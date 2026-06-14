@@ -1,0 +1,1723 @@
+@import "tailwindcss";
+
+/* ─── Aumovio Design Tokens ─────────────────────────────────────────────── */
+/* All brand colours with full 50-950 ranges.                                */
+/* Anchor shades match the Aumovio brand guide; fillers complete the curve.  */
+/* BOTH naming conventions are defined: orange-* AND primary-*, etc.         */
+@theme {
+    /* ── Orange (Primary — 60 % of colour usage) ─────────────────────────── */
+    --color-orange-50: #fff5f2;
+    --color-orange-100: #ffb7a1;
+    --color-orange-200: #ff906e;
+    --color-orange-300: #ff693b;
+    --color-orange-400: #ff4208; /* brand anchor */
+    --color-orange-500: #da3806;
+    --color-orange-600: #b82e05;
+    --color-orange-700: #952504;
+    --color-orange-800: #731c03;
+    --color-orange-900: #521402;
+    --color-orange-950: #3a0d01;
+
+    /* ── Purple (Secondary — 30 % of colour usage) ───────────────────────── */
+    --color-purple-50: #f3effe;
+    --color-purple-100: #a08ae5;
+    --color-purple-200: #7e60dc;
+    --color-purple-300: #5c37d2;
+    --color-purple-400: #4827af; /* brand anchor */
+    --color-purple-500: #341c7d;
+    --color-purple-600: #2b1768;
+    --color-purple-700: #221254;
+    --color-purple-800: #190d3f;
+    --color-purple-900: #11082b;
+    --color-purple-950: #0a041a;
+
+    /* ── Primary aliases (point to orange) ───────────────────────────────── */
+    --color-primary-50: #fff5f2;
+    --color-primary-100: #ffb7a1;
+    --color-primary-200: #ff906e;
+    --color-primary-300: #ff693b;
+    --color-primary-400: #ff4208;
+    --color-primary-500: #da3806;
+    --color-primary-600: #b82e05;
+    --color-primary-700: #952504;
+    --color-primary-800: #731c03;
+    --color-primary-900: #521402;
+    --color-primary-950: #3a0d01;
+
+    /* ── Secondary aliases (point to purple) ─────────────────────────────── */
+    --color-secondary-50: #f3effe;
+    --color-secondary-100: #a08ae5;
+    --color-secondary-200: #7e60dc;
+    --color-secondary-300: #5c37d2;
+    --color-secondary-400: #4827af;
+    --color-secondary-500: #341c7d;
+    --color-secondary-600: #2b1768;
+    --color-secondary-700: #221254;
+    --color-secondary-800: #190d3f;
+    --color-secondary-900: #11082b;
+    --color-secondary-950: #0a041a;
+
+    /* ── Blue (Accent) ───────────────────────────────────────────────────── */
+    --color-blue-50: #edf8fe;
+    --color-blue-100: #a3ddf5;
+    --color-blue-200: #6dc5ef;
+    --color-blue-300: #3bafe8;
+    --color-blue-400: #18a9e7; /* brand anchor */
+    --color-blue-500: #1b8dce;
+    --color-blue-600: #1774ac;
+    --color-blue-700: #125c8a;
+    --color-blue-800: #0e4568;
+    --color-blue-900: #092e46;
+    --color-blue-950: #051a2a;
+
+    /* ── Turquoise (Accent) ──────────────────────────────────────────────── */
+    --color-turquoise-50: #edfdfb;
+    --color-turquoise-100: #a1f7ea;
+    --color-turquoise-200: #6bf0dc;
+    --color-turquoise-300: #38e5cc;
+    --color-turquoise-400: #12caae; /* brand anchor */
+    --color-turquoise-500: #0faa92;
+    --color-turquoise-600: #0c8b77;
+    --color-turquoise-700: #096c5c;
+    --color-turquoise-800: #074d42;
+    --color-turquoise-900: #042f28;
+    --color-turquoise-950: #021b17;
+
+    /* ── Yellow (Accent) ─────────────────────────────────────────────────── */
+    --color-yellow-50: #fdfce9;
+    --color-yellow-100: #ebe9b5;
+    --color-yellow-200: #ddd983;
+    --color-yellow-300: #d6cf5c;
+    --color-yellow-400: #cec43a; /* brand anchor */
+    --color-yellow-500: #b0a730;
+    --color-yellow-600: #918926;
+    --color-yellow-700: #736c1d;
+    --color-yellow-800: #554f15;
+    --color-yellow-900: #37330d;
+    --color-yellow-950: #221f08;
+
+    /* ── Grey ────────────────────────────────────────────────────────────── */
+    --color-grey-50: #fafafa;
+    --color-grey-100: #f0f0f0;
+    --color-grey-200: #dcdcdc;
+    --color-grey-300: #c8c8c8;
+    --color-grey-400: #aaaaaa;
+    --color-grey-500: #787878;
+    --color-grey-600: #606060;
+    --color-grey-700: #484848;
+    --color-grey-800: #303030;
+    --color-grey-900: #1a1a1a;
+    --color-grey-950: #0d0d0d;
+
+    /* ── Danger — BOTH naming conventions ────────────────────────────────── */
+    --color-danger-50: #fef2f2;
+    --color-danger-100: #f0d3dc;
+    --color-danger-200: #eaabb6;
+    --color-danger-300: #e27a82;
+    --color-danger-400: #d82822;
+    --color-danger-500: #b82220;
+    --color-danger-600: #981c1a;
+    --color-danger-700: #781615;
+    --color-danger-800: #581010;
+    --color-danger-900: #3a0b0b;
+    --color-danger-950: #240606;
+    --color-danger-default: #d82822;
+    --color-danger-light: #f0d3dc;
+
+    /* ── Warn — BOTH naming conventions ──────────────────────────────────── */
+    --color-warn-50: #fffde6;
+    --color-warn-100: #ffee99;
+    --color-warn-200: #ffe566;
+    --color-warn-300: #ffdd33;
+    --color-warn-400: #ffd600;
+    --color-warn-500: #d9b600;
+    --color-warn-600: #b39600;
+    --color-warn-700: #8c7600;
+    --color-warn-800: #665600;
+    --color-warn-900: #403600;
+    --color-warn-950: #261f00;
+    --color-warn-default: #ffd600;
+    --color-warn-light: #ffee99;
+
+    /* ── Success — BOTH naming conventions ───────────────────────────────── */
+    --color-success-50: #f0fdf4;
+    --color-success-100: #adebc6;
+    --color-success-200: #81dfa8;
+    --color-success-300: #56d38a;
+    --color-success-400: #32cb70;
+    --color-success-500: #2aad5f;
+    --color-success-600: #228e4e;
+    --color-success-700: #1a703e;
+    --color-success-800: #12512d;
+    --color-success-900: #0b331d;
+    --color-success-950: #061e11;
+    --color-success-default: #32cb70;
+    --color-success-light: #adebc6;
+
+    /* ── Font ────────────────────────────────────────────────────────────── */
+    --font-sans: "Aumovio", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ─── CSS Custom Properties (runtime, not @theme) ──────────────────────── */
+:root {
+    /* Named-palette light tints — set by JS for named palettes, fallback white */
+    --color-light-surface: #ffffff;
+    --color-light-surface-alt: #fafafa;
+
+    /* Gradient button tokens — brand defaults; overridden by JS for non-brand palettes */
+    --color-gradient-from: #ff4208;
+    --color-gradient-to: #4827af;
+    --color-gradient-text: #ffffff;
+
+    /* Derived interaction tokens — brand defaults; overridden by JS for named palettes */
+    --accent: #ff4208;
+    --accent-subtle: rgba(255, 66, 8, 0.08);
+    --accent-muted: rgba(255, 66, 8, 0.40);
+    --accent-on-dark: #ff7040;
+    --shadow-tint: rgba(255, 66, 8, 0.04);
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --text-on-accent: #ffffff;
+
+    /* Sidebar user card — light keeps a faint accent tint; dark uses a white
+       overlay (palette-agnostic) so the card lifts off the dark sidebar surface
+       instead of disappearing into it for low-chroma palettes. */
+    --side-card-bg:     var(--accent-subtle);
+    --side-card-border: var(--border-subtle);
+
+    /* ── Surface elevation ladder (brand default — neutral grey) ─────────── */
+    --surface-0: #ffffff;
+    --surface-1: #fafafa;
+    --surface-2: #f5f5f5;
+    --surface-3: #f0f0f0;
+    --surface-4: #ffffff;
+    --border-elevation: rgba(0, 0, 0, 0.06);
+
+    /* ── Active state tokens (brand default — orange primary) ─────────────── */
+    --nav-active-text:    #d83806;
+    --nav-active-bg:      rgba(255, 66, 8, 0.08);
+    --nav-active-border:  #ff4208;
+    --side-active-text:   #d83806;
+    --side-active-bg:     rgba(255, 66, 8, 0.08);
+    --side-active-border: #ff4208;
+    --nav-hover-bg:       rgba(255, 66, 8, 0.04);
+    --side-hover-bg:      rgba(255, 66, 8, 0.04);
+    /* ── Hover border + foreground contrast tokens (brand default) ─────────── */
+    --nav-hover-border:   transparent;
+    --side-hover-border:  transparent;
+    --accent-foreground:  #b82e05;        /* orange-600 — ≥ 4.5:1 on white */
+    --accent-icon:        #da3806;        /* orange-500 — ≥ 3:1 on white */
+    --color-card-surface-border: rgba(255, 66, 8, 0.04);
+
+    /* ── Per-group nav family colours (brand default — distinct hues) ──────── */
+    /* Each sidebar group has its own hue (Finance=yellow, Records=blue,
+       Management=purple, …). Overridden per-palette by applyPaletteVars() with
+       contrast-safe values so dots / active text stay visible on dark surfaces. */
+    --side-purple-text:    var(--color-purple-500);
+    --side-purple-bg:      color-mix(in srgb, var(--color-purple-400) 8%, transparent);
+    --side-blue-text:      var(--color-blue-500);
+    --side-blue-bg:        color-mix(in srgb, var(--color-blue-400) 8%, transparent);
+    --side-yellow-text:    var(--color-yellow-600);
+    --side-yellow-bg:      color-mix(in srgb, var(--color-yellow-400) 8%, transparent);
+    --side-turquoise-text: var(--color-turquoise-600);
+    --side-turquoise-bg:   color-mix(in srgb, var(--color-turquoise-400) 8%, transparent);
+
+    /* ── Status colour tokens (brand default — calibrated for white surface) ─ */
+    --status-success-bg:   #ecfdf5;
+    --status-success-base: #22c55e;
+    --status-success-text: #166534;
+    --status-warning-bg:   #fffbeb;
+    --status-warning-base: #f59e0b;
+    --status-warning-text: #92400e;
+    --status-danger-bg:    #fef2f2;
+    --status-danger-base:  #ef4444;
+    --status-danger-text:  #991b1b;
+    --status-info-bg:      #eff6ff;
+    --status-info-base:    #3b82f6;
+    --status-info-text:    #1e40af;
+    --status-neutral-bg:   #f9fafb;
+    --status-neutral-base: #6b7280;
+    --status-neutral-text: #374151;
+
+    --bg-surface: var(--surface-0);
+    --bg-surface-2: var(--surface-1);
+    --bg-surface-3: var(--surface-2);
+    --text-primary: #1a1a1a;
+    --text-secondary: #484848;
+    --text-muted: #787878;
+    --text-tertiary: #787878;
+    --text-accent: #ff4208;
+    --text-accent-hover: #d83806;
+    --text-on-surface-alt: #1a1a1a;
+    --border-color: #dcdcdc;
+    --track-bg: #dcdcdc;
+    --ring-track: #f0f0f0;
+
+    /* ── Easing library ──────────────────────────────────────────────────── */
+    /* Standard Material-style curves */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+    --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+    /* Spring / organic curves */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-spring-soft: cubic-bezier(0.25, 1.4, 0.5, 1);
+    --ease-spring-hard: cubic-bezier(0.5, 2, 0.6, 0.8);
+
+    /* Bounce */
+    --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --ease-bounce-out: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+    /* Snappy UI interactions */
+    --ease-snap: cubic-bezier(0.2, 0, 0, 1);
+    --ease-overshoot: cubic-bezier(0.3, 1.8, 0.4, 0.9);
+
+    /* ── Duration tokens ─────────────────────────────────────────────────── */
+    --duration-instant: 80ms;
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-moderate: 350ms;
+    --duration-slow: 500ms;
+    --duration-lazy: 700ms;
+
+    /* ── Shadow tokens ───────────────────────────────────────────────────── */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1);
+    --shadow-2xl: 0 32px 80px rgba(0, 0, 0, 0.2), 0 12px 32px rgba(0, 0, 0, 0.12);
+
+    /* Brand-coloured glows */
+    --glow-orange: 0 8px 28px rgba(255, 66, 8, 0.3);
+    --glow-purple: 0 8px 28px rgba(72, 39, 175, 0.28);
+    --glow-blue: 0 8px 28px rgba(24, 169, 231, 0.28);
+    --glow-success: 0 8px 28px rgba(50, 203, 112, 0.28);
+    --glow-danger: 0 8px 28px rgba(216, 40, 34, 0.28);
+}
+
+[data-theme="dark"] {
+    /* Named-palette dark vars — CSS defaults for brand; overridden by JS for named palettes */
+    --color-dark-text: rgba(255, 255, 255, 0.85);
+    --color-dark-muted: rgba(255, 255, 255, 0.55);
+    --color-dark-surface-elevated: var(--palette-surface-2-dark, #1a1030);
+
+    /* Derived token dark-mode defaults — keeps brand palette borders visible on dark surfaces */
+    --border-subtle: rgba(255, 255, 255, 0.10);
+
+    /* Sidebar user card — white overlay lifts the card off the dark sidebar
+       surface regardless of the active palette's hue/chroma. */
+    --side-card-bg:     rgba(255, 255, 255, 0.06);
+    --side-card-border: rgba(255, 255, 255, 0.14);
+
+    /* ── Surface elevation ladder (brand dark default) ───────────────────── */
+    --surface-0: #0d0d14;
+    --surface-1: #141520;
+    --surface-2: #1a1d2c;
+    --surface-3: #222538;
+    --surface-4: #2a2d44;
+    --border-elevation: rgba(255, 255, 255, 0.06);
+
+    /* ── Active state tokens (brand dark default) ──────────────────────────── */
+    --nav-active-text:    #ff7040;
+    --nav-active-bg:      rgba(255, 112, 64, 0.12);
+    --nav-active-border:  #ff7040;
+    --side-active-text:   #ff7040;
+    --side-active-bg:     rgba(255, 112, 64, 0.12);
+    --side-active-border: #ff7040;
+    --nav-hover-bg:       rgba(255, 255, 255, 0.10);  /* Fix 3: white/10 floor — visible on any dark surface */
+    --side-hover-bg:      rgba(255, 255, 255, 0.10);
+    /* ── Hover border + foreground contrast tokens (brand dark default) ──── */
+    --nav-hover-border:   rgba(255, 112, 64, 0.50);
+    --side-hover-border:  rgba(255, 112, 64, 0.50);
+    --accent-foreground:  #ff7040;        /* orange-on-dark — ≥ 4.5:1 on dark surface */
+    --accent-icon:        #ff7040;        /* same for icons at 3:1 minimum */
+    --color-card-surface-border: rgba(255, 255, 255, 0.08);
+
+    /* ── Per-group nav family colours (brand dark default) ────────────────── */
+    /* Brand family -400 anchors are bright enough on the dark sidebar; named
+       palettes override these with contrast-safe values via applyPaletteVars(). */
+    --side-purple-text:    var(--color-purple-400);
+    --side-purple-bg:      color-mix(in srgb, var(--color-purple-400) 12%, transparent);
+    --side-blue-text:      var(--color-blue-400);
+    --side-blue-bg:        color-mix(in srgb, var(--color-blue-400) 12%, transparent);
+    --side-yellow-text:    var(--color-yellow-400);
+    --side-yellow-bg:      color-mix(in srgb, var(--color-yellow-400) 12%, transparent);
+    --side-turquoise-text: var(--color-turquoise-400);
+    --side-turquoise-bg:   color-mix(in srgb, var(--color-turquoise-400) 12%, transparent);
+
+    /* ── Status colour tokens (brand dark default — calibrated for dark surface) */
+    --status-success-bg:   #052e16;
+    --status-success-base: #4ade80;
+    --status-success-text: #86efac;
+    --status-warning-bg:   #1c1003;
+    --status-warning-base: #fbbf24;
+    --status-warning-text: #fde68a;
+    --status-danger-bg:    #1c0404;
+    --status-danger-base:  #f87171;
+    --status-danger-text:  #fca5a5;
+    --status-info-bg:      #0c1a2e;
+    --status-info-base:    #60a5fa;
+    --status-info-text:    #93c5fd;
+    --status-neutral-bg:   #111827;
+    --status-neutral-base: #9ca3af;
+    --status-neutral-text: #d1d5db;
+
+    --bg-surface: var(--surface-0);
+    --bg-surface-2: var(--surface-1);
+    --bg-surface-3: var(--surface-2);
+    --text-primary: var(--color-dark-text, rgba(255, 255, 255, 0.85));
+    --text-secondary: #c8c8c8;
+    --text-muted: var(--color-dark-muted, #787878);
+    --text-tertiary: rgba(255, 255, 255, 0.40);
+    --text-accent: var(--accent-on-dark, #ff7040);
+    --text-accent-hover: #ff9060;
+    --text-on-surface-alt: var(--color-dark-text, rgba(255, 255, 255, 0.85));
+    --border-color: #303030;
+    --track-bg: #484848;
+    --ring-track: #303030;
+
+    /* Shadows are stronger in dark mode to punch through dark surfaces */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.28);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
+    --shadow-2xl: 0 32px 80px rgba(0, 0, 0, 0.7), 0 12px 32px rgba(0, 0, 0, 0.45);
+
+    --glow-orange: 0 8px 32px rgba(255, 66, 8, 0.45);
+    --glow-purple: 0 8px 32px rgba(72, 39, 175, 0.45);
+    --glow-blue: 0 8px 32px rgba(24, 169, 231, 0.42);
+    --glow-success: 0 8px 32px rgba(50, 203, 112, 0.42);
+    --glow-danger: 0 8px 32px rgba(216, 40, 34, 0.42);
+}
+
+@variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* ─── Font Faces ────────────────────────────────────────────────────────── */
+@font-face {
+    font-family: "Aumovio";
+    src: url("../fonts/AUMOVIOScreen-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Aumovio";
+    src: url("../fonts/AUMOVIOScreen-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ─── Font Utility Classes ──────────────────────────────────────────────── */
+.font-aumovio {
+    font-family: var(--font-sans) !important;
+}
+.font-aumovio-bold {
+    font-family: var(--font-sans) !important;
+    font-weight: 700;
+}
+.font-aumovio-italic {
+    font-family: var(--font-sans) !important;
+    font-style: italic;
+}
+.font-aumovio-bold-italic {
+    font-family: var(--font-sans) !important;
+    font-weight: 700;
+    font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Opacity ─────────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* ── Slide ───────────────────────────────────────────────────────────────── */
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-left {
+    from {
+        opacity: 0;
+        transform: translateX(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slide-right {
+    from {
+        opacity: 0;
+        transform: translateX(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ── Scale ───────────────────────────────────────────────────────────────── */
+@keyframes scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes scale-in-center {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes scale-out {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+}
+
+/* Spring scale with overshoot */
+@keyframes scale-spring {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.04);
+    }
+    80% {
+        transform: scale(0.98);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ── Slide + Scale combos (most common enter/exit patterns) ──────────────── */
+@keyframes enter-up {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes enter-down {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes exit-up {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.96);
+    }
+}
+
+@keyframes exit-down {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(10px) scale(0.96);
+    }
+}
+
+/* ── Float / hover loops ─────────────────────────────────────────────────── */
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes float-sm {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes float-lg {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-14px);
+    }
+}
+
+/* ── Bounce ──────────────────────────────────────────────────────────────── */
+@keyframes bounce-slow {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-8px);
+    }
+    60% {
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes bounce-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.08);
+    }
+    80% {
+        transform: scale(0.97);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ── Fade in from direction ──────────────────────────────────────────────── */
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fade-in-down {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fade-in-left {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fade-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ── Shake / attention ───────────────────────────────────────────────────── */
+@keyframes shake {
+    0%,
+    40%,
+    80% {
+        transform: translateX(0.1rem);
+        color: rgb(239 68 68);
+        border-color: rgb(239 68 68);
+    }
+    20%,
+    60%,
+    100% {
+        transform: translateX(-0.1rem);
+        color: rgb(239 68 68);
+        border-color: rgb(239 68 68);
+    }
+}
+
+@keyframes shake-h {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    20% {
+        transform: translateX(-5px);
+    }
+    40% {
+        transform: translateX(5px);
+    }
+    60% {
+        transform: translateX(-3px);
+    }
+    80% {
+        transform: translateX(3px);
+    }
+}
+
+@keyframes wobble {
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+    20% {
+        transform: rotate(-5deg);
+    }
+    40% {
+        transform: rotate(4deg);
+    }
+    60% {
+        transform: rotate(-2deg);
+    }
+    80% {
+        transform: rotate(1deg);
+    }
+}
+
+@keyframes headshake {
+    0% {
+        transform: translateX(0);
+    }
+    6.5% {
+        transform: translateX(-4px) rotateY(-9deg);
+    }
+    18.5% {
+        transform: translateX(3px) rotateY(7deg);
+    }
+    31.5% {
+        transform: translateX(-2px) rotateY(-5deg);
+    }
+    43.5% {
+        transform: translateX(1px) rotateY(3deg);
+    }
+    50% {
+        transform: translateX(0);
+    }
+}
+
+/* ── Pulse / heartbeat ───────────────────────────────────────────────────── */
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes pulse-scale {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes heartbeat {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    14% {
+        transform: scale(1.12);
+    }
+    28% {
+        transform: scale(1);
+    }
+    42% {
+        transform: scale(1.08);
+    }
+    70% {
+        transform: scale(1);
+    }
+}
+
+/* Ping / ripple ring */
+@keyframes ping {
+    75%,
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+/* ── Spin / rotate ───────────────────────────────────────────────────────── */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spin-reverse {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(-360deg);
+    }
+}
+
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Dot loaders ─────────────────────────────────────────────────────────── */
+@keyframes dot-bounce {
+    0%,
+    80%,
+    100% {
+        transform: scale(0.7);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes dot-pulse {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes bar-grow {
+    0%,
+    100% {
+        transform: scaleY(0.4);
+    }
+    50% {
+        transform: scaleY(1);
+    }
+}
+
+/* ── Shimmer / skeleton ──────────────────────────────────────────────────── */
+@keyframes shimmer {
+    0% {
+        background-position: 200% center;
+    }
+    100% {
+        background-position: -200% center;
+    }
+}
+
+@keyframes skeleton-wave {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(200%);
+    }
+}
+
+/* ── Ripple (button click feedback) ──────────────────────────────────────── */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* ── Glitch ──────────────────────────────────────────────────────────────── */
+@keyframes glitch {
+    0%,
+    100% {
+        clip-path: inset(0);
+        transform: none;
+    }
+    10% {
+        clip-path: inset(20% 0 60% 0);
+        transform: translateX(-3px);
+    }
+    20% {
+        clip-path: inset(70% 0 5% 0);
+        transform: translateX(3px);
+    }
+    30% {
+        clip-path: inset(40% 0 40% 0);
+        transform: translateX(-2px);
+    }
+    40% {
+        clip-path: inset(0);
+        transform: none;
+    }
+}
+
+/* ── Draw / stroke ───────────────────────────────────────────────────────── */
+@keyframes draw-in {
+    from {
+        stroke-dashoffset: var(--path-length, 1000);
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* ── Number roll (used for counters) ────────────────────────────────────── */
+@keyframes count-up {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ── Toast / notification slides ────────────────────────────────────────── */
+@keyframes toast-in-right {
+    from {
+        transform: translateX(110%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toast-in-left {
+    from {
+        transform: translateX(-110%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toast-in-up {
+    from {
+        transform: translateY(80px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toast-out {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+        max-height: 120px;
+    }
+    to {
+        transform: translateX(110%);
+        opacity: 0;
+        max-height: 0;
+        padding: 0;
+        margin: 0;
+    }
+}
+
+/* ── Accordion / collapse ────────────────────────────────────────────────── */
+@keyframes accordion-down {
+    from {
+        height: 0;
+        opacity: 0;
+    }
+    to {
+        height: var(--radix-accordion-content-height);
+        opacity: 1;
+    }
+}
+
+@keyframes accordion-up {
+    from {
+        height: var(--radix-accordion-content-height);
+        opacity: 1;
+    }
+    to {
+        height: 0;
+        opacity: 0;
+    }
+}
+
+/* ── Progress bar fill ───────────────────────────────────────────────────── */
+@keyframes progress-fill {
+    from {
+        width: 0%;
+    }
+    to {
+        width: var(--progress-value, 100%);
+    }
+}
+
+@keyframes progress-indeterminate {
+    0% {
+        left: -35%;
+        right: 100%;
+    }
+    60% {
+        left: 100%;
+        right: -90%;
+    }
+    100% {
+        left: 100%;
+        right: -90%;
+    }
+}
+
+/* ── Gradient / aurora background ────────────────────────────────────────── */
+@keyframes gradient-shift {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+@keyframes aurora {
+    0%,
+    100% {
+        transform: translateX(-10%) skewX(-3deg);
+    }
+    50% {
+        transform: translateX(10%) skewX(3deg);
+    }
+}
+
+/* ── Staggered list item enter ───────────────────────────────────────────── */
+@keyframes list-item-in {
+    from {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ── Checkmark draw ──────────────────────────────────────────────────────── */
+@keyframes check-draw {
+    0% {
+        stroke-dashoffset: 36;
+    }
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* ── Caret blink ─────────────────────────────────────────────────────────── */
+@keyframes caret-blink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
+/* ── Orbit ───────────────────────────────────────────────────────────────── */
+@keyframes orbit {
+    from {
+        transform: rotate(0deg) translateX(60px) rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg) translateX(60px) rotate(-360deg);
+    }
+}
+
+/* ── Tilt on hover (3d card) ─────────────────────────────────────────────── */
+@keyframes tilt-enter {
+    from {
+        transform: perspective(1000px) rotateX(0deg) rotateY(0deg);
+    }
+    to {
+        transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    }
+}
+
+/* ── Page transitions ────────────────────────────────────────────────────── */
+@keyframes page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.99);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes page-exit {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.99);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATION UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Core enter animations ───────────────────────────────────────────────── */
+.animate-fade-in {
+    animation: fade-in var(--duration-normal) var(--ease-decelerate) both;
+}
+.animate-fade-out {
+    animation: fade-out var(--duration-normal) var(--ease-accelerate) both;
+}
+.animate-slide-up {
+    animation: slide-up var(--duration-moderate) var(--ease-spring) both;
+}
+.animate-slide-down {
+    animation: slide-down var(--duration-moderate) var(--ease-spring) both;
+}
+.animate-slide-left {
+    animation: slide-left var(--duration-moderate) var(--ease-spring) both;
+}
+.animate-slide-right {
+    animation: slide-right var(--duration-moderate) var(--ease-spring) both;
+}
+.animate-scale-in {
+    animation: scale-in var(--duration-normal) var(--ease-spring) both;
+}
+.animate-scale-in-center {
+    animation: scale-in-center var(--duration-slow) var(--ease-spring) both;
+}
+.animate-scale-out {
+    animation: scale-out var(--duration-fast) var(--ease-accelerate) both;
+}
+.animate-scale-spring {
+    animation: scale-spring var(--duration-moderate) var(--ease-standard) both;
+}
+.animate-enter-up {
+    animation: enter-up var(--duration-normal) var(--ease-spring) both;
+}
+.animate-enter-down {
+    animation: enter-down var(--duration-normal) var(--ease-spring) both;
+}
+.animate-bounce-in {
+    animation: bounce-in var(--duration-slow) var(--ease-bounce) both;
+}
+
+/* ── Fade in from direction ──────────────────────────────────────────────── */
+.animate-fade-in-up {
+    animation: fade-in-up 0.6s var(--ease-spring) both;
+    opacity: 0;
+}
+.animate-fade-in-down {
+    animation: fade-in-down 0.6s var(--ease-spring) both;
+    opacity: 0;
+}
+.animate-fade-in-left {
+    animation: fade-in-left 0.6s var(--ease-spring) both;
+    opacity: 0;
+}
+.animate-fade-in-right {
+    animation: fade-in-right 0.6s var(--ease-spring) both;
+    opacity: 0;
+}
+
+/* ── Loop animations ─────────────────────────────────────────────────────── */
+.animate-float {
+    animation: float 3s var(--ease-standard) infinite;
+}
+.animate-float-sm {
+    animation: float-sm 2.5s var(--ease-standard) infinite;
+}
+.animate-float-lg {
+    animation: float-lg 4s var(--ease-standard) infinite;
+}
+.animate-bounce-slow {
+    animation: bounce-slow 2s infinite;
+}
+.animate-heartbeat {
+    animation: heartbeat 1.3s var(--ease-standard) infinite;
+}
+.animate-pulse {
+    animation: pulse 1.5s var(--ease-standard) infinite;
+}
+.animate-pulse-scale {
+    animation: pulse-scale 1.5s var(--ease-standard) infinite;
+}
+.animate-ping {
+    animation: ping 1s var(--ease-standard) infinite;
+}
+.animate-spin {
+    animation: spin 0.75s linear infinite;
+}
+.animate-spin-slow {
+    animation: spin-slow 2s linear infinite;
+}
+.animate-spin-reverse {
+    animation: spin-reverse 1.2s linear infinite;
+}
+.animate-shimmer {
+    animation: shimmer 2s linear infinite;
+}
+.animate-gradient {
+    animation: gradient-shift 4s var(--ease-standard) infinite;
+    background-size: 300% 300%;
+}
+
+/* ── Attention seekers ───────────────────────────────────────────────────── */
+.animate-shake {
+    animation: shake 250ms var(--ease-standard);
+}
+.animate-shake-h {
+    animation: shake-h 500ms var(--ease-standard);
+}
+.animate-wobble {
+    animation: wobble 600ms var(--ease-bounce);
+}
+.animate-headshake {
+    animation: headshake 500ms var(--ease-standard);
+}
+
+/* ── Toast / notification ────────────────────────────────────────────────── */
+.animate-toast-in-right {
+    animation: toast-in-right var(--duration-moderate) var(--ease-spring) both;
+}
+.animate-toast-in-left {
+    animation: toast-in-left var(--duration-moderate) var(--ease-spring) both;
+}
+.animate-toast-in-up {
+    animation: toast-in-up var(--duration-moderate) var(--ease-spring) both;
+}
+.animate-toast-out {
+    animation: toast-out var(--duration-moderate) var(--ease-accelerate) both;
+}
+
+/* ── Page transition ─────────────────────────────────────────────────────── */
+.animate-page-enter {
+    animation: page-enter var(--duration-moderate) var(--ease-spring) both;
+}
+.animate-page-exit {
+    animation: page-exit var(--duration-normal) var(--ease-accelerate) both;
+}
+
+/* ── Stagger delay helpers ───────────────────────────────────────────────── */
+.delay-0 {
+    animation-delay: 0ms;
+}
+.delay-50 {
+    animation-delay: 50ms;
+}
+.delay-75 {
+    animation-delay: 75ms;
+}
+.delay-100 {
+    animation-delay: 100ms;
+}
+.delay-150 {
+    animation-delay: 150ms;
+}
+.delay-200 {
+    animation-delay: 200ms;
+}
+.delay-300 {
+    animation-delay: 300ms;
+}
+.delay-400 {
+    animation-delay: 400ms;
+}
+.delay-500 {
+    animation-delay: 500ms;
+}
+.delay-600 {
+    animation-delay: 600ms;
+}
+.delay-700 {
+    animation-delay: 700ms;
+}
+.delay-1000 {
+    animation-delay: 1000ms;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRANSITION UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Named transition presets ────────────────────────────────────────────── */
+
+/*
+ * Standard smooth — for nav links, colour swaps, opacity changes.
+ * Fast and tight; never feels heavy.
+ */
+.transition-smooth {
+    transition:
+        transform var(--duration-normal) var(--ease-standard),
+        opacity var(--duration-normal) var(--ease-standard),
+        box-shadow var(--duration-moderate) var(--ease-standard),
+        background var(--duration-fast) var(--ease-standard),
+        color var(--duration-fast) var(--ease-standard),
+        border-color var(--duration-fast) var(--ease-standard);
+    will-change: transform, opacity;
+}
+
+/*
+ * Spring — for interactive elements that need physical feel:
+ * buttons, toggles, cards on hover.
+ */
+.transition-spring {
+    transition:
+        transform var(--duration-moderate) var(--ease-spring),
+        box-shadow var(--duration-moderate) var(--ease-spring),
+        opacity var(--duration-normal) var(--ease-decelerate);
+    will-change: transform, box-shadow;
+}
+
+/*
+ * Bounce — for playful items: modals, drawers, notification toasts.
+ */
+.transition-bounce {
+    transition:
+        transform var(--duration-moderate) var(--ease-bounce),
+        opacity var(--duration-normal) var(--ease-decelerate);
+    will-change: transform, opacity;
+}
+
+/*
+ * Snap — nearly instant; for nav dropdowns, tooltips, tiny state toggles.
+ */
+.transition-snap {
+    transition:
+        transform var(--duration-fast) var(--ease-snap),
+        opacity var(--duration-fast) var(--ease-snap);
+    will-change: transform, opacity;
+}
+
+/*
+ * Lazy — for background decorations, large hero sections, ambient motion.
+ */
+.transition-lazy {
+    transition:
+        transform var(--duration-lazy) var(--ease-standard),
+        opacity var(--duration-lazy) var(--ease-standard),
+        box-shadow var(--duration-lazy) var(--ease-standard);
+}
+
+/* ── Individual property shortcuts ──────────────────────────────────────── */
+.transition-colors-fast {
+    transition:
+        color var(--duration-fast) var(--ease-standard),
+        background-color var(--duration-fast) var(--ease-standard),
+        border-color var(--duration-fast) var(--ease-standard);
+}
+.transition-transform-spring {
+    transition: transform var(--duration-moderate) var(--ease-spring);
+    will-change: transform;
+}
+.transition-shadow {
+    transition: box-shadow var(--duration-moderate) var(--ease-standard);
+}
+.transition-opacity {
+    transition: opacity var(--duration-normal) var(--ease-standard);
+}
+.transition-scale-spring {
+    transition: transform var(--duration-moderate) var(--ease-spring);
+}
+
+/*
+ * Button — spring transform + shadow, fast bg/color/border.
+ * The physical lift uses spring easing; colour swaps stay fast and crisp.
+ */
+.transition-button {
+    transition:
+        transform var(--duration-moderate) var(--ease-spring),
+        box-shadow var(--duration-moderate) var(--ease-spring),
+        background-color var(--duration-fast) var(--ease-standard),
+        color var(--duration-fast) var(--ease-standard),
+        border-color var(--duration-fast) var(--ease-standard),
+        opacity var(--duration-normal) var(--ease-decelerate);
+    will-change: transform;
+}
+
+/* ── Hover lift patterns ─────────────────────────────────────────────────── */
+.hover-lift {
+    transition:
+        transform var(--duration-moderate) var(--ease-spring),
+        box-shadow var(--duration-moderate) var(--ease-standard);
+}
+.hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+.hover-lift:active {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.hover-lift-sm {
+    transition:
+        transform var(--duration-normal) var(--ease-spring),
+        box-shadow var(--duration-normal) var(--ease-standard);
+}
+.hover-lift-sm:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.hover-lift-lg {
+    transition:
+        transform var(--duration-moderate) var(--ease-spring),
+        box-shadow var(--duration-moderate) var(--ease-standard);
+}
+.hover-lift-lg:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-xl);
+}
+
+/* ── Press / click feedback ──────────────────────────────────────────────── */
+.hover-press {
+    transition: transform var(--duration-fast) var(--ease-snap);
+}
+.hover-press:hover {
+    transform: scale(1.02);
+}
+.hover-press:active {
+    transform: scale(0.97);
+}
+
+/* ── Glow on hover ───────────────────────────────────────────────────────── */
+.hover-glow-orange {
+    transition: box-shadow var(--duration-normal) var(--ease-standard);
+}
+.hover-glow-orange:hover {
+    box-shadow: var(--glow-orange);
+}
+
+.hover-glow-purple {
+    transition: box-shadow var(--duration-normal) var(--ease-standard);
+}
+.hover-glow-purple:hover {
+    box-shadow: var(--glow-purple);
+}
+
+.hover-glow-blue {
+    transition: box-shadow var(--duration-normal) var(--ease-standard);
+}
+.hover-glow-blue:hover {
+    box-shadow: var(--glow-blue);
+}
+
+.hover-glow-success {
+    transition: box-shadow var(--duration-normal) var(--ease-standard);
+}
+.hover-glow-success:hover {
+    box-shadow: var(--glow-success);
+}
+
+/* ── Scale utilities ─────────────────────────────────────────────────────── */
+.scale-hover {
+    transition: transform var(--duration-normal) var(--ease-spring);
+}
+.scale-hover:hover {
+    transform: scale(1.05);
+}
+.scale-hover:active {
+    transform: scale(0.97);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKELETON / SHIMMER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.skeleton {
+    background: linear-gradient(90deg, var(--bg-surface-2) 25%, var(--bg-surface-3) 50%, var(--bg-surface-2) 75%);
+    background-size: 400% 100%;
+    animation: shimmer 1.8s var(--ease-standard) infinite;
+    border-radius: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOADERS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Spinner ring — replaces the old one-liner; now uses CSS custom props */
+.spinner {
+    display: inline-block;
+    width: var(--spinner-size, 1.25rem);
+    height: var(--spinner-size, 1.25rem);
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--color-orange-400) 25%, transparent);
+    border-top-color: var(--color-orange-400);
+    animation: spin var(--spinner-speed, 0.65s) linear infinite;
+}
+
+[data-theme="dark"] .spinner {
+    border-color: color-mix(in srgb, var(--color-orange-400) 20%, transparent);
+    border-top-color: var(--color-orange-400);
+}
+.spinner-sm {
+    --spinner-size: 1rem;
+    --spinner-speed: 0.55s;
+}
+.spinner-lg {
+    --spinner-size: 2rem;
+    --spinner-speed: 0.75s;
+}
+.spinner-xl {
+    --spinner-size: 3rem;
+    --spinner-speed: 0.9s;
+}
+
+/* Dot bounce loader */
+.loader-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.loader-dots span {
+    display: block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-orange-400);
+    animation: dot-pulse 0.9s var(--ease-standard) infinite;
+}
+.loader-dots span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+.loader-dots span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+/* Bar equalizer loader */
+.loader-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 1.5rem;
+}
+.loader-bars span {
+    display: block;
+    width: 4px;
+    border-radius: 3px;
+    background: var(--color-orange-400);
+    transform-origin: bottom;
+    animation: bar-grow 0.9s var(--ease-standard) infinite;
+}
+.loader-bars span:nth-child(1) {
+    animation-delay: 0s;
+}
+.loader-bars span:nth-child(2) {
+    animation-delay: 0.12s;
+}
+.loader-bars span:nth-child(3) {
+    animation-delay: 0.24s;
+}
+.loader-bars span:nth-child(4) {
+    animation-delay: 0.36s;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INTERACTIVE MICRO-INTERACTION HELPERS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Ripple container — add position:relative to the parent */
+.ripple-host {
+    position: relative;
+    overflow: hidden;
+}
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.32);
+    transform: scale(0);
+    animation: ripple 0.6s var(--ease-standard);
+    pointer-events: none;
+}
+
+/* Focus ring — consistent accessible focus across the system */
+.focus-ring {
+    outline: none;
+    transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+.focus-ring:focus-visible {
+    box-shadow:
+        0 0 0 2px var(--bg-surface),
+        0 0 0 4px color-mix(in srgb, var(--color-orange-400) 55%, transparent);
+}
+
+/* Checkbox check-draw animation */
+.check-path {
+    stroke-dasharray: 36;
+    stroke-dashoffset: 36;
+    transition: stroke-dashoffset var(--duration-moderate) var(--ease-spring);
+}
+.checked .check-path {
+    stroke-dashoffset: 0;
+}
+
+/* Toggle thumb spring */
+.toggle-thumb {
+    transition:
+        transform var(--duration-moderate) var(--ease-spring),
+        background var(--duration-fast) var(--ease-standard);
+}
+
+/* Card tilt — attach JS mouse-move handler, set CSS vars */
+.card-tilt {
+    transform-style: preserve-3d;
+    transition: transform var(--duration-normal) var(--ease-standard);
+    transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRANSITION UTILITIES — LEGACY ALIASES (backwards compat)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/*
+ * Keep the original .transition-smooth shorthand working for all existing
+ * components while the new token-based classes are adopted progressively.
+ */
+.DELAY_1 {
+    transition: all 300ms var(--ease-standard) 75ms;
+}
+.DELAY_3 {
+    transition: all 500ms var(--ease-standard) 150ms;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.gpu {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* ─── Transparency toggle ────────────────────────────────────────────────── */
+/* Targets the data-transparency="off" attribute set by ThemeContext.         */
+/* Rule 1 — kill all backdrop-filter (Navbar, Drawer overlay, alerts, etc.)   */
+html[data-transparency="off"] *,
+html[data-transparency="off"] *::before,
+html[data-transparency="off"] *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+/* Rule 2 — kill the filter:blur that Modal.jsx adds to #root via blur-sm.    */
+/* This makes the toggle visibly work while a modal is open, because the      */
+/* blurred background the user sees comes from filter:blur on #root           */
+/* (a createPortal side-effect), not from backdrop-filter.                    */
+html[data-transparency="off"] #root {
+    filter: none !important;
+}

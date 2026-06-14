@@ -1,0 +1,201 @@
+"use strict";
+
+/**
+ * @fileoverview Security filter middleware.
+ * Blocks vulnerability scanning patterns, path traversal,
+ * script injection, and suspicious HTTP methods.
+ * Tracks suspicious IPs in-memory with auto-block after threshold.
+ */
+
+const { logger } = require("../../utils/logger");
+const { getStatusTitle } = require("../../constants/responses");
+const { middlewareMessages } = require("../../constants/messages/middleware.messages");
+
+class SecurityFilterMiddleware {
+  constructor(options = {}) {
+    this._maliciousPatterns = options.maliciousPatterns ?? [
+      /\/services$/,
+      /\/bea_wls_internal\//,
+      /\/weblogic\//,
+      /\/redfish\//,
+      /\/appliance\/avtrans/,
+      /\/dana-na\/auth/,
+      /\/Synchronization$/,
+      /\/webui\/auth/,
+      /\/rest\/api\/latest\/repos/,
+      /\/o\/docs\//,
+      /\/bin\/login\/XWiki/,
+      /\/bin\/get\/Main\/SolrSearch/,
+      /\/ws$/,
+      /\/Apriso\//,
+      /\/userRpm\//,
+      /\/adv_index\.htm/,
+      /\/hp\/device\//,
+      /_layouts\/15\//,
+      /\/core\/auth\/login\//,
+      /\/cli\/ws/,
+      /\/login\/login/,
+      /\.\.[/\\]/,
+      /\/\.\.\//,
+      /\\\.\\\./,
+      /<script>/i,
+      /<iframe>/i,
+      /javascript:/i,
+      /onerror=/i,
+      /onload=/i,
+      /\.asp$/i,
+      /\.aspx$/i,
+      /\.jsp$/i,
+      /\.cgi$/i,
+      /\.pl$/i,
+      /\.php$/i,
+      /\.cfm$/i,
+      /\.class$/i,
+      /\.jar$/i,
+      /\.nsf$/i,
+      /\.htm$/i,
+      /\/TiVoConnect/,
+      /\/NFuse\//,
+      /\/CCMAdmin\//,
+      /\/vncviewer\.jar/,
+      /\/robots\.txt/,
+      /\/level\/99\//,
+      /\/hb1\//,
+    ];
+
+    // _methodWhitelistedPaths: these paths are exempt from the blocked-method check only.
+    // Malicious pattern checking always runs regardless of path (H-05).
+    this._methodWhitelistedPaths = options.methodWhitelistedPaths ?? [
+      /^\/$/,
+      /^\/health$/,
+      /^\/api-docs/,
+    ];
+
+    this._blockedMethods =
+      options.blockedMethods ??
+      new Set(["TRACE", "TRACK", "PROPFIND", "SEARCH"]);
+
+    this._suspiciousIPs = new Map();
+    this._suspiciousThreshold = options.suspiciousThreshold ?? 10;
+    this._blockDurationMs = options.blockDurationMs ?? 60 * 60 * 1000;
+
+    // Cleanup stale entries every hour
+    this._cleanupTimer = setInterval(
+      () => {
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        for (const [ip, r] of this._suspiciousIPs) {
+          if (r.lastSeen < cutoff) this._suspiciousIPs.delete(ip);
+        }
+      },
+      60 * 60 * 1000,
+    );
+    if (this._cleanupTimer.unref) this._cleanupTimer.unref();
+
+    this.handle = this.handle.bind(this);
+  }
+
+  handle(req, res, next) {
+    const ip = req.ip || req.connection?.remoteAddress || "unknown";
+    const reqPath = req.path;
+    const method = req.method;
+
+    // Always check if IP is currently blocked (applies to all paths).
+    const record = this._suspiciousIPs.get(ip);
+    if (record && record.blockedUntil > Date.now()) {
+      logger.warning(middlewareMessages.IP_BLOCKED_SUSPICIOUS(ip, method, reqPath));
+      return res.status(403).json({
+        status: "error",
+        code: 403,
+        title: getStatusTitle(403),
+        message: "Forbidden",
+        error: { type: "ForbiddenError" },
+      });
+    }
+
+    // Blocked method check — skip only for health/root paths (not all /api/ paths).
+    const isMethodWhitelisted = this._methodWhitelistedPaths.some((p) => p.test(reqPath));
+    if (!isMethodWhitelisted && this._blockedMethods.has(method)) {
+      this._trackSuspiciousIP(ip);
+      logger.warning(middlewareMessages.HTTP_METHOD_BLOCKED(ip, method, reqPath));
+      return res.status(405).json({
+        status: "error",
+        code: 405,
+        title: getStatusTitle(405),
+        message: "Method Not Allowed",
+        error: { type: "MethodNotAllowed" },
+      });
+    }
+
+    // Malicious pattern check — always runs regardless of path (H-05).
+    if (this._maliciousPatterns.some((p) => p.test(reqPath))) {
+      this._trackSuspiciousIP(ip);
+      logger.warning(middlewareMessages.MALICIOUS_REQUEST_BLOCKED(ip, method, reqPath));
+      return res.status(404).json({
+        status: "error",
+        code: 404,
+        title: getStatusTitle(404),
+        message: "Not Found",
+        error: { type: "NotFound" },
+      });
+    }
+
+    next();
+  }
+
+  getStats() {
+    const now = Date.now();
+    const blocked = [];
+    const suspicious = [];
+
+    for (const [ip, r] of this._suspiciousIPs) {
+      if (r.blockedUntil > now) {
+        blocked.push({
+          ip,
+          count: r.count,
+          blockedUntil: new Date(r.blockedUntil).toISOString(),
+        });
+      } else if (r.count > 0) {
+        suspicious.push({
+          ip,
+          count: r.count,
+          lastSeen: new Date(r.lastSeen).toISOString(),
+        });
+      }
+    }
+
+    return {
+      totalTracked: this._suspiciousIPs.size,
+      blocked: blocked.length,
+      suspicious: suspicious.length,
+      blockedIPs: blocked,
+      suspiciousIPs: suspicious,
+    };
+  }
+
+  _trackSuspiciousIP(ip) {
+    const now = Date.now();
+    const record = this._suspiciousIPs.get(ip) || {
+      count: 0,
+      blockedUntil: 0,
+      lastSeen: now,
+    };
+
+    if (record.blockedUntil > now) return true;
+
+    record.count++;
+    record.lastSeen = now;
+
+    if (record.count >= this._suspiciousThreshold) {
+      record.blockedUntil = now + this._blockDurationMs;
+      logger.warning(middlewareMessages.SUSPICIOUS_IP_BLOCKED(ip, new Date(record.blockedUntil).toISOString()), {
+        requestCount: record.count,
+      });
+    }
+
+    this._suspiciousIPs.set(ip, record);
+    return record.blockedUntil > now;
+  }
+}
+
+const defaultSecurityFilter = new SecurityFilterMiddleware();
+module.exports = { SecurityFilterMiddleware, defaultSecurityFilter };

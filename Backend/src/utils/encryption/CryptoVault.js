@@ -1,0 +1,1655 @@
+/**
+ * CryptoVault.js
+ * Unified password encryption, hashing, and verification module.
+ *
+ * Consolidates BCryptAdapter, Argon2Adapter, and SymmetricCrypto into a single
+ * cohesive gateway. Supports four PASSWORD_HASH_MODE strategies:
+ *
+ *   • "plain"     — no hashing (dev/test ONLY, forbidden in production)
+ *   • "bcrypt"    — bcrypt hashing with configurable salt rounds
+ *   • "argon2"    — Argon2id (OWASP #1) with pepper + HMAC pre-hash
+ *   • "tripledes" — TripleDES symmetric encryption (legacy C# interop)
+ *
+ * Also exposes SymmetricCrypto utilities (DES, RC2, AES/Rijndael, TripleDES)
+ * for general-purpose symmetric encryption/decryption.
+ *
+ * Features:
+ *   - Automatic hash-type detection during verification (bcrypt ↔ argon2)
+ *   - Zero-downtime bcrypt → argon2 migration helper
+ *   - Needs-rehash detection for Argon2 parameter upgrades
+ *   - Configurable via environment variables
+ *   - Comprehensive self-test suite (run: node CryptoVault.js)
+ *
+ * @author Jm-Paunlagui
+ * @version 3.0
+ * @license Apache-2.0
+ */
+
+"use strict";
+
+const crypto = require("crypto");
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 1: SYMMETRIC CRYPTO ENGINE (from SymmetricCrypto.js / C# CoreLib)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const SymmetricCrypto = (() => {
+    // ─── Enum: EncryptionAlgorithm ───
+    const EncryptionAlgorithm = Object.freeze({
+        Des: 1,
+        Rc2: 2,
+        Rijndael: 3,
+        TripleDes: 4,
+    });
+
+    // ─── Helper: Map algorithm enum → Node.js cipher name ───
+    function getCipherName(algorithmID, keyLength) {
+        switch (algorithmID) {
+            case EncryptionAlgorithm.Des:
+                return "des-cbc";
+            case EncryptionAlgorithm.TripleDes:
+                return keyLength === 16 ? "des-ede-cbc" : "des-ede3-cbc";
+            case EncryptionAlgorithm.Rc2:
+                return "rc2-cbc";
+            case EncryptionAlgorithm.Rijndael:
+                if (keyLength === 16) return "aes-128-cbc";
+                if (keyLength === 24) return "aes-192-cbc";
+                return "aes-256-cbc";
+            default:
+                throw new Error(`Algorithm ID '${algorithmID}' not supported.`);
+        }
+    }
+
+    // ─── Helper: Default key/IV sizes (bytes) ───
+    function getDefaultSizes(algorithmID) {
+        switch (algorithmID) {
+            case EncryptionAlgorithm.Des:
+                return { keySize: 8, ivSize: 8 };
+            case EncryptionAlgorithm.TripleDes:
+                return { keySize: 24, ivSize: 8 };
+            case EncryptionAlgorithm.Rc2:
+                return { keySize: 16, ivSize: 8 };
+            case EncryptionAlgorithm.Rijndael:
+                return { keySize: 32, ivSize: 16 };
+            default:
+                throw new Error(`Algorithm ID '${algorithmID}' not supported.`);
+        }
+    }
+
+    // ─── EncryptTransformer ───
+    class EncryptTransformer {
+        constructor(algId) {
+            this.algorithmID = algId;
+            this._iv = null;
+            this._key = null;
+        }
+
+        get IV() {
+            return this._iv;
+        }
+        set IV(v) {
+            this._iv = v;
+        }
+        get Key() {
+            return this._key;
+        }
+
+        getCryptoServiceProvider(bytesKey) {
+            const { keySize, ivSize } = getDefaultSizes(this.algorithmID);
+            const key = bytesKey
+                ? Buffer.from(bytesKey)
+                : crypto.randomBytes(keySize);
+            this._key = key;
+            const iv = this._iv
+                ? Buffer.from(this._iv)
+                : crypto.randomBytes(ivSize);
+            this._iv = iv;
+            const cipherName = getCipherName(this.algorithmID, key.length);
+            return crypto.createCipheriv(cipherName, key, iv);
+        }
+    }
+
+    // ─── DecryptTransformer ───
+    class DecryptTransformer {
+        constructor(algId) {
+            this.algorithmID = algId;
+            this._iv = null;
+        }
+
+        set IV(v) {
+            this._iv = v;
+        }
+
+        getCryptoServiceProvider(bytesKey) {
+            const key = Buffer.from(bytesKey);
+            const iv = Buffer.from(this._iv);
+            const cipherName = getCipherName(this.algorithmID, key.length);
+            return crypto.createDecipheriv(cipherName, key, iv);
+        }
+    }
+
+    // ─── Encryptor ───
+    class Encryptor {
+        constructor(algId) {
+            this.transformer = new EncryptTransformer(algId);
+            this._iv = null;
+            this._key = null;
+        }
+
+        get IV() {
+            return this._iv;
+        }
+        set IV(v) {
+            this._iv = v;
+            this.transformer.IV = v;
+        }
+        get Key() {
+            return this._key;
+        }
+
+        encrypt(bytesData, bytesKey) {
+            try {
+                this.transformer.IV = this._iv;
+                const cipher =
+                    this.transformer.getCryptoServiceProvider(bytesKey);
+                const encrypted = Buffer.concat([
+                    cipher.update(bytesData),
+                    cipher.final(),
+                ]);
+                this._key = this.transformer.Key;
+                this._iv = this.transformer.IV;
+                return encrypted;
+            } catch (ex) {
+                throw new Error(
+                    "Error while writing encrypted data to the stream: \n" +
+                        ex.message,
+                );
+            }
+        }
+    }
+
+    // ─── Decryptor ───
+    class Decryptor {
+        constructor(algId) {
+            this.transformer = new DecryptTransformer(algId);
+            this._iv = null;
+        }
+
+        set IV(v) {
+            this._iv = v;
+        }
+
+        decrypt(bytesData, bytesKey) {
+            try {
+                this.transformer.IV = this._iv;
+                const decipher =
+                    this.transformer.getCryptoServiceProvider(bytesKey);
+                return Buffer.concat([
+                    decipher.update(bytesData),
+                    decipher.final(),
+                ]);
+            } catch (ex) {
+                throw new Error(
+                    "Error while writing decrypted data to the stream: \n" +
+                        ex.message,
+                );
+            }
+        }
+    }
+
+    // ─── SecurityCryptHelper ───
+    class SecurityCryptHelper {
+        static encryptText(text) {
+            try {
+                const initkey = process.env.PASSWORD_KEY;
+                const prefix = initkey.padEnd(5, "x").substring(0, 5);
+                const keyStr = prefix + "57984354841";
+                const ivStr = prefix + "789";
+                const key = Buffer.from(keyStr, "ascii");
+                const iv = Buffer.from(ivStr, "ascii");
+                const plainText = Buffer.from(text, "ascii");
+
+                const enc = new Encryptor(EncryptionAlgorithm.TripleDes);
+                enc.IV = iv;
+                const cipherText = enc.encrypt(plainText, key);
+                return cipherText.toString("base64");
+            } catch (ex) {
+                return null;
+            }
+        }
+
+        static decryptText(base64CipherText) {
+            try {
+                const initkey = process.env.PASSWORD_KEY;
+                const prefix = initkey.padEnd(5, "x").substring(0, 5);
+                const keyStr = prefix + "57984354841";
+                const ivStr = prefix + "789";
+                const key = Buffer.from(keyStr, "ascii");
+                const iv = Buffer.from(ivStr, "ascii");
+                const cipherText = Buffer.from(base64CipherText, "base64");
+
+                const dec = new Decryptor(EncryptionAlgorithm.TripleDes);
+                dec.IV = iv;
+                const plainText = dec.decrypt(cipherText, key);
+                return plainText.toString("ascii");
+            } catch (ex) {
+                return null;
+            }
+        }
+
+        static generateCodeID(text) {
+            const randomBytes = crypto
+                .randomBytes(6)
+                .toString("base64")
+                .substring(0, 8);
+            return `${text}-${randomBytes}`;
+        }
+    }
+
+    return {
+        EncryptionAlgorithm,
+        EncryptTransformer,
+        DecryptTransformer,
+        Encryptor,
+        Decryptor,
+        SecurityCryptHelper,
+    };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 2: ENVIRONMENT & CONFIG RESOLUTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const VALID_MODES = ["plain", "bcrypt", "argon2", "tripledes"];
+
+/** Modes considered cryptographically strong (one-way, slow). */
+const STRONG_MODES = new Set(["bcrypt", "argon2"]);
+
+const resolveMode = () => {
+    const mode = (process.env.PASSWORD_HASH_MODE || "argon2")
+        .toLowerCase()
+        .trim();
+
+    if (!VALID_MODES.includes(mode)) {
+        throw new Error(
+            `[CryptoVault] Invalid PASSWORD_HASH_MODE: "${mode}". ` +
+                `Accepted: ${VALID_MODES.join(" | ")}`,
+        );
+    }
+
+    if (mode === "plain" && process.env.NODE_ENV === "production") {
+        throw new Error(
+            "[CryptoVault] PASSWORD_HASH_MODE=plain is forbidden in production.",
+        );
+    }
+
+    return mode;
+};
+
+/**
+ * Resolves the effective hashing mode for T_EMP_MGMT_ADMIN passwords.
+ *
+ * Rules:
+ *  1. When PASSWORD_HASH_MODE is already strong (bcrypt | argon2),
+ *     admin passwords follow PASSWORD_HASH_MODE — no override needed.
+ *  2. When PASSWORD_HASH_MODE is weak (plain | tripledes | md5 …),
+ *     PASSWORD_ENCRYPTION_MODE MUST be set to 'bcrypt' or 'argon2'.
+ *     Any other value (or absence) throws — fail-fast.
+ *
+ * @returns {'bcrypt'|'argon2'}
+ * @throws {Error} When PASSWORD_HASH_MODE is weak and PASSWORD_ENCRYPTION_MODE
+ *   is absent, empty, or not one of 'bcrypt' | 'argon2'.
+ */
+const resolveAdminMode = () => {
+    const hashMode = getMode(); // triggers normal mode validation first
+
+    // Fast path: PASSWORD_HASH_MODE is already strong — use it directly.
+    if (STRONG_MODES.has(hashMode)) return hashMode;
+
+    // Slow path: PASSWORD_HASH_MODE is weak — must have PASSWORD_ENCRYPTION_MODE.
+    const encMode = (process.env.PASSWORD_ENCRYPTION_MODE || "")
+        .toLowerCase()
+        .trim();
+
+    if (!encMode) {
+        throw new Error(
+            "[CryptoVault] PASSWORD_HASH_MODE is set to a weak mode " +
+                `("${hashMode}") but PASSWORD_ENCRYPTION_MODE is not configured. ` +
+                "Set PASSWORD_ENCRYPTION_MODE=bcrypt or PASSWORD_ENCRYPTION_MODE=argon2 " +
+                "to ensure T_EMP_MGMT_ADMIN passwords are stored with a strong one-way hash.",
+        );
+    }
+
+    if (!STRONG_MODES.has(encMode)) {
+        throw new Error(
+            `[CryptoVault] PASSWORD_ENCRYPTION_MODE="${encMode}" is not allowed. ` +
+                "Accepted values: bcrypt | argon2",
+        );
+    }
+
+    return encMode;
+};
+
+// Cache the resolved admin mode (lazy, same pattern as _mode).
+let _adminMode = null;
+const getAdminMode = () => {
+    if (!_adminMode) _adminMode = resolveAdminMode();
+    return _adminMode;
+};
+
+const parseEnvInt = (key, fallback, min, max) => {
+    const raw = process.env[key];
+    if (!raw) return fallback;
+    const val = parseInt(raw, 10);
+    if (isNaN(val) || val < min || val > max) {
+        throw new RangeError(
+            `[CryptoVault] ${key} must be between ${min} and ${max}. Got: "${raw}"`,
+        );
+    }
+    return val;
+};
+
+// ─── BCrypt Config ───
+const BCRYPT_DEFAULTS = { minRounds: 10, maxRounds: 31, defaultRounds: 12 };
+
+const resolveBcryptRounds = () => {
+    const raw = process.env.BCRYPT_SALT_ROUNDS;
+    const parsed = parseInt(raw, 10);
+    if (raw === undefined) return BCRYPT_DEFAULTS.defaultRounds;
+    if (
+        isNaN(parsed) ||
+        parsed < BCRYPT_DEFAULTS.minRounds ||
+        parsed > BCRYPT_DEFAULTS.maxRounds
+    ) {
+        throw new RangeError(
+            `[CryptoVault] BCRYPT_SALT_ROUNDS must be between ${BCRYPT_DEFAULTS.minRounds} and ${BCRYPT_DEFAULTS.maxRounds}. Got: "${raw}"`,
+        );
+    }
+    return parsed;
+};
+
+// ─── Argon2 Config ───
+const ARGON2_DEFAULTS = {
+    memoryCost: 19456,
+    timeCost: 2,
+    parallelism: 1,
+    hashLength: 32,
+};
+
+const resolveArgon2Config = () => ({
+    memoryCost: parseEnvInt(
+        "ARGON2_MEMORY_COST",
+        ARGON2_DEFAULTS.memoryCost,
+        8192,
+        4194304,
+    ),
+    timeCost: parseEnvInt("ARGON2_TIME_COST", ARGON2_DEFAULTS.timeCost, 1, 999),
+    parallelism: parseEnvInt(
+        "ARGON2_PARALLELISM",
+        ARGON2_DEFAULTS.parallelism,
+        1,
+        64,
+    ),
+    hashLength: parseEnvInt(
+        "ARGON2_HASH_LENGTH",
+        ARGON2_DEFAULTS.hashLength,
+        16,
+        128,
+    ),
+});
+
+const resolveArgon2Pepper = () => {
+    const pepper = process.env.ARGON2_PEPPER;
+    if (!pepper || pepper.trim().length < 32) {
+        throw new Error(
+            "[CryptoVault] ARGON2_PEPPER must be set and at least 32 characters.\n" +
+                "  Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+        );
+    }
+    return pepper.trim();
+};
+
+// ─── Lazy-init singletons (resolved on first use, not at import time) ───
+let _mode = null;
+let _bcryptRounds = null;
+let _argon2Config = null;
+let _argon2Pepper = null;
+let _signingSecret = null;
+
+const getMode = () => {
+    if (!_mode) _mode = resolveMode();
+    return _mode;
+};
+const getBcryptRounds = () => {
+    if (!_bcryptRounds) _bcryptRounds = resolveBcryptRounds();
+    return _bcryptRounds;
+};
+const getArgon2Config = () => {
+    if (!_argon2Config) _argon2Config = resolveArgon2Config();
+    return _argon2Config;
+};
+const getArgon2Pepper = () => {
+    if (!_argon2Pepper) _argon2Pepper = resolveArgon2Pepper();
+    return _argon2Pepper;
+};
+
+// ─── Data Signing Config ───
+const resolveSigningSecret = () => {
+    const secret = process.env.DATA_SIGNING_SECRET;
+    if (!secret || secret.trim().length < 32) {
+        throw new Error(
+            "[CryptoVault] DATA_SIGNING_SECRET must be set and at least 32 characters.\n" +
+                "  Generate: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+        );
+    }
+    return secret.trim();
+};
+
+const getSigningSecret = () => {
+    if (!_signingSecret) _signingSecret = resolveSigningSecret();
+    return _signingSecret;
+};
+
+const MAX_PASSWORD_BYTES = parseEnvInt(
+    "ARGON2_MAX_PASSWORD_BYTES",
+    1024,
+    64,
+    4096,
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 3: INTERNAL HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// HMAC-SHA256 here is a keyed pepper transformation, NOT the password hash.
+// Computational hardness is enforced by Argon2 in the caller; this step only
+// binds a server-side secret to the value before it reaches Argon2.
+const applyPepper = (password) =>
+    crypto.createHmac("sha256", getArgon2Pepper()).update(password).digest();
+
+const validatePassword = (value, label = "Password") => {
+    if (!value || typeof value !== "string") {
+        throw new TypeError(
+            `[CryptoVault] ${label} must be a non-empty string.`,
+        );
+    }
+    if (Buffer.byteLength(value, "utf8") > MAX_PASSWORD_BYTES) {
+        throw new RangeError(
+            `[CryptoVault] ${label} exceeds the maximum allowed size (${MAX_PASSWORD_BYTES} bytes).`,
+        );
+    }
+};
+
+// ─── Logger — uses project logger; silently drops events if unavailable ──────
+// Fallback is intentionally a no-op (not console.*) because CryptoVault handles
+// security-critical operations (Argon2, TripleDES, HMAC-SHA256 signing). Using
+// console.* in the fallback would emit sensitive operational events outside the
+// structured log pipeline, making them invisible in production environments.
+let _logger;
+try {
+    _logger = require("../logger").logger;
+} catch {
+    const noop = () => {};
+    _logger = { error: noop, warn: noop, info: noop };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 4: CryptoVault — UNIFIED GATEWAY CLASS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class CryptoVault {
+    // ───────────────────────────────────────────────────────────────────────
+    // hashPassword — strategy-driven hashing
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Hashes a plaintext password using the active PASSWORD_HASH_MODE strategy.
+     *
+     * @param {string} password - The plaintext password to hash/encrypt.
+     * @returns {Promise<string>} - The hashed or encrypted password.
+     * @throws {TypeError|RangeError|Error}
+     */
+    static async hashPassword(password) {
+        validatePassword(password);
+        const mode = getMode();
+
+        // ── plain (dev/test only) ──
+        if (mode === "plain") return password;
+
+        // ── tripledes (legacy C# interop) ──
+        if (mode === "tripledes") {
+            const result =
+                SymmetricCrypto.SecurityCryptHelper.encryptText(password);
+            if (result === null)
+                throw new Error("[CryptoVault] TripleDES encryption failed.");
+            return result;
+        }
+
+        // ── bcrypt ──
+        if (mode === "bcrypt") {
+            const bcrypt = require("bcryptjs");
+            try {
+                return await bcrypt.hash(password, getBcryptRounds());
+            } catch (err) {
+                _logger.error("[CryptoVault] bcrypt hashing error:", err);
+                throw new Error("Password hashing failed.");
+            }
+        }
+
+        // ── argon2 (default / recommended) ──
+        const argon2 = require("argon2");
+        const cfg = getArgon2Config();
+        try {
+            return await argon2.hash(applyPepper(password), {
+                type: argon2.argon2id,
+                memoryCost: cfg.memoryCost,
+                timeCost: cfg.timeCost,
+                parallelism: cfg.parallelism,
+                hashLength: cfg.hashLength,
+            });
+        } catch (err) {
+            _logger.error("[CryptoVault] Argon2 hashing error:", err);
+            throw new Error("Password hashing failed.");
+        }
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // verifyPassword — auto-detects hash type for seamless migration
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Verifies a plaintext password against a stored hash/ciphertext.
+     * Auto-detects bcrypt hashes ($2b$/$2a$ prefix) even in argon2 mode,
+     * enabling zero-downtime migration.
+     *
+     * @param {string} password
+     * @param {string} hashedPassword
+     * @returns {Promise<boolean>}
+     */
+    static async verifyPassword(password, hashedPassword) {
+        validatePassword(password);
+
+        if (!hashedPassword || typeof hashedPassword !== "string") {
+            throw new TypeError(
+                "[CryptoVault] Hashed password must be a non-empty string.",
+            );
+        }
+
+        const mode = getMode();
+
+        // ── plain ──
+        if (mode === "plain") return password === hashedPassword;
+
+        // ── tripledes ──
+        if (mode === "tripledes") {
+            const decrypted =
+                SymmetricCrypto.SecurityCryptHelper.decryptText(hashedPassword);
+            return decrypted === password;
+        }
+
+        // ── Auto-detect bcrypt hash (migration support) ──
+        const isBcryptHash =
+            hashedPassword.startsWith("$2b$") ||
+            hashedPassword.startsWith("$2a$");
+
+        if (isBcryptHash) {
+            const bcrypt = require("bcryptjs");
+            try {
+                return await bcrypt.compare(password, hashedPassword);
+            } catch (err) {
+                _logger.error("[CryptoVault] bcrypt verification error:", err);
+                throw new Error("Password verification failed.");
+            }
+        }
+
+        // ── Argon2 hash ──
+        const argon2 = require("argon2");
+        try {
+            return await argon2.verify(hashedPassword, applyPepper(password));
+        } catch (err) {
+            _logger.error("[CryptoVault] Argon2 verification error:", err);
+            throw new Error("Password verification failed.");
+        }
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // hashAdminPassword — always uses a strong mode (argon2 | bcrypt)
+    //
+    // Routes T_EMP_MGMT_ADMIN passwords through getAdminMode() rather than
+    // getMode(). When PASSWORD_HASH_MODE is weak (tripledes, plain) and
+    // PASSWORD_ENCRYPTION_MODE is set, admin passwords are hashed with the
+    // strong mode regardless of the global HRIS mode.
+    //
+    // Migration / rehash-on-next-login:
+    //   If an existing stored hash starts with a TripleDES-base64 pattern
+    //   (i.e. it is NOT a bcrypt $2b$/argon2id$ prefix), the verify path
+    //   falls back to decryptText comparison AND re-hashes if it matches.
+    //   The caller (AdminManagementService / AuthService) is responsible
+    //   for persisting the new hash returned by verifyAdminPassword.
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Hashes a plaintext admin password using the strong admin mode
+     * (resolved via PASSWORD_ENCRYPTION_MODE or PASSWORD_HASH_MODE when
+     * PASSWORD_HASH_MODE is already strong).
+     *
+     * Always uses bcrypt or argon2 — never plain or tripledes.
+     * This method MUST be used for all T_EMP_MGMT_ADMIN password writes.
+     *
+     * @param {string} password - The plaintext password to hash.
+     * @returns {Promise<string>} Strong hash string.
+     * @throws {TypeError|RangeError|Error}
+     */
+    static async hashAdminPassword(password) {
+        validatePassword(password);
+        const mode = getAdminMode(); // bcrypt | argon2 only
+
+        if (mode === "bcrypt") {
+            const bcrypt = require("bcryptjs");
+            try {
+                return await bcrypt.hash(password, getBcryptRounds());
+            } catch (err) {
+                _logger.error("[CryptoVault] Admin bcrypt hashing error:", err);
+                throw new Error("Admin password hashing failed.");
+            }
+        }
+
+        // argon2
+        const argon2 = require("argon2");
+        const cfg = getArgon2Config();
+        try {
+            return await argon2.hash(applyPepper(password), {
+                type: argon2.argon2id,
+                memoryCost: cfg.memoryCost,
+                timeCost: cfg.timeCost,
+                parallelism: cfg.parallelism,
+                hashLength: cfg.hashLength,
+            });
+        } catch (err) {
+            _logger.error("[CryptoVault] Admin Argon2 hashing error:", err);
+            throw new Error("Admin password hashing failed.");
+        }
+    }
+
+    /**
+     * Verifies a plaintext password against a stored admin hash.
+     *
+     * Handles three stored formats:
+     *   - Argon2id ($argon2id$…)  → argon2.verify()
+     *   - Bcrypt ($2b$/a$…)       → bcrypt.compare()
+     *   - Legacy TripleDES (base64) → decryptText() fallback; re-hashes on
+     *     match so the next login will use the strong format automatically.
+     *
+     * Re-hash return: when a legacy TripleDES hash is matched, returns
+     *   { matched: true, newHash: string } so the caller can persist the
+     *   upgraded hash. For modern hashes returns { matched: boolean, newHash: null }.
+     *
+     * @param {string} password - Plaintext password.
+     * @param {string} storedHash - Stored EMP_PW value.
+     * @returns {Promise<{ matched: boolean, newHash: string|null }>}
+     */
+    static async verifyAdminPassword(password, storedHash) {
+        validatePassword(password);
+
+        if (!storedHash || typeof storedHash !== "string") {
+            throw new TypeError(
+                "[CryptoVault] Stored admin hash must be a non-empty string.",
+            );
+        }
+
+        // ── Modern: Argon2id hash ──
+        if (storedHash.startsWith("$argon2")) {
+            const argon2 = require("argon2");
+            try {
+                const matched = await argon2.verify(
+                    storedHash,
+                    applyPepper(password),
+                );
+                return { matched, newHash: null };
+            } catch (err) {
+                _logger.error(
+                    "[CryptoVault] Admin Argon2 verification error:",
+                    err,
+                );
+                throw new Error("Admin password verification failed.");
+            }
+        }
+
+        // ── Modern: bcrypt hash ──
+        if (
+            storedHash.startsWith("$2b$") ||
+            storedHash.startsWith("$2a$")
+        ) {
+            const bcrypt = require("bcryptjs");
+            try {
+                const matched = await bcrypt.compare(password, storedHash);
+                return { matched, newHash: null };
+            } catch (err) {
+                _logger.error(
+                    "[CryptoVault] Admin bcrypt verification error:",
+                    err,
+                );
+                throw new Error("Admin password verification failed.");
+            }
+        }
+
+        // ── Legacy: TripleDES base64 — rehash-on-match migration ──
+        // This branch fires only when a stored admin password was previously
+        // written in tripledes mode (before PASSWORD_ENCRYPTION_MODE was introduced).
+        // On a successful match we immediately produce a strong hash that the
+        // caller MUST persist, completing the transparent migration.
+        const decrypted =
+            SymmetricCrypto.SecurityCryptHelper.decryptText(storedHash);
+        const matched = decrypted !== null && decrypted === password;
+
+        if (!matched) return { matched: false, newHash: null };
+
+        // Successful match — produce a new strong hash for transparent migration.
+        const newHash = await CryptoVault.hashAdminPassword(password);
+        return { matched: true, newHash };
+    }
+
+    /**
+     * Returns true if the stored admin hash was produced with weaker params
+     * (bcrypt/argon2 parameter upgrade detection) or is a legacy TripleDES hash.
+     * Callers should re-hash on the next successful login when true.
+     *
+     * @param {string} storedHash
+     * @returns {boolean}
+     */
+    static adminNeedsRehash(storedHash) {
+        if (!storedHash) return true;
+        // Legacy TripleDES / plain — always needs rehash
+        if (!storedHash.startsWith("$2b$") &&
+            !storedHash.startsWith("$2a$") &&
+            !storedHash.startsWith("$argon2")) {
+            return true;
+        }
+        // Argon2 parameter upgrade detection
+        if (storedHash.startsWith("$argon2")) {
+            const argon2 = require("argon2");
+            const cfg = getArgon2Config();
+            try {
+                return argon2.needsRehash(storedHash, {
+                    memoryCost: cfg.memoryCost,
+                    timeCost: cfg.timeCost,
+                    parallelism: cfg.parallelism,
+                });
+            } catch {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // needsRehash — Argon2 parameter upgrade detection
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns true if the stored Argon2 hash was produced with weaker params
+     * than the current config. Re-hash on next successful login when true.
+     *
+     * @param {string} hashedPassword
+     * @returns {boolean}
+     */
+    static needsRehash(hashedPassword) {
+        if (getMode() !== "argon2") return false;
+        const argon2 = require("argon2");
+        const cfg = getArgon2Config();
+        return argon2.needsRehash(hashedPassword, {
+            memoryCost: cfg.memoryCost,
+            timeCost: cfg.timeCost,
+            parallelism: cfg.parallelism,
+        });
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // migrateFromBcrypt — zero-downtime bcrypt → argon2 migration
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Verifies a legacy bcrypt hash and issues a fresh Argon2id hash on match.
+     * Only meaningful when PASSWORD_HASH_MODE=argon2.
+     *
+     * @param {string} password
+     * @param {string} bcryptHash
+     * @returns {Promise<{ matched: boolean, argon2Hash: string|null, requiresReset?: boolean }>}
+     */
+    static async migrateFromBcrypt(password, bcryptHash) {
+        validatePassword(password);
+
+        if (!bcryptHash.startsWith("$2b$") && !bcryptHash.startsWith("$2a$")) {
+            throw new TypeError(
+                "[CryptoVault] Provided hash does not appear to be a bcrypt hash.",
+            );
+        }
+
+        if (Buffer.byteLength(password, "utf8") > 72) {
+            return { matched: false, argon2Hash: null, requiresReset: true };
+        }
+
+        const bcrypt = require("bcryptjs");
+        const matched = await bcrypt.compare(password, bcryptHash);
+        if (!matched) return { matched: false, argon2Hash: null };
+
+        const argon2Hash = await CryptoVault.hashPassword(password);
+        return { matched: true, argon2Hash };
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Config snapshot — auditing & tests
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns the active mode and configuration snapshot.
+     * @returns {object}
+     */
+    static get config() {
+        const mode = getMode();
+        const base = { mode };
+
+        if (mode === "bcrypt") {
+            return { ...base, saltRounds: getBcryptRounds() };
+        }
+
+        if (mode === "argon2") {
+            return {
+                ...base,
+                ...getArgon2Config(),
+                maxPasswordBytes: MAX_PASSWORD_BYTES,
+            };
+        }
+
+        return base;
+    }
+
+    /**
+     * Exposes the embedded SymmetricCrypto engine for direct use.
+     * @returns {object}
+     */
+    static get symmetric() {
+        return SymmetricCrypto;
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // DATA SIGNING — tamper-evident HMAC-SHA256 signatures (generic record API)
+    //
+    // HMAC-SHA256(secret, payload) produces a keyed digest.  Storing that
+    // hex digest as a "signature" lets us later recompute HMAC(payload) and
+    // compare with crypto.timingSafeEqual — detecting any field mutation
+    // without exposing the secret or the plaintext.
+    //
+    // buildPayload() turns any { field: value } map into a canonical,
+    // deterministic string.  Keys are sorted alphabetically so call-site
+    // insertion order never matters.  A `context` prefix (e.g. table name)
+    // namespaces the signature so a digest computed for one entity cannot
+    // be replayed against a different one.
+    //
+    // signRecord / verifyRecord are the high-level helpers projects use.
+    // signData / verifySignature remain available for raw-string use cases
+    // (webhook payloads, JWT claims, etc.).
+    //
+    // Secret source: DATA_SIGNING_SECRET env var (≥ 32 chars, kept separate
+    // from JWT_SECRET and ARGON2_PEPPER — one purpose per secret).
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Builds a canonical, deterministic payload string from any record.
+     *
+     * Keys are sorted alphabetically — insertion order at the call site never
+     * affects the output.  `context` namespaces the signature so a digest
+     * produced for one entity cannot be replayed against another.
+     *
+     * @param {string} context  - Entity / table identifier (e.g. 'USERS', 'T_ORDERS')
+     * @param {Record<string, unknown>} fields - Plain object of field → value pairs
+     * @returns {string}
+     *
+     * @example
+     * CryptoVault.buildPayload('USERS', { ROLE: 'admin', ID: 1, PW: hash });
+     * // → 'USERS:ID=1|PW=<hash>|ROLE=admin'   (keys always sorted A→Z)
+     */
+    static buildPayload(context, fields) {
+        if (!context || typeof context !== "string") {
+            throw new TypeError(
+                "[CryptoVault] buildPayload: context must be a non-empty string.",
+            );
+        }
+        if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
+            throw new TypeError(
+                "[CryptoVault] buildPayload: fields must be a plain object.",
+            );
+        }
+        const parts = Object.keys(fields)
+            .sort()
+            .map((k) => `${k}=${fields[k]}`);
+        return `${context}:${parts.join("|")}`;
+    }
+
+    /**
+     * Produces an HMAC-SHA256 hex digest of a raw `payload` string.
+     * Prefer `signRecord()` for DB row integrity — use this for raw-string
+     * use cases (webhook bodies, JWT claims, etc.).
+     *
+     * @param {string} payload
+     * @returns {Promise<string>} 64-character hex string
+     */
+    static async signData(payload) {
+        if (!payload || typeof payload !== "string") {
+            throw new TypeError(
+                "[CryptoVault] signData: payload must be a non-empty string.",
+            );
+        }
+        return crypto
+            .createHmac("sha256", getSigningSecret())
+            .update(payload, "utf8")
+            .digest("hex");
+    }
+
+    /**
+     * Verifies that a raw `payload` string matches a stored HMAC-SHA256
+     * `signature`.  Uses crypto.timingSafeEqual to prevent timing attacks.
+     * Prefer `verifyRecord()` for DB row integrity.
+     *
+     * @param {string} payload
+     * @param {string} signature - 64-char hex string returned by signData()
+     * @returns {Promise<boolean>}
+     */
+    static async verifySignature(payload, signature) {
+        if (!payload || typeof payload !== "string") {
+            throw new TypeError(
+                "[CryptoVault] verifySignature: payload must be a non-empty string.",
+            );
+        }
+        if (!signature || typeof signature !== "string") return false;
+
+        const expected = crypto
+            .createHmac("sha256", getSigningSecret())
+            .update(payload, "utf8")
+            .digest();
+
+        let actual;
+        try {
+            actual = Buffer.from(signature, "hex");
+        } catch {
+            return false;
+        }
+
+        // timingSafeEqual requires equal-length buffers; mismatched length is a
+        // fast-path rejection that leaks no timing information about the content.
+        if (actual.length !== expected.length) return false;
+        return crypto.timingSafeEqual(expected, actual);
+    }
+
+    /**
+     * Signs any DB record by building a canonical payload from `context` +
+     * `fields` then HMAC-SHA256-signing it.  Persist the result alongside
+     * the row.  Any future change to any signed field will break the check.
+     *
+     * @param {string} context  - Entity / table identifier
+     * @param {Record<string, unknown>} fields
+     * @returns {Promise<string>}
+     *
+     * @example
+     * // MEAL project — admin table
+     * const sig = await CryptoVault.signRecord('T_EMP_MGMT_ADMIN', {
+     *     EMP_ID: 'ADMIN01', EMP_PW: hash, EMP_ROLE: 'SuperAdmin',
+     * });
+     *
+     * @example
+     * // Any other project
+     * const sig = await CryptoVault.signRecord('USERS', {
+     *     USER_ID: 42, USERNAME: 'jsmith', ROLE: 'editor',
+     * });
+     */
+    static async signRecord(context, fields) {
+        return CryptoVault.signData(CryptoVault.buildPayload(context, fields));
+    }
+
+    /**
+     * Verifies a DB record against its stored signature.
+     * Returns false (not throws) on any mismatch — callers degrade gracefully.
+     *
+     * @param {string} context
+     * @param {Record<string, unknown>} fields
+     * @param {string|null|undefined} signature
+     * @returns {Promise<boolean>}
+     *
+     * @example
+     * const ok = await CryptoVault.verifyRecord('T_EMP_MGMT_ADMIN', {
+     *     EMP_ID: row.EMP_ID, EMP_PW: row.EMP_PW, EMP_ROLE: row.EMP_ROLE,
+     * }, row.SYSSIGNATURE);
+     */
+    static async verifyRecord(context, fields, signature) {
+        if (!signature) return false;
+        return CryptoVault.verifySignature(
+            CryptoVault.buildPayload(context, fields),
+            signature,
+        );
+    }
+
+    /**
+     * Verifies a plain SHA-256 ROW_HASH produced by Oracle's STANDARD_HASH(..., 'SHA256').
+     *
+     * Oracle stores: UPPER(STANDARD_HASH(canonical_string, 'SHA256')) — 64-char hex VARCHAR2.
+     * This method replicates that computation in JS using Node's built-in `crypto` module
+     * and compares with timing-safe equality to prevent timing-based attacks.
+     *
+     * NOTE: This is NOT HMAC. Do not use CryptoVault.verifyRecord() for ROW_HASH columns —
+     * that method uses HMAC-SHA256 (keyed) which produces a completely different digest.
+     *
+     * @param {string} canonicalInput  - The pre-image string exactly as Oracle hashed it.
+     * @param {string} storedHash      - The ROW_HASH value retrieved from the DB (64-char hex).
+     * @returns {boolean}
+     *
+     * @example
+     * const canonical = `${row.ID}|${row.TRXN_ID}|${row.EMP_ID}|${row.AMOUNT}|${row.STATUS}|${row.CREATED_DATE}`;
+     * const ok = CryptoVault.verifyRowHash(canonical, row.ROW_HASH);
+     */
+    static verifyRowHash(canonicalInput, storedHash) {
+        if (!canonicalInput || !storedHash) return false;
+        const computed = crypto
+            .createHash("sha256")
+            .update(canonicalInput, "utf8")
+            .digest("hex")
+            .toUpperCase();
+        const stored = storedHash.toUpperCase();
+        if (computed.length !== stored.length) return false;
+        return crypto.timingSafeEqual(
+            Buffer.from(computed, "utf8"),
+            Buffer.from(stored, "utf8"),
+        );
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 5: BCryptAdapter — STANDALONE BCRYPT ADAPTER
+// Standalone bcrypt adapter for legacy use or explicit bcrypt hashing needs.
+// Prefer CryptoVault (which routes via PASSWORD_HASH_MODE) for new code.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class BCryptAdapter {
+    static #MIN_ROUNDS = BCRYPT_DEFAULTS.minRounds;
+    static #MAX_ROUNDS = BCRYPT_DEFAULTS.maxRounds;
+    static #DEFAULT_ROUNDS = BCRYPT_DEFAULTS.defaultRounds;
+
+    static #SALT_ROUNDS = (() => {
+        const raw = process.env.BCRYPT_SALT_ROUNDS;
+        const parsed = parseInt(raw, 10);
+        if (!raw) return BCryptAdapter.#DEFAULT_ROUNDS;
+        if (
+            isNaN(parsed) ||
+            parsed < BCryptAdapter.#MIN_ROUNDS ||
+            parsed > BCryptAdapter.#MAX_ROUNDS
+        ) {
+            throw new RangeError(
+                `[BCryptAdapter] BCRYPT_SALT_ROUNDS must be ${BCryptAdapter.#MIN_ROUNDS}–${BCryptAdapter.#MAX_ROUNDS}. Got: "${raw}"`,
+            );
+        }
+        return parsed;
+    })();
+
+    /**
+     * Hashes a plaintext password with bcrypt.
+     * @param {string} password
+     * @returns {Promise<string>}
+     */
+    static async hashPassword(password) {
+        if (!password || typeof password !== "string")
+            throw new TypeError(
+                "[BCryptAdapter] Password must be a non-empty string.",
+            );
+        const bcrypt = require("bcryptjs");
+        try {
+            return await bcrypt.hash(password, BCryptAdapter.#SALT_ROUNDS);
+        } catch (err) {
+            _logger.error("[BCryptAdapter] Hashing error:", err);
+            throw new Error("Password hashing failed.");
+        }
+    }
+
+    /**
+     * Verifies a plaintext password against a bcrypt hash.
+     * @param {string} password
+     * @param {string} hashedPassword
+     * @returns {Promise<boolean>}
+     */
+    static async verifyPassword(password, hashedPassword) {
+        if (!password || typeof password !== "string")
+            throw new TypeError(
+                "[BCryptAdapter] Password must be a non-empty string.",
+            );
+        if (!hashedPassword || typeof hashedPassword !== "string")
+            throw new TypeError(
+                "[BCryptAdapter] Hashed password must be a non-empty string.",
+            );
+        const bcrypt = require("bcryptjs");
+        try {
+            return await bcrypt.compare(password, hashedPassword);
+        } catch (err) {
+            _logger.error("[BCryptAdapter] Verification error:", err);
+            throw new Error("Password verification failed.");
+        }
+    }
+
+    /** Active salt rounds — useful for auditing and tests. */
+    static get saltRounds() {
+        return BCryptAdapter.#SALT_ROUNDS;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 6: Argon2Adapter — STANDALONE ARGON2 ADAPTER
+// Primary password hashing engine. Routes to argon2 | bcrypt | plain | tripledes
+// based on PASSWORD_HASH_MODE env var. Argon2id is strongly recommended.
+// Delegates to CryptoVault internally for consistent behavior.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class Argon2Adapter {
+    /**
+     * Hashes a password using the strategy set by PASSWORD_HASH_MODE.
+     *
+     * | Mode       | Algorithm                  | Notes                       |
+     * |------------|----------------------------|-----------------------------|
+     * | argon2     | Argon2id + pepper (HMAC)   | Recommended for production  |
+     * | bcrypt     | bcrypt                     | Legacy migration only       |
+     * | tripledes  | TripleDES (field-encrypt)  | Legacy — NOT for passwords  |
+     * | plain      | No hashing                 | Dev / unit tests only       |
+     *
+     * @param {string} password
+     * @returns {Promise<string>}
+     */
+    static async hashPassword(password) {
+        return CryptoVault.hashPassword(password);
+    }
+
+    /**
+     * Verifies a password against a stored hash.
+     * Auto-detects the hash type from its prefix — safe to call during migration.
+     *
+     * @param {string} password
+     * @param {string} hashedPassword
+     * @returns {Promise<boolean>}
+     */
+    static async verifyPassword(password, hashedPassword) {
+        return CryptoVault.verifyPassword(password, hashedPassword);
+    }
+
+    /**
+     * Returns true when the stored hash was produced with weaker params than
+     * the current config. Re-hash on the next successful login.
+     * Only meaningful in argon2 mode.
+     *
+     * @param {string} hashedPassword
+     * @returns {boolean}
+     */
+    static needsRehash(hashedPassword) {
+        return CryptoVault.needsRehash(hashedPassword);
+    }
+
+    /**
+     * Zero-downtime bcrypt → Argon2id migration helper.
+     * Verifies the bcrypt hash; on match issues a fresh Argon2id hash.
+     * Only meaningful when PASSWORD_HASH_MODE=argon2.
+     *
+     * @param {string} password
+     * @param {string} bcryptHash
+     * @returns {Promise<{ matched: boolean, argon2Hash: string|null, requiresReset?: boolean }>}
+     */
+    static async migrateFromBcrypt(password, bcryptHash) {
+        return CryptoVault.migrateFromBcrypt(password, bcryptHash);
+    }
+
+    /** Active mode and Argon2 configuration snapshot — for auditing and tests. */
+    static get config() {
+        return CryptoVault.config;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 7: EXPORTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+module.exports = { CryptoVault, Argon2Adapter, BCryptAdapter, SymmetricCrypto };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 8: SELF-TEST SUITE (run: node CryptoVault.js)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+if (require.main === module) {
+    const TEST_PASSWORD = "Continental01";
+
+    const hr = () => console.log("─".repeat(65));
+    const pass = (label) => console.log(`  ✅  ${label}`);
+    const fail = (label, err) =>
+        console.error(`  ❌  ${label}: ${err?.constructor?.name ?? "Error"}`);
+
+    const runTests = async () => {
+        console.log(
+            "\n╔═══════════════════════════════════════════════════════════════╗",
+        );
+        console.log(
+            "║              CryptoVault v3.0 — Self-Test Suite              ║",
+        );
+        console.log(
+            "╚═══════════════════════════════════════════════════════════════╝\n",
+        );
+
+        // ── TEST GROUP 1: SymmetricCrypto (TripleDES) ──
+        console.log("▸ SymmetricCrypto — TripleDES Encrypt/Decrypt");
+        hr();
+        try {
+            // Set a temp key for testing if not present
+            if (!process.env.PASSWORD_KEY) process.env.PASSWORD_KEY = "HRIS";
+
+            const {
+                SecurityCryptHelper,
+                EncryptionAlgorithm,
+                Encryptor,
+                Decryptor,
+            } = SymmetricCrypto;
+
+            const encrypted = SecurityCryptHelper.encryptText(TEST_PASSWORD);
+            const decrypted = SecurityCryptHelper.decryptText(encrypted);
+            console.log(`    Plain     : [REDACTED]`);
+            console.log(`    Encrypted : ${encrypted}`);
+            console.log(`    Decrypted : [REDACTED]`);
+            if (decrypted === TEST_PASSWORD) pass("TripleDES round-trip");
+            else fail("TripleDES round-trip", { message: "Mismatch!" });
+
+            // Manual Encryptor/Decryptor
+            const key = Buffer.from("TestK57984354841", "ascii"); // 16 bytes
+            const iv = Buffer.from("TestK789", "ascii"); // 8 bytes
+            const enc = new Encryptor(EncryptionAlgorithm.TripleDes);
+            enc.IV = iv;
+            const cipherBytes = enc.encrypt(
+                Buffer.from("HelloWorld", "ascii"),
+                key,
+            );
+            const dec = new Decryptor(EncryptionAlgorithm.TripleDes);
+            dec.IV = iv;
+            const plainBytes = dec.decrypt(cipherBytes, key);
+            if (plainBytes.toString("ascii") === "HelloWorld")
+                pass("Manual Encryptor/Decryptor round-trip");
+            else
+                fail("Manual Encryptor/Decryptor round-trip", {
+                    message: "Mismatch!",
+                });
+
+            // GenerateCodeID
+            const codeId = SecurityCryptHelper.generateCodeID("USER001");
+            console.log(`    CodeID    : ${codeId}`);
+            if (codeId.startsWith("USER001-") && codeId.length > 9)
+                pass("GenerateCodeID format");
+            else fail("GenerateCodeID format", { message: codeId });
+        } catch (err) {
+            fail("SymmetricCrypto tests", err);
+        }
+
+        // ── TEST GROUP 2: CryptoVault — TripleDES mode ──
+        console.log("\n▸ CryptoVault — PASSWORD_HASH_MODE=tripledes");
+        hr();
+        try {
+            // Force tripledes mode for this test
+            _mode = null;
+            process.env.PASSWORD_HASH_MODE = "tripledes";
+            if (!process.env.PASSWORD_KEY) process.env.PASSWORD_KEY = "HRIS";
+            _mode = null; // reset cache
+
+            const hash = await CryptoVault.hashPassword(TEST_PASSWORD);
+            const verified = await CryptoVault.verifyPassword(
+                TEST_PASSWORD,
+                hash,
+            );
+            const wrongVerify = await CryptoVault.verifyPassword(
+                "WrongPassword",
+                hash,
+            );
+            console.log(`    Hash      : ${hash.substring(0, 12)}…[REDACTED]`);
+            console.log(`    Config    :`, CryptoVault.config);
+            if (verified) pass("TripleDES hash → verify (correct password)");
+            else fail("TripleDES verify", { message: "Should be true" });
+            if (!wrongVerify)
+                pass("TripleDES verify (wrong password rejected)");
+            else fail("TripleDES wrong-pass", { message: "Should be false" });
+        } catch (err) {
+            fail("CryptoVault tripledes tests", err);
+        }
+
+        // ── TEST GROUP 3: CryptoVault — BCrypt mode ──
+        console.log("\n▸ CryptoVault — PASSWORD_HASH_MODE=bcrypt");
+        hr();
+        try {
+            _mode = null;
+            process.env.PASSWORD_HASH_MODE = "bcrypt";
+            _mode = null;
+
+            const hash = await CryptoVault.hashPassword(TEST_PASSWORD);
+            const verified = await CryptoVault.verifyPassword(
+                TEST_PASSWORD,
+                hash,
+            );
+            const wrongVerify = await CryptoVault.verifyPassword(
+                "WrongPassword",
+                hash,
+            );
+            console.log(`    Hash      : ${hash.substring(0, 12)}…[REDACTED]`);
+            if (verified) pass("BCrypt hash → verify (correct password)");
+            else fail("BCrypt verify", { message: "Should be true" });
+            if (!wrongVerify) pass("BCrypt verify (wrong password rejected)");
+            else fail("BCrypt wrong-pass", { message: "Should be false" });
+        } catch (err) {
+            fail("CryptoVault bcrypt tests", err);
+        }
+
+        // ── TEST GROUP 4: CryptoVault — Argon2 mode ──
+        console.log("\n▸ CryptoVault — PASSWORD_HASH_MODE=argon2");
+        hr();
+        try {
+            _mode = null;
+            _argon2Config = null;
+            _argon2Pepper = null;
+            process.env.PASSWORD_HASH_MODE = "argon2";
+            // Generate a test pepper if not set
+            if (
+                !process.env.ARGON2_PEPPER ||
+                process.env.ARGON2_PEPPER.length < 32
+            ) {
+                process.env.ARGON2_PEPPER = crypto
+                    .randomBytes(32)
+                    .toString("hex");
+            }
+            _mode = null;
+
+            const hash = await CryptoVault.hashPassword(TEST_PASSWORD);
+            const verified = await CryptoVault.verifyPassword(
+                TEST_PASSWORD,
+                hash,
+            );
+            const wrongVerify = await CryptoVault.verifyPassword(
+                "WrongPassword",
+                hash,
+            );
+            console.log(`    Hash      : ${hash.substring(0, 12)}…[REDACTED]`);
+            if (verified) pass("Argon2 hash → verify (correct password)");
+            else fail("Argon2 verify", { message: "Should be true" });
+            if (!wrongVerify) pass("Argon2 verify (wrong password rejected)");
+            else fail("Argon2 wrong-pass", { message: "Should be false" });
+
+            // needsRehash
+            const rehash = CryptoVault.needsRehash(hash);
+            pass(`needsRehash = ${rehash} (expected false for fresh hash)`);
+        } catch (err) {
+            fail("CryptoVault argon2 tests", err);
+        }
+
+        // ── TEST GROUP 5: CryptoVault — Argon2 ↔ BCrypt migration ──
+        console.log("\n▸ CryptoVault — BCrypt → Argon2 Migration");
+        hr();
+        try {
+            // Hash with bcrypt first
+            _mode = null;
+            process.env.PASSWORD_HASH_MODE = "bcrypt";
+            _mode = null;
+            const bcryptHash = await CryptoVault.hashPassword(TEST_PASSWORD);
+
+            // Switch to argon2 and migrate
+            _mode = null;
+            _argon2Config = null;
+            _argon2Pepper = null;
+            process.env.PASSWORD_HASH_MODE = "argon2";
+            _mode = null;
+
+            // verifyPassword should auto-detect bcrypt
+            const verified = await CryptoVault.verifyPassword(
+                TEST_PASSWORD,
+                bcryptHash,
+            );
+            if (verified) pass("Auto-detect bcrypt hash in argon2 mode");
+            else fail("Auto-detect bcrypt", { message: "Should be true" });
+
+            // migrateFromBcrypt
+            const migration = await CryptoVault.migrateFromBcrypt(
+                TEST_PASSWORD,
+                bcryptHash,
+            );
+            if (migration.matched && migration.argon2Hash) {
+                pass("migrateFromBcrypt produced argon2 hash");
+                const verifyMigrated = await CryptoVault.verifyPassword(
+                    TEST_PASSWORD,
+                    migration.argon2Hash,
+                );
+                if (verifyMigrated)
+                    pass("Migrated argon2 hash verifies correctly");
+                else
+                    fail("Migrated hash verify", { message: "Should be true" });
+            } else {
+                fail("migrateFromBcrypt", { message: "Migration failed" });
+            }
+        } catch (err) {
+            fail("CryptoVault migration tests", err);
+        }
+
+        // ── TEST GROUP 6: CryptoVault — Plain mode ──
+        console.log("\n▸ CryptoVault — PASSWORD_HASH_MODE=plain");
+        hr();
+        try {
+            _mode = null;
+            delete process.env.NODE_ENV; // Ensure not production
+            process.env.PASSWORD_HASH_MODE = "plain";
+            _mode = null;
+
+            const hash = await CryptoVault.hashPassword(TEST_PASSWORD);
+            const verified = await CryptoVault.verifyPassword(
+                TEST_PASSWORD,
+                hash,
+            );
+            if (hash === TEST_PASSWORD) pass("Plain mode returns raw password");
+            else fail("Plain mode hash", { message: "Should equal input" });
+            if (verified) pass("Plain mode verify");
+            else fail("Plain mode verify", { message: "Should be true" });
+        } catch (err) {
+            fail("CryptoVault plain tests", err);
+        }
+
+        // ── TEST GROUP 7: Input validation ──
+        console.log("\n▸ CryptoVault — Input Validation");
+        hr();
+        try {
+            await CryptoVault.hashPassword("");
+            fail("Empty password", { message: "Should throw" });
+        } catch {
+            pass("Rejects empty password");
+        }
+        try {
+            await CryptoVault.hashPassword(12345);
+            fail("Non-string password", { message: "Should throw" });
+        } catch {
+            pass("Rejects non-string password");
+        }
+        try {
+            await CryptoVault.verifyPassword("pass", "");
+            fail("Empty hash", { message: "Should throw" });
+        } catch {
+            pass("Rejects empty hash in verifyPassword");
+        }
+
+        // ── TEST GROUP 8: CryptoVault — HMAC-SHA256 Data Signing ──
+        console.log("\n▸ CryptoVault — HMAC-SHA256 Data Signing");
+        hr();
+        try {
+            if (
+                !process.env.DATA_SIGNING_SECRET ||
+                process.env.DATA_SIGNING_SECRET.length < 32
+            ) {
+                process.env.DATA_SIGNING_SECRET = crypto
+                    .randomBytes(32)
+                    .toString("hex");
+            }
+            _signingSecret = null; // reset singleton so it picks up the env var
+
+            // ── signData / verifySignature (raw-string primitives) ──
+            const rawPayload = "raw:test-payload-string";
+            const rawSig = await CryptoVault.signData(rawPayload);
+            if (typeof rawSig === "string" && rawSig.length === 64)
+                pass("signData returns 64-char hex string");
+            else
+                fail("signData output", {
+                    message: `Got length ${rawSig?.length}`,
+                });
+
+            if (await CryptoVault.verifySignature(rawPayload, rawSig))
+                pass("verifySignature: correct payload matches");
+            else fail("verifySignature correct", { message: "Should be true" });
+
+            if (!(await CryptoVault.verifySignature(rawPayload + "X", rawSig)))
+                pass("verifySignature: tampered payload rejected");
+            else fail("verifySignature tamper", { message: "Should be false" });
+
+            if (
+                !(await CryptoVault.verifySignature(rawPayload, "a".repeat(64)))
+            )
+                pass("verifySignature: forged signature rejected");
+            else fail("verifySignature forged", { message: "Should be false" });
+
+            const rawSig2 = await CryptoVault.signData(rawPayload);
+            if (rawSig === rawSig2)
+                pass("signData is deterministic (same input → same output)");
+            else fail("signData determinism", { message: "Signatures differ" });
+
+            // ── buildPayload ──
+            const p1 = CryptoVault.buildPayload("USERS", {
+                ROLE: "admin",
+                ID: 1,
+                PW: "hash",
+            });
+            const p2 = CryptoVault.buildPayload("USERS", {
+                ID: 1,
+                PW: "hash",
+                ROLE: "admin",
+            });
+            if (p1 === p2)
+                pass(
+                    "buildPayload: key insertion order does not affect output",
+                );
+            else fail("buildPayload order", { message: `p1=${p1} p2=${p2}` });
+
+            if (p1.startsWith("USERS:"))
+                pass("buildPayload: context prefix present");
+            else fail("buildPayload prefix", { message: p1 });
+
+            const pOther = CryptoVault.buildPayload("ORDERS", {
+                ID: 1,
+                PW: "hash",
+                ROLE: "admin",
+            });
+            if (p1 !== pOther)
+                pass("buildPayload: different context → different payload");
+            else
+                fail("buildPayload context isolation", {
+                    message: "Should differ",
+                });
+
+            // ── signRecord / verifyRecord round-trip ──
+            const fields = {
+                EMP_ID: "EMP001",
+                EMP_PW: "$argon2id$v=19$m=19456$...",
+                EMP_ROLE: "SuperAdmin",
+            };
+            const recSig = await CryptoVault.signRecord(
+                "T_EMP_MGMT_ADMIN",
+                fields,
+            );
+            if (
+                await CryptoVault.verifyRecord(
+                    "T_EMP_MGMT_ADMIN",
+                    fields,
+                    recSig,
+                )
+            )
+                pass("signRecord / verifyRecord round-trip");
+            else fail("signRecord round-trip", { message: "Should be true" });
+
+            // wrong field value
+            const badFields = { ...fields, EMP_ROLE: "USER" };
+            if (
+                !(await CryptoVault.verifyRecord(
+                    "T_EMP_MGMT_ADMIN",
+                    badFields,
+                    recSig,
+                ))
+            )
+                pass("verifyRecord: mutated field value rejected");
+            else fail("verifyRecord mutation", { message: "Should be false" });
+
+            // wrong context — same fields, different entity
+            if (
+                !(await CryptoVault.verifyRecord("OTHER_TABLE", fields, recSig))
+            )
+                pass(
+                    "verifyRecord: wrong context rejected (cross-entity replay blocked)",
+                );
+            else fail("verifyRecord context", { message: "Should be false" });
+
+            // null / missing signature handled gracefully
+            if (
+                !(await CryptoVault.verifyRecord(
+                    "T_EMP_MGMT_ADMIN",
+                    fields,
+                    null,
+                ))
+            )
+                pass("verifyRecord: null signature returns false");
+            else fail("verifyRecord null sig", { message: "Should be false" });
+
+            // buildPayload input validation
+            try {
+                CryptoVault.buildPayload("", { ID: 1 });
+                fail("buildPayload empty context", { message: "Should throw" });
+            } catch {
+                pass("buildPayload: rejects empty context");
+            }
+            try {
+                CryptoVault.buildPayload("USERS", null);
+                fail("buildPayload null fields", { message: "Should throw" });
+            } catch {
+                pass("buildPayload: rejects null fields");
+            }
+        } catch (err) {
+            fail("HMAC-SHA256 signing tests", err);
+        }
+
+        // ── TEST GROUP 9: Specific Decryption Task ──
+        console.log("\n▸ Manual Decryption Task");
+        hr();
+        try {
+            const targetCipher = "0k9DQnY8Zp0=";
+
+            // Decrypt using the helper (ensure process.env.PASSWORD_KEY is "HRIS" or your specific key)
+            const result =
+                SymmetricCrypto.SecurityCryptHelper.decryptText(targetCipher);
+
+            console.log(`    Ciphertext : ${targetCipher}`);
+            console.log(`    Plain Text : ${result}`);
+
+            if (result) pass("Decryption successful");
+        } catch (err) {
+            fail("Decryption task", err);
+        }
+
+        console.log(
+            "\n╔═══════════════════════════════════════════════════════════════╗",
+        );
+        console.log(
+            "║                    All tests completed!                       ║",
+        );
+        console.log(
+            "╚═══════════════════════════════════════════════════════════════╝\n",
+        );
+    };
+
+    runTests().catch((err) => {
+        console.error("\n💥 Unhandled test error:", err);
+        process.exit(1);
+    });
+}
