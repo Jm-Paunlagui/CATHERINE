@@ -1,0 +1,526 @@
+[
+  {
+    "id": "ca7e1100-0001-0000-0000-000000000001",
+    "displayDate": "2026-03-02",
+    "version": "1.0.0-dev.1",
+    "title": "Initial Template Scaffold",
+    "message": "First release of the Catherine full-stack template — a production-grade Express v5 + React 19 foundation with clean layered architecture and a standardized API contract.",
+    "whatChanged": [
+      {
+        "text": "Established the full-stack project structure",
+        "items": [
+          "React 19 + Tailwind CSS v4 frontend with the Aumovio Design System",
+          "Node.js + Express v5 backend with a class-based OOP architecture"
+        ]
+      },
+      {
+        "text": "Defined the frontend three-layer architecture (api → hook → view)"
+      },
+      {
+        "text": "Defined the backend layered architecture (Route → Controller → Service → Model)"
+      },
+      {
+        "text": "Added a standardized API response shape (sendSuccess / sendError)"
+      },
+      {
+        "text": "Added the AppError class and a single global error handler"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-03-02T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0002-0000-0000-000000000002",
+    "displayDate": "2026-03-06",
+    "version": "1.1.0-dev.1",
+    "title": "Security Middleware Suite",
+    "message": "Hardened the template with a full suite of security middleware covering response headers, CSRF, CORS, IP filtering, and scanner blocking.",
+    "whatChanged": [
+      {
+        "text": "Added Helmet for secure HTTP response headers"
+      },
+      {
+        "text": "Added double-submit-cookie CSRF protection"
+      },
+      {
+        "text": "Added network-aware CORS with corporate, VPN, and local origin matching"
+      },
+      {
+        "text": "Added a CIDR-aware IP allowlist filter"
+      },
+      {
+        "text": "Added a security filter that blocks scanners, path traversal, and script injection"
+      },
+      {
+        "text": "Added redirect prevention for all /api routes"
+      }
+    ],
+    "type": "security",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-03-06T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0003-0000-0000-000000000003",
+    "displayDate": "2026-03-11",
+    "version": "1.2.0-dev.1",
+    "title": "JWT Authentication & Dynamic Permissions",
+    "message": "Added JWT authentication with a data-driven permission model, per-user login lockout, and route guarding on the frontend.",
+    "whatChanged": [
+      {
+        "text": "Added JWT authentication with HTTP-only cookie token storage"
+      },
+      {
+        "text": "Introduced a dynamic requireAccess(predicate) authorization model",
+        "items": [
+          "Permissions are data-driven, not hardcoded per project"
+        ]
+      },
+      {
+        "text": "Added per-user login lockout after repeated failed attempts"
+      },
+      {
+        "text": "Added ProtectedRoute and AuthMiddleware.isAuth() on the frontend"
+      },
+      {
+        "text": "Added the standard auth routes (register, login, refresh, logout)"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-03-11T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0004-0000-0000-000000000004",
+    "displayDate": "2026-03-16",
+    "version": "1.3.0-dev.1",
+    "title": "OracleDB Dual-Pool & Mongo-Style Wrapper",
+    "message": "Connected the template to OracleDB with a resilient dual-pool setup and a MongoDB-style query wrapper that makes Oracle SQL feel familiar.",
+    "whatChanged": [
+      {
+        "text": "Added an OracleDB adapter with a dual-connection-pool pattern"
+      },
+      {
+        "text": "Added a PoolHealthMonitor (30s checks, 3-strike unhealthy marking)"
+      },
+      {
+        "text": "Added exponential-backoff retry on pool initialization"
+      },
+      {
+        "text": "Added the oracle-mongo-wrapper library (MongoDB-style API over Oracle SQL)"
+      },
+      {
+        "text": "Added Oracle error classification for clear, actionable messages"
+      },
+      {
+        "text": "Added join column disambiguation to prevent ORA-00918 ambiguity errors"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-03-16T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0005-0000-0000-000000000005",
+    "displayDate": "2026-03-20",
+    "version": "1.4.0-dev.1",
+    "title": "Rate Limiting, Traceability & Response Timing",
+    "message": "Added per-IP rate limiting, end-to-end request traceability, and response-time tracking with slow-response detection.",
+    "whatChanged": [
+      {
+        "text": "Added a Sliding Window Counter rate limiter (in-memory, no Redis)"
+      },
+      {
+        "text": "Added request traceability with a unique X-Request-Id per request"
+      },
+      {
+        "text": "Added response-time tracking with an X-Response-Time header"
+      },
+      {
+        "text": "Added structured incoming and completed request logging"
+      },
+      {
+        "text": "Added graceful shutdown with connection-pool cleanup"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-03-20T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0006-0000-0000-000000000006",
+    "displayDate": "2026-03-27",
+    "version": "1.5.0-dev.1",
+    "title": "Aumovio Design System Component Library",
+    "message": "Shipped the Aumovio Design System — a large, dark-mode-ready React component library covering forms, UI, charts, layout, and typography.",
+    "whatChanged": [
+      {
+        "text": "Added form components",
+        "items": [
+          "Input, Select, Textarea, Checkbox, Radio, Toggle, FileInput, and more"
+        ]
+      },
+      {
+        "text": "Added UI components",
+        "items": [
+          "Modal, Drawer, Tabs, Table, Card, Badge, Tooltip, Datepicker, and more"
+        ]
+      },
+      {
+        "text": "Added a charts suite (Area, Bar, Donut, Heatmap, Line, Radial, Scatter)"
+      },
+      {
+        "text": "Added layout components (Navbar, Sidebar, Footer, BottomNav)"
+      },
+      {
+        "text": "Added a dark-mode ThemeToggle with persisted preference"
+      },
+      {
+        "text": "Wrapped every view in an ErrorBoundary"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-03-27T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0007-0000-0000-000000000007",
+    "displayDate": "2026-04-02",
+    "version": "1.6.0-dev.1",
+    "title": "Domain-Agnostic Cache Subsystem",
+    "message": "Added a reusable cache subsystem with a registry, deterministic key builder, and cache-aside middleware that ports cleanly to any project.",
+    "whatChanged": [
+      {
+        "text": "Added CacheStore — a NodeCache wrapper with structured operation logging"
+      },
+      {
+        "text": "Added CacheRegistry — the single place where cache stores are created"
+      },
+      {
+        "text": "Added CacheKeyBuilder — alphabetically sorted keys, auto-hashed when long"
+      },
+      {
+        "text": "Added CacheMiddleware — cache-aside read with fire-and-forget invalidation",
+        "items": [
+          "Only caches 2xx JSON responses; errors are never stored"
+        ]
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-04-02T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0008-0000-0000-000000000008",
+    "displayDate": "2026-04-08",
+    "version": "1.7.0-dev.1",
+    "title": "Metrics & Health Observability",
+    "message": "Added live request metrics and a health endpoint so the running service can be monitored at a glance.",
+    "whatChanged": [
+      {
+        "text": "Added a metrics middleware tracking Requests, Errors, and Duration (RED)"
+      },
+      {
+        "text": "Added an in-memory MetricsStore with a metrics API route"
+      },
+      {
+        "text": "Added a GET /api/v1/health endpoint that always returns 200 OK"
+      },
+      {
+        "text": "Added frontend charts to visualize live service metrics"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-04-08T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0009-0000-0000-000000000009",
+    "displayDate": "2026-04-14",
+    "version": "1.8.0-dev.1",
+    "title": "Audit Logging Module",
+    "message": "Added an audit logging module that records system activity for traceability and later investigation.",
+    "whatChanged": [
+      {
+        "text": "Added an audit-log middleware that records mutating requests"
+      },
+      {
+        "text": "Added audit-log route, controller, and service layers"
+      },
+      {
+        "text": "Captured the request actor, action, and timestamp for every audited event"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-04-14T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0010-0000-0000-000000000010",
+    "displayDate": "2026-04-20",
+    "version": "1.9.0-dev.1",
+    "title": "RFC 5424 Logging & Session UX",
+    "message": "Upgraded the logger to the industry-standard RFC 5424 8-level hierarchy and added proactive session-expiry handling on the frontend.",
+    "whatChanged": [
+      {
+        "text": "Upgraded the logger from 4 levels to the RFC 5424 8-level hierarchy",
+        "items": [
+          "logger.warn(...) renamed to logger.warning(...) — warn kept as a deprecated alias"
+        ]
+      },
+      {
+        "text": "Added a proactive Session Warning modal before the login session expires"
+      },
+      {
+        "text": "Added a Profile modal and toast notifications"
+      },
+      {
+        "text": "Logs are organized as logs/YYYY/MM/DD/level.log and never truncated"
+      }
+    ],
+    "type": "refactor",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-04-20T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0011-0000-0000-000000000011",
+    "displayDate": "2026-04-24",
+    "version": "1.10.0-dev.1",
+    "title": "Theme Personalization",
+    "message": "Added a Personalize option so each user can pick the app's accent color theme, saved between sessions.",
+    "whatChanged": [
+      {
+        "text": "Added a ColorPicker-based Personalize option for the accent color theme"
+      },
+      {
+        "text": "Theme preference is persisted between sessions"
+      },
+      {
+        "text": "Replaced hardcoded color values with design-system palette variables for consistency"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-04-24T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0012-0000-0000-000000000012",
+    "displayDate": "2026-04-28",
+    "version": "1.11.0-dev.1",
+    "title": "Changelog / Version History Module",
+    "message": "Added the Changelog module — an encrypted entry store on the backend and a timeline-style Version History page on the frontend.",
+    "whatChanged": [
+      {
+        "text": "Added an AES-256-GCM encrypted changelog store (data/changelog.enc)"
+      },
+      {
+        "text": "Added changelog routes with SUPER_ADMIN-only create, update, and delete"
+      },
+      {
+        "text": "Added a Version History timeline page with collapsible 'What Changed' sections"
+      },
+      {
+        "text": "Added SemVer-aware version auto-suggestion based on the selected change type"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-04-28T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "ca7e1100-0013-0000-0000-000000000013",
+    "displayDate": "2026-05-04",
+    "version": "1.11.1-dev.1",
+    "title": "Changelog Entry Format Upgrade",
+    "message": "Restructured changelog entries from a single summary field into a short headline message plus a structured 'What Changed' list, with automatic migration of older entries.",
+    "whatChanged": [
+      {
+        "text": "Replaced the single summary field with a message + structured whatChanged array",
+        "items": [
+          "whatChanged supports nested sub-bullets (indent 2 spaces in the form)"
+        ]
+      },
+      {
+        "text": "Added automatic, idempotent migration of legacy summary-only entries on read"
+      },
+      {
+        "text": "Updated the entry form to a one-item-per-line 'What Changed' textarea"
+      }
+    ],
+    "type": "refactor",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-05-04T08:00:00.000Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "3d64de09-948a-433a-8101-554250fcbea9",
+    "displayDate": "2026-06-05",
+    "version": "1.12.0-dev.1",
+    "title": "Theme Personalization & Version History Upgrade",
+    "message": "Personalize the app with a full color picker, more accent palettes that adapt to dark mode, and a layout switcher. The Version History page now shows grouped \"what changed\" detail per release.",
+    "whatChanged": [
+      {
+        "text": "Appearance",
+        "items": [
+          "Added a full color picker (drag, hue slider, hex entry, keyboard control)",
+          "Added many more accent palettes that adjust their surface and text colors in dark mode"
+        ]
+      },
+      {
+        "text": "Added a layout switcher and a redesigned two-column Personalize panel with live preview"
+      },
+      {
+        "text": "Transparency toggle now applies instantly with no flash on load"
+      },
+      {
+        "text": "Refreshed components for consistent dark-mode colors"
+      },
+      {
+        "text": "Version History",
+        "items": [
+          "Release entries now carry a short headline plus a grouped \"what changed\" list with sub-items",
+          "Added a `patch` release type",
+          "Reset/seed the history from a standalone script instead of bundled data"
+        ]
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-06-05T07:16:54.728Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "46d3d198-a38f-4717-ba4e-64374dca4053",
+    "displayDate": "2026-06-05",
+    "version": "1.12.1-dev.1",
+    "title": "Accurate Availability and Error Rate Metrics",
+    "message": "Availability no longer counts client errors (4xx) as failures, so the dashboard reflects true service health. Client and server errors now report as separate, clearly labelled rates.",
+    "whatChanged": [
+      {
+        "text": "Availability is now computed from server errors only — a 4xx (bad input, failed auth, blocked scanner) counts as a correct rejection, not an outage"
+      },
+      {
+        "text": "Client Error Rate (4xx) and Server Error Rate (5xx) shown as independent metrics, each as a share of total traffic"
+      },
+      {
+        "text": "Added an Availability headline to the system health banner"
+      },
+      {
+        "text": "Fixed audit statistics so category counts always reconcile with the total (no more Success + Redirect exceeding Total)"
+      },
+      {
+        "text": "Retuned the high-error-rate alert to fire on server errors only (1% warning, 5% critical), removing false alarms from client-error noise"
+      },
+      {
+        "text": "Request-completion logs now record the HTTP status code and duration, making error entries diagnosable"
+      },
+      {
+        "text": "Added unit tests covering status-code boundaries and metric reconciliation"
+      }
+    ],
+    "type": "patch",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-06-05T08:55:44.509Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "9625a063-623e-4a7a-a5e1-7a4de817f3d7",
+    "displayDate": "2026-06-08",
+    "version": "1.12.2-dev.1",
+    "title": "Accurate Heap Metrics And Leak Detection",
+    "message": "The system monitor now reports memory against Node's real heap ceiling instead of a misleading internal figure, so a healthy server no longer shows a near-full heap. New garbage-collection and leak-trend indicators make memory problems visible before they cause an outage.",
+    "whatChanged": [
+      {
+        "text": "Heap usage now measured against the real V8 limit, not the committed heap",
+        "items": [
+          "Dashboard bar reads true utilization (e.g. ~2%) instead of a false ~94%",
+          "Committed heap kept as a secondary garbage-collection pressure hint"
+        ]
+      },
+      {
+        "text": "Added a Memory Trend (Leak Detector) card with Stable / Gathering Data / Leak Suspected status"
+      },
+      {
+        "text": "Added garbage-collection health: overhead %, major/minor counts, recent pause times"
+      },
+      {
+        "text": "Heap alerts now graduate (warning at 75%, critical at 90% of the limit)"
+      },
+      {
+        "text": "New alerts for excessive GC overhead and sustained post-GC memory growth"
+      },
+      {
+        "text": "Fixed a broken critical-heap log call that would have thrown when triggered"
+      },
+      {
+        "text": "Added full unit, integration, and chaos test coverage plus test:metrics and test:chaos scripts"
+      }
+    ],
+    "type": "patch",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus"
+    ],
+    "createdAt": "2026-06-08T04:01:36.924Z",
+    "updatedAt": "2026-06-15T03:44:46.579Z"
+  }
+]
