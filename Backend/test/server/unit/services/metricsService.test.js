@@ -134,6 +134,51 @@ describe("MetricsService.evaluateAlerts() — memory & GC rules", function () {
   });
 });
 
+describe("MetricsService.evaluateAlerts() — Rule 7 ORACLE_POOL_SATURATION (USE)", function () {
+  /** Healthy snapshot with a given dependencies.oracle map. */
+  function withOracle(oracle) {
+    return makeSnapshot({ dependencies: { oracle } });
+  }
+
+  it("does not fire at or below 80% utilization", function () {
+    const snap = withOracle({ userAccount: { poolUtilization: 0.8, connectionsInUse: 8, connectionsOpen: 10 } });
+    expect(ruleNames(MetricsService.evaluateAlerts(snap))).to.not.include("ORACLE_POOL_SATURATION");
+  });
+
+  it("fires WARNING above 80% (and at/below 95%)", function () {
+    const snap = withOracle({ userAccount: { poolUtilization: 0.85, connectionsInUse: 17, connectionsOpen: 20, queueLength: 0 } });
+    const a = MetricsService.evaluateAlerts(snap).find((x) => x.rule === "ORACLE_POOL_SATURATION");
+    expect(a).to.exist;
+    expect(a.severity).to.equal("warning");
+    expect(a.pool).to.equal("userAccount");
+    expect(a.value).to.equal(0.85);
+  });
+
+  it("fires CRITICAL above 95%", function () {
+    const snap = withOracle({ reporting: { poolUtilization: 1, connectionsInUse: 20, connectionsOpen: 20, queueLength: 6 } });
+    const a = MetricsService.evaluateAlerts(snap).find((x) => x.rule === "ORACLE_POOL_SATURATION");
+    expect(a).to.exist;
+    expect(a.severity).to.equal("critical");
+  });
+
+  it("ignores a pool whose utilization has not been reported yet (null)", function () {
+    const snap = withOracle({ idle: { poolUtilization: null, connectionsInUse: null, connectionsOpen: null } });
+    expect(ruleNames(MetricsService.evaluateAlerts(snap))).to.not.include("ORACLE_POOL_SATURATION");
+  });
+
+  it("evaluates each pool independently (one warning + one critical)", function () {
+    const snap = withOracle({
+      a: { poolUtilization: 0.5, connectionsInUse: 5, connectionsOpen: 10 },
+      b: { poolUtilization: 0.85, connectionsInUse: 17, connectionsOpen: 20 },
+      c: { poolUtilization: 0.99, connectionsInUse: 99, connectionsOpen: 100 },
+    });
+    const pool = MetricsService.evaluateAlerts(snap).filter((x) => x.rule === "ORACLE_POOL_SATURATION");
+    expect(pool).to.have.length(2);
+    const counts = pool.reduce((m, x) => ({ ...m, [x.severity]: (m[x.severity] || 0) + 1 }), {});
+    expect(counts).to.deep.equal({ warning: 1, critical: 1 });
+  });
+});
+
 describe("MetricsService.getSummary()", function () {
   afterEach(() => sinon.restore());
 

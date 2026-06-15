@@ -8,9 +8,11 @@ import Table from "../../../../components/ui/Table";
 import { PILL_BASE, getAlertSeverityStyle } from "../metricsStyles";
 
 /**
- * @param {{ hook: import('../metrics.hook').MetricsHook }} props
+ * @param {{ hook: import('../metrics.hook').MetricsHook, onViewLogs?: (route: string) => void }} props
+ * @param {function} [props.onViewLogs] - Pivot callback: jump to the Audit Logs tab
+ *   pre-filtered to a route. Rendered as a "View Logs" action on route-scoped alerts.
  */
-export default function AlertsTab({ hook }) {
+export default function AlertsTab({ hook, onViewLogs }) {
     const { alerts, alertsLoading, alertsError, refetchAlerts, formatPct, formatMs } = hook;
 
     if (alertsLoading) {
@@ -44,9 +46,12 @@ export default function AlertsTab({ hook }) {
             render: (row) => <span className="text-sm text-grey-600 dark:text-grey-300">{row.description ?? RULE_DESCRIPTIONS[row.rule] ?? row.rule}</span>,
         },
         {
-            key: "route",
-            label: "Route",
-            render: (row) => (row.route ? <span className="font-mono text-xs text-grey-500 dark:text-grey-400">{row.route}</span> : <span className="text-grey-300 dark:text-grey-600">—</span>),
+            key: "scope",
+            label: "Route / Pool",
+            render: (row) => {
+                const scope = row.route ?? row.pool;
+                return scope ? <span className="font-mono text-xs text-grey-500 dark:text-grey-400">{scope}</span> : <span className="text-grey-300 dark:text-grey-600">—</span>;
+            },
         },
         {
             key: "value",
@@ -59,8 +64,20 @@ export default function AlertsTab({ hook }) {
                 if (row.rule === "HIGH_LATENCY") display = formatMs(row.value);
                 if (row.rule === "HIGH_HEAP") display = formatPct(row.value);
                 if (row.rule === "EVENT_LOOP_LAG") display = `${Math.round(row.value)}ms`;
+                if (row.rule === "HIGH_GC_OVERHEAD") display = `${row.value}%`;
+                if (row.rule === "ORACLE_POOL_SATURATION") display = formatPct(row.value);
                 return <span className="text-sm font-medium text-grey-700 dark:text-grey-200">{display}</span>;
             },
+        },
+        {
+            key: "actions",
+            label: "",
+            render: (row) =>
+                row.route && onViewLogs ? (
+                    <Button variant="ghost" size="sm" onClick={() => onViewLogs(row.route)}>
+                        View Logs
+                    </Button>
+                ) : null,
         },
     ];
 
@@ -90,8 +107,11 @@ export default function AlertsTab({ hook }) {
 // ─── Fallback descriptions ─────────────────────────────────────────────────────
 
 const RULE_DESCRIPTIONS = {
-    HIGH_ERROR_RATE: "Global error rate exceeds 5%",
+    HIGH_ERROR_RATE: "Global server-error rate exceeds threshold",
     HIGH_LATENCY: "Route p99 latency exceeds 2 000ms",
-    HIGH_HEAP: "Heap usage exceeds 80% of heap total",
+    HIGH_HEAP: "Heap usage exceeds the V8 limit threshold",
     EVENT_LOOP_LAG: "Event-loop lag exceeds 100ms",
+    HIGH_GC_OVERHEAD: "GC overhead exceeds threshold of wall-clock time",
+    MEMORY_LEAK_SUSPECTED: "Post-GC heap is steadily climbing — possible leak",
+    ORACLE_POOL_SATURATION: "Oracle connection pool utilization exceeds threshold",
 };

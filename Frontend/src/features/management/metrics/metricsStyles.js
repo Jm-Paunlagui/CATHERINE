@@ -152,6 +152,25 @@ export function getCpuStyle(ms) {
     return "bg-danger-400/15 text-danger-400";
 }
 
+// ─── Oracle pool utilization  (0.0 – 1.0 ratio, in-use ÷ open) ────────────────
+
+/**
+ * Style for an Oracle connection-pool utilization ratio (connectionsInUse /
+ * connectionsOpen). Thresholds mirror the backend ORACLE_POOL_SATURATION alert
+ * (warning > 80%, critical > 95%) so the pill colour matches when an alert fires.
+ *
+ * @param {number} ratio - 0.0–1.0 utilization
+ * @returns {string} "bg-X/opacity text-X" pill class
+ */
+export function getPoolUtilStyle(ratio) {
+    const n = (Number(ratio) || 0) * 100;
+    if (n < 50) return "bg-success-300/15 text-success-300";
+    if (n < 70) return "bg-success-400/15 text-success-400";
+    if (n < 80) return "bg-success-500/15 text-success-500";
+    if (n < 95) return "bg-warn-400/20 text-warn-400";
+    return "bg-danger-400/15 text-danger-400";
+}
+
 // ─── Active handles / requests count ─────────────────────────────────────────
 
 export function getHandlesStyle(count) {

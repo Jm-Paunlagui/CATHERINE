@@ -221,6 +221,16 @@ class MetricsStore {
     this._oracle = new Map();
 
     /**
+     * Live Oracle connection-pool saturation stats (USE method).
+     * Key: poolName, Value: { connectionsInUse, connectionsOpen, poolMax,
+     * queueLength, utilization (0–1), capacity (0–1), updatedAt }.
+     * Pushed by the Oracle adapter's PoolHealthMonitor on its 30 s poll —
+     * distinct from `_oracle` (per-query timings) which is fed by recordDbQuery.
+     * @type {Map<string, { connectionsInUse: number, connectionsOpen: number, poolMax: number, queueLength: number, utilization: number, capacity: number, updatedAt: string }>}
+     */
+    this._oraclePoolStats = new Map();
+
+    /**
      * Frontend vitals FIFO (max FRONTEND_VITALS_MAX entries).
      * @type {Array<{ name: string, value: number, rating: string, context: object, ts: string }>}
      */
@@ -560,6 +570,36 @@ class MetricsStore {
   }
 
   /**
+   * Record live Oracle connection-pool saturation stats (USE method).
+   *
+   * Called by the Oracle adapter's PoolHealthMonitor on its 30 s poll. The
+   * pool object exposes these counters synchronously, so this is non-blocking
+   * and never touches the DB query hot path. Two derived ratios are stored:
+   *   - utilization = connectionsInUse / connectionsOpen  (how saturated the
+   *     currently-open connections are — the live pressure signal)
+   *   - capacity    = connectionsOpen / poolMax           (how close the pool
+   *     is to its hard ceiling — headroom before exhaustion)
+   *
+   * @param {string} poolName - Named connection pool (e.g. "userAccount")
+   * @param {{ connectionsInUse: number, connectionsOpen: number, poolMax: number, queueLength: number }} stats
+   */
+  recordPoolStats(poolName, stats) {
+    const open = Number(stats?.connectionsOpen) || 0;
+    const inUse = Number(stats?.connectionsInUse) || 0;
+    const poolMax = Number(stats?.poolMax) || 0;
+    const queueLength = Number(stats?.queueLength) || 0;
+    this._oraclePoolStats.set(poolName, {
+      connectionsInUse: inUse,
+      connectionsOpen: open,
+      poolMax,
+      queueLength,
+      utilization: open > 0 ? inUse / open : 0,
+      capacity: poolMax > 0 ? open / poolMax : 0,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  /**
    * Store a frontend web vital event.
    * Evicts oldest when buffer exceeds FRONTEND_VITALS_MAX.
    *
@@ -604,7 +644,7 @@ class MetricsStore {
    *   uptime: number,
    *   red: Object.<string, { count: number, clientErrorCount: number, serverErrorCount: number, errorRate: number, clientErrorRate: number, availability: number, p50: number, p95: number, p99: number, avgMs: number }>,
    *   system: { cpu: object, memory: object, eventLoopLag: number, gc: object, handles: number, requests: number },
-   *   dependencies: { oracle: Object.<string, { queryCount: number, errorCount: number, avgMs: number, p95Ms: number }> },
+   *   dependencies: { oracle: Object.<string, { queryCount: number, errorCount: number, avgMs: number, p95Ms: number, poolUtilization: number|null, connectionsInUse: number|null, connectionsOpen: number|null, poolMax: number|null, queueLength: number|null, capacity: number|null }> },
    *   totals: { requestsTotal: number, clientErrorsTotal: number, serverErrorsTotal: number, errorRate: number, clientErrorRate: number, availability: number },
    *   frontendVitals: Array,
    *   frontendErrors: Array
@@ -659,18 +699,33 @@ class MetricsStore {
       ? Number(((apdexSatisfied + apdexTolerating / 2) / apdexSamples).toFixed(3))
       : 1;
 
-    // Build Oracle dependency stats
+    // Build Oracle dependency stats — union of per-query timings (recordDbQuery)
+    // and live pool saturation (recordPoolStats). Either source may be absent:
+    // recordDbQuery is optional instrumentation, while pool stats arrive from the
+    // adapter's 30 s health poll. A pool appears here as soon as either reports.
     const oracleDeps = {};
-    for (const [poolName, entry] of this._oracle) {
-      const sorted = [...entry.durations].sort((a, b) => a - b);
+    const oracleNames = new Set([
+      ...this._oracle.keys(),
+      ...this._oraclePoolStats.keys(),
+    ]);
+    for (const poolName of oracleNames) {
+      const entry = this._oracle.get(poolName);
+      const sorted = entry ? [...entry.durations].sort((a, b) => a - b) : [];
+      const pool = this._oraclePoolStats.get(poolName) || null;
       oracleDeps[poolName] = {
-        queryCount: entry.queryCount,
-        errorCount: entry.errorCount,
-        avgMs: entry.queryCount
+        queryCount: entry?.queryCount ?? 0,
+        errorCount: entry?.errorCount ?? 0,
+        avgMs: entry?.queryCount
           ? Math.round(entry.totalMs / entry.queryCount)
           : 0,
         p95Ms: calcPercentile(sorted, 0.95),
-        poolUtilization: null, // Placeholder — pool utilization requires OracleDB pool stats API
+        // Live pool saturation (USE). null until the adapter first reports.
+        poolUtilization: pool ? Number(pool.utilization.toFixed(4)) : null,
+        connectionsInUse: pool?.connectionsInUse ?? null,
+        connectionsOpen: pool?.connectionsOpen ?? null,
+        poolMax: pool?.poolMax ?? null,
+        queueLength: pool?.queueLength ?? null,
+        capacity: pool ? Number(pool.capacity.toFixed(4)) : null,
       };
     }
 

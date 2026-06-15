@@ -97,6 +97,50 @@ export function alertSeverityVariant(severity) {
     return "warning";
 }
 
+/**
+ * Canonical display order for the Core Web Vitals.
+ * @constant {Object.<string, number>}
+ */
+const VITAL_ORDER = { LCP: 0, INP: 1, CLS: 2, FID: 3 };
+
+/**
+ * Aggregate raw frontend web-vital events into per-metric summary cards.
+ * For each metric name returns the sample count, average value, the
+ * good/needs-improvement/poor distribution, and the worst rating observed
+ * (which drives the summary card colour).
+ *
+ * @param {Array<{ name: string, value: number, rating: string }>} [vitals=[]]
+ * @returns {Array<{ name: string, count: number, avg: number, good: number, needsImprovement: number, poor: number, rating: string }>}
+ */
+export function buildVitalsSummary(vitals = []) {
+    const byName = new Map();
+    for (const v of vitals) {
+        if (!v || !v.name) continue;
+        let agg = byName.get(v.name);
+        if (!agg) {
+            agg = { name: v.name, count: 0, sum: 0, good: 0, needsImprovement: 0, poor: 0 };
+            byName.set(v.name, agg);
+        }
+        agg.count++;
+        agg.sum += Number(v.value) || 0;
+        if (v.rating === "good") agg.good++;
+        else if (v.rating === "needs-improvement") agg.needsImprovement++;
+        else if (v.rating === "poor") agg.poor++;
+    }
+    return [...byName.values()]
+        .map((a) => ({
+            name: a.name,
+            count: a.count,
+            avg: a.count ? a.sum / a.count : 0,
+            good: a.good,
+            needsImprovement: a.needsImprovement,
+            poor: a.poor,
+            // Worst rating present drives the card colour ("not blind" bias).
+            rating: a.poor > 0 ? "poor" : a.needsImprovement > 0 ? "needs-improvement" : "good",
+        }))
+        .sort((x, y) => (VITAL_ORDER[x.name] ?? 99) - (VITAL_ORDER[y.name] ?? 99));
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -143,10 +187,34 @@ export function useMetrics() {
     // Alert evaluations
     const { data: alertsData, loading: alertsLoading, error: alertsError, refetch: refetchAlerts } = useRequest("metrics/alerts", metricsApi.alerts, { staleTime: 30_000 });
 
+    // Health probes — liveness + readiness (own tab). Fetched here so HealthTab
+    // stays presentation-only and never touches httpClient (three-layer rule).
+    const { data: liveData, loading: liveLoading, error: liveError, refetch: refetchLive } = useRequest("health/live", metricsApi.healthLive, { staleTime: 30_000 });
+    const { data: readyData, loading: readyLoading, error: readyError, refetch: refetchReady } = useRequest("health/ready", metricsApi.healthReady, { staleTime: 30_000 });
+
     // Derive typed data from raw API responses
     const snapshot = snapshotData?.data ?? null;
     const summary = summaryData?.data ?? null;
     const alerts = alertsData?.data?.alerts ?? [];
+
+    // Health derivations
+    const liveness = liveData?.data ?? null;
+    const readiness = readyData?.data ?? null;
+    const healthLoading = liveLoading || readyLoading;
+    const healthError = liveError || readyError;
+    const refetchHealth = () => {
+        refetchLive();
+        refetchReady();
+    };
+
+    // Surfaced-but-previously-invisible telemetry
+    const oracleDeps = snapshot?.dependencies?.oracle ?? {};
+    const apdex = snapshot?.totals?.apdex ?? null;
+    const frontendErrors = snapshot?.frontendErrors ?? [];
+    const vitalsSummary = useMemo(
+        () => buildVitalsSummary(snapshot?.frontendVitals ?? []),
+        [snapshot],
+    );
 
     /**
      * RED metrics flattened into rows for the Table component.
@@ -193,6 +261,19 @@ export function useMetrics() {
         // Refetch
         refetchSnapshot,
         refetchAlerts,
+
+        // Health probes
+        liveness,
+        readiness,
+        healthLoading,
+        healthError,
+        refetchHealth,
+
+        // Surfaced telemetry (previously collected but never displayed)
+        oracleDeps,
+        apdex,
+        vitalsSummary,
+        frontendErrors,
 
         // UI state
         activeTab,

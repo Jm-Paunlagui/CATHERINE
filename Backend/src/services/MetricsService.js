@@ -49,6 +49,20 @@ const GC_OVERHEAD_WARNING_THRESHOLD = 5;
 /** @constant {number} GC overhead that raises a CRITICAL alert — collection is starving the event loop. */
 const GC_OVERHEAD_CRITICAL_THRESHOLD = 10;
 
+/**
+ * @constant {number} Oracle pool utilization (connectionsInUse / connectionsOpen)
+ * that raises a WARNING. Sustained > 80% means the open connections are nearly all
+ * checked out — new queries start queueing and tail latency climbs (USE saturation).
+ */
+const POOL_SATURATION_WARNING_THRESHOLD = 0.8;
+
+/**
+ * @constant {number} Oracle pool utilization that raises a CRITICAL alert — the pool
+ * is effectively exhausted (> 95% of open connections in use); requests are blocking
+ * on connection acquisition and the dependency is the bottleneck.
+ */
+const POOL_SATURATION_CRITICAL_THRESHOLD = 0.95;
+
 class MetricsService {
     // ========================================
     // SNAPSHOT & ALERTS
@@ -117,13 +131,14 @@ class MetricsService {
      *   4. Event-loop lag > 100ms
      *   5. GC overhead > 5% (warning) / > 10% (critical) of wall-clock time
      *   6. Memory leak suspected — sustained post-major-GC live-set growth
+     *   7. Oracle pool saturation > 80% (warning) / > 95% (critical) utilization, per pool
      *
      * Note: the global error rate is computed from 5xx responses only — client
      * errors (4xx) are excluded so auth failures, validation rejections, and
      * scanner noise never trip the availability alert. See MetricsStore.computeRates.
      *
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
-     * @returns {Array<{ rule: string, severity: string, value: number, route?: string }>}
+     * @returns {Array<{ rule: string, severity: string, value: number, route?: string, pool?: string }>}
      */
     static evaluateAlerts(snapshot = null) {
         const snap = snapshot || MetricsService.getSnapshot();
@@ -258,6 +273,38 @@ class MetricsService {
                     windowMs: trend.windowMs,
                     firstHeapUsedMb: Math.round(trend.firstHeapUsed / 1024 / 1024),
                     lastHeapUsedMb: Math.round(trend.lastHeapUsed / 1024 / 1024),
+                },
+            );
+        }
+
+        // Rule 7 — Oracle connection-pool saturation (USE method). poolUtilization
+        // is null until the adapter's health poll first reports, so guard the type.
+        const oracleDeps = snap.dependencies?.oracle ?? {};
+        for (const [poolName, dep] of Object.entries(oracleDeps)) {
+            const util = dep.poolUtilization;
+            if (typeof util !== "number" || util <= POOL_SATURATION_WARNING_THRESHOLD) {
+                continue;
+            }
+            const isCritical = util > POOL_SATURATION_CRITICAL_THRESHOLD;
+            const severity = isCritical ? "critical" : "warning";
+            const threshold = isCritical
+                ? POOL_SATURATION_CRITICAL_THRESHOLD
+                : POOL_SATURATION_WARNING_THRESHOLD;
+            alerts.push({
+                rule: "ORACLE_POOL_SATURATION",
+                severity,
+                pool: poolName,
+                value: util,
+                description: `Oracle pool "${poolName}" is ${(util * 100).toFixed(1)}% utilized (${dep.connectionsInUse}/${dep.connectionsOpen} connections in use, threshold: ${(threshold * 100).toFixed(0)}%)`,
+            });
+            logger[isCritical ? "crit" : "warning"](
+                metricsMessages.ALERT_TRIGGERED("ORACLE_POOL_SATURATION", severity),
+                {
+                    poolName,
+                    utilization: util,
+                    connectionsInUse: dep.connectionsInUse,
+                    connectionsOpen: dep.connectionsOpen,
+                    queueLength: dep.queueLength,
                 },
             );
         }

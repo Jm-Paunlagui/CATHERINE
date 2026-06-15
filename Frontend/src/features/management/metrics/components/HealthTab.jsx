@@ -1,49 +1,21 @@
 /**
  * @fileoverview Health tab — liveness and readiness check results.
- * Fetches /health/live and /health/ready directly using httpClient.
+ * Presentation only: health data comes from metrics.hook (useRequest), so this
+ * component never imports httpClient (three-layer rule).
  */
 
-import { useEffect, useState } from "react";
 import { ANIMATE_ENTER_UP, ANIM_DELAY_0, staggerDelay } from "../../../../assets/styles/pre-set-styles";
 import Badge from "../../../../components/ui/Badge";
 import Button from "../../../../components/ui/Button";
-import httpClient from "../../../../middleware/HttpClient";
 import { PILL_BASE, getHealthLatencyStyle } from "../metricsStyles";
 
 /**
  * @param {{ hook: import('../metrics.hook').MetricsHook }} props
  */
 export default function HealthTab({ hook }) {
-    const [liveness, setLiveness] = useState(null);
-    const [readiness, setReadiness] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const { liveness, readiness, healthLoading, healthError, refetchHealth } = hook;
 
-    const fetchHealth = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const [liveRes, readyRes] = await Promise.allSettled([httpClient.get("health/live"), httpClient.get("health/ready")]);
-            setLiveness(liveRes.status === "fulfilled" ? liveRes.value.data : null);
-            setReadiness(readyRes.status === "fulfilled" ? readyRes.value.data : (readyRes.reason?.response?.data ?? null));
-        } catch {
-            setError("Failed to fetch health endpoint data.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-only fetch: kicks off async health check on first render
-    useEffect(() => {
-        let cancelled = false;
-        fetchHealth();
-        return () => {
-            cancelled = true;
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    if (loading) {
+    if (healthLoading && !liveness && !readiness) {
         return (
             <div className="mt-6 space-y-3">
                 <div className="h-20 rounded-xl skeleton" />
@@ -52,21 +24,22 @@ export default function HealthTab({ hook }) {
         );
     }
 
-    if (error) {
-        return <div className="mt-6 p-4 rounded-xl bg-danger-400/10 border border-danger-400/30 text-danger-400 text-sm">{error}</div>;
+    if (healthError && !readiness) {
+        return <div className="mt-6 p-4 rounded-xl bg-danger-400/10 border border-danger-400/30 text-danger-400 text-sm">Failed to fetch health endpoint data.</div>;
     }
 
-    const liveData = liveness?.data ?? {};
-    const liveOk = liveness?.status === "success";
+    // liveness/readiness are the response envelopes' `data` payloads from the hook.
+    const liveData = liveness ?? {};
+    const liveOk = liveData.alive === true;
 
-    const readyData = readiness?.data ?? {};
-    const readyOk = readiness?.status === "success";
+    const readyData = readiness ?? {};
+    const readyOk = readyData.ready === true;
     const checks = readyData.checks ?? {};
 
     return (
         <div className={`mt-6 space-y-4 ${ANIMATE_ENTER_UP} ${ANIM_DELAY_0}`}>
             <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={fetchHealth}>
+                <Button variant="outline" size="sm" onClick={refetchHealth} disabled={healthLoading}>
                     Refresh
                 </Button>
             </div>

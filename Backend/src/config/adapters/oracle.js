@@ -26,6 +26,9 @@ const path = require("path");
 const { getConnectionConfig, getConnectionNames } = require("../database");
 const { logger } = require("../../utils/logger");
 const { oracleMessages } = require("../../constants/messages");
+// Leaf-level metrics store (depends only on perf_hooks/v8/os) — cycle-safe to
+// require here so the health poll can feed live pool saturation to the dashboard.
+const { metricsStore } = require("../../middleware/metrics/MetricsStore");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 1 — Oracle client environment  (was: oracleEnvironment.js)
@@ -211,6 +214,20 @@ class PoolHealthMonitor {
             const conn = await pool.getConnection();
             await conn.ping();
             await conn.close();
+            // USE-method saturation: feed the live pool counters to the metrics
+            // store so the observability Dependencies panel and the pool-saturation
+            // alert have real data. Counters are read synchronously off the pool
+            // object; wrapped so metrics never affect health-checking.
+            try {
+                metricsStore.recordPoolStats(name, {
+                    connectionsInUse: pool.connectionsInUse,
+                    connectionsOpen: pool.connectionsOpen,
+                    poolMax: pool.poolMax,
+                    queueLength: pool.queueLength,
+                });
+            } catch {
+                // Non-fatal — metrics push must never break pool health checks.
+            }
             // Log once when a pool recovers after failures to avoid log spam during outages
             if (
                 !meta.healthy &&

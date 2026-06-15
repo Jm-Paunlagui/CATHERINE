@@ -150,3 +150,48 @@ describe("MetricsStore — RED three-bucket model", function () {
         });
     });
 });
+
+describe("MetricsStore — Oracle pool stats (recordPoolStats / USE method)", function () {
+    let store;
+    beforeEach(function () {
+        store = new MetricsStore();
+    });
+
+    it("reports no pools when none have been recorded", function () {
+        expect(store.getSnapshot().dependencies.oracle).to.deep.equal({});
+    });
+
+    it("computes utilization = inUse/open and capacity = open/poolMax", function () {
+        store.recordPoolStats("userAccount", { connectionsInUse: 17, connectionsOpen: 20, poolMax: 25, queueLength: 0 });
+        const dep = store.getSnapshot().dependencies.oracle.userAccount;
+        expect(dep.poolUtilization).to.equal(0.85);
+        expect(dep.capacity).to.equal(0.8);
+        expect(dep.connectionsInUse).to.equal(17);
+        expect(dep.connectionsOpen).to.equal(20);
+        expect(dep.poolMax).to.equal(25);
+    });
+
+    it("never divides by zero when no connections are open", function () {
+        store.recordPoolStats("idle", { connectionsInUse: 0, connectionsOpen: 0, poolMax: 10, queueLength: 0 });
+        const dep = store.getSnapshot().dependencies.oracle.idle;
+        expect(dep.poolUtilization).to.equal(0);
+        expect(dep.capacity).to.equal(0);
+    });
+
+    it("replaces the old null placeholder with a real number once reported", function () {
+        store.recordPoolStats("reporting", { connectionsInUse: 20, connectionsOpen: 20, poolMax: 20, queueLength: 4 });
+        const dep = store.getSnapshot().dependencies.oracle.reporting;
+        expect(dep.poolUtilization).to.be.a("number").and.to.equal(1);
+        expect(dep.queueLength).to.equal(4);
+    });
+
+    it("unions per-query stats and pool stats under one pool name", function () {
+        store.recordDbQuery("userAccount", 12, true);
+        store.recordDbQuery("userAccount", 8, true);
+        store.recordPoolStats("userAccount", { connectionsInUse: 5, connectionsOpen: 10, poolMax: 20, queueLength: 0 });
+        const dep = store.getSnapshot().dependencies.oracle.userAccount;
+        expect(dep.queryCount).to.equal(2);
+        expect(dep.avgMs).to.equal(10);
+        expect(dep.poolUtilization).to.equal(0.5);
+    });
+});
