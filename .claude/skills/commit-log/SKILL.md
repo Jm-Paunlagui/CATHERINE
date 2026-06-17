@@ -49,7 +49,7 @@ Produce a fenced block with exactly these fields — ready to paste into the
 Version History "New Entry" modal:
 
 ```
-Type:          <feat | fix | perf | refactor | security | docs | chore>
+Type:          <feat | fix | perf | refactor | security | test | docs | chore>
 Title:         <≤60 chars, title case, no version number>
 Message:       <1–2 sentences, present tense, user-facing benefit first>
 What Changed:
@@ -73,6 +73,16 @@ Rules for changelog fields:
   list, grouping FE and BE items under sub-headings only when the lists are long
   enough to warrant separation (6+ bullets per side). When one side has no
   changes, simply omit that side's bullets — do not add a "No changes" line.
+- **`test` type content rules** — test entries report test-run outcomes, not
+  product changes. Follow this structure:
+  - **Title:** `"<Scope> Test Suite — <Verdict>"` (e.g. `"Backend Test Suite — All Passing"`).
+  - **Message:** Lead with the verdict, then counts and duration.
+    `"Full test run completed in 4.2 s — 247 passed, 0 failed, 92% branch coverage."`
+  - **What Changed bullets:** Category → count → coverage. Failures first.
+    Top-level: total tests/suites/duration. Sub-bullets: per-category breakdown.
+    Add a coverage-targets bullet and a security-suite bullet when applicable.
+  - **Never include:** raw JSON/CI output, per-test-case listings, stack traces,
+    or tool-specific jargon (e.g. `vitest --reporter=verbose`).
 
 ---
 

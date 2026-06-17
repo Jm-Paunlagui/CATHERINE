@@ -345,7 +345,8 @@ Mocha + Chai + Supertest + Sinon.
 - Ensure every new log message is a named template function in the correct `constants/messages/` sub-file — never an inline string.
 - Document every new `.env` variable in `.env.example` with a safe default and category comment, following the section-organised style used across all Project Catherine repos.
 - Follow `oracle-mongo-wrapper` file header pattern: `WHAT THIS FILE DOES`, `HOW IT WORKS`, `EXAMPLE`, `SUPPORTED OPERATORS` blocks at the top of every file. Update Operator Reference table in `README.md`. Update the Quick Cheat Sheet with representative examples.
-- Changelog entries: conventional-commit style (`feat`, `fix`, `security`, `perf`, `docs`, `refactor`, `chore`) for every meaningful change.
+- Changelog entries: conventional-commit style (`feat`, `fix`, `security`, `perf`, `test`, `docs`, `refactor`, `chore`) for every meaningful change.
+- **`test` changelog content rules:** Title follows `"<Scope> Test Suite — <Verdict>"`. Message leads with verdict, then counts/duration/coverage. What Changed bullets use category → count → coverage structure with failures first. Never include raw CI output, per-test-case listings, stack traces, or tool jargon.
 - Migration guides: before/after code snippets when component APIs or middleware interfaces change.
 - ASCII flow diagrams for non-trivial control flow (OAuth, request lifecycle, cache invalidation, chaos experiment design).
 

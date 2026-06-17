@@ -7,7 +7,7 @@
  * SUPER_ADMIN users see Add / Edit / Delete controls.
  */
 
-import { faArrowUp, faBug, faChevronDown, faChevronUp, faCodeBranch, faCodeMerge, faFileLines, faFlagCheckered, faGears, faLock, faPen, faPlus, faRocket, faShieldHalved, faTrashCan, faTriangleExclamation, faWrench } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faBug, faChevronDown, faChevronUp, faCodeBranch, faCodeMerge, faFileLines, faFlagCheckered, faFlask, faGears, faLock, faPen, faPlus, faRocket, faShieldHalved, faTrashCan, faTriangleExclamation, faWrench } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 
@@ -20,10 +20,9 @@ import Button from "../../../components/ui/Button";
 import { Datepicker } from "../../../components/ui/Datepicker";
 import { Modal } from "../../../components/ui/Modal";
 import { Skeleton } from "../../../components/ui/Skeleton";
-import { Tooltip } from "../../../components/ui/Tooltip";
 
 import { ANIMATE_FADE_IN_UP, ANIMATE_PAGE_ENTER, ANIMATE_PULSE_SCALE, ANIM_DELAY_0, ANIM_DELAY_100, ANIM_DELAY_200, BASE_COLOR_BG, BASE_COLOR_TEXT, GRADIENT_COLOR_TEXT, STANDARD_BORDER, TITLE_COLOR_TEXT, staggerDelay } from "../../../assets/styles/pre-set-styles";
-import { parseStageFromVersion, STAGE_META } from "../../../config/appVersion";
+import { STAGE_META, parseStageFromVersion } from "../../../config/appVersion";
 
 import { useChangelog } from "./changelog.hook";
 
@@ -37,6 +36,7 @@ const TYPE_META = {
     perf: { badge: "purple", icon: faGears, label: "Performance", dotColor: "bg-purple-400" },
     refactor: { badge: "grey", icon: faCodeBranch, label: "Refactor", dotColor: "bg-grey-400" },
     security: { badge: "orange", icon: faShieldHalved, label: "Security", dotColor: "bg-orange-400" },
+    test: { badge: "teal", icon: faFlask, label: "Test", dotColor: "bg-teal-400" },
     docs: { badge: "cyan", icon: faFileLines, label: "Docs", dotColor: "bg-blue-300" },
     chore: { badge: "grey", icon: faGears, label: "Chore", dotColor: "bg-grey-300" },
     release: { badge: "green", icon: faFlagCheckered, label: "Release", dotColor: "bg-success-400" },
@@ -169,11 +169,7 @@ function ReleaseControl({ hook }) {
 
             {/* Hint */}
             <p className={`mt-3 text-xs ${BASE_COLOR_TEXT} opacity-45`}>
-                {!rs?.hasTarget || stage === "stable"
-                    ? "No cycle in flight — open one to start logging changes. Every action opens an entry you review before it’s written."
-                    : stage === "rc"
-                      ? "Release candidate — review and cut to stable when ready. A new fix is just a new entry at rc."
-                      : "Promote when this stage is ready. Each action opens a pre-filled entry you review before saving."}
+                {!rs?.hasTarget || stage === "stable" ? "No cycle in flight — open one to start logging changes. Every action opens an entry you review before it’s written." : stage === "rc" ? "Release candidate — review and cut to stable when ready. A new fix is just a new entry at rc." : "Promote when this stage is ready. Each action opens a pre-filled entry you review before saving."}
             </p>
         </div>
     );

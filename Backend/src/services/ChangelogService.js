@@ -22,6 +22,7 @@ const VALID_TYPES = [
     "perf",
     "refactor",
     "security",
+    "test",
     "docs",
     "chore",
     "release", // release-train milestone markers (promote / cut / open)
