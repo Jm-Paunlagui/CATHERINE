@@ -213,6 +213,6 @@ Full architecture rules, the complete component map, the animation system, and t
 
 **CATHERINE** — secure, fast, observable, and beautiful, from the first commit.
 
-_Aumovio Design System v3.1 · Express v5 class-based OOP · Mira `oracle-mongo-wrapper` (Apache 2.0 © 2026 John Moises Paunlagui)_
+_TailwindCSS Design System v3.1 · Express v5 class-based OOP · Mira `oracle-mongo-wrapper` (Apache 2.0 © 2026 John Moises Paunlagui)_
 
 </div>

@@ -39,15 +39,15 @@ Write code review comments terse and actionable. One line per finding. Location,
 
 ❌ "I noticed that on line 42 you're not checking if the user object is null before accessing the email property. This could potentially cause a crash if the user is not found in the database. You might want to add a null check here."
 
-✅ `L42: 🔴 bug: user can be null after .find(). Add guard before .email.`
+`L42: 🔴 bug: user can be null after .find(). Add guard before .email.`
 
 ❌ "It looks like this function is doing a lot of things and might benefit from being broken up into smaller functions for readability."
 
-✅ `L88-140: 🔵 nit: 50-line fn does 4 things. Extract validate/normalize/persist.`
+`L88-140: 🔵 nit: 50-line fn does 4 things. Extract validate/normalize/persist.`
 
 ❌ "Have you considered what happens if the API returns a 429? I think we should probably handle that case."
 
-✅ `L23: 🟡 risk: no retry on 429. Wrap in withBackoff(3).`
+`L23: 🟡 risk: no retry on 429. Wrap in withBackoff(3).`
 
 ## Auto-Clarity
 

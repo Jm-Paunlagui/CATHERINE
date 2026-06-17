@@ -39,28 +39,30 @@ When the work is outside the Aumovio codebase but touches one of the thirteen do
 
 - Map every UI need to the correct Aumovio component. Never write a raw `<input>` when `Input`, `Select`, `Toggle`, `FloatingLabel`, or `FileInput` exists. Never write raw HTML when a system component fulfils the need.
 - Enforce the three-layer feature architecture without exception:
-  - `<feature>.api.js` — all HTTP calls via `httpClient` (never direct Axios)
-  - `<feature>.hook.js` — all state, `useRequest`, derived data, callbacks
-  - `<Feature>.view.jsx` — pure rendering, no imports of `.api.js` files
+    - `<feature>.api.js` — all HTTP calls via `httpClient` (never direct Axios)
+    - `<feature>.hook.js` — all state, `useRequest`, derived data, callbacks
+    - `<Feature>.view.jsx` — pure rendering, no imports of `.api.js` files
 - When a view file exceeds ~400 lines, extract tab-level and modal-level components into a sibling `components/` folder. Each extracted component receives all data via props — it never imports the feature hook or API file. The view file remains the sole consumer of the hook.
 
 ### Three-tier component sharing model
 
 The frontend uses a **deliberate three-tier hierarchy** for component placement. Pick the lowest tier that fits; promote only when reuse demands it.
 
-| Tier | Path                                       | Scope                                                       | When to use                                                                                                                       |
-| ---- | ------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `src/features/<feature>/components/`       | One feature only                                            | Tab panels, modals, section blocks extracted from a view that crossed ~400 lines. Each receives data via props; never imports the feature hook or API. |
-| 2    | `src/features/<feature>/shared/`           | Multiple components **inside the same feature**             | Sub-components, helpers, constants, or hooks reused by 2+ components within this feature. Internal — never imported by another feature. |
-| 3    | `src/components/shared/`                   | Multiple features, **identical flow / different data**      | Components used by 2+ features that follow the **exact same steps**, differing only in data shape and processing. The shared component owns the UX; each feature passes its own data contract via props/config. |
+| Tier | Path                                 | Scope                                                  | When to use                                                                                                                                                                                                     |
+| ---- | ------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `src/features/<feature>/components/` | One feature only                                       | Tab panels, modals, section blocks extracted from a view that crossed ~400 lines. Each receives data via props; never imports the feature hook or API.                                                          |
+| 2    | `src/features/<feature>/shared/`     | Multiple components **inside the same feature**        | Sub-components, helpers, constants, or hooks reused by 2+ components within this feature. Internal — never imported by another feature.                                                                         |
+| 3    | `src/components/shared/`             | Multiple features, **identical flow / different data** | Components used by 2+ features that follow the **exact same steps**, differing only in data shape and processing. The shared component owns the UX; each feature passes its own data contract via props/config. |
 
 **Promotion rule (rule of three):**
+
 - Start in tier 1.
-- Promote to tier 2 only when a *second component inside the same feature* needs it.
-- Promote to tier 3 only when a *second feature* needs the **exact same flow** — not merely a similar one. A flow that "looks close" but has different steps stays at tier 1 in each feature.
+- Promote to tier 2 only when a _second component inside the same feature_ needs it.
+- Promote to tier 3 only when a _second feature_ needs the **exact same flow** — not merely a similar one. A flow that "looks close" but has different steps stays at tier 1 in each feature.
 - Never preemptively generalise. Two features doing visually-similar but logically-different work is a strong signal to keep them separate.
 
 **Canonical tier-3 example:** `ExcelStepDropzone` in `src/components/shared/ExcelUploadStepper/`. Every Excel-import feature in the platform runs the same Upload → Verify → Complete wizard — only the row shape, validation rules, and final write differ. The wizard, dropzone, step indicator, and shared helpers (`makeUploadSteps`, `sortAndIndexRows`, `rowTintClass`) live in tier 3; each feature owns its Step 2 (Verify) and Step 3 (Complete) implementations at tier 1.
+
 - Use only `@theme`-defined design tokens. Never hard-code hex values, pixel values outside the token set, or arbitrary Tailwind classes.
 - Pick animation constants from the documented set (`ANIMATE_FADE_IN_UP`, `HOVER_LIFT`, `TRANSITION_SPRING`, `ANIMATE_SHAKE`, `staggerDelay`, etc.) using the Animation Decision Guide. Never hard-code `transition: all 300ms`.
 - Always pair light utilities with `dark:` variants. Use documented surface colours (`dark:bg-[#1a1030]`, `dark:text-white/85`).
@@ -84,15 +86,15 @@ The frontend uses a **deliberate three-tier hierarchy** for component placement.
 ### Core responsibilities
 
 - Enforce class-based OOP without exception. Use the decision table:
-  - **Use CLASS when:** holds state, manages a resource (pool, timer, store), has lifecycle (init/start/stop), wraps a third-party client, has multiple related methods
-  - **Use FUNCTION when:** pure transformation (in → out), no state, no side effects, single-purpose utility
+    - **Use CLASS when:** holds state, manages a resource (pool, timer, store), has lifecycle (init/start/stop), wraps a third-party client, has multiple related methods
+    - **Use FUNCTION when:** pure transformation (in → out), no state, no side effects, single-purpose utility
 - Every middleware module exports a default instantiated class whose `.handle()` method is bound in `app.js`. Custom instances via `new XMiddleware(options)`.
 - Controllers: classes with static `catchAsync`-wrapped methods. Zero DB calls, zero business logic. Return `res.json(sendSuccess(...))` or call `next(new AppError(...))`.
 - Services: own all business logic. Throw `AppError(message, statusCode, options)`. Never call `res.json()` directly.
 - Enforce the three-bucket constants rule:
-  - `throw new AppError(...)` → `constants/errors/`
-  - `res.json(sendSuccess(...))` → `constants/responses/`
-  - `logger.*` calls → `constants/messages/<namespace>.messages.js`
+    - `throw new AppError(...)` → `constants/errors/`
+    - `res.json(sendSuccess(...))` → `constants/responses/`
+    - `logger.*` calls → `constants/messages/<namespace>.messages.js`
 - Ban `console.log` / `console.error` in production code. Only `logger.*` is permitted.
 - Never reorder the 14-step middleware chain. Always explain positional rationale when discussing middleware changes.
 - Auth: use `AuthMiddleware.requireAccess(predicate)`. Never hardcode `AREAS` or `ROLES` in the template layer.
@@ -170,6 +172,7 @@ Treat the following as your active working knowledge. Load the linked reference 
 ### When to consult references
 
 Always read the relevant reference file before:
+
 - Reviewing code for a class of vulnerability you have not named explicitly in the current conversation
 - Triaging a CVE in a direct or transitive dependency
 - Designing a new authentication, authorization, or cryptographic flow
@@ -286,7 +289,7 @@ Deliver findings as a structured report with:
 
 - Be specific and actionable. Vague feedback like "consider refactoring" is rejected.
 - Distinguish blocking issues (must fix before merge) from non-blocking (nice to have, follow-up issue).
-- Explain *why*, not just *what* — link to the CWE / CVE / pattern documentation so the author learns.
+- Explain _why_, not just _what_ — link to the CWE / CVE / pattern documentation so the author learns.
 
 ---
 
@@ -294,7 +297,7 @@ Deliver findings as a structured report with:
 
 ### Backend test stack
 
-Mocha + Chai + Supertest + Sinon.
+Vitest + Supertest (Vitest's built-in `expect` replaces Chai; `vi` mocking/spies/stubs replace Sinon).
 
 ### Backend test categories
 
@@ -406,18 +409,18 @@ Chaos engineering is **hypothesis-driven experimentation on a production-like sy
 - For every non-trivial algorithm, state its time and space complexity in Big-O notation, in the JSDoc or a comment: `// O(n log n) time, O(n) space — n = row count`.
 - Prefer `O(n)` over `O(n²)` only when n can grow. For n ≤ 100 with no growth path, a clear `O(n²)` beats a clever `O(n log n)`.
 - Watch for hidden quadratics: nested `.find()` / `.includes()` inside a `.map()` is `O(n·m)`. Convert one side to a `Map`/`Set` lookup → `O(n + m)`.
-- Avoid premature `.flat()` / `.flatMap()` chains that allocate intermediate arrays; a single `for` loop with manual push is often the right Big-O *and* the right constants.
+- Avoid premature `.flat()` / `.flatMap()` chains that allocate intermediate arrays; a single `for` loop with manual push is often the right Big-O _and_ the right constants.
 
 ### Time-vs-space tradeoff table
 
-| Situation                                | Prefer                              | Why                                              |
-| ---------------------------------------- | ----------------------------------- | ------------------------------------------------ |
-| Read-heavy lookup, small key set         | `Map` / object cache (space)        | O(1) lookup, memory is cheap                     |
-| Write-heavy, small read set              | Recompute (time)                    | Avoid cache invalidation complexity              |
-| Hot path called per-request              | Memoise at module load              | One-time space cost, zero per-request time       |
-| Cold path called once per day            | Recompute (time)                    | Memory pressure not worth the saving             |
-| Large dataset, single pass               | Streaming / generator               | O(1) space vs. O(n) materialised                 |
-| Repeated aggregation over same dataset   | Materialised view (space)           | Trade storage for read latency                   |
+| Situation                              | Prefer                       | Why                                        |
+| -------------------------------------- | ---------------------------- | ------------------------------------------ |
+| Read-heavy lookup, small key set       | `Map` / object cache (space) | O(1) lookup, memory is cheap               |
+| Write-heavy, small read set            | Recompute (time)             | Avoid cache invalidation complexity        |
+| Hot path called per-request            | Memoise at module load       | One-time space cost, zero per-request time |
+| Cold path called once per day          | Recompute (time)             | Memory pressure not worth the saving       |
+| Large dataset, single pass             | Streaming / generator        | O(1) space vs. O(n) materialised           |
+| Repeated aggregation over same dataset | Materialised view (space)    | Trade storage for read latency             |
 
 ### Frontend performance
 
@@ -440,7 +443,7 @@ Chaos engineering is **hypothesis-driven experimentation on a production-like sy
 - The function is called once at startup.
 - Profiling shows it is < 1% of total time.
 - The optimisation harms readability and the workload is small and bounded.
-- Quote Knuth correctly: "Premature optimisation is the root of all evil" applies to the **97%** non-critical code. The other **3%** *should* be ruthlessly optimised.
+- Quote Knuth correctly: "Premature optimisation is the root of all evil" applies to the **97%** non-critical code. The other **3%** _should_ be ruthlessly optimised.
 
 ---
 
@@ -483,23 +486,23 @@ State the pattern name (so the author can look it up), why it bites in this spec
 
 ## CROSS-CUTTING PRINCIPLES (non-negotiable on every response)
 
-| Principle              | Frontend rule                                                  | Backend rule                                                                                  |
-| ---------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Architecture integrity | Views never import API files. Hooks never contain JSX.         | Controllers never contain DB calls. Services never call `res.json()`.                         |
-| Component/class-first  | Never write raw HTML when an Aumovio component exists.         | Every stateful module is a class. Pure transformations may be functions.                      |
-| Token-first            | Never hard-code colours, durations, or easing values.          | Never inline log message strings. Use `constants/messages/` templates.                        |
-| Security-always        | Every feature checked against frontend security rules.         | Every feature checked against backend security model before delivery.                         |
-| No console logging     | `console.log` banned in production code.                       | Only `logger.*` permitted.                                                                    |
-| Bind variables         | N/A                                                            | All `oracle-mongo-wrapper` queries use bind variables. Raw interpolation forbidden.           |
-| Dark mode parity       | Every light-mode class has a `dark:` counterpart.              | N/A                                                                                           |
-| State hygiene          | Use state management decision table. No Redux/Zustand.         | `useRequest` for server data. No external state managers.                                     |
-| Error boundaries       | Every view wrapped in `<ErrorBoundary>`.                       | Every async controller uses `catchAsync`. All errors funnel through `ErrorHandlerMiddleware`. |
-| No secrets in code     | All secrets are `VITE_*` env vars. No `.env` commits.          | All secrets are `process.env.*`. No `.env` commits.                                           |
-| Audit trail            | Significant changes include changelog entry and updated JSDoc. | Significant changes include changelog entry, updated JSDoc, and `.env.example` additions.    |
-| Middleware stack order | N/A                                                            | The 14-step middleware chain is never reordered. Position rationale always explained.         |
-| Complexity awareness   | State Big-O for any algorithm > trivial.                       | State Big-O for any algorithm > trivial. Profile before optimising.                           |
-| Resilience by default  | Three states (loading/success/error) on every async action.    | Timeouts, retries, circuit breakers on every external dependency.                             |
-| Anti-pattern hygiene   | Flag god components, magic numbers, callback pyramids on sight.| Flag god classes, swallowed errors, boolean params on sight.                                  |
+| Principle              | Frontend rule                                                   | Backend rule                                                                                  |
+| ---------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Architecture integrity | Views never import API files. Hooks never contain JSX.          | Controllers never contain DB calls. Services never call `res.json()`.                         |
+| Component/class-first  | Never write raw HTML when an Aumovio component exists.          | Every stateful module is a class. Pure transformations may be functions.                      |
+| Token-first            | Never hard-code colours, durations, or easing values.           | Never inline log message strings. Use `constants/messages/` templates.                        |
+| Security-always        | Every feature checked against frontend security rules.          | Every feature checked against backend security model before delivery.                         |
+| No console logging     | `console.log` banned in production code.                        | Only `logger.*` permitted.                                                                    |
+| Bind variables         | N/A                                                             | All `oracle-mongo-wrapper` queries use bind variables. Raw interpolation forbidden.           |
+| Dark mode parity       | Every light-mode class has a `dark:` counterpart.               | N/A                                                                                           |
+| State hygiene          | Use state management decision table. No Redux/Zustand.          | `useRequest` for server data. No external state managers.                                     |
+| Error boundaries       | Every view wrapped in `<ErrorBoundary>`.                        | Every async controller uses `catchAsync`. All errors funnel through `ErrorHandlerMiddleware`. |
+| No secrets in code     | All secrets are `VITE_*` env vars. No `.env` commits.           | All secrets are `process.env.*`. No `.env` commits.                                           |
+| Audit trail            | Significant changes include changelog entry and updated JSDoc.  | Significant changes include changelog entry, updated JSDoc, and `.env.example` additions.     |
+| Middleware stack order | N/A                                                             | The 14-step middleware chain is never reordered. Position rationale always explained.         |
+| Complexity awareness   | State Big-O for any algorithm > trivial.                        | State Big-O for any algorithm > trivial. Profile before optimising.                           |
+| Resilience by default  | Three states (loading/success/error) on every async action.     | Timeouts, retries, circuit breakers on every external dependency.                             |
+| Anti-pattern hygiene   | Flag god components, magic numbers, callback pyramids on sight. | Flag god classes, swallowed errors, boolean params on sight.                                  |
 
 ---
 
@@ -524,37 +527,37 @@ State the pattern name (so the author can look it up), why it bites in this spec
 
 ## FILE OWNERSHIP MAP
 
-| Path                                          | Owning specialisation(s)                                      |
-| --------------------------------------------- | ------------------------------------------------------------- |
-| `src/features/<feature>/<feature>.api.js`     | React Engineer                                                |
-| `src/features/<feature>/<feature>.hook.js`    | React Engineer + QA                                           |
-| `src/features/<feature>/<Feature>.view.jsx`   | React Engineer + UI/UX Designer + QA                          |
-| `src/components/ui/*.jsx`                     | React Engineer + UI/UX Designer                               |
-| `src/components/shared/ExcelUploadStepper/**` | React Engineer + QA                                           |
-| `src/assets/styles/index.css`                 | React Engineer + UI/UX Designer                               |
-| `src/assets/styles/pre-set-styles.jsx`        | React Engineer                                                |
-| `src/middleware/security/*.js`                | Node.js Engineer + Cybersecurity                              |
-| `src/middleware/cache/*.js`                   | Node.js Engineer + Performance                                |
-| `src/routes/*.route.js`                       | Node.js Engineer + Cybersecurity                              |
-| `src/controllers/*.js`                        | Node.js Engineer + Code Reviewer                              |
-| `src/services/*.js`                           | Node.js Engineer + Accountant (if financial) + Performance    |
-| `src/constants/errors/*.js`                   | Node.js Engineer + Documentation                              |
-| `src/constants/responses/*.js`                | Node.js Engineer + Documentation                              |
-| `src/constants/messages/*.js`                 | Node.js Engineer + Documentation                              |
-| `src/config/database.js`                      | Oracle Engineer + Chaos Engineer                              |
-| `src/config/adapters/oracle.js`               | Oracle Engineer + Node.js Engineer                            |
-| `src/utils/oracle-mongo-wrapper/**`           | Oracle Engineer + Documentation                               |
-| `src/utils/logger.js`                         | Node.js Engineer + Documentation                              |
-| `test/unit/**`                                | Test Engineer                                                 |
-| `test/integration/**`                         | Test Engineer                                                 |
-| `test/security/**`                            | Test Engineer + Cybersecurity                                 |
-| `test/performance/**`                         | Test Engineer + Performance                                   |
-| `test/reliability/**`                         | Test Engineer + Node.js Engineer                              |
-| `test/chaos/**`                               | Test Engineer + Chaos Engineer                                |
-| `CLAUDE.md` (both)                            | Documentation Engineer                                        |
-| `.env.example`                                | Node.js Engineer + Documentation                              |
-| `server.js`                                   | Node.js Engineer                                              |
-| `src/app.js`                                  | Node.js Engineer + Cybersecurity                              |
+| Path                                          | Owning specialisation(s)                                   |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| `src/features/<feature>/<feature>.api.js`     | React Engineer                                             |
+| `src/features/<feature>/<feature>.hook.js`    | React Engineer + QA                                        |
+| `src/features/<feature>/<Feature>.view.jsx`   | React Engineer + UI/UX Designer + QA                       |
+| `src/components/ui/*.jsx`                     | React Engineer + UI/UX Designer                            |
+| `src/components/shared/ExcelUploadStepper/**` | React Engineer + QA                                        |
+| `src/assets/styles/index.css`                 | React Engineer + UI/UX Designer                            |
+| `src/assets/styles/pre-set-styles.jsx`        | React Engineer                                             |
+| `src/middleware/security/*.js`                | Node.js Engineer + Cybersecurity                           |
+| `src/middleware/cache/*.js`                   | Node.js Engineer + Performance                             |
+| `src/routes/*.route.js`                       | Node.js Engineer + Cybersecurity                           |
+| `src/controllers/*.js`                        | Node.js Engineer + Code Reviewer                           |
+| `src/services/*.js`                           | Node.js Engineer + Accountant (if financial) + Performance |
+| `src/constants/errors/*.js`                   | Node.js Engineer + Documentation                           |
+| `src/constants/responses/*.js`                | Node.js Engineer + Documentation                           |
+| `src/constants/messages/*.js`                 | Node.js Engineer + Documentation                           |
+| `src/config/database.js`                      | Oracle Engineer + Chaos Engineer                           |
+| `src/config/adapters/oracle.js`               | Oracle Engineer + Node.js Engineer                         |
+| `src/utils/oracle-mongo-wrapper/**`           | Oracle Engineer + Documentation                            |
+| `src/utils/logger.js`                         | Node.js Engineer + Documentation                           |
+| `test/unit/**`                                | Test Engineer                                              |
+| `test/integration/**`                         | Test Engineer                                              |
+| `test/security/**`                            | Test Engineer + Cybersecurity                              |
+| `test/performance/**`                         | Test Engineer + Performance                                |
+| `test/reliability/**`                         | Test Engineer + Node.js Engineer                           |
+| `test/chaos/**`                               | Test Engineer + Chaos Engineer                             |
+| `CLAUDE.md` (both)                            | Documentation Engineer                                     |
+| `.env.example`                                | Node.js Engineer + Documentation                           |
+| `server.js`                                   | Node.js Engineer                                           |
+| `src/app.js`                                  | Node.js Engineer + Cybersecurity                           |
 
 ---
 

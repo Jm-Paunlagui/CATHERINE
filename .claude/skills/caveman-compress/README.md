@@ -40,7 +40,7 @@ Real results on real project files:
 | `mixed-with-code.md`       |      888 |        560 | **36.9%** |
 | **Average**                |  **898** |    **481** |   **46%** |
 
-All validations passed ✅ — headings, code blocks, URLs, file paths preserved exactly.
+All validations passed — headings, code blocks, URLs, file paths preserved exactly.
 
 ## Before / After
 
@@ -99,8 +99,8 @@ Examples:
 
 | Type                                  | Compress?              |
 | ------------------------------------- | ---------------------- |
-| `.md`, `.txt`, `.rst`                 | ✅ Yes                 |
-| Extensionless natural language        | ✅ Yes                 |
+| `.md`, `.txt`, `.rst`                 | Yes                    |
+| Extensionless natural language        | Yes                    |
 | `.py`, `.js`, `.ts`, `.json`, `.yaml` | ❌ Skip (code/config)  |
 | `*.original.md`                       | ❌ Skip (backup files) |
 

@@ -38,7 +38,7 @@ def print_table(rows):
     print("\n| File | Original | Compressed | Saved % | Valid |")
     print("|------|----------|------------|---------|-------|")
     for r in rows:
-        print(f"| {r[0]} | {r[1]} | {r[2]} | {r[3]:.1f}% | {'✅' if r[4] else '❌'} |")
+        print(f"| {r[0]} | {r[1]} | {r[2]} | {r[3]:.1f}% | {'' if r[4] else '❌'} |")
 
 
 def main():

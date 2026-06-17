@@ -26,14 +26,14 @@ Each scan type sees a different slice of the system. **None replaces the others.
 
 Analyses source code or compiled bytecode without executing it. Finds: injection patterns, hard-coded secrets, unsafe deserialization, weak crypto choices, missing auth annotations.
 
-| Tool | Notes |
-| ---- | ----- |
-| **Semgrep** | Pattern-based, fast, open-source rules. Great for custom rules tuned to your codebase. |
-| **CodeQL** (GitHub) | Query language; deep dataflow analysis; free for OSS, paid for private repos. |
-| **SonarQube / SonarCloud** | Broad language coverage; quality + security; gated quality profiles. |
-| **Snyk Code** | Symbolic execution; commercial; fast. |
-| **Checkmarx, Veracode, Fortify** | Enterprise SAST; deep but slow. |
-| **ESLint security plugins** (`eslint-plugin-security`, `eslint-plugin-no-unsanitized`) | Lint-level; quick wins for JS. |
+| Tool                                                                                   | Notes                                                                                  |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Semgrep**                                                                            | Pattern-based, fast, open-source rules. Great for custom rules tuned to your codebase. |
+| **CodeQL** (GitHub)                                                                    | Query language; deep dataflow analysis; free for OSS, paid for private repos.          |
+| **SonarQube / SonarCloud**                                                             | Broad language coverage; quality + security; gated quality profiles.                   |
+| **Snyk Code**                                                                          | Symbolic execution; commercial; fast.                                                  |
+| **Checkmarx, Veracode, Fortify**                                                       | Enterprise SAST; deep but slow.                                                        |
+| **ESLint security plugins** (`eslint-plugin-security`, `eslint-plugin-no-unsanitized`) | Lint-level; quick wins for JS.                                                         |
 
 **Strengths:** finds vulnerabilities before the code runs; surfaces issues at PR time when fix is cheapest; catches issues in code paths that aren't yet tested.
 
@@ -41,14 +41,14 @@ Analyses source code or compiled bytecode without executing it. Finds: injection
 
 ### DAST — Dynamic Application Security Testing
 
-Probes a *running* application from the outside, like a black-box attacker. Finds: misconfigurations, missing security headers, auth bypass, injection that manifests over the wire, server-side processing flaws.
+Probes a _running_ application from the outside, like a black-box attacker. Finds: misconfigurations, missing security headers, auth bypass, injection that manifests over the wire, server-side processing flaws.
 
-| Tool | Notes |
-| ---- | ----- |
-| **OWASP ZAP** | Open-source; scriptable; CI-friendly. The default starting point. |
-| **Burp Suite** (Pro / Enterprise) | Industry standard for manual testing; Enterprise for automation. |
-| **Nuclei** | Template-based scanner; fast; massive community template library. |
-| **Acunetix, AppScan, Rapid7 InsightAppSec** | Commercial DAST suites. |
+| Tool                                        | Notes                                                             |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| **OWASP ZAP**                               | Open-source; scriptable; CI-friendly. The default starting point. |
+| **Burp Suite** (Pro / Enterprise)           | Industry standard for manual testing; Enterprise for automation.  |
+| **Nuclei**                                  | Template-based scanner; fast; massive community template library. |
+| **Acunetix, AppScan, Rapid7 InsightAppSec** | Commercial DAST suites.                                           |
 
 **Strengths:** sees the real attack surface; catches misconfigurations SAST can't; framework-agnostic.
 
@@ -58,27 +58,27 @@ Probes a *running* application from the outside, like a black-box attacker. Find
 
 Inventories dependencies and checks them against vulnerability databases. See `cve-methodology.md` for full handling.
 
-| Tool | Notes |
-| ---- | ----- |
-| **`npm audit` / `yarn audit` / `pnpm audit`** | Built-in; uses GHSA; baseline. |
-| **Dependabot / Renovate** | Auto-PR for upgrades; configure version policy carefully. |
-| **Snyk Open Source** | Reachability analysis; broader DB than `npm audit`. |
-| **Trivy** | OSS; container + dependency + SBOM in one tool. |
-| **Grype** | OSS; pairs with Syft for SBOM-driven scanning. |
-| **OWASP Dependency-Check** | OSS; CVE-focused; broad language support. |
-| **OWASP Dependency-Track** | OSS; consumes SBOMs; org-wide vulnerability dashboard. |
-| **Socket.dev** | Behaviour analysis of npm packages — flags supply-chain risk beyond known CVEs. |
-| **GitHub Advanced Security** | Bundles SCA + secret scanning + CodeQL. |
+| Tool                                          | Notes                                                                           |
+| --------------------------------------------- | ------------------------------------------------------------------------------- |
+| **`npm audit` / `yarn audit` / `pnpm audit`** | Built-in; uses GHSA; baseline.                                                  |
+| **Dependabot / Renovate**                     | Auto-PR for upgrades; configure version policy carefully.                       |
+| **Snyk Open Source**                          | Reachability analysis; broader DB than `npm audit`.                             |
+| **Trivy**                                     | OSS; container + dependency + SBOM in one tool.                                 |
+| **Grype**                                     | OSS; pairs with Syft for SBOM-driven scanning.                                  |
+| **OWASP Dependency-Check**                    | OSS; CVE-focused; broad language support.                                       |
+| **OWASP Dependency-Track**                    | OSS; consumes SBOMs; org-wide vulnerability dashboard.                          |
+| **Socket.dev**                                | Behaviour analysis of npm packages — flags supply-chain risk beyond known CVEs. |
+| **GitHub Advanced Security**                  | Bundles SCA + secret scanning + CodeQL.                                         |
 
 ### IAST — Interactive Application Security Testing
 
 Runtime instrumentation that observes application behaviour from inside. Combines SAST visibility (source location) with DAST accuracy (real execution).
 
-| Tool | Notes |
-| ---- | ----- |
+| Tool                  | Notes                            |
+| --------------------- | -------------------------------- |
 | **Contrast Security** | Commercial; mature; agent-based. |
-| **Datadog ASM** | Pairs with existing Datadog APM. |
-| **Seeker (Synopsys)** | Enterprise. |
+| **Datadog ASM**       | Pairs with existing Datadog APM. |
+| **Seeker (Synopsys)** | Enterprise.                      |
 
 **Use case:** run during integration/e2e tests in CI to get extremely accurate vulnerability findings tied to specific request flows. Lower false-positive rate than SAST or DAST alone.
 
@@ -90,12 +90,12 @@ Runtime defence: blocks attacks as they happen, in production. Same vendors as I
 
 Always-on, separate from SAST. Catches API keys, tokens, private keys committed to source.
 
-| Tool | Notes |
-| ---- | ----- |
-| **gitleaks** | OSS; pre-commit + CI. |
-| **truffleHog** | OSS; deep git-history scanning. |
+| Tool                       | Notes                                                  |
+| -------------------------- | ------------------------------------------------------ |
+| **gitleaks**               | OSS; pre-commit + CI.                                  |
+| **truffleHog**             | OSS; deep git-history scanning.                        |
 | **GitHub secret scanning** | Built-in; alerts partners (AWS, Stripe, etc.) on leak. |
-| **detect-secrets** (Yelp) | OSS; baseline file pattern. |
+| **detect-secrets** (Yelp)  | OSS; baseline file pattern.                            |
 
 **Always combine with pre-commit hooks** (`pre-commit` framework) so leaks never enter git history — rotation is faster than removal.
 
@@ -103,7 +103,7 @@ Always-on, separate from SAST. Catches API keys, tokens, private keys committed 
 
 ## 2. Threat modeling frameworks
 
-Threat modeling is a structured conversation: *what could go wrong?* Done at design time, before code, on every new feature with meaningful trust boundaries.
+Threat modeling is a structured conversation: _what could go wrong?_ Done at design time, before code, on every new feature with meaningful trust boundaries.
 
 ### The four questions (Shostack)
 
@@ -116,14 +116,14 @@ Threat modeling is a structured conversation: *what could go wrong?* Done at des
 
 The most-used framework. One letter per category of threat — walk every component / data flow against each.
 
-| Letter | Threat                       | Violates property | Example mitigation |
-| ------ | ---------------------------- | ----------------- | ------------------ |
-| **S**  | Spoofing                     | Authentication    | Strong auth, MFA, mutual TLS |
-| **T**  | Tampering                    | Integrity         | Signatures, HMAC, ACLs, audit logs |
-| **R**  | Repudiation                  | Non-repudiation   | Append-only audit log, signed receipts |
-| **I**  | Information Disclosure       | Confidentiality   | Encryption at rest/in transit, access control, masking |
-| **D**  | Denial of Service            | Availability      | Rate limits, quotas, autoscaling, circuit breakers |
-| **E**  | Elevation of Privilege       | Authorisation     | Least privilege, sandboxing, input validation |
+| Letter | Threat                 | Violates property | Example mitigation                                     |
+| ------ | ---------------------- | ----------------- | ------------------------------------------------------ |
+| **S**  | Spoofing               | Authentication    | Strong auth, MFA, mutual TLS                           |
+| **T**  | Tampering              | Integrity         | Signatures, HMAC, ACLs, audit logs                     |
+| **R**  | Repudiation            | Non-repudiation   | Append-only audit log, signed receipts                 |
+| **I**  | Information Disclosure | Confidentiality   | Encryption at rest/in transit, access control, masking |
+| **D**  | Denial of Service      | Availability      | Rate limits, quotas, autoscaling, circuit breakers     |
+| **E**  | Elevation of Privilege | Authorisation     | Least privilege, sandboxing, input validation          |
 
 **STRIDE-per-element:** apply each letter to each component (process, data store, data flow, external entity) in your diagram. STRIDE-per-interaction does the same per data flow — more thorough, more work.
 
@@ -143,15 +143,15 @@ Seven-stage, risk-centric, business-aligned. Heavier than STRIDE; appropriate fo
 
 Privacy-focused complement to STRIDE. Use when handling personal data (always relevant under GDPR / Philippine Data Privacy Act / CCPA).
 
-| Letter | Threat                                |
-| ------ | ------------------------------------- |
-| **L**  | Linkability — can two records be linked to the same person? |
-| **I**  | Identifiability — can a record be tied to a real identity? |
-| **N**  | Non-repudiation — can the user deny an action they took? (sometimes a privacy *good*) |
-| **D**  | Detectability — can an outsider tell whether a record exists? |
-| **D**  | Data disclosure |
-| **U**  | Unawareness — does the user know what data is collected and how it's used? |
-| **N**  | Non-compliance — with applicable privacy law |
+| Letter | Threat                                                                                |
+| ------ | ------------------------------------------------------------------------------------- |
+| **L**  | Linkability — can two records be linked to the same person?                           |
+| **I**  | Identifiability — can a record be tied to a real identity?                            |
+| **N**  | Non-repudiation — can the user deny an action they took? (sometimes a privacy _good_) |
+| **D**  | Detectability — can an outsider tell whether a record exists?                         |
+| **D**  | Data disclosure                                                                       |
+| **U**  | Unawareness — does the user know what data is collected and how it's used?            |
+| **N**  | Non-compliance — with applicable privacy law                                          |
 
 ### DREAD — risk scoring
 
@@ -179,12 +179,12 @@ Modern attacks increasingly target the build pipeline rather than the running ap
 
 Pronounced "salsa." Tiered framework from Google / OpenSSF (`slsa.dev`).
 
-| Level | Requirements |
-| ----- | ------------ |
-| **L0** | No guarantees |
-| **L1** | Build process documented; provenance generated |
-| **L2** | Tamper-resistant build service; signed provenance; version-controlled source |
-| **L3** | Hardened build platform; non-falsifiable provenance; isolated build environments |
+| Level  | Requirements                                                                                 |
+| ------ | -------------------------------------------------------------------------------------------- |
+| **L0** | No guarantees                                                                                |
+| **L1** | Build process documented; provenance generated                                               |
+| **L2** | Tamper-resistant build service; signed provenance; version-controlled source                 |
+| **L3** | Hardened build platform; non-falsifiable provenance; isolated build environments             |
 | **L4** | (deprecated in v1.0; concepts merged into L3) Two-party review, hermetic reproducible builds |
 
 **Practical floor for production:** SLSA L2 — use GitHub Actions / GitLab CI with provenance attestation, sign artifacts, pin action versions to SHA (not tag).
@@ -239,9 +239,9 @@ Hierarchy from worst to best:
 1. ❌ Hard-coded in source — never (CWE-798).
 2. ❌ Committed `.env` file — never.
 3. ⚠️ Untracked `.env` on production server — workable for one-server hobby projects only.
-4. ✅ Platform env vars (Heroku, Vercel, container orchestrator secret) — baseline for small teams.
-5. ✅ Secret manager (AWS Secrets Manager, GCP Secret Manager, Azure Key Vault, HashiCorp Vault, Doppler, 1Password) — baseline for production.
-6. ✅✅ Secret manager + short-lived credentials (OIDC / workload identity / IAM roles) — no long-lived secrets in any environment.
+4. Platform env vars (Heroku, Vercel, container orchestrator secret) — baseline for small teams.
+5. Secret manager (AWS Secrets Manager, GCP Secret Manager, Azure Key Vault, HashiCorp Vault, Doppler, 1Password) — baseline for production.
+6. Secret manager + short-lived credentials (OIDC / workload identity / IAM roles) — no long-lived secrets in any environment.
 
 ### Operational rules
 
@@ -261,23 +261,27 @@ If a secret leaks: **rotate first, investigate second.** Git history rewrites do
 Run mentally on every PR that touches:
 
 ### Authentication / authorisation
+
 - Is auth required on every new route? Which middleware enforces it?
 - Are authorisation checks on the resource fetch itself, not just the route?
-- Tenant / ownership boundary respected on reads *and* writes?
+- Tenant / ownership boundary respected on reads _and_ writes?
 - Any privileged fields accepted from user input? (mass assignment — CWE-915)
 
 ### Input handling
+
 - Schema validation on the request body, query, headers, route params?
 - Numeric inputs range-checked?
 - File uploads: extension, MIME (sniffed), size, virus scan if relevant?
 - Any place untrusted data crosses into SQL, HTML, shell, URL, regex, template, log, file path, XML, JSON?
 
 ### Output
+
 - Errors generic in production? No stack traces? (CWE-209)
 - Logs scrubbed of tokens, passwords, PII? (CWE-532)
 - API responses field-allow-listed per role?
 
 ### Crypto
+
 - Passwords hashed with Argon2id / scrypt / bcrypt? (CWE-916)
 - Tokens generated from CSPRNG, ≥128 bits? (CWE-330)
 - JWT algorithm pinned, signature verified, claims validated (`iss`, `aud`, `exp`, `nbf`)?
@@ -285,6 +289,7 @@ Run mentally on every PR that touches:
 - HMAC / signature on inbound webhooks?
 
 ### Resilience
+
 - Timeouts on all outbound calls?
 - Retries bounded (count + budget)?
 - Circuit breaker where appropriate?
@@ -292,11 +297,13 @@ Run mentally on every PR that touches:
 - Rate limit on the route — at appropriate cardinality (per-IP, per-user, per-tenant)?
 
 ### Dependencies
+
 - Any new direct dependencies? License OK? Maintenance signals OK?
 - SCA scan clean on the new dep tree?
 - Lockfile churn explained?
 
 ### Documentation & ops
+
 - New `.env` variable documented in `.env.example`?
 - New log message named in `constants/messages/`?
 - New route in API docs?
@@ -309,25 +316,31 @@ Run mentally on every PR that touches:
 Suggested pipeline stages (block at hard gates, warn at soft gates):
 
 ### Pre-commit (developer machine)
+
 - **Hard:** secret scan (gitleaks).
 - **Soft:** linter security plugins.
 
 ### PR-time (CI on every commit)
+
 - **Hard:** secret scan; SAST high-severity; SCA Critical/High on reachable paths; license check; type-check / lint.
 - **Soft:** SAST medium; SCA Medium; coverage delta; complexity delta.
 
 ### Pre-merge (CI on PR ready)
+
 - **Hard:** full test suite (unit + integration + security tests); SBOM generation succeeds.
 
 ### Post-merge to main (deploys to staging)
+
 - **Hard:** build provenance signed; container image scanned and signed.
 - **Soft:** DAST against staging; performance baseline.
 
 ### Pre-prod release
+
 - **Hard:** all open Critical/High CVEs on reachable paths resolved or suppressed-with-justification; SBOM attached to release; KEV cross-check.
 - **Soft:** chaos test passing; load test passing.
 
 ### Post-deploy
+
 - Runtime monitoring (RASP, anomaly detection).
 - Continuous SCA — new CVEs against deployed SBOM trigger re-triage automatically.
 
@@ -340,6 +353,7 @@ The canonical framework. Four phases — practise the playbook before you need i
 ### Phase 1 — Preparation
 
 Before any incident:
+
 - Documented IR plan with named roles (incident commander, comms lead, scribe, technical lead).
 - On-call rotation with escalation paths.
 - Runbooks for common scenarios (credential leak, DB exfiltration, malicious dependency, ransomware, account takeover).
@@ -358,15 +372,18 @@ Before any incident:
 ### Phase 3 — Containment, Eradication, Recovery
 
 **Containment** — stop the bleeding without destroying evidence:
+
 - Short-term: isolate affected hosts, revoke credentials, block IP ranges, disable feature flags.
 - Long-term: patch, rebuild, re-image with the fix.
 
 **Eradication** — remove the foothold:
+
 - Rotate every credential that may have been exposed.
 - Remove backdoors, persistence mechanisms.
 - Verify root cause is addressed, not just symptoms.
 
 **Recovery** — return to normal:
+
 - Restore from clean backups where needed.
 - Re-enable services in stages with monitoring.
 - Heightened monitoring for re-occurrence for a defined window.
@@ -382,6 +399,7 @@ Before any incident:
 ### Evidence preservation
 
 If law enforcement or litigation is even possible:
+
 - Do not power off potentially-compromised systems — image them.
 - Preserve volatile memory if you can capture it safely.
 - Maintain chain of custody for any artifact retained as evidence.
@@ -391,11 +409,12 @@ If law enforcement or litigation is even possible:
 
 ## 8. Responsible disclosure for your project
 
-Make it easy for researchers to report vulnerabilities to *you*.
+Make it easy for researchers to report vulnerabilities to _you_.
 
 ### `SECURITY.md` (committed to repo root)
 
 Cover at minimum:
+
 - Where to send reports (dedicated email like `security@<domain>`, not a personal address).
 - Encryption (PGP key, Signal contact) for sensitive details.
 - Expected response time (acknowledge within 24h, triage within 72h).
@@ -427,22 +446,22 @@ For higher engagement: **HackerOne**, **Bugcrowd**, **Intigriti**, **YesWeHack**
 
 Quick map of which framework applies when. Each has its own controls; map your security baseline once, satisfy multiple frameworks with overlapping evidence.
 
-| Framework | When it applies | Highlights |
-| --------- | --------------- | ---------- |
-| **PCI-DSS v4.0** | Handling payment card data | Network segmentation, encryption, quarterly scans, annual pen test, secure SDLC requirements |
-| **HIPAA / HITECH** | US healthcare PHI | Encryption, access controls, audit logs, breach notification (60-day) |
-| **SOX** | US publicly-traded co's financial reporting | Change management, access controls, audit trails on financial systems |
-| **GDPR** | Processing EU residents' personal data | Lawful basis, DPIA, 72-hour breach notification, right to erasure, DPO appointment, DPA with processors |
-| **Philippine DPA (RA 10173)** | Processing Philippine residents' personal data | NPC registration, DPO appointment, 72-hour breach notification, security measures, data subject rights |
-| **CCPA / CPRA** | US California residents' personal data | Right to know, delete, opt out; data minimisation |
-| **ISO 27001 / 27002** | Voluntary; common B2B contractual ask | ISMS with 93 controls (2022 version); risk-based |
-| **SOC 2 Type II** | Voluntary; common B2B SaaS ask | Trust Services Criteria (Security mandatory; Availability, Confidentiality, Processing Integrity, Privacy optional); auditor reviews evidence over 6–12 months |
-| **NIST CSF 2.0** | Voluntary; US federal baseline | Govern, Identify, Protect, Detect, Respond, Recover |
-| **NIST 800-53** | US federal info systems (FedRAMP) | Comprehensive control catalog; baselines by impact (Low/Moderate/High) |
-| **CIS Controls v8** | Voluntary; practical prioritised list | 18 controls, three implementation groups |
-| **FedRAMP** | US gov cloud services | NIST 800-53 based; authorisation process; continuous monitoring |
-| **DORA** | EU financial entities and ICT providers (2025) | Operational resilience, third-party risk, incident reporting |
-| **NIS2** | EU essential and important entities | Risk management, incident reporting, supply-chain security |
+| Framework                     | When it applies                                | Highlights                                                                                                                                                     |
+| ----------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PCI-DSS v4.0**              | Handling payment card data                     | Network segmentation, encryption, quarterly scans, annual pen test, secure SDLC requirements                                                                   |
+| **HIPAA / HITECH**            | US healthcare PHI                              | Encryption, access controls, audit logs, breach notification (60-day)                                                                                          |
+| **SOX**                       | US publicly-traded co's financial reporting    | Change management, access controls, audit trails on financial systems                                                                                          |
+| **GDPR**                      | Processing EU residents' personal data         | Lawful basis, DPIA, 72-hour breach notification, right to erasure, DPO appointment, DPA with processors                                                        |
+| **Philippine DPA (RA 10173)** | Processing Philippine residents' personal data | NPC registration, DPO appointment, 72-hour breach notification, security measures, data subject rights                                                         |
+| **CCPA / CPRA**               | US California residents' personal data         | Right to know, delete, opt out; data minimisation                                                                                                              |
+| **ISO 27001 / 27002**         | Voluntary; common B2B contractual ask          | ISMS with 93 controls (2022 version); risk-based                                                                                                               |
+| **SOC 2 Type II**             | Voluntary; common B2B SaaS ask                 | Trust Services Criteria (Security mandatory; Availability, Confidentiality, Processing Integrity, Privacy optional); auditor reviews evidence over 6–12 months |
+| **NIST CSF 2.0**              | Voluntary; US federal baseline                 | Govern, Identify, Protect, Detect, Respond, Recover                                                                                                            |
+| **NIST 800-53**               | US federal info systems (FedRAMP)              | Comprehensive control catalog; baselines by impact (Low/Moderate/High)                                                                                         |
+| **CIS Controls v8**           | Voluntary; practical prioritised list          | 18 controls, three implementation groups                                                                                                                       |
+| **FedRAMP**                   | US gov cloud services                          | NIST 800-53 based; authorisation process; continuous monitoring                                                                                                |
+| **DORA**                      | EU financial entities and ICT providers (2025) | Operational resilience, third-party risk, incident reporting                                                                                                   |
+| **NIS2**                      | EU essential and important entities            | Risk management, incident reporting, supply-chain security                                                                                                     |
 
 ### Recommended baseline for a multi-tenant SaaS
 
