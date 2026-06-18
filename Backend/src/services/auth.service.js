@@ -6,9 +6,9 @@
  * Project-agnostic replacement for the HRIS/Meal auth coupling. Credentials live
  * in two tables (or the in-memory demo store when DEMO_MODE=true):
  *
- *   T_ADMINS  — privileged accounts with RBAC (SUPER_ADMIN/ADMIN/USER) and a
+ *   T_ADMINS_DEV  — privileged accounts with RBAC (SUPER_ADMIN/ADMIN/USER) and a
  *               tamper-evident SYSSIGNATURE. Checked first.
- *   T_USERS   — regular accounts. Authenticate at USER level.
+ *   T_USERS_DEV   — regular accounts. Authenticate at USER level.
  *
  * Passwords are Argon2id (CryptoVault, PASSWORD_HASH_MODE=argon2). Admin rows are
  * additionally HMAC-signed so a row edited directly in the DB is refused at login.
@@ -41,7 +41,7 @@ class AuthService {
 
     /**
      * Authenticates a username/password pair.
-     * Admins (T_ADMINS) are checked before regular users (T_USERS).
+     * Admins (T_ADMINS_DEV) are checked before regular users (T_USERS_DEV).
      *
      * @param {string} username
      * @param {string} password
@@ -58,7 +58,9 @@ class AuthService {
         if (lockState.locked) {
             throw new AppError(AUTH_ERRORS.ACCOUNT_LOCKED, 429, {
                 type: "AccountLockedError",
-                details: [{ field: "retryAfter", issue: `${lockState.retryAfter}` }],
+                details: [
+                    { field: "retryAfter", issue: `${lockState.retryAfter}` },
+                ],
             });
         }
 
@@ -105,7 +107,9 @@ class AuthService {
             AuthService._assertActive(admin.IS_ACTIVE, username);
             const role = await AuthService._resolveRole(admin);
             logger.info(authMessages.TOKEN_REFRESHED(username));
-            return AuthService._issueTokens(AuthService._adminPayload(admin, role));
+            return AuthService._issueTokens(
+                AuthService._adminPayload(admin, role),
+            );
         }
 
         const user = await UserModel.findByUsername(username);
@@ -140,7 +144,9 @@ class AuthService {
             secure: process.env.USE_HTTPS === "true",
             sameSite: "strict",
             signed: true,
-            maxAge: AuthService._parseDuration(process.env.JWT_EXPIRES_IN || "30m"),
+            maxAge: AuthService._parseDuration(
+                process.env.JWT_EXPIRES_IN || "30m",
+            ),
         };
     }
 
@@ -167,7 +173,12 @@ class AuthService {
                 `Unrecognised duration format: "${str}". Expected e.g. "30m", "8h", "7d".`,
             );
         }
-        const multipliers = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+        const multipliers = {
+            s: 1_000,
+            m: 60_000,
+            h: 3_600_000,
+            d: 86_400_000,
+        };
         return parseInt(match[1], 10) * multipliers[match[2]];
     }
 
@@ -183,7 +194,9 @@ class AuthService {
             admin.SYSSIGNATURE,
         );
         if (!sigValid) {
-            logger.warning(authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(username));
+            logger.warning(
+                authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(username),
+            );
             throw new AppError(
                 AUTH_ERRORS.ACCOUNT_INTEGRITY_FAILED,
                 HTTP_STATUS.UNPROCESSABLE,
@@ -191,7 +204,10 @@ class AuthService {
             );
         }
 
-        const pwMatch = await CryptoVault.verifyPassword(password, admin.PASSWORD);
+        const pwMatch = await CryptoVault.verifyPassword(
+            password,
+            admin.PASSWORD,
+        );
         if (!pwMatch) {
             loginLockout.recordFailure(username);
             throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, 401, {
@@ -203,7 +219,9 @@ class AuthService {
         // hash was created. Best-effort — never blocks login.
         await AuthService._maybeRehashAdmin(admin, password);
 
-        const isDefaultPassword = await AuthService._checkIsDefaultPassword(admin.PASSWORD);
+        const isDefaultPassword = await AuthService._checkIsDefaultPassword(
+            admin.PASSWORD,
+        );
 
         logger.info(authMessages.AUTH_SUCCESS(username));
         const tokens = AuthService._issueTokens(
@@ -216,7 +234,10 @@ class AuthService {
     static async _loginUser(user, username, password) {
         AuthService._assertActive(user.IS_ACTIVE, username);
 
-        const pwMatch = await CryptoVault.verifyPassword(password, user.PASSWORD);
+        const pwMatch = await CryptoVault.verifyPassword(
+            password,
+            user.PASSWORD,
+        );
         if (!pwMatch) {
             loginLockout.recordFailure(username);
             throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, 401, {
@@ -224,7 +245,9 @@ class AuthService {
             });
         }
 
-        const isDefaultPassword = await AuthService._checkIsDefaultPassword(user.PASSWORD);
+        const isDefaultPassword = await AuthService._checkIsDefaultPassword(
+            user.PASSWORD,
+        );
 
         logger.info(authMessages.AUTH_SUCCESS(username));
         const tokens = AuthService._issueTokens(
@@ -258,7 +281,9 @@ class AuthService {
         );
         if (!sigValid) {
             logger.warning(
-                authMessages.SYS_SIGNATURE_TAMPERED_ROLE_FALLBACK(admin.USERNAME),
+                authMessages.SYS_SIGNATURE_TAMPERED_ROLE_FALLBACK(
+                    admin.USERNAME,
+                ),
             );
             return "USER";
         }
@@ -370,7 +395,11 @@ class AuthService {
      */
     static async _maybeRehashAdmin(admin, plainPassword) {
         try {
-            if (!CryptoVault.needsRehash || !CryptoVault.needsRehash(admin.PASSWORD)) return;
+            if (
+                !CryptoVault.needsRehash ||
+                !CryptoVault.needsRehash(admin.PASSWORD)
+            )
+                return;
             const newHash = await CryptoVault.hashPassword(plainPassword);
             const sig = await CryptoVault.signRecord(
                 AdminModel.SIGN_CONTEXT,
@@ -403,9 +432,13 @@ class AuthService {
         const admin = await AdminModel.findByUsername(username);
         const account = admin || (await UserModel.findByUsername(username));
         if (!account) {
-            throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND, {
-                type: "NotFoundError",
-            });
+            throw new AppError(
+                AUTH_ERRORS.USER_NOT_FOUND,
+                HTTP_STATUS.NOT_FOUND,
+                {
+                    type: "NotFoundError",
+                },
+            );
         }
 
         // Admin rows: verify integrity before touching credentials.
@@ -416,7 +449,9 @@ class AuthService {
                 admin.SYSSIGNATURE,
             );
             if (!sigValid) {
-                logger.warning(authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(username));
+                logger.warning(
+                    authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(username),
+                );
                 throw new AppError(
                     AUTH_ERRORS.ACCOUNT_INTEGRITY_FAILED,
                     HTTP_STATUS.UNPROCESSABLE,
@@ -425,12 +460,19 @@ class AuthService {
             }
         }
 
-        const pwMatch = await CryptoVault.verifyPassword(currentPassword, account.PASSWORD);
+        const pwMatch = await CryptoVault.verifyPassword(
+            currentPassword,
+            account.PASSWORD,
+        );
         if (!pwMatch) {
-            throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, HTTP_STATUS.UNAUTHORIZED, {
-                type: "AuthenticationError",
-                hint: "The current password you entered is incorrect.",
-            });
+            throw new AppError(
+                AUTH_ERRORS.INVALID_CREDENTIALS,
+                HTTP_STATUS.UNAUTHORIZED,
+                {
+                    type: "AuthenticationError",
+                    hint: "The current password you entered is incorrect.",
+                },
+            );
         }
 
         const defaultPw = process.env.ADMIN_DEFAULT_PASSWORD;
@@ -465,8 +507,15 @@ class AuthService {
         logger.info(authMessages.PASSWORD_CHANGED(username));
 
         const claims = admin
-            ? AuthService._adminPayload({ ...admin, PASSWORD: newHash }, admin.ROLE, false)
-            : AuthService._userPayload({ ...account, PASSWORD: newHash }, false);
+            ? AuthService._adminPayload(
+                  { ...admin, PASSWORD: newHash },
+                  admin.ROLE,
+                  false,
+              )
+            : AuthService._userPayload(
+                  { ...account, PASSWORD: newHash },
+                  false,
+              );
         return AuthService._issueTokens(claims);
     }
 }

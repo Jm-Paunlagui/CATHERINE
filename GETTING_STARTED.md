@@ -146,7 +146,7 @@ sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1 @01_schema.sql
 sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1 @02_seed_demo.sql   # optional sample audit rows
 ```
 
-This creates `T_USERS`, `T_ADMINS`, and `T_AUDIT_LOGS`. The optional second script
+This creates `T_USERS_DEV`, `T_ADMINS_DEV`, and `T_AUDIT_LOGS_DEV`. The optional second script
 fills the audit table with ~200 synthetic rows so the **Logging & Observability**
 dashboard renders immediately.
 
@@ -215,7 +215,7 @@ After running `npm run db:seed:template` (or in Demo Mode — `DEMO_MODE=true`):
 
 Features to explore as `admin`:
 
-- **Logging & Observability** — golden-signal charts powered by `T_AUDIT_LOGS`
+- **Logging & Observability** — golden-signal charts powered by `T_AUDIT_LOGS_DEV`
   (seed `02_seed_demo.sql` for instant data).
 - **Admin Management** — RBAC user/admin CRUD.
 - **Version History (Changelog)** — encrypted file store; seed with the changelog

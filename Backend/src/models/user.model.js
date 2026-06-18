@@ -1,11 +1,11 @@
 "use strict";
 
 /**
- * @fileoverview UserModel — standalone regular-user accounts (T_USERS).
+ * @fileoverview UserModel — standalone regular-user accounts (T_USERS_DEV).
  *
  * Generic, project-agnostic replacement for the HRIS U_USERS coupling. The login
- * identifier is USERNAME; PASSWORD holds an Argon2id hash. A T_USERS account with
- * no matching T_ADMINS row authenticates at USER level.
+ * identifier is USERNAME; PASSWORD holds an Argon2id hash. A T_USERS_DEV account with
+ * no matching T_ADMINS_DEV row authenticates at USER level.
  *
  * In DEMO_MODE every method reads from the in-memory demo store — no Oracle
  * connection is opened (the OracleCollection is lazily created only when needed).
@@ -16,14 +16,21 @@ const { isDemoMode } = require("../config/demoMode");
 const demo = require("./demo/demoStore");
 
 const PROJECTION = {
-    ID: 1, USERNAME: 1, PASSWORD: 1, FIRST_NAME: 1, LAST_NAME: 1,
-    EMAIL: 1, IS_ACTIVE: 1, CREATED_AT: 1, UPDATED_AT: 1,
+    ID: 1,
+    USERNAME: 1,
+    PASSWORD: 1,
+    FIRST_NAME: 1,
+    LAST_NAME: 1,
+    EMAIL: 1,
+    IS_ACTIVE: 1,
+    CREATED_AT: 1,
+    UPDATED_AT: 1,
 };
 
 let _col = null;
-/** Lazily resolves the T_USERS collection (never called in DEMO_MODE). */
+/** Lazily resolves the T_USERS_DEV collection (never called in DEMO_MODE). */
 function col() {
-    if (!_col) _col = new OracleCollection("T_USERS", createDb("appDb"));
+    if (!_col) _col = new OracleCollection("T_USERS_DEV", createDb("appDb"));
     return _col;
 }
 
@@ -54,7 +61,16 @@ class UserModel {
         }
         return col()
             .find({})
-            .project({ ID: 1, USERNAME: 1, FIRST_NAME: 1, LAST_NAME: 1, EMAIL: 1, IS_ACTIVE: 1, CREATED_AT: 1, UPDATED_AT: 1 })
+            .project({
+                ID: 1,
+                USERNAME: 1,
+                FIRST_NAME: 1,
+                LAST_NAME: 1,
+                EMAIL: 1,
+                IS_ACTIVE: 1,
+                CREATED_AT: 1,
+                UPDATED_AT: 1,
+            })
             .sort({ USERNAME: 1 })
             .toArray();
     }
@@ -113,7 +129,11 @@ class UserModel {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             const row = users.find((u) => u.USERNAME === username);
-            if (row) Object.assign(row, { PASSWORD: passwordHash, UPDATED_AT: new Date() });
+            if (row)
+                Object.assign(row, {
+                    PASSWORD: passwordHash,
+                    UPDATED_AT: new Date(),
+                });
             return;
         }
         await col().updateOne(

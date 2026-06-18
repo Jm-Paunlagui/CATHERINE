@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * @fileoverview AuditLogModel — per-request audit trail (T_AUDIT_LOGS).
+ * @fileoverview AuditLogModel — per-request audit trail (T_AUDIT_LOGS_DEV).
  *
  * In DEMO_MODE every method reads/writes the in-memory demo store; no Oracle
  * connection is opened. In normal mode the model uses the `appDb` connection.
@@ -12,9 +12,10 @@ const { isDemoMode } = require("../config/demoMode");
 const demo = require("./demo/demoStore");
 
 let _col = null;
-/** Lazily resolves the T_AUDIT_LOGS collection (never called in DEMO_MODE). */
+/** Lazily resolves the T_AUDIT_LOGS_DEV collection (never called in DEMO_MODE). */
 function col() {
-    if (!_col) _col = new OracleCollection("T_AUDIT_LOGS", createDb("appDb"));
+    if (!_col)
+        _col = new OracleCollection("T_AUDIT_LOGS_DEV", createDb("appDb"));
     return _col;
 }
 

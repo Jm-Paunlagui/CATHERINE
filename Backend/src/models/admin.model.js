@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * @fileoverview AdminModel — standalone privileged accounts (T_ADMINS) with RBAC.
+ * @fileoverview AdminModel — standalone privileged accounts (T_ADMINS_DEV) with RBAC.
  *
  * Generic, project-agnostic replacement for the Meal T_EMP_MGMT_ADMIN coupling.
  * RBAC role ∈ { SUPER_ADMIN, ADMIN, USER }. Each row carries a tamper-evident
@@ -18,10 +18,10 @@ const { isDemoMode } = require("../config/demoMode");
 const demo = require("./demo/demoStore");
 
 /** Signature context — namespaces the HMAC so it can't be replayed cross-table. */
-const SIGN_CONTEXT = "T_ADMINS";
+const SIGN_CONTEXT = "T_ADMINS_DEV";
 
 /**
- * Canonical signed-field set for a T_ADMINS row. EVERY signRecord/verifyRecord
+ * Canonical signed-field set for a T_ADMINS_DEV row. EVERY signRecord/verifyRecord
  * call must pass exactly these fields; changing the set is a breaking change that
  * requires re-signing all rows.
  * @param {object} row
@@ -37,14 +37,20 @@ function buildSignedFields(row) {
 }
 
 const PROJECTION = {
-    ID: 1, USERNAME: 1, PASSWORD: 1, ROLE: 1, IS_ACTIVE: 1,
-    SYSSIGNATURE: 1, CREATED_AT: 1, UPDATED_AT: 1,
+    ID: 1,
+    USERNAME: 1,
+    PASSWORD: 1,
+    ROLE: 1,
+    IS_ACTIVE: 1,
+    SYSSIGNATURE: 1,
+    CREATED_AT: 1,
+    UPDATED_AT: 1,
 };
 
 let _col = null;
-/** Lazily resolves the T_ADMINS collection (never called in DEMO_MODE). */
+/** Lazily resolves the T_ADMINS_DEV collection (never called in DEMO_MODE). */
 function col() {
-    if (!_col) _col = new OracleCollection("T_ADMINS", createDb("appDb"));
+    if (!_col) _col = new OracleCollection("T_ADMINS_DEV", createDb("appDb"));
     return _col;
 }
 
@@ -65,19 +71,20 @@ class AdminModel {
     }
 
     /**
-     * Returns all admins ordered by USERNAME (PASSWORD excluded — never list hashes).
+     * Returns all admins ordered by USERNAME.
+     * Includes PASSWORD + SYSSIGNATURE so callers can verify integrity.
      * @returns {Promise<Array<object>>}
      */
     static async findAll() {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
-            return admins
-                .map(({ PASSWORD, SYSSIGNATURE, ...rest }) => rest)
-                .sort((a, b) => a.USERNAME.localeCompare(b.USERNAME));
+            return [...admins].sort((a, b) =>
+                a.USERNAME.localeCompare(b.USERNAME),
+            );
         }
         return col()
             .find({})
-            .project({ ID: 1, USERNAME: 1, ROLE: 1, IS_ACTIVE: 1, CREATED_AT: 1, UPDATED_AT: 1 })
+            .project(PROJECTION)
             .sort({ USERNAME: 1 })
             .toArray();
     }
@@ -106,11 +113,18 @@ class AdminModel {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return admins.filter(
-                (a) => a.ROLE === role && a.IS_ACTIVE === "Y" && a.USERNAME !== excludeUsername,
+                (a) =>
+                    a.ROLE === role &&
+                    a.IS_ACTIVE === "Y" &&
+                    a.USERNAME !== excludeUsername,
             ).length;
         }
         return col()
-            .find({ ROLE: role, IS_ACTIVE: "Y", USERNAME: { $ne: excludeUsername } })
+            .find({
+                ROLE: role,
+                IS_ACTIVE: "Y",
+                USERNAME: { $ne: excludeUsername },
+            })
             .count();
     }
 
@@ -153,7 +167,10 @@ class AdminModel {
      * @returns {Promise<void>}
      */
     static async updateCredentials(username, passwordHash, sysSignature) {
-        return AdminModel._set(username, { PASSWORD: passwordHash, SYSSIGNATURE: sysSignature });
+        return AdminModel._set(username, {
+            PASSWORD: passwordHash,
+            SYSSIGNATURE: sysSignature,
+        });
     }
 
     /**
@@ -164,7 +181,10 @@ class AdminModel {
      * @returns {Promise<void>}
      */
     static async updateRole(username, role, sysSignature) {
-        return AdminModel._set(username, { ROLE: role, SYSSIGNATURE: sysSignature });
+        return AdminModel._set(username, {
+            ROLE: role,
+            SYSSIGNATURE: sysSignature,
+        });
     }
 
     /**
@@ -175,7 +195,10 @@ class AdminModel {
      * @returns {Promise<void>}
      */
     static async setActive(username, isActive, sysSignature) {
-        return AdminModel._set(username, { IS_ACTIVE: isActive, SYSSIGNATURE: sysSignature });
+        return AdminModel._set(username, {
+            IS_ACTIVE: isActive,
+            SYSSIGNATURE: sysSignature,
+        });
     }
 
     /**
@@ -204,7 +227,10 @@ class AdminModel {
             if (row) Object.assign(row, fields, { UPDATED_AT: new Date() });
             return;
         }
-        await col().updateOne({ USERNAME: username }, { $set: { ...fields, UPDATED_AT: new Date() } });
+        await col().updateOne(
+            { USERNAME: username },
+            { $set: { ...fields, UPDATED_AT: new Date() } },
+        );
     }
 }
 

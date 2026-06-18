@@ -1,19 +1,19 @@
 --------------------------------------------------------------------------------
 -- 02_seed_demo.sql — Optional sample audit data for the observability dashboard
 --------------------------------------------------------------------------------
--- Generates ~200 synthetic T_AUDIT_LOGS rows spread across the last 7 days with a
+-- Generates ~200 synthetic T_AUDIT_LOGS_DEV rows spread across the last 7 days with a
 -- realistic mix of 2xx / 3xx / 4xx / 5xx status classes, varied endpoints,
 -- methods, response times, users, and client IPs. This lets the Logging &
 -- Observability page render meaningful charts when running against a real Oracle
 -- DB (DEMO_MODE=false). Re-run safe — it only INSERTs; truncate first if you want
--- a clean set:  TRUNCATE TABLE T_AUDIT_LOGS;
+-- a clean set:  TRUNCATE TABLE T_AUDIT_LOGS_DEV;
 --
 -- Demo user/admin ACCOUNTS are seeded separately (Argon2id):  npm run db:seed:template
 --------------------------------------------------------------------------------
 
 SET DEFINE OFF;
 
-INSERT INTO T_AUDIT_LOGS
+INSERT INTO T_AUDIT_LOGS_DEV
   (REQUEST_ID, USER_ID, USERNAME, METHOD, ENDPOINT, PARAMS,
    STATUS_CODE, STATUS_CATEGORY, RESPONSE_TIME_MS, CLIENT_IP, SERVER_IP, CREATED_AT)
 SELECT
@@ -61,5 +61,5 @@ COMMIT;
 
 --------------------------------------------------------------------------------
 -- Sanity check (uncomment to verify the status-class spread):
---   SELECT STATUS_CATEGORY, COUNT(*) FROM T_AUDIT_LOGS GROUP BY STATUS_CATEGORY ORDER BY 1;
+--   SELECT STATUS_CATEGORY, COUNT(*) FROM T_AUDIT_LOGS_DEV GROUP BY STATUS_CATEGORY ORDER BY 1;
 --------------------------------------------------------------------------------

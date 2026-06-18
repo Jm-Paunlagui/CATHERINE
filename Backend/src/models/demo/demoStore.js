@@ -7,10 +7,10 @@
  * template runs with no database. Everything goes through the SAME service/auth
  * code path as the real DB — the only difference is where the rows come from.
  *
- *   • Accounts (T_USERS / T_ADMINS) are hashed with the real CryptoVault at first
+ *   • Accounts (T_USERS_DEV / T_ADMINS_DEV) are hashed with the real CryptoVault at first
  *     access, so login exercises the genuine Argon2id verify + signature path.
  *     Demo credentials:  admin / Demo@123 (SUPER_ADMIN), manager / Demo@123 (ADMIN),
- *                        user / Demo@123 (USER, T_USERS).
+ *                        user / Demo@123 (USER, T_USERS_DEV).
  *   • Audit logs are pre-populated with a realistic 2xx/3xx/4xx/5xx spread so the
  *     Logging & Observability dashboard renders immediately.
  *
@@ -31,11 +31,27 @@ async function _buildAccounts() {
     const now = new Date();
 
     const admins = [
-        { ID: 1, USERNAME: "admin",   PASSWORD: pw, ROLE: "SUPER_ADMIN", IS_ACTIVE: "Y", CREATED_AT: now, UPDATED_AT: now },
-        { ID: 2, USERNAME: "manager", PASSWORD: pw, ROLE: "ADMIN",       IS_ACTIVE: "Y", CREATED_AT: now, UPDATED_AT: now },
+        {
+            ID: 1,
+            USERNAME: "admin",
+            PASSWORD: pw,
+            ROLE: "SUPER_ADMIN",
+            IS_ACTIVE: "Y",
+            CREATED_AT: now,
+            UPDATED_AT: now,
+        },
+        {
+            ID: 2,
+            USERNAME: "manager",
+            PASSWORD: pw,
+            ROLE: "ADMIN",
+            IS_ACTIVE: "Y",
+            CREATED_AT: now,
+            UPDATED_AT: now,
+        },
     ];
     for (const a of admins) {
-        a.SYSSIGNATURE = await CryptoVault.signRecord("T_ADMINS", {
+        a.SYSSIGNATURE = await CryptoVault.signRecord("T_ADMINS_DEV", {
             USERNAME: a.USERNAME,
             PASSWORD: a.PASSWORD,
             ROLE: a.ROLE,
@@ -45,9 +61,15 @@ async function _buildAccounts() {
 
     const users = [
         {
-            ID: 1, USERNAME: "user", PASSWORD: pw,
-            FIRST_NAME: "Demo", LAST_NAME: "User", EMAIL: "user@demo.local",
-            IS_ACTIVE: "Y", CREATED_AT: now, UPDATED_AT: now,
+            ID: 1,
+            USERNAME: "user",
+            PASSWORD: pw,
+            FIRST_NAME: "Demo",
+            LAST_NAME: "User",
+            EMAIL: "user@demo.local",
+            IS_ACTIVE: "Y",
+            CREATED_AT: now,
+            UPDATED_AT: now,
         },
     ];
 
@@ -99,7 +121,8 @@ function _buildAuditLogs(count = 200) {
             PARAMS: null,
             STATUS_CODE: sc,
             STATUS_CATEGORY: `${Math.floor(sc / 100)}xx`,
-            RESPONSE_TIME_MS: Math.round(8 + Math.random() * 342) + (sc >= 500 ? 280 : 0),
+            RESPONSE_TIME_MS:
+                Math.round(8 + Math.random() * 342) + (sc >= 500 ? 280 : 0),
             CLIENT_IP: `192.168.1.${(i % 254) + 1}`,
             SERVER_IP: "10.0.0.10",
             CREATED_AT: new Date(Date.now() - Math.random() * sevenDaysMs),
@@ -136,16 +159,26 @@ function _toComparable(v) {
 
 function _matchOp(value, op, expected) {
     switch (op) {
-        case "$eq":  return value === expected;
-        case "$ne":  return value !== expected;
-        case "$gt":  return _toComparable(value) >  _toComparable(expected);
-        case "$gte": return _toComparable(value) >= _toComparable(expected);
-        case "$lt":  return _toComparable(value) <  _toComparable(expected);
-        case "$lte": return _toComparable(value) <= _toComparable(expected);
-        case "$in":  return Array.isArray(expected) && expected.includes(value);
-        case "$nin": return Array.isArray(expected) && !expected.includes(value);
-        case "$exists": return expected ? value != null : value == null;
-        default:     return false;
+        case "$eq":
+            return value === expected;
+        case "$ne":
+            return value !== expected;
+        case "$gt":
+            return _toComparable(value) > _toComparable(expected);
+        case "$gte":
+            return _toComparable(value) >= _toComparable(expected);
+        case "$lt":
+            return _toComparable(value) < _toComparable(expected);
+        case "$lte":
+            return _toComparable(value) <= _toComparable(expected);
+        case "$in":
+            return Array.isArray(expected) && expected.includes(value);
+        case "$nin":
+            return Array.isArray(expected) && !expected.includes(value);
+        case "$exists":
+            return expected ? value != null : value == null;
+        default:
+            return false;
     }
 }
 
@@ -170,12 +203,18 @@ function match(row, filter) {
 
         const value = row[key];
 
-        if (cond && typeof cond === "object" && !Array.isArray(cond) && !(cond instanceof Date)) {
+        if (
+            cond &&
+            typeof cond === "object" &&
+            !Array.isArray(cond) &&
+            !(cond instanceof Date)
+        ) {
             for (const [op, expected] of Object.entries(cond)) {
                 if (op === "$regex") {
                     const flags = cond.$options?.includes("i") ? "i" : "";
                     if (op === "$options") continue;
-                    if (!new RegExp(expected, flags).test(String(value ?? ""))) return false;
+                    if (!new RegExp(expected, flags).test(String(value ?? "")))
+                        return false;
                 } else if (op === "$options") {
                     // handled with $regex
                 } else if (!_matchOp(value, op, expected)) {

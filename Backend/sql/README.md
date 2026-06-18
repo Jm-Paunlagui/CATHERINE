@@ -5,10 +5,10 @@ authentication, RBAC, and audit-log features. It is **not** tied to the HRIS
 (`U_USERS`) or Meal (`T_EMP_MGMT_ADMIN`) databases — drop it into any fresh Oracle
 schema and the backend has its own users, admins, and audit trail.
 
-| File              | What it does                                                                 |
-| ----------------- | --------------------------------------------------------------------------- |
-| `01_schema.sql`   | Creates `T_USERS`, `T_ADMINS` (RBAC + signature), `T_AUDIT_LOGS` + indexes. |
-| `02_seed_demo.sql`| (Optional) Inserts ~200 synthetic audit rows so the dashboard has data.     |
+| File               | What it does                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| `01_schema.sql`    | Creates `T_USERS_DEV`, `T_ADMINS_DEV` (RBAC + signature), `T_AUDIT_LOGS_DEV` + indexes. |
+| `02_seed_demo.sql` | (Optional) Inserts ~200 synthetic audit rows so the dashboard has data.                 |
 
 > **Accounts are seeded by a Node script, not SQL.** Argon2id hashes are peppered
 > with `ARGON2_PEPPER` and each admin row is HMAC-signed with `DATA_SIGNING_SECRET`,
@@ -44,23 +44,23 @@ sqlplus APP_USER/APP_PASSWORD@//localhost:1521/XEPDB1 @02_seed_demo.sql   # opti
   (ignoring "table does not exist"), so you can re-run it safely. Comment out the
   `RESET` block at the top if you want `CREATE` to fail on an existing table.
 - `02_seed_demo.sql` only `INSERT`s. To reset the sample data:
-  `TRUNCATE TABLE T_AUDIT_LOGS;` then re-run it.
+  `TRUNCATE TABLE T_AUDIT_LOGS_DEV;` then re-run it.
 - Verify the status-class spread after seeding:
-  ```sql
-  SELECT STATUS_CATEGORY, COUNT(*) FROM T_AUDIT_LOGS GROUP BY STATUS_CATEGORY ORDER BY 1;
-  ```
+    ```sql
+    SELECT STATUS_CATEGORY, COUNT(*) FROM T_AUDIT_LOGS_DEV GROUP BY STATUS_CATEGORY ORDER BY 1;
+    ```
 
 ## Schema at a glance
 
 ```
-T_USERS         ID, USERNAME(unique), PASSWORD(argon2), FIRST_NAME, LAST_NAME,
+T_USERS_DEV         ID, USERNAME(unique), PASSWORD(argon2), FIRST_NAME, LAST_NAME,
                 EMAIL, IS_ACTIVE, CREATED_AT, UPDATED_AT
 
-T_ADMINS        ID, USERNAME(unique), PASSWORD(argon2),
+T_ADMINS_DEV        ID, USERNAME(unique), PASSWORD(argon2),
                 ROLE  CHECK in (SUPER_ADMIN, ADMIN, USER),
                 IS_ACTIVE, SYSSIGNATURE(HMAC), CREATED_AT, UPDATED_AT
 
-T_AUDIT_LOGS    ID, REQUEST_ID, USER_ID, USERNAME, METHOD, ENDPOINT, PARAMS,
+T_AUDIT_LOGS_DEV    ID, REQUEST_ID, USER_ID, USERNAME, METHOD, ENDPOINT, PARAMS,
                 STATUS_CODE, STATUS_CATEGORY, RESPONSE_TIME_MS,
                 CLIENT_IP, SERVER_IP, CREATED_AT
                 + indexes on CREATED_AT, STATUS_CATEGORY, USER_ID

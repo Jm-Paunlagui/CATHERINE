@@ -3,8 +3,8 @@
 /**
  * @fileoverview Admin Management business logic.
  *
- * Owns all operations on T_ADMINS (CRUD, password reset, signature reset).
- * Uses the standalone AdminModel (T_ADMINS) — no HRIS or Meal dependencies.
+ * Owns all operations on T_ADMINS_DEV (CRUD, password reset, signature reset).
+ * Uses the standalone AdminModel (T_ADMINS_DEV) — no HRIS or Meal dependencies.
  *
  * Security:
  *  - SYSSIGNATURE is verified before every write and delete operation.
@@ -23,7 +23,7 @@ const { adminMessages } = require("../constants/messages");
 const { CryptoVault } = require("../utils/encryption/CryptoVault");
 const AdminModel = require("../models/admin.model");
 
-/** Canonical set of valid ROLE values for T_ADMINS. */
+/** Canonical set of valid ROLE values for T_ADMINS_DEV. */
 const VALID_ROLES = ["ADMIN", "SUPER_ADMIN", "USER"];
 
 class AdminManagementService {
@@ -51,9 +51,12 @@ class AdminManagementService {
                     );
                 }
 
+                // Map to the shape the frontend expects (empId / empRole / etc.)
                 return {
-                    username: admin.USERNAME,
-                    role: admin.ROLE,
+                    empId: admin.USERNAME,
+                    empRole: admin.ROLE,
+                    firstName: null,
+                    lastName: null,
                     isActive: String(admin.IS_ACTIVE ?? "Y"),
                     signatureValid: sigValid,
                     createdAt: admin.CREATED_AT ?? null,
@@ -69,7 +72,7 @@ class AdminManagementService {
     // ─── Create admin ────────────────────────────────────────────────────────
 
     /**
-     * Registers a new admin in T_ADMINS.
+     * Registers a new admin in T_ADMINS_DEV.
      */
     static async addAdmin({
         username,

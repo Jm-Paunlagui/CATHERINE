@@ -61,16 +61,6 @@ const requireSuperAdmin = AuthMiddleware.requireAccess(
 // ── Auth guards applied to the entire router ──────────────────────────────────
 router.use(AuthMiddleware.authenticate, requireAdmin);
 
-// ── Search employees (HRIS) ───────────────────────────────────────────────────
-// NOT cached — real-time HRIS search; the user expects live results.
-// Caching would return stale employee name/position data from HRIS.
-// validateRequiredFields automatically checks req.query for GET requests.
-router.get(
-    "/search",
-    AuthMiddleware.validateRequiredFields(["q"]),
-    AdminManagementController.search,
-);
-
 // ── List all admins ───────────────────────────────────────────────────────────
 // Cache key: `adminList` — no query params, roster is the same for all callers.
 // Auth already verified by router.use() above before this cache read executes.

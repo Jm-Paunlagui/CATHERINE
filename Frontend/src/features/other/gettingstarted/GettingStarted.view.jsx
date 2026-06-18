@@ -407,9 +407,9 @@ HOST=0.0.0.0`}</CodeBlock>
                         <h3 className={`text-lg font-bold mb-3 ${TITLE_COLOR_TEXT}`}>Schema at a glance</h3>
                         <div className="grid gap-3 sm:grid-cols-3 mb-8">
                             {[
-                                { table: "T_USERS", desc: "Regular end-user accounts with Argon2id password hashes.", color: "blue" },
-                                { table: "T_ADMINS", desc: "Privileged accounts with RBAC (SUPER_ADMIN / ADMIN / USER) + tamper-evident SYSSIGNATURE.", color: "purple" },
-                                { table: "T_AUDIT_LOGS", desc: "Per-request audit trail powering the Logging & Observability dashboard.", color: "orange" },
+                                { table: "T_USERS_DEV", desc: "Regular end-user accounts with Argon2id password hashes.", color: "blue" },
+                                { table: "T_ADMINS_DEV", desc: "Privileged accounts with RBAC (SUPER_ADMIN / ADMIN / USER) + tamper-evident SYSSIGNATURE.", color: "purple" },
+                                { table: "T_AUDIT_LOGS_DEV", desc: "Per-request audit trail powering the Logging & Observability dashboard.", color: "orange" },
                             ].map((t) => (
                                 <div key={t.table} className={`p-4 rounded-xl ${BASE_COLOR_BG} ${STANDARD_BORDER}`}>
                                     <Badge variant={t.color} size="xs" className="mb-2">
@@ -429,7 +429,7 @@ sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1
                         </StepCard>
 
                         <StepCard number={2} title="Seed sample audit data (optional)">
-                            <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>Fills T_AUDIT_LOGS with ~200 synthetic rows so the observability dashboard renders charts immediately.</p>
+                            <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>Fills T_AUDIT_LOGS_DEV with ~200 synthetic rows so the observability dashboard renders charts immediately.</p>
                             <CodeBlock title="SQL*Plus / SQLcl">{`@Backend/sql/02_seed_demo.sql`}</CodeBlock>
                         </StepCard>
 

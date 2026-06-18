@@ -100,7 +100,7 @@ class AuthController {
     /**
      * GET /api/v1/auth/me
      * Returns the caller's profile: the decoded JWT payload with permission
-     * flags refreshed from T_ADMINS at read time (JWT flag claims go
+     * flags refreshed from T_ADMINS_DEV at read time (JWT flag claims go
      * stale the moment a SUPER_ADMIN edits permissions mid-session).
      * Requires: AuthMiddleware.authenticate
      */
