@@ -18,6 +18,7 @@ import SessionWarningModal from "./components/feedback/SessionWarningModal";
 import Footer from "./components/layout/Footer";
 import Navbar from "./components/layout/Navbar";
 import Sidebar from "./components/layout/Sidebar";
+import SidebarHeader from "./components/layout/SidebarHeader";
 import ProtectedRoute from "./components/routing/ProtectedRoute";
 import Breadcrumb from "./components/ui/Breadcrumb";
 import { useLayout } from "./contexts/layout/LayoutContext";
@@ -71,11 +72,20 @@ function ConditionalSidebar() {
     return <Sidebar />;
 }
 
-function ConditionalBreadcrumb() {
+function ConditionalSidebarHeader() {
     const { pathname } = useLocation();
     const { layout } = useLayout();
     if (isBareRoute(pathname)) return null;
-    //if (layout === "sidebar") return null;
+    if (layout !== "sidebar") return null;
+    return <SidebarHeader />;
+}
+
+function ConditionalBreadcrumb() {
+    const { pathname } = useLocation();
+    if (isBareRoute(pathname)) return null;
+    // Breadcrumb handles its own visibility per layout mode:
+    // sidebar → hidden on lg+ (shown on tablet/mobile with sidebar toggle)
+    // topbar  → always visible
     return <Breadcrumb auto homeIcon separator="chevron" size="md" variant="bar" />;
 }
 
@@ -101,17 +111,23 @@ function AppContent() {
     const bare = isBareRoute(pathname);
 
     return (
-        <div className="flex min-h-screen bg-(--bg-surface) transition-colors duration-300">
-            <ConditionalSidebar />
-            <div className="flex flex-col flex-1 min-h-screen transition-all duration-300">
-                <ConditionalNavbar />
-                <ConditionalBreadcrumb />
-                <main className="grow">
-                    <Suspense fallback={<PageLoader />}>
-                        <AppRoutes />
-                    </Suspense>
-                </main>
-                <ConditionalFooter />
+        <div className={`flex flex-col bg-(--bg-surface) transition-colors duration-300 ${layout === "sidebar" ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+            {/* ── Full-width top bars (header + breadcrumb) ── */}
+            <ConditionalNavbar />
+            <ConditionalSidebarHeader />
+            <ConditionalBreadcrumb />
+
+            {/* ── Below the top bars: sidebar + main content side-by-side ── */}
+            <div className="relative flex flex-1 overflow-hidden">
+                <ConditionalSidebar />
+                <div className="flex flex-col flex-1 min-w-0 overflow-y-auto transition-all duration-300">
+                    <main className="grow">
+                        <Suspense fallback={<PageLoader />}>
+                            <AppRoutes />
+                        </Suspense>
+                    </main>
+                    <ConditionalFooter />
+                </div>
             </div>
             {!bare && <SessionWarningModal />}
         </div>

@@ -183,7 +183,7 @@ export default function Navbar() {
                         {open && <div className="fixed inset-0 z-40 lg:hidden bg-black/10" />}
 
                         <div className="relative">
-                            <div className="relative flex items-center justify-between h-16 md:h-20 lg:h-24 px-4">
+                            <div className="relative flex items-center justify-between h-16 px-4">
                                 {/* Logo + version badge */}
                                 <div className="flex items-center gap-2.5">
                                     <NavLink to="/" className="flex items-center gap-2">
