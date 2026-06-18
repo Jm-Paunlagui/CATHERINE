@@ -34,6 +34,7 @@ const AdminManagementView = lazy(() => import("./features/management/adminmanage
 
 // Other
 const ChangelogView = lazy(() => import("./features/other/changelog/Changelog.view"));
+const GettingStartedView = lazy(() => import("./features/other/gettingstarted/GettingStarted.view"));
 
 // Role constants — must match the strings stored in T_EMP_MGMT_ADMIN.EMP_ROLE
 // and returned in the JWT payload as user.role.
@@ -48,7 +49,7 @@ const ROLES = {
     ROBOT: "ROBOT",
 };
 
-const BARE_ROUTES = ["/auth", "/", "/user/logout", "/unauthorized", "/login-timeout", "/invalid-token", "/bad-request", "/page-not-found", "/service-is-currently-unavailable", "/signature-mismatch", "/auth/change-password"];
+const BARE_ROUTES = ["/auth", "/", "/user/logout", "/unauthorized", "/login-timeout", "/invalid-token", "/bad-request", "/page-not-found", "/service-is-currently-unavailable", "/signature-mismatch", "/auth/change-password", "/about/getting-started"];
 
 function isBareRoute(pathname) {
     return BARE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
@@ -121,9 +122,10 @@ function AppRoutes() {
     return (
         <Routes>
             {/* Public */}
-            <Route path="/" element={<Navigate to="/auth" replace />} />
+            <Route path="/" element={<Navigate to="/about/getting-started" replace />} />
             <Route path="auth" element={<LoginView />} />
             <Route path="user/logout" element={<LogoutView />} />
+            <Route path="about/getting-started" element={<GettingStartedView />} />
 
             {/* Dashboard */}
             <Route path="dashboard" element={<DashboardView />} />

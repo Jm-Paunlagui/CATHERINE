@@ -1,91 +1,83 @@
-﻿"use strict";
+"use strict";
+
+/**
+ * @fileoverview AuthService — standalone username/password authentication.
+ *
+ * Project-agnostic replacement for the HRIS/Meal auth coupling. Credentials live
+ * in two tables (or the in-memory demo store when DEMO_MODE=true):
+ *
+ *   T_ADMINS  — privileged accounts with RBAC (SUPER_ADMIN/ADMIN/USER) and a
+ *               tamper-evident SYSSIGNATURE. Checked first.
+ *   T_USERS   — regular accounts. Authenticate at USER level.
+ *
+ * Passwords are Argon2id (CryptoVault, PASSWORD_HASH_MODE=argon2). Admin rows are
+ * additionally HMAC-signed so a row edited directly in the DB is refused at login.
+ *
+ * Public API (consumed by auth.controllers.js):
+ *   login, refresh, getProfile, changePassword,
+ *   accessCookieOptions, refreshCookieOptions, COOKIE_NAMES
+ */
 
 const jwt = require("jsonwebtoken");
-const { AppError, AUTH_ERRORS, ADMIN_ERRORS, VALIDATION_ERRORS } = require("../constants/errors");
+const { AppError, AUTH_ERRORS, ADMIN_ERRORS } = require("../constants/errors");
 const { HTTP_STATUS } = require("../constants");
 const { logger } = require("../utils/logger");
-const { authMessages, adminMessages } = require("../constants/messages");
-const {
-    CryptoVault,
-    SymmetricCrypto,
-} = require("../utils/encryption/CryptoVault");
-const HrisUaModel = require("../models/hris.ua.model");
-const MealAdmModel = require("../models/meal.adm.model");
+const { authMessages } = require("../constants/messages");
+const { CryptoVault } = require("../utils/encryption/CryptoVault");
+const AdminModel = require("../models/admin.model");
+const UserModel = require("../models/user.model");
 const {
     loginLockout,
 } = require("../middleware/authentication/LoginLockoutMiddleware");
-const { registry, CacheKeyBuilder } = require("../middleware/cache");
-
-// ─── /auth/me profile-flags cache helper ──────────────────────────────────────
-// Returns the authProfile CacheStore (TTL 30s), or null when unregistered
-// (unit tests that bootstrap the service without loading app.js). Only the
-// extracted permission-flag object is cached — never the raw T_EMP_MGMT_ADMIN
-// row, which contains the password hash. Flags are UI hints only (never
-// server-side gates), so 30s staleness is harmless; flag writes invalidate
-// the key surgically at the MealAdmModel write chokepoint anyway.
-function _profileFlagsStore() {
-    try {
-        return registry.resolve("authProfile");
-    } catch (_) {
-        return null;
-    }
-}
 
 class AuthService {
     // ─── Cookie name constants (single source of truth) ───────────────────────
     static COOKIE_NAMES = {
-        ACCESS: "meal.access-token",
-        REFRESH: "meal.refresh-token",
+        ACCESS: "app.access-token",
+        REFRESH: "app.refresh-token",
     };
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
     /**
-     * Authenticates a user.
+     * Authenticates a username/password pair.
+     * Admins (T_ADMINS) are checked before regular users (T_USERS).
      *
-     * Primary path  : U_USERS (userAccount DB) — TripleDES-encrypted password.
-     * Fallback path : T_EMP_MGMT_ADMIN (Meal DB) — hashed password (bcrypt or argon2).
-     *
-     * @param {string} userId
-     * @param {string} password  - Plaintext password supplied by the user
+     * @param {string} username
+     * @param {string} password
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string }>}
      */
-    static async login(userId, password) {
+    static async login(username, password) {
         // ── Lockout gate ──────────────────────────────────────────────────────
-        const lockState = loginLockout.check(userId);
-
+        const lockState = loginLockout.check(username);
         if (lockState.hrReset) {
             throw new AppError(AUTH_ERRORS.ACCOUNT_LOCKED_PERMANENTLY, 423, {
                 type: "AccountLockedError",
             });
         }
-
         if (lockState.locked) {
             throw new AppError(AUTH_ERRORS.ACCOUNT_LOCKED, 429, {
                 type: "AccountLockedError",
-                details: [
-                    { field: "retryAfter", issue: `${lockState.retryAfter}` },
-                ],
+                details: [{ field: "retryAfter", issue: `${lockState.retryAfter}` }],
             });
         }
 
-        // ── Credential check ──────────────────────────────────────────────────
-        const uaUser = await HrisUaModel.findByUserId(userId);
+        const admin = await AdminModel.findByUsername(username);
+        if (admin) return AuthService._loginAdmin(admin, username, password);
 
-        if (uaUser) {
-            logger.info(authMessages.AUTH_UA_PRIMARY(userId));
-            return AuthService._loginViaUa(uaUser, userId, password);
-        }
+        const user = await UserModel.findByUsername(username);
+        if (user) return AuthService._loginUser(user, username, password);
 
-        // adminMessages used in the meal-only login path below
-
-        logger.info(authMessages.AUTH_FALLBACK_MEAL(userId));
-        return AuthService._loginViaMeal(userId, password);
+        // Unknown username — same generic error as a wrong password (no enumeration).
+        loginLockout.recordFailure(username);
+        throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, 401, {
+            type: "AuthenticationError",
+        });
     }
 
     /**
-     * Issues a fresh access + refresh token pair using the stored refresh token.
-     * Re-fetches user data so the new token reflects any role changes.
+     * Issues a fresh access + refresh token pair from a valid refresh token,
+     * re-reading the account so role/active changes take effect.
      *
      * @param {string} refreshToken
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string }>}
@@ -100,149 +92,44 @@ class AuthService {
                 hint: "Refresh token is invalid or expired. Please log in again.",
             });
         }
-
         if (decoded.type !== "refresh") {
             throw new AppError(AUTH_ERRORS.TOKEN_INVALID, 403, {
                 type: "AuthenticationError",
             });
         }
 
-        const userId = decoded.sub;
-        const uaUser = await HrisUaModel.findByUserId(userId);
+        const username = decoded.sub;
 
-        if (uaUser) {
-            const [empAdmin, GID] = await Promise.all([
-                MealAdmModel.findByEmpId(userId),
-                MealAdmModel.findGidByEmpId(userId),
-            ]);
-
-            // IS_ACTIVE gate on refresh — deactivated admins cannot refresh
-            // tokens on the UA path either (mirrors the meal fallback below).
-            if (empAdmin && String(empAdmin.IS_ACTIVE ?? "Y") === "N") {
-                throw new AppError(ADMIN_ERRORS.ACCOUNT_INACTIVE, 403, {
-                    type: "AuthorizationError",
-                });
-            }
-
-            const role = await AuthService._resolveRole(empAdmin);
-            logger.info(authMessages.TOKEN_REFRESHED(userId));
-            return AuthService._issueTokens({
-                userId,
-                GID,
-                firstName: uaUser.FIRSTNAME,
-                lastName: uaUser.LASTNAME,
-                segmentCode: uaUser.SEGMENT_CODE,
-                segmentDesc: uaUser.SEGMENT_DESC,
-                email: uaUser.EMAILADDRESS ?? null,
-                role,
-                loginSource: "ua",
-                // Without this, a refreshed token silently drops the flags and
-                // the UI falls back to its permissive 'Y' defaults.
-                permissionFlags: AuthService._extractPermissionFlags(empAdmin),
-            });
+        const admin = await AdminModel.findByUsername(username);
+        if (admin) {
+            AuthService._assertActive(admin.IS_ACTIVE, username);
+            const role = await AuthService._resolveRole(admin);
+            logger.info(authMessages.TOKEN_REFRESHED(username));
+            return AuthService._issueTokens(AuthService._adminPayload(admin, role));
         }
 
-        // Fallback: meal-only account
-        const [empAdmin, GID] = await Promise.all([
-            MealAdmModel.findByEmpId(userId),
-            MealAdmModel.findGidByEmpId(userId),
-        ]);
-        if (!empAdmin) {
-            throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, 401, {
-                type: "AuthenticationError",
-            });
+        const user = await UserModel.findByUsername(username);
+        if (user) {
+            AuthService._assertActive(user.IS_ACTIVE, username);
+            logger.info(authMessages.TOKEN_REFRESHED(username));
+            return AuthService._issueTokens(AuthService._userPayload(user));
         }
 
-        // IS_ACTIVE gate on refresh — deactivated admins cannot refresh tokens
-        if (String(empAdmin.IS_ACTIVE ?? "Y") === "N") {
-            throw new AppError(ADMIN_ERRORS.ACCOUNT_INACTIVE, 403, {
-                type: "AuthorizationError",
-            });
-        }
-
-        const sigValid = await CryptoVault.verifyRecord(
-            "T_EMP_MGMT_ADMIN",
-            MealAdmModel.buildSignedFields(empAdmin),
-            empAdmin.SYSSIGNATURE,
-        );
-        if (!sigValid) {
-            logger.warning(authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(userId));
-            throw new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, 403, {
-                type: "AuthorizationError",
-            });
-        }
-
-        logger.info(authMessages.TOKEN_REFRESHED(userId));
-        return AuthService._issueTokens({
-            userId:     empAdmin.EMP_ID,
-            GID,
-            firstName:  null,
-            lastName:   null,
-            segmentCode: null,
-            segmentDesc: null,
-            email:      null,
-            role:       empAdmin.EMP_ROLE,
-            loginSource: "meal",
-            permissionFlags: AuthService._extractPermissionFlags(empAdmin),
+        throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, 401, {
+            type: "AuthenticationError",
         });
     }
 
     /**
-     * Returns the caller's profile for GET /auth/me with permission flags
-     * refreshed from T_EMP_MGMT_ADMIN at read time.
-     *
-     * JWT claims are frozen at login. If a SUPER_ADMIN changes an admin's
-     * flags mid-session, the token keeps the stale values until re-login —
-     * but the server-side gates re-read the DB on every action. Serving the
-     * raw token payload here makes the UI contradict the server: buttons
-     * render enabled and then 403, and "no permission" notices never show.
-     * Refreshing the flags on /auth/me keeps the UI honest within one page
-     * load of any permission change.
-     *
-     * Best-effort: on lookup failure the token payload is returned unchanged —
-     * /auth/me must never break an otherwise valid session. Users with no
-     * admin row (plain HRIS users) are returned unchanged too.
+     * Returns the caller's profile for GET /auth/me. The JWT already carries the
+     * authoritative claims (role/userLevel), so this returns the decoded payload
+     * unchanged — role-gated actions are always re-checked server-side at action time.
      *
      * @param {object} decodedUser - req.user (verified JWT payload)
-     * @returns {Promise<object>} profile with up-to-date `permissions`
+     * @returns {Promise<object>}
      */
     static async getProfile(decodedUser) {
-        try {
-            // Cached + coalesced: GET /me is hit on every page focus, and under
-            // a burst of concurrent loads the identical T_EMP_MGMT_ADMIN lookup
-            // would otherwise run once per request. `false` is cached as the
-            // negative sentinel ("not an admin") because getOrSet skips storing
-            // null/undefined — without it, regular employees (the majority,
-            // who have no admin row) would never benefit from the cache.
-            const store = _profileFlagsStore();
-            const loadFlags = async () => {
-                const empAdmin = await MealAdmModel.findByEmpId(
-                    decodedUser.userId,
-                );
-                return empAdmin
-                    ? AuthService._extractPermissionFlags(empAdmin)
-                    : false;
-            };
-            const flags = store
-                ? await store.getOrSet(
-                      CacheKeyBuilder.build("authProfile", {
-                          empId: decodedUser.userId,
-                      }),
-                      loadFlags,
-                  )
-                : await loadFlags();
-
-            if (!flags) return decodedUser;
-            return { ...decodedUser, permissions: flags };
-        } catch (err) {
-            logger.warning(
-                authMessages.PROFILE_FLAG_REFRESH_FAILED(
-                    decodedUser?.userId,
-                    err.message,
-                ),
-            );
-            return decodedUser;
-        }
+        return decodedUser;
     }
 
     // ─── Cookie option helpers (used by the controller) ───────────────────────
@@ -253,41 +140,8 @@ class AuthService {
             secure: process.env.USE_HTTPS === "true",
             sameSite: "strict",
             signed: true,
-            maxAge: AuthService._parseDuration(
-                process.env.JWT_EXPIRES_IN || "30m",
-            ),
+            maxAge: AuthService._parseDuration(process.env.JWT_EXPIRES_IN || "30m"),
         };
-    }
-
-    /**
-     * Converts a JWT-style duration string to milliseconds.
-     * Supports s (seconds), m (minutes), h (hours), d (days).
-     *
-     * @param {string} str - e.g. '30m', '8h', '7d', '60s'
-     * @returns {number} Duration in milliseconds
-     * @throws {Error} When the format is unrecognised
-     *
-     * @example
-     * AuthService._parseDuration('30m')  // 1_800_000
-     * AuthService._parseDuration('8h')   // 28_800_000
-     * AuthService._parseDuration('7d')   // 604_800_000
-     */
-    static _parseDuration(str) {
-        const match = /^(\d+)([smhd])$/.exec(String(str).trim());
-        if (!match) {
-            throw new Error(
-                `Unrecognised duration format: "${str}". Expected e.g. "30m", "8h", "7d".`,
-            );
-        }
-        const value = parseInt(match[1], 10);
-        const unit = match[2];
-        const multipliers = {
-            s: 1_000,
-            m: 60_000,
-            h: 3_600_000,
-            d: 86_400_000,
-        };
-        return value * multipliers[unit];
     }
 
     static refreshCookieOptions() {
@@ -301,142 +155,35 @@ class AuthService {
         };
     }
 
-    // ─── Private helpers ──────────────────────────────────────────────────────
-
-    static async _loginViaUa(uaUser, userId, password) {
-        const decrypted = SymmetricCrypto.SecurityCryptHelper.decryptText(
-            uaUser.PASSWORD,
-        );
-
-        const hrisMatch = decrypted && decrypted === password;
-
-        // If HRIS password didn't match, check if the user is an admin and
-        // try the admin password from T_EMP_MGMT_ADMIN before rejecting.
-        // This covers the scenario where a new admin was provisioned with
-        // ADMIN_DEFAULT_PASSWORD and has not yet changed it — their HRIS
-        // password and admin password are different credentials.
-        const empAdmin = await MealAdmModel.findByEmpId(userId);
-
-        if (!hrisMatch) {
-            if (!empAdmin) {
-                loginLockout.recordFailure(userId);
-                throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, 401, {
-                    type: "AuthenticationError",
-                });
-            }
-
-            // IS_ACTIVE gate — inactive admins cannot log in (migration v3.0)
-            if (String(empAdmin.IS_ACTIVE ?? "Y") === "N") {
-                logger.warning(
-                    adminMessages.ADMIN_INACTIVE_LOGIN_BLOCKED(userId),
-                );
-                throw new AppError(ADMIN_ERRORS.ACCOUNT_INACTIVE, 403, {
-                    type: "AuthorizationError",
-                });
-            }
-
-            // Verify admin record integrity before attempting password check
-            const sigValid = await CryptoVault.verifyRecord(
-                "T_EMP_MGMT_ADMIN",
-                MealAdmModel.buildSignedFields(empAdmin),
-                empAdmin.SYSSIGNATURE,
+    /**
+     * Converts a JWT-style duration string to milliseconds (s/m/h/d).
+     * @param {string} str - e.g. '30m', '8h', '7d', '60s'
+     * @returns {number}
+     */
+    static _parseDuration(str) {
+        const match = /^(\d+)([smhd])$/.exec(String(str).trim());
+        if (!match) {
+            throw new Error(
+                `Unrecognised duration format: "${str}". Expected e.g. "30m", "8h", "7d".`,
             );
-            if (!sigValid) {
-                logger.warning(
-                    authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(userId),
-                );
-                throw new AppError(
-                    AUTH_ERRORS.ACCOUNT_INTEGRITY_FAILED,
-                    HTTP_STATUS.UNPROCESSABLE,
-                    { type: "DataIntegrityError" },
-                );
-            }
-
-            // verifyAdminPassword handles bcrypt, argon2, and legacy TripleDES
-            // with transparent rehash-on-match migration.
-            const { matched: adminPwMatch, newHash } =
-                await CryptoVault.verifyAdminPassword(
-                    password,
-                    empAdmin.EMP_PW,
-                );
-            if (!adminPwMatch) {
-                loginLockout.recordFailure(userId);
-                throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, 401, {
-                    type: "AuthenticationError",
-                });
-            }
-
-            // Transparent migration: persist upgraded hash when TripleDES was stored
-            if (newHash) {
-                await AuthService._persistAdminHashUpgrade(
-                    empAdmin,
-                    newHash,
-                );
-            }
-
-            logger.info(authMessages.AUTH_ADMIN_PASSWORD(userId));
         }
-
-        const role = await AuthService._resolveRole(empAdmin);
-
-        const isDefaultPassword = empAdmin
-            ? await AuthService._checkIsDefaultPassword(empAdmin.EMP_PW)
-            : false;
-        const requiresPasswordChange = isDefaultPassword;
-
-        // Resolve permanent GID — null for accounts not yet in T_EMP_MASTER_LIST
-        const GID = await MealAdmModel.findGidByEmpId(userId);
-
-        logger.info(authMessages.AUTH_SUCCESS(userId));
-
-        const tokens = AuthService._issueTokens({
-            userId,
-            GID,
-            firstName: uaUser.FIRSTNAME,
-            lastName: uaUser.LASTNAME,
-            segmentCode: uaUser.SEGMENT_CODE,
-            segmentDesc: uaUser.SEGMENT_DESC,
-            email: uaUser.EMAILADDRESS ?? null,
-            role,
-            loginSource: "ua",
-            isDefaultPassword,
-            requiresPasswordChange,
-            permissionFlags: AuthService._extractPermissionFlags(empAdmin),
-        });
-
-        loginLockout.recordSuccess(userId);
-        return tokens;
+        const multipliers = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+        return parseInt(match[1], 10) * multipliers[match[2]];
     }
 
-    static async _loginViaMeal(userId, password) {
-        const empAdmin = await MealAdmModel.findByEmpId(userId);
+    // ─── Login helpers ────────────────────────────────────────────────────────
 
-        if (!empAdmin) {
-            // Intentionally vague — don't reveal which DB was checked
-            loginLockout.recordFailure(userId);
-            throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, 401, {
-                type: "AuthenticationError",
-            });
-        }
+    static async _loginAdmin(admin, username, password) {
+        AuthService._assertActive(admin.IS_ACTIVE, username);
 
-        // IS_ACTIVE gate — inactive admins cannot log in (migration v3.0).
-        // Default 'Y' when the column is absent (pre-migration rows read as null).
-        if (String(empAdmin.IS_ACTIVE ?? "Y") === "N") {
-            logger.warning(adminMessages.ADMIN_INACTIVE_LOGIN_BLOCKED(userId));
-            throw new AppError(ADMIN_ERRORS.ACCOUNT_INACTIVE, 403, {
-                type: "AuthorizationError",
-            });
-        }
-
-        // Integrity check: reject records with broken signatures before
-        // attempting password comparison (prevents timing oracle on tampered rows)
+        // Integrity check before any password comparison (blocks tampered rows).
         const sigValid = await CryptoVault.verifyRecord(
-            "T_EMP_MGMT_ADMIN",
-            MealAdmModel.buildSignedFields(empAdmin),
-            empAdmin.SYSSIGNATURE,
+            AdminModel.SIGN_CONTEXT,
+            AdminModel.buildSignedFields(admin),
+            admin.SYSSIGNATURE,
         );
         if (!sigValid) {
-            logger.warning(authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(userId));
+            logger.warning(authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(username));
             throw new AppError(
                 AUTH_ERRORS.ACCOUNT_INTEGRITY_FAILED,
                 HTTP_STATUS.UNPROCESSABLE,
@@ -444,88 +191,83 @@ class AuthService {
             );
         }
 
-        // verifyAdminPassword handles bcrypt, argon2, and legacy TripleDES
-        // with transparent rehash-on-match migration.
-        const { matched: pwMatch, newHash } =
-            await CryptoVault.verifyAdminPassword(
-                password,
-                empAdmin.EMP_PW,
-            );
+        const pwMatch = await CryptoVault.verifyPassword(password, admin.PASSWORD);
         if (!pwMatch) {
-            loginLockout.recordFailure(userId);
+            loginLockout.recordFailure(username);
             throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, 401, {
                 type: "AuthenticationError",
             });
         }
 
-        // Transparent migration: persist upgraded hash when TripleDES was stored
-        if (newHash) {
-            await AuthService._persistAdminHashUpgrade(empAdmin, newHash);
-        }
+        // Transparent rehash when Argon2 params have been strengthened since the
+        // hash was created. Best-effort — never blocks login.
+        await AuthService._maybeRehashAdmin(admin, password);
 
-        const isDefaultPassword = await AuthService._checkIsDefaultPassword(
-            empAdmin.EMP_PW,
+        const isDefaultPassword = await AuthService._checkIsDefaultPassword(admin.PASSWORD);
+
+        logger.info(authMessages.AUTH_SUCCESS(username));
+        const tokens = AuthService._issueTokens(
+            AuthService._adminPayload(admin, admin.ROLE, isDefaultPassword),
         );
-        const requiresPasswordChange = isDefaultPassword;
-
-        // Resolve permanent GID — null for admin-only accounts not in T_EMP_MASTER_LIST
-        const GID = await MealAdmModel.findGidByEmpId(empAdmin.EMP_ID);
-
-        logger.info(authMessages.AUTH_SUCCESS(userId));
-
-        const tokens = AuthService._issueTokens({
-            userId: empAdmin.EMP_ID,
-            GID,
-            firstName: null,
-            lastName: null,
-            segmentCode: null,
-            segmentDesc: null,
-            email: null,
-            role: empAdmin.EMP_ROLE,
-            loginSource: "meal",
-            isDefaultPassword,
-            requiresPasswordChange,
-            permissionFlags: AuthService._extractPermissionFlags(empAdmin),
-        });
-
-        loginLockout.recordSuccess(userId);
+        loginLockout.recordSuccess(username);
         return tokens;
     }
 
-    /**
-     * Resolves the role from a T_EMP_MGMT_ADMIN record.
-     * Falls back to "USER" if the record is missing or its signature is broken.
-     * @param {object|null} empAdmin
-     * @returns {Promise<string>}
-     */
-    static async _resolveRole(empAdmin) {
-        if (!empAdmin) return "USER";
+    static async _loginUser(user, username, password) {
+        AuthService._assertActive(user.IS_ACTIVE, username);
 
-        const sigValid = await CryptoVault.verifyRecord(
-            "T_EMP_MGMT_ADMIN",
-            MealAdmModel.buildSignedFields(empAdmin),
-            empAdmin.SYSSIGNATURE,
-        );
-
-        if (!sigValid) {
-            logger.warning(
-                authMessages.SYS_SIGNATURE_TAMPERED_ROLE_FALLBACK(
-                    empAdmin.EMP_ID,
-                ),
-            );
-            return "USER";
+        const pwMatch = await CryptoVault.verifyPassword(password, user.PASSWORD);
+        if (!pwMatch) {
+            loginLockout.recordFailure(username);
+            throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, 401, {
+                type: "AuthenticationError",
+            });
         }
 
-        return empAdmin.EMP_ROLE;
+        const isDefaultPassword = await AuthService._checkIsDefaultPassword(user.PASSWORD);
+
+        logger.info(authMessages.AUTH_SUCCESS(username));
+        const tokens = AuthService._issueTokens(
+            AuthService._userPayload(user, isDefaultPassword),
+        );
+        loginLockout.recordSuccess(username);
+        return tokens;
+    }
+
+    /** Throws 403 when IS_ACTIVE is 'N' (default 'Y' when the column is absent). */
+    static _assertActive(isActive, username) {
+        if (String(isActive ?? "Y") === "N") {
+            logger.warning(authMessages.ACCOUNT_INACTIVE_BLOCKED(username));
+            throw new AppError(AUTH_ERRORS.ACCOUNT_INACTIVE, 403, {
+                type: "AuthorizationError",
+            });
+        }
     }
 
     /**
-     * Maps a role string to a numeric userLevel used by requireAccess predicates.
-     *
-     * SUPER_ADMIN → 3  (full admin)
-     * ADMIN       → 2  (admin)
-     * All others  → 1  (USER, APPROVER, ROBOT, etc.)
-     *
+     * Re-reads the role from a verified admin row, falling back to USER when the
+     * signature is broken (defence in depth for the refresh path).
+     * @param {object} admin
+     * @returns {Promise<string>}
+     */
+    static async _resolveRole(admin) {
+        const sigValid = await CryptoVault.verifyRecord(
+            AdminModel.SIGN_CONTEXT,
+            AdminModel.buildSignedFields(admin),
+            admin.SYSSIGNATURE,
+        );
+        if (!sigValid) {
+            logger.warning(
+                authMessages.SYS_SIGNATURE_TAMPERED_ROLE_FALLBACK(admin.USERNAME),
+            );
+            return "USER";
+        }
+        return admin.ROLE;
+    }
+
+    /**
+     * Maps an RBAC role to the numeric userLevel used by requireAccess predicates.
+     * SUPER_ADMIN → 3, ADMIN → 2, everything else → 1.
      * @param {string} role
      * @returns {number}
      */
@@ -535,104 +277,63 @@ class AuthService {
         return 1;
     }
 
-    /**
-     * Extracts the permission flag object from a T_EMP_MGMT_ADMIN row.
-     * All flags default to 'Y' for backward compatibility with pre-migration rows
-     * (null values), except CAN_RECEIVE_BILLING which defaults to 'N' (opt-in).
-     *
-     * @param {object|null} empAdmin - T_EMP_MGMT_ADMIN row, or null
-     * @returns {object}
-     * @private
-     */
-    static _extractPermissionFlags(empAdmin) {
-        if (!empAdmin) {
-            // Non-admin HRIS users have no admin row — return all flags as Y
-            // (they are USER-level; the flags are only meaningful for admins)
-            return {
-                canApproveReset:   "Y",
-                canRejectReset:    "Y",
-                canApproveBilling: "Y",
-                canRejectBilling:  "Y",
-                canReceiveBilling: "N",
-                canExportBilling:  "Y",
-                isActive:          "Y",
-            };
-        }
+    /** Builds the JWT claim object for an admin account. */
+    static _adminPayload(admin, role, isDefaultPassword = false) {
         return {
-            canApproveReset:   String(empAdmin.CAN_APPROVE_RESET   ?? "Y"),
-            canRejectReset:    String(empAdmin.CAN_REJECT_RESET     ?? "Y"),
-            canApproveBilling: String(empAdmin.CAN_APPROVE_BILLING  ?? "Y"),
-            canRejectBilling:  String(empAdmin.CAN_REJECT_BILLING   ?? "Y"),
-            canReceiveBilling: String(empAdmin.CAN_RECEIVE_BILLING  ?? "N"),
-            canExportBilling:  String(empAdmin.CAN_EXPORT_BILLING   ?? "Y"),
-            isActive:          String(empAdmin.IS_ACTIVE             ?? "Y"),
+            id: Number(admin.ID) || null,
+            username: admin.USERNAME,
+            firstName: null,
+            lastName: null,
+            email: null,
+            role,
+            loginSource: "admin",
+            isDefaultPassword,
+        };
+    }
+
+    /** Builds the JWT claim object for a regular user account. */
+    static _userPayload(user, isDefaultPassword = false) {
+        return {
+            id: Number(user.ID) || null,
+            username: user.USERNAME,
+            firstName: user.FIRST_NAME ?? null,
+            lastName: user.LAST_NAME ?? null,
+            email: user.EMAIL ?? null,
+            role: "USER",
+            loginSource: "user",
+            isDefaultPassword,
         };
     }
 
     /**
-     * Builds and signs both JWT tokens.
-     * The access token carries the full user profile including GID, userLevel,
-     * isDefaultPassword, requiresPasswordChange, and permission flags.
-     * The refresh token carries only sub + type (minimal surface area).
+     * Builds and signs the access + refresh tokens from a claim object.
+     * The access token carries the full profile; the refresh token carries only
+     * sub + type (minimal surface area).
      *
-     * SECURITY NOTE: Permission flags in the JWT are for UI purposes ONLY
-     * (hiding buttons). The authoritative check is always re-read from the DB
-     * at action time by the relevant service. Stale JWT flags can never bypass
-     * the DB-level gate.
-     *
-     * @param {object} params
-     * @param {string} params.userId
-     * @param {number|null} params.GID          - Permanent employee GID from T_EMP_MASTER_LIST
-     * @param {string|null} params.firstName
-     * @param {string|null} params.lastName
-     * @param {string|null} params.segmentCode
-     * @param {string|null} params.segmentDesc
-     * @param {string|null} params.email
-     * @param {string} params.role
-     * @param {string} params.loginSource
-     * @param {boolean} [params.isDefaultPassword=false]
-     * @param {boolean} [params.requiresPasswordChange=false]
-     * @param {object} [params.permissionFlags={}]  - Permission flags from T_EMP_MGMT_ADMIN
+     * @param {object} claims - from _adminPayload / _userPayload
      * @returns {{ user: object, accessToken: string, refreshToken: string }}
      */
-    static _issueTokens({
-        userId,
-        GID = null,
-        firstName,
-        lastName,
-        segmentCode,
-        segmentDesc,
-        email,
-        role,
-        loginSource,
-        isDefaultPassword = false,
-        requiresPasswordChange = false,
-        permissionFlags = {},
-    }) {
+    static _issueTokens(claims) {
         const userPayload = {
-            sub: String(userId),
-            userId: String(userId),
-            GID: GID ?? null,
-            userLevel: AuthService._roleToUserLevel(role),
-            firstName,
-            lastName,
-            segmentCode,
-            segmentDesc,
-            email,
-            role,
-            loginSource,
-            isDefaultPassword,
-            requiresPasswordChange,
-            // Permission flags — for UI hints only, never for server-side gates
-            permissions: permissionFlags,
+            sub: String(claims.username),
+            userId: String(claims.username),
+            id: claims.id ?? null,
+            username: claims.username,
+            userLevel: AuthService._roleToUserLevel(claims.role),
+            firstName: claims.firstName ?? null,
+            lastName: claims.lastName ?? null,
+            email: claims.email ?? null,
+            role: claims.role,
+            loginSource: claims.loginSource,
+            isDefaultPassword: claims.isDefaultPassword ?? false,
+            requiresPasswordChange: claims.isDefaultPassword ?? false,
         };
 
         const accessToken = jwt.sign(userPayload, process.env.JWT_SECRET, {
-            expiresIn: process.env.JWT_EXPIRES_IN || "8h",
+            expiresIn: process.env.JWT_EXPIRES_IN || "30m",
         });
-
         const refreshToken = jwt.sign(
-            { sub: String(userId), type: "refresh" },
+            { sub: String(claims.username), type: "refresh" },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d" },
         );
@@ -640,70 +341,47 @@ class AuthService {
         return { user: userPayload, accessToken, refreshToken };
     }
 
-    // ─── Default password check ───────────────────────────────────────────────
+    // ─── Default-password check ───────────────────────────────────────────────
 
     /**
-     * Returns true when the stored EMP_PW hash was produced from the
-     * ADMIN_DEFAULT_PASSWORD env var, indicating the user has not changed
-     * their password from the initial system-assigned value.
-     *
-     * Returns false when ADMIN_DEFAULT_PASSWORD is not configured or when
-     * empPwHash is falsy — callers treat missing config as "no forced change".
-     *
-     * @param {string|null|undefined} empPwHash
+     * True when the stored hash was produced from ADMIN_DEFAULT_PASSWORD — i.e. the
+     * account still has its system-assigned password and must change it on login.
+     * Returns false when the env var is unset or verification throws.
+     * @param {string|null|undefined} passwordHash
      * @returns {Promise<boolean>}
-     * @private
      */
-    static async _checkIsDefaultPassword(empPwHash) {
+    static async _checkIsDefaultPassword(passwordHash) {
         const defaultPw = process.env.ADMIN_DEFAULT_PASSWORD;
-        if (!defaultPw || !empPwHash) return false;
+        if (!defaultPw || !passwordHash) return false;
         try {
-            // Use verifyAdminPassword to handle all stored formats including
-            // legacy TripleDES (no rehash needed here — this is read-only)
-            const { matched } = await CryptoVault.verifyAdminPassword(
-                defaultPw,
-                empPwHash,
-            );
-            return matched;
+            return await CryptoVault.verifyPassword(defaultPw, passwordHash);
         } catch {
-            // Verification failure (bad hash format, etc.) is non-fatal here
             return false;
         }
     }
 
     /**
-     * Persists an upgraded admin password hash after a transparent
-     * TripleDES → strong-mode migration on successful login.
-     * Updates both EMP_PW and SYSSIGNATURE in T_EMP_MGMT_ADMIN.
-     * Failures are logged as warnings — never propagated to the caller.
-     *
-     * @param {object} empAdmin - The T_EMP_MGMT_ADMIN row
-     * @param {string} newHash  - New strong (argon2|bcrypt) hash
+     * Re-hashes an admin password with current Argon2 params on login when the
+     * stored hash used weaker params. Best-effort — failures are logged, not thrown.
+     * @param {object} admin
+     * @param {string} plainPassword
      * @returns {Promise<void>}
      * @private
      */
-    static async _persistAdminHashUpgrade(empAdmin, newHash) {
+    static async _maybeRehashAdmin(admin, plainPassword) {
         try {
-            // Sign over the full permission-flag payload (migration v3.0).
-            // Only EMP_PW changes; all other row values are preserved as-is.
-            const sysSignature = await CryptoVault.signRecord(
-                "T_EMP_MGMT_ADMIN",
-                MealAdmModel.buildSignedFields({ ...empAdmin, EMP_PW: newHash }),
+            if (!CryptoVault.needsRehash || !CryptoVault.needsRehash(admin.PASSWORD)) return;
+            const newHash = await CryptoVault.hashPassword(plainPassword);
+            const sig = await CryptoVault.signRecord(
+                AdminModel.SIGN_CONTEXT,
+                AdminModel.buildSignedFields({ ...admin, PASSWORD: newHash }),
             );
-            await MealAdmModel.updateAdmin(
-                empAdmin.EMP_ID,
-                newHash,
-                empAdmin.EMP_ROLE,
-                sysSignature,
-            );
-            logger.info(
-                authMessages.ADMIN_HASH_UPGRADED
-                    ? authMessages.ADMIN_HASH_UPGRADED(empAdmin.EMP_ID)
-                    : `Admin password hash upgraded for ${empAdmin.EMP_ID}`,
-            );
+            await AdminModel.updateCredentials(admin.USERNAME, newHash, sig);
+            admin.PASSWORD = newHash; // keep in-memory row consistent
+            logger.info(authMessages.HASH_UPGRADED(admin.USERNAME));
         } catch (err) {
             logger.warning(
-                `Admin hash upgrade failed for ${empAdmin.EMP_ID}: ${err?.message}`,
+                `Password rehash skipped for ${admin.USERNAME}: ${err?.message}`,
             );
         }
     }
@@ -711,129 +389,85 @@ class AuthService {
     // ─── Change password ──────────────────────────────────────────────────────
 
     /**
-     * Changes an admin's password while the user is already authenticated.
-     * Verifies the current password, rejects the default password as a new
-     * value, hashes the new password, re-signs the record, and issues fresh
-     * JWT tokens with requiresPasswordChange=false.
+     * Changes the caller's password (admin or user) while authenticated.
+     * Verifies the current password, rejects the system default as the new value,
+     * hashes + persists the new password (re-signing admin rows), and issues fresh
+     * tokens with requiresPasswordChange=false.
      *
-     * @param {string} userId
-     * @param {string} currentPassword - Plain-text current password
-     * @param {string} newPassword     - Plain-text new password
+     * @param {string} username
+     * @param {string} currentPassword
+     * @param {string} newPassword
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string }>}
-     * @throws {AppError} 404 not found; 422 signature invalid; 401 wrong current password; 400 default password forbidden
      */
-    static async changePassword(userId, currentPassword, newPassword) {
-        const empAdmin = await MealAdmModel.findByEmpId(userId);
-        if (!empAdmin) {
-            throw new AppError(
-                AUTH_ERRORS.USER_NOT_FOUND,
-                HTTP_STATUS.NOT_FOUND,
-                {
-                    type: "NotFoundError",
-                },
-            );
+    static async changePassword(username, currentPassword, newPassword) {
+        const admin = await AdminModel.findByUsername(username);
+        const account = admin || (await UserModel.findByUsername(username));
+        if (!account) {
+            throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND, {
+                type: "NotFoundError",
+            });
         }
 
-        // Integrity check before touching credentials
-        const sigValid = await CryptoVault.verifyRecord(
-            "T_EMP_MGMT_ADMIN",
-            MealAdmModel.buildSignedFields(empAdmin),
-            empAdmin.SYSSIGNATURE,
-        );
-        if (!sigValid) {
-            logger.warning(authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(userId));
-            throw new AppError(
-                AUTH_ERRORS.ACCOUNT_INTEGRITY_FAILED,
-                HTTP_STATUS.UNPROCESSABLE,
-                { type: "DataIntegrityError" },
+        // Admin rows: verify integrity before touching credentials.
+        if (admin) {
+            const sigValid = await CryptoVault.verifyRecord(
+                AdminModel.SIGN_CONTEXT,
+                AdminModel.buildSignedFields(admin),
+                admin.SYSSIGNATURE,
             );
-        }
-
-        // Verify current password using the admin-specific verifier
-        // (handles bcrypt, argon2, and legacy TripleDES with rehash migration)
-        const { matched: pwMatch, newHash: migratedHash } =
-            await CryptoVault.verifyAdminPassword(
-                currentPassword,
-                empAdmin.EMP_PW,
-            );
-        if (!pwMatch) {
-            throw new AppError(
-                AUTH_ERRORS.INVALID_CREDENTIALS,
-                HTTP_STATUS.UNAUTHORIZED,
-                {
-                    type: "AuthenticationError",
-                    hint: "The current password you entered is incorrect.",
-                },
-            );
-        }
-
-        // Reject default password as new value (plain compare + hash verify)
-        const defaultPw = process.env.ADMIN_DEFAULT_PASSWORD;
-        if (defaultPw) {
-            if (newPassword === defaultPw) {
-                logger.warning(authMessages.DEFAULT_PASSWORD_REJECTED(userId));
+            if (!sigValid) {
+                logger.warning(authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED(username));
                 throw new AppError(
-                    ADMIN_ERRORS.DEFAULT_PASSWORD_FORBIDDEN,
-                    HTTP_STATUS.BAD_REQUEST,
-                    {
-                        type: "ValidationError",
-                        details: [
-                            {
-                                field: "newPassword",
-                                issue: "Choose a password different from the system default.",
-                            },
-                        ],
-                    },
+                    AUTH_ERRORS.ACCOUNT_INTEGRITY_FAILED,
+                    HTTP_STATUS.UNPROCESSABLE,
+                    { type: "DataIntegrityError" },
                 );
             }
         }
 
-        // Note: the dead `isDefaultHash` computation that previously appeared here
-        // was removed (L-02) — the plain compare above already covers this check.
-        // migratedHash is intentionally discarded here — the user is setting a new
-        // password immediately, which will always produce a strong hash below.
-        void migratedHash;
+        const pwMatch = await CryptoVault.verifyPassword(currentPassword, account.PASSWORD);
+        if (!pwMatch) {
+            throw new AppError(AUTH_ERRORS.INVALID_CREDENTIALS, HTTP_STATUS.UNAUTHORIZED, {
+                type: "AuthenticationError",
+                hint: "The current password you entered is incorrect.",
+            });
+        }
 
-        const newPwHash = await CryptoVault.hashAdminPassword(newPassword);
-        // Sign over the full permission-flag payload (migration v3.0).
-        // EMP_PW is the *new* hash; all other flag values are read from the
-        // existing row (they are not changing during a password change).
-        const sysSignature = await CryptoVault.signRecord(
-            "T_EMP_MGMT_ADMIN",
-            MealAdmModel.buildSignedFields({ ...empAdmin, EMP_PW: newPwHash }),
-        );
+        const defaultPw = process.env.ADMIN_DEFAULT_PASSWORD;
+        if (defaultPw && newPassword === defaultPw) {
+            logger.warning(authMessages.DEFAULT_PASSWORD_REJECTED(username));
+            throw new AppError(
+                ADMIN_ERRORS.DEFAULT_PASSWORD_FORBIDDEN,
+                HTTP_STATUS.BAD_REQUEST,
+                {
+                    type: "ValidationError",
+                    details: [
+                        {
+                            field: "newPassword",
+                            issue: "Choose a password different from the system default.",
+                        },
+                    ],
+                },
+            );
+        }
 
-        await MealAdmModel.updateAdmin(
-            empAdmin.EMP_ID,
-            newPwHash,
-            empAdmin.EMP_ROLE,
-            sysSignature,
-        );
-        logger.info(authMessages.PASSWORD_CHANGED(userId));
+        const newHash = await CryptoVault.hashPassword(newPassword);
 
-        // Fetch HRIS profile + GID in parallel (GID may be null for meal-only admins)
-        const [uaUser, GID] = await Promise.all([
-            HrisUaModel.findByUserId(userId),
-            MealAdmModel.findGidByEmpId(userId),
-        ]);
+        if (admin) {
+            const sig = await CryptoVault.signRecord(
+                AdminModel.SIGN_CONTEXT,
+                AdminModel.buildSignedFields({ ...admin, PASSWORD: newHash }),
+            );
+            await AdminModel.updateCredentials(username, newHash, sig);
+        } else {
+            await UserModel.updatePassword(username, newHash);
+        }
+        logger.info(authMessages.PASSWORD_CHANGED(username));
 
-        // Re-read admin row to pick up any flag changes since login
-        const freshAdmin = await MealAdmModel.findByEmpId(userId);
-
-        return AuthService._issueTokens({
-            userId: empAdmin.EMP_ID,
-            GID,
-            firstName: uaUser?.FIRSTNAME ?? null,
-            lastName: uaUser?.LASTNAME ?? null,
-            segmentCode: uaUser?.SEGMENT_CODE ?? null,
-            segmentDesc: uaUser?.SEGMENT_DESC ?? null,
-            email: uaUser?.EMAILADDRESS ?? null,
-            role: empAdmin.EMP_ROLE,
-            loginSource: uaUser ? "ua" : "meal",
-            isDefaultPassword: false,
-            requiresPasswordChange: false,
-            permissionFlags: AuthService._extractPermissionFlags(freshAdmin),
-        });
+        const claims = admin
+            ? AuthService._adminPayload({ ...admin, PASSWORD: newHash }, admin.ROLE, false)
+            : AuthService._userPayload({ ...account, PASSWORD: newHash }, false);
+        return AuthService._issueTokens(claims);
     }
 }
 

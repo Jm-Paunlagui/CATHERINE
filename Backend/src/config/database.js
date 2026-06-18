@@ -37,26 +37,19 @@ function buildTNSConnectString(host, port, sid) {
  *   poolMax        {number}  optional — overrides global default
  */
 const connections = {
-  userAccount: {
-    user: process.env.UA_DB_USERNAME,
-    password: process.env.UA_DB_PASSWORD,
+  // ── appDb — the standalone template connection (T_USERS / T_ADMINS /
+  //    T_AUDIT_LOGS). This is the only connection a fresh project needs.
+  //    Skipped entirely when DEMO_MODE=true (no Oracle pool is opened).
+  appDb: {
+    user: process.env.APP_DB_USERNAME,
+    password: process.env.APP_DB_PASSWORD,
     connectString: buildSimpleConnectString(
       process.env.DB_HOST,
       process.env.DB_PORT,
-      process.env.DB_UA_SERVICE_NAME,
+      process.env.DB_APP_SERVICE_NAME,
     ),
-  },
-
-  Meal: {
-    user: process.env.MEAL_DB_USERNAME,
-    password: process.env.MEAL_DB_PASSWORD,
-    connectString: buildSimpleConnectString(
-      process.env.DB_HOST,
-      process.env.DB_PORT,
-      process.env.DB_MEAL_SERVICE_NAME,
-    ),
-    poolMin: parseInt(process.env.MEAL_POOL_MIN, 10) || 5,
-    poolMax: parseInt(process.env.MEAL_POOL_MAX, 10) || 20,
+    poolMin: parseInt(process.env.APP_POOL_MIN, 10) || 2,
+    poolMax: parseInt(process.env.APP_POOL_MAX, 10) || 10,
   },
 
   // ── Add new connections below ──────────────────────────────────────────

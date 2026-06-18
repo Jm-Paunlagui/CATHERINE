@@ -28,32 +28,34 @@
  */
 
 const express = require("express");
-const router  = express.Router();
+const router = express.Router();
 
 const AdminManagementController = require("../controllers/AdminManagementController");
-const AuthMiddleware             = require("../middleware/authentication/AuthMiddleware");
-const { CacheMiddleware, CacheKeyBuilder, registry } = require("../middleware/cache");
+const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
+const {
+    CacheMiddleware,
+    CacheKeyBuilder,
+    registry,
+} = require("../middleware/cache");
 
 // ── Cache stores ───────────────────────────────────────────────────────────────
-const adminStore   = registry.resolve("adminList");
-// Billing store is a separate store — the billing admin-list key must also be
-// invalidated when permission flags change (it includes IS_ACTIVE + CAN_RECEIVE_BILLING).
-const billingStore = registry.resolve("billing");
+const adminStore = registry.resolve("adminList");
 
 /** Predicate: only ADMIN and SUPER_ADMIN may manage the admin roster. */
 const requireAdmin = AuthMiddleware.requireAccess(
-  (user) => user.role === "ADMIN" || user.role === "SUPER_ADMIN",
-  {
-    message: "Only ADMIN or SUPER_ADMIN accounts may access admin management.",
-  },
+    (user) => user.role === "ADMIN" || user.role === "SUPER_ADMIN",
+    {
+        message:
+            "Only ADMIN or SUPER_ADMIN accounts may access admin management.",
+    },
 );
 
 /** Predicate: only SUPER_ADMIN may update permission flags (zero-approver guard). */
 const requireSuperAdmin = AuthMiddleware.requireAccess(
-  (user) => user.role === "SUPER_ADMIN",
-  {
-    message: "Only SUPER_ADMIN accounts may update admin permission flags.",
-  },
+    (user) => user.role === "SUPER_ADMIN",
+    {
+        message: "Only SUPER_ADMIN accounts may update admin permission flags.",
+    },
 );
 
 // ── Auth guards applied to the entire router ──────────────────────────────────
@@ -64,41 +66,42 @@ router.use(AuthMiddleware.authenticate, requireAdmin);
 // Caching would return stale employee name/position data from HRIS.
 // validateRequiredFields automatically checks req.query for GET requests.
 router.get(
-  "/search",
-  AuthMiddleware.validateRequiredFields(["q"]),
-  AdminManagementController.search,
+    "/search",
+    AuthMiddleware.validateRequiredFields(["q"]),
+    AdminManagementController.search,
 );
 
 // ── List all admins ───────────────────────────────────────────────────────────
 // Cache key: `adminList` — no query params, roster is the same for all callers.
 // Auth already verified by router.use() above before this cache read executes.
 router.get(
-  "/",
-  CacheMiddleware.read(
-    adminStore,
-    () => CacheKeyBuilder.build("adminList"),
-  ),
-  AdminManagementController.list,
+    "/",
+    CacheMiddleware.read(adminStore, () => CacheKeyBuilder.build("adminList")),
+    AdminManagementController.list,
 );
 
 // ── Create admin ──────────────────────────────────────────────────────────────
 // Invalidation: namespace wipe — new admin appears in the roster and in the
 // billing recipient selector; both are served from the same adminList store.
 router.post(
-  "/",
-  AuthMiddleware.validateRequiredFields(["empId", "role", "retainPassword"]),
-  CacheMiddleware.invalidate(adminStore, () => "adminList", { usePattern: true }),
-  AdminManagementController.create,
+    "/",
+    AuthMiddleware.validateRequiredFields(["empId", "role", "retainPassword"]),
+    CacheMiddleware.invalidate(adminStore, () => "adminList", {
+        usePattern: true,
+    }),
+    AdminManagementController.create,
 );
 
 // ── Update admin ──────────────────────────────────────────────────────────────
 // Invalidation: namespace wipe — role or name change affects list display and
 // the billing recipient selector dropdown.
 router.put(
-  "/:empId",
-  AuthMiddleware.validateRequiredFields(["role", "changePassword"]),
-  CacheMiddleware.invalidate(adminStore, () => "adminList", { usePattern: true }),
-  AdminManagementController.update,
+    "/:empId",
+    AuthMiddleware.validateRequiredFields(["role", "changePassword"]),
+    CacheMiddleware.invalidate(adminStore, () => "adminList", {
+        usePattern: true,
+    }),
+    AdminManagementController.update,
 );
 
 // ── Reset password ────────────────────────────────────────────────────────────
@@ -110,18 +113,22 @@ router.patch("/:empId/reset-password", AdminManagementController.resetPassword);
 // signatureValid verdict per row. Without invalidation a repaired signature
 // keeps showing "tampered" in the roster until the 600s TTL expires.
 router.patch(
-  "/:empId/reset-signature",
-  CacheMiddleware.invalidate(adminStore, () => "adminList", { usePattern: true }),
-  AdminManagementController.resetSignature,
+    "/:empId/reset-signature",
+    CacheMiddleware.invalidate(adminStore, () => "adminList", {
+        usePattern: true,
+    }),
+    AdminManagementController.resetSignature,
 );
 
 // ── Delete admin ──────────────────────────────────────────────────────────────
 // Invalidation: namespace wipe — removed admin must disappear from the roster
 // and from the billing recipient selector.
 router.delete(
-  "/:empId",
-  CacheMiddleware.invalidate(adminStore, () => "adminList", { usePattern: true }),
-  AdminManagementController.remove,
+    "/:empId",
+    CacheMiddleware.invalidate(adminStore, () => "adminList", {
+        usePattern: true,
+    }),
+    AdminManagementController.remove,
 );
 
 // ── Update permission flags ───────────────────────────────────────────────────
@@ -133,13 +140,14 @@ router.delete(
 // Both invalidations run via setImmediate (fire-and-forget) — the response is sent
 // first, then caches are cleaned so the next fetch picks up fresh data.
 router.patch(
-  "/:empId/permissions",
-  AuthMiddleware.authenticate,       // re-auth (overrides router.use for this path)
-  requireSuperAdmin,
-  AuthMiddleware.validateRequiredFields(["flags"]),
-  CacheMiddleware.invalidate(adminStore,   () => "adminList",               { usePattern: true }),
-  CacheMiddleware.invalidate(billingStore, () => "billing:type=adminList",  { usePattern: false }),
-  AdminManagementController.updatePermissions,
+    "/:empId/permissions",
+    AuthMiddleware.authenticate, // re-auth (overrides router.use for this path)
+    requireSuperAdmin,
+    AuthMiddleware.validateRequiredFields(["flags"]),
+    CacheMiddleware.invalidate(adminStore, () => "adminList", {
+        usePattern: true,
+    }),
+    AdminManagementController.updatePermissions,
 );
 
 module.exports = router;

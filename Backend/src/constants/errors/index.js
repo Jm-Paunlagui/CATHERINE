@@ -44,7 +44,9 @@ const AUTH_ERRORS = {
     ACCOUNT_LOCKED:
         "Too many failed sign-in attempts. Please wait before trying again.",
     ACCOUNT_LOCKED_PERMANENTLY:
-        "Account locked due to too many failed attempts. Please contact HR to reset your password.",
+        "Account locked due to too many failed attempts. Please contact an administrator to reset your password.",
+    ACCOUNT_INACTIVE:
+        "Your account is currently inactive. Please contact an administrator to restore access.",
 };
 
 // ─── Validation error messages ────────────────────────────────────────────────
