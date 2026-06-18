@@ -18,7 +18,7 @@
  * filled sets (react-icons/md, react-icons/fa) here or the sidebar looks uneven.
  */
 
-import { LuCircleHelp, LuHistory, LuHouse, LuLayoutDashboard, LuLogIn, LuScrollText, LuUserCog } from "react-icons/lu";
+import { LuBookOpen, LuCircleHelp, LuHistory, LuHouse, LuLayoutDashboard, LuLogIn, LuScrollText, LuUserCog } from "react-icons/lu";
 
 const SIZE = 18;
 const STROKE = 1.75;
@@ -29,7 +29,7 @@ const icon = (Glyph) => <Glyph size={SIZE} strokeWidth={STROKE} />;
 // ── Unauthenticated flat links ────────────────────────────────────────────────
 export const PUBLIC_LINKS = [
     { name: "Home", href: "/", icon: icon(LuHouse) },
-    { name: "Help", href: "/about/help", icon: icon(LuCircleHelp) },
+    { name: "Getting Started", href: "/about/getting-started", icon: icon(LuBookOpen) },
     { name: "Sign In", href: "/auth", icon: icon(LuLogIn) },
 ];
 
@@ -52,6 +52,7 @@ export const NAV_GROUPS = {
             label: "About",
             color: "grey",
             items: [
+                { name: "Getting Started", href: "/about/getting-started", icon: icon(LuBookOpen), description: "Setup guide, prerequisites, and first steps" },
                 { name: "Version History", href: "/about/changelog", icon: icon(LuHistory), description: "What's changed in each release" },
                 { name: "Help", href: "/about/help", icon: icon(LuCircleHelp) },
             ],
@@ -71,6 +72,7 @@ export const NAV_GROUPS = {
             label: "About",
             color: "grey",
             items: [
+                { name: "Getting Started", href: "/about/getting-started", icon: icon(LuBookOpen), description: "Setup guide, prerequisites, and first steps" },
                 { name: "Version History", href: "/about/changelog", icon: icon(LuHistory), description: "What's changed in each release" },
                 { name: "Help", href: "/about/help", icon: icon(LuCircleHelp) },
             ],
@@ -90,6 +92,7 @@ export const NAV_GROUPS = {
             label: "About",
             color: "grey",
             items: [
+                { name: "Getting Started", href: "/about/getting-started", icon: icon(LuBookOpen), description: "Setup guide, prerequisites, and first steps" },
                 { name: "Version History", href: "/about/changelog", icon: icon(LuHistory), description: "What's changed in each release" },
                 { name: "Help", href: "/about/help", icon: icon(LuCircleHelp) },
             ],

@@ -28,7 +28,7 @@
  * Wrapped in ErrorBoundary.
  */
 
-import { ArrowPathIcon, CpuChipIcon, KeyIcon, MagnifyingGlassIcon, PencilIcon, ShieldCheckIcon, TrashIcon, UserGroupIcon, UserPlusIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, CpuChipIcon, MagnifyingGlassIcon, PencilIcon, ShieldCheckIcon, TrashIcon, UserGroupIcon, UserPlusIcon } from "@heroicons/react/24/outline";
 import { useEffect } from "react";
 import { ANIMATE_ENTER_UP, ANIMATE_PAGE_ENTER, HOVER_LIFT_SM, TRANSITION_COLORS, TRANSITION_SMOOTH, staggerDelay } from "../../../assets/styles/pre-set-styles";
 import ErrorBoundary from "../../../components/feedback/ErrorBoundary";
@@ -39,10 +39,8 @@ import Button from "../../../components/ui/Button";
 import { Modal } from "../../../components/ui/Modal";
 import Skeleton from "../../../components/ui/Skeleton";
 import { Table } from "../../../components/ui/Table";
-import { Tooltip } from "../../../components/ui/Tooltip";
 import { useAdminManagement } from "./adminmanagement.hook";
 import { PermissionFlagsFieldset } from "./components/PermissionFlagsFieldset";
-import { PermissionCluster } from "./components/PermissionCluster";
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
@@ -87,19 +85,9 @@ function buildColumns(onEdit, onResetPw, onResetSig, onDelete, onPermissions) {
     return [
         {
             key: "empId",
-            label: "Employee ID",
+            label: "Username",
             sortable: true,
-        },
-        {
-            key: "name",
-            label: "Name",
-            render: (row) => (
-                <span className={row.isActive === "N" ? "opacity-45" : ""}>
-                    {row.firstName || row.lastName
-                        ? `${row.firstName ?? ""} ${row.lastName ?? ""}`.trim()
-                        : <span className="text-grey-400 italic text-xs">Not in HRIS</span>}
-                </span>
-            ),
+            render: (row) => <span className={`font-mono text-sm ${row.isActive === "N" ? "opacity-45" : ""}`}>{row.empId}</span>,
         },
         {
             key: "empRole",
@@ -115,20 +103,14 @@ function buildColumns(onEdit, onResetPw, onResetSig, onDelete, onPermissions) {
             label: "Status",
             render: (row) =>
                 row.isActive === "N" ? (
-                    <Badge variant="red" dot>Inactive</Badge>
+                    <Badge variant="red" dot>
+                        Inactive
+                    </Badge>
                 ) : (
-                    <Badge variant="green" dot>Active</Badge>
+                    <Badge variant="green" dot>
+                        Active
+                    </Badge>
                 ),
-        },
-        {
-            key: "permissions",
-            label: "Permissions",
-            render: (row) => (
-                <PermissionCluster
-                    row={row}
-                    onClick={onPermissions ? () => onPermissions(row) : undefined}
-                />
-            ),
         },
         {
             key: "signatureValid",
@@ -147,16 +129,7 @@ function buildColumns(onEdit, onResetPw, onResetSig, onDelete, onPermissions) {
         {
             key: "updatedAt",
             label: "Last Updated",
-            render: (row) =>
-                row.updatedAt ? (
-                    <Tooltip content={`By: ${row.updatedBy ?? "system"}`} placement="top">
-                        <span className="text-xs text-grey-500 dark:text-grey-400 cursor-default">
-                            {new Date(row.updatedAt).toLocaleDateString()}
-                        </span>
-                    </Tooltip>
-                ) : (
-                    <span className="text-xs text-grey-300 dark:text-grey-600">—</span>
-                ),
+            render: (row) => (row.updatedAt ? <span className="text-xs text-grey-500 dark:text-grey-400">{new Date(row.updatedAt).toLocaleDateString()}</span> : <span className="text-xs text-grey-300 dark:text-grey-600">—</span>),
         },
         {
             key: "actions",
@@ -166,9 +139,6 @@ function buildColumns(onEdit, onResetPw, onResetSig, onDelete, onPermissions) {
                     <Button size="xs" variant="ghost" leftIcon={PencilIcon} onClick={() => onEdit(row)} aria-label={`Edit ${row.empId}`} />
                     <Button size="xs" variant="warning" leftIcon={ShieldCheckIcon} onClick={() => onResetPw(row)} aria-label={`Reset password for ${row.empId}`} />
                     {!row.signatureValid && <Button size="xs" variant="accent" leftIcon={ArrowPathIcon} onClick={() => onResetSig(row)} aria-label={`Reset signature for ${row.empId}`} />}
-                    {onPermissions && (
-                        <Button size="xs" variant="ghost" leftIcon={KeyIcon} onClick={() => onPermissions(row)} aria-label={`Edit permissions for ${row.empId}`} />
-                    )}
                     <Button size="xs" variant="danger" leftIcon={TrashIcon} onClick={() => onDelete(row)} aria-label={`Remove ${row.empId}`} />
                 </div>
             ),
@@ -188,27 +158,13 @@ function buildColumns(onEdit, onResetPw, onResetSig, onDelete, onPermissions) {
  * @param {Function|null} onPermissions - null when caller is not SUPER_ADMIN; cluster is still shown read-only
  * @returns {Array}
  */
-function buildRobotColumns(onEdit, onResetPw, onResetSig, onDelete, onPermissions) {
+function buildRobotColumns(onEdit, onResetPw, onResetSig, onDelete) {
     return [
         {
             key: "empId",
-            label: "Employee ID",
+            label: "Username",
             sortable: true,
-        },
-        {
-            key: "name",
-            label: "Name",
-            render: (row) => (row.firstName || row.lastName ? `${row.firstName ?? ""} ${row.lastName ?? ""}`.trim() : <span className="text-grey-400 italic text-xs">Not in HRIS</span>),
-        },
-        {
-            key: "permissions",
-            label: "Permissions",
-            render: (row) => (
-                <PermissionCluster
-                    row={row}
-                    onClick={onPermissions ? () => onPermissions(row) : undefined}
-                />
-            ),
+            render: (row) => <span className="font-mono text-sm">{row.empId}</span>,
         },
         {
             key: "signatureValid",
@@ -232,9 +188,6 @@ function buildRobotColumns(onEdit, onResetPw, onResetSig, onDelete, onPermission
                     <Button size="xs" variant="ghost" leftIcon={PencilIcon} onClick={() => onEdit(row)} aria-label={`Edit robot ${row.empId}`} />
                     <Button size="xs" variant="warning" leftIcon={ShieldCheckIcon} onClick={() => onResetPw(row)} aria-label={`Reset password for robot ${row.empId}`} />
                     {!row.signatureValid && <Button size="xs" variant="accent" leftIcon={ArrowPathIcon} onClick={() => onResetSig(row)} aria-label={`Reset signature for robot ${row.empId}`} />}
-                    {onPermissions && (
-                        <Button size="xs" variant="ghost" leftIcon={KeyIcon} onClick={() => onPermissions(row)} aria-label={`Edit permissions for robot ${row.empId}`} />
-                    )}
                     <Button size="xs" variant="danger" leftIcon={TrashIcon} onClick={() => onDelete(row)} aria-label={`Remove robot ${row.empId}`} />
                 </div>
             ),
@@ -333,20 +286,8 @@ function AdminManagementView() {
 
     const isSuperAdmin = hook.currentUser?.role === "SUPER_ADMIN";
 
-    const columns = buildColumns(
-        hook.openEditModal,
-        hook.openResetPwModal,
-        hook.openResetSigModal,
-        hook.openDeleteModal,
-        isSuperAdmin ? hook.openPermissionsModal : null,
-    );
-    const robotColumns = buildRobotColumns(
-        hook.openEditModal,
-        hook.openResetPwModal,
-        hook.openResetSigModal,
-        hook.openDeleteModal,
-        isSuperAdmin ? hook.openPermissionsModal : null,
-    );
+    const columns = buildColumns(hook.openEditModal, hook.openResetPwModal, hook.openResetSigModal, hook.openDeleteModal);
+    const robotColumns = buildRobotColumns(hook.openEditModal, hook.openResetPwModal, hook.openResetSigModal, hook.openDeleteModal);
 
     // Normalise rows so Table's id lookup works.
     // Inactive admins are visually muted via row-level className passed to Table.
@@ -526,13 +467,8 @@ function AdminManagementView() {
 
                             {/* Permission flags — pre-populated with defaults, editable at creation */}
                             <hr className="border-grey-200 dark:border-grey-700" />
-                            <p className="text-xs font-aumovio-bold text-black/60 dark:text-white/50 uppercase tracking-wide">
-                                Permission Flags
-                            </p>
-                            <PermissionFlagsFieldset
-                                form={hook.addForm.flags}
-                                onToggle={hook.handleAddFlagToggle}
-                            />
+                            <p className="text-xs font-aumovio-bold text-black/60 dark:text-white/50 uppercase tracking-wide">Permission Flags</p>
+                            <PermissionFlagsFieldset form={hook.addForm.flags} onToggle={hook.handleAddFlagToggle} />
                         </>
                     )}
                 </div>
@@ -734,13 +670,7 @@ function AdminManagementView() {
                     </div>
                 }
             >
-                <PermissionFlagsFieldset
-                    form={hook.permissionsForm}
-                    onToggle={hook.handlePermissionToggle}
-                    showAuditTrail
-                    updatedAt={hook.targetAdmin?.updatedAt ?? null}
-                    updatedBy={hook.targetAdmin?.updatedBy ?? null}
-                />
+                <PermissionFlagsFieldset form={hook.permissionsForm} onToggle={hook.handlePermissionToggle} showAuditTrail updatedAt={hook.targetAdmin?.updatedAt ?? null} updatedBy={hook.targetAdmin?.updatedBy ?? null} />
             </Modal>
         </div>
     );

@@ -14,6 +14,10 @@ const authMessages = {
     AUTH_SUCCESS: (userId) => `USER ${userId} authenticated successfully.`,
     AUTH_LOGOUT: (userId) => `USER ${userId} logged out.`,
     TOKEN_REFRESHED: (userId) => `Token refreshed for user ${userId}.`,
+    ACCOUNT_INACTIVE_BLOCKED: (userId) =>
+        `Login blocked — account ${userId} is inactive.`,
+    HASH_UPGRADED: (userId) =>
+        `Password hash for ${userId} upgraded to current Argon2 parameters on login.`,
     PROFILE_FLAG_REFRESH_FAILED: (userId, errMessage) =>
         `Permission-flag refresh failed for /auth/me — user ${userId}, falling back to token payload: ${errMessage}`,
     SYS_SIGNATURE_TAMPERED_BLOCKED: (empId) =>

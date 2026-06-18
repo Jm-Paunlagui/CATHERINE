@@ -522,5 +522,49 @@
     ],
     "createdAt": "2026-06-08T04:01:36.924Z",
     "updatedAt": "2026-06-15T03:44:46.579Z"
+  },
+  {
+    "id": "3e6d718e-9a6c-40b5-a580-b94252d9c2a8",
+    "displayDate": "2026-06-15",
+    "version": "1.12.2-dev.2",
+    "title": "Standardized Observability Dashboard",
+    "message": "The Logging & Observability page now follows industry-standard observability practice — one coherent five-tab layout built around the Four Golden Signals, with operational data the system was already collecting but never showing.",
+    "whatChanged": [
+      {
+        "text": "Reorganized into five tabs: Overview, Metrics, Audit Logs, Health, Log Retention",
+        "items": [
+          "Overview leads with the Four Golden Signals (Latency, Traffic, Errors, Saturation) plus Apdex and a health-at-a-glance strip",
+          "Metrics consolidates RED, System, Dependencies, Frontend Vitals, and Alerts"
+        ]
+      },
+      {
+        "text": "Added an Oracle Dependencies view showing live connection-pool utilization, open/in-use connections, and queue depth"
+      },
+      {
+        "text": "Added a Frontend Vitals view — Core Web Vitals (LCP/CLS/INP) summaries with drill-down plus a client-side error log"
+      },
+      {
+        "text": "Started collecting frontend performance and error telemetry that was previously inactive"
+      },
+      {
+        "text": "Added a pool-saturation alert that warns above 80% and goes critical above 95% utilization"
+      },
+      {
+        "text": "Added a one-click jump from a firing alert to the matching filtered audit logs"
+      },
+      {
+        "text": "Surfaced the Apdex responsiveness score that was computed but never displayed"
+      },
+      {
+        "text": "Improved dark-mode contrast on the historical date-range controls"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-06-15T04:02:11.804Z",
+    "updatedAt": "2026-06-15T04:02:11.804Z"
   }
 ]

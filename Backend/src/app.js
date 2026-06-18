@@ -7,30 +7,30 @@ const app = express();
 const { defaultHelmet } = require("./middleware/security/HelmetMiddleware");
 const { defaultCors } = require("./middleware/security/CorsMiddleware");
 const {
-  defaultSecurityFilter,
+    defaultSecurityFilter,
 } = require("./middleware/security/SecurityFilterMiddleware");
 const { defaultIpFilter } = require("./middleware/security/IpFilterMiddleware");
 const {
-  defaultPreventRedirects,
+    defaultPreventRedirects,
 } = require("./middleware/security/PreventRedirectsMiddleware");
 const {
-  defaultRateLimiter,
+    defaultRateLimiter,
 } = require("./middleware/security/RateLimiterMiddleware");
 
 // ─── Traceability middleware ──────────────────────────────────────────────────
 const {
-  defaultTraceability,
+    defaultTraceability,
 } = require("./middleware/traceability/TraceabilityMiddleware");
 const {
-  defaultAuditLog,
+    defaultAuditLog,
 } = require("./middleware/traceability/AuditLogMiddleware");
 
 // ─── Performance middleware ───────────────────────────────────────────────────
 const {
-  defaultCompression,
+    defaultCompression,
 } = require("./middleware/performance/CompressionMiddleware");
 const {
-  defaultResponseTime,
+    defaultResponseTime,
 } = require("./middleware/performance/ResponseTimeMiddleware");
 
 // ─── Metrics middleware ───────────────────────────────────────────────────────
@@ -38,10 +38,10 @@ const { defaultMetrics } = require("./middleware/metrics");
 
 // ─── Parsing middleware ───────────────────────────────────────────────────────
 const {
-  defaultBodyParser,
+    defaultBodyParser,
 } = require("./middleware/parsing/BodyParserMiddleware");
 const {
-  defaultCookieParser,
+    defaultCookieParser,
 } = require("./middleware/parsing/CookieParserMiddleware");
 
 // ─── CSRF protection ──────────────────────────────────────────────────────────
@@ -49,80 +49,31 @@ const { defaultCsrf } = require("./middleware/security/CsrfMiddleware");
 
 // ─── Error handling ───────────────────────────────────────────────────────────
 const {
-  defaultErrorHandler,
+    defaultErrorHandler,
 } = require("./middleware/errorHandling/ErrorHandlerMiddleware");
 
 // ─── Cache stores ─────────────────────────────────────────────────────────────
 const { registry, ClusterCacheSync } = require("./middleware/cache");
 registry.registerAll({
-  // ── RFID ────────────────────────────────────────────────────────────────────
-  // Queried on every RFID management page load. Low mutation rate (batch uploads).
-  // Namespace-wiped on any write. maxKeys=200 absorbs list + archived + pagination.
-  rfidMasterfile: { ttl: 300, checkPeriod: 60, maxKeys: 200 },
+    // ── Admin roster ──────────────────────────────────────────────────────────────
+    // Small dataset (<100 admins). Queried by admin list. Mutates only on admin
+    // CRUD. maxKeys=50 is a hard ceiling.
+    adminList: { ttl: 600, checkPeriod: 120, maxKeys: 50 },
 
-  // ── Admin roster ──────────────────────────────────────────────────────────────
-  // Small dataset (<100 admins). Queried by admin list and billing recipient
-  // selector. Mutates only on admin CRUD. maxKeys=50 is a hard ceiling.
-  adminList: { ttl: 600, checkPeriod: 120, maxKeys: 50 },
+    // ── Audit log ─────────────────────────────────────────────────────────────────
+    // Logs grow continuously; 120s TTL prevents serving stale security telemetry
+    // while reducing Oracle pressure for admin polling. maxKeys=200 covers
+    // concurrent admin sessions browsing the list, stats, and per-requestId views.
+    auditLog: { ttl: 120, checkPeriod: 30, maxKeys: 200 },
 
-  // ── Pay period ────────────────────────────────────────────────────────────────
-  // Append-only mid-cycle; locked periods never change. Years list changes at
-  // most once per year. maxKeys=100 covers all year-filtered variants.
-  payPeriod: { ttl: 900, checkPeriod: 180, maxKeys: 100 },
+    // ── Auth profile (/auth/me) ───────────────────────────────────────────────────
+    // Per-user profile cache. /me fires on every page focus; 30s staleness is
+    // harmless since role/active changes take effect on next refresh.
+    authProfile: { ttl: 30, checkPeriod: 15, maxKeys: 10000 },
 
-  // ── Subsidy management ────────────────────────────────────────────────────────
-  // Queried per year+month; 12 months x 10 years = 120 list keys max.
-  // maxKeys=500 is generous headroom for years/months helpers + list variants.
-  subsidy: { ttl: 600, checkPeriod: 120, maxKeys: 500 },
-
-  // ── Billing ───────────────────────────────────────────────────────────────────
-  // Report is the heaviest Oracle query in the system. Paginated with
-  // entity+search filters means many key combos. 1800s staleness is acceptable
-  // — billing data is tied to cutoff cycles, not real-time. download-requests
-  // list shares this store; invalidated via billing:downloadRequests pattern.
-  // maxKeys=1000: ~200 cutoffs x ~5 page/filter combos each.
-  billing: { ttl: 1800, checkPeriod: 300, maxKeys: 1000 },
-
-  // ── Audit log ─────────────────────────────────────────────────────────────────
-  // Logs grow continuously; 120s TTL prevents serving stale security telemetry
-  // while reducing Oracle pressure for admin polling. maxKeys=200 covers
-  // concurrent admin sessions browsing the list, stats, and per-requestId views.
-  auditLog: { ttl: 120, checkPeriod: 30, maxKeys: 200 },
-
-  // ── Consumption history ───────────────────────────────────────────────────────
-  // Per-GID list of all periods with subsidy + consumption totals. Fetches 3
-  // separate Oracle queries (cutoffs, subsidies, transactions aggregate). Data
-  // changes only on period close + settlement (~twice a month) or subsidy upload.
-  // TTL=300s is conservative; computeSettlement actively deletes the key per GID
-  // so stale data is rarely served. maxKeys=10000 covers the maximum user ceiling.
-  consumptionHistory: { ttl: 300, checkPeriod: 60, maxKeys: 10000 },
-
-  // ── Consumption summary ───────────────────────────────────────────────────────
-  // Per-GID active-period summary: wallet balance, net consumption, subsidy,
-  // carry-over, and settlement status. Fetches 4–6 Oracle queries in parallel
-  // (active cutoff, live settlement view, consumption aggregate x2, wallet,
-  // settlement row). This is the highest-cost read endpoint in the system.
-  // TTL=60s (staleTime 60000ms) — short enough to reflect mid-period swipes
-  // for SSE users (who get real-time updates via the SSE stream instead), but
-  // long enough to absorb concurrent page loads from the same employee.
-  // Invalidated by computeSettlement, seedWalletIfAbsent, and subsidy upload.
-  // maxKeys=10000 covers the maximum concurrent-user ceiling.
-  consumptionSummary: { ttl: 60, checkPeriod: 30, maxKeys: 10000 },
-
-  // ── QR stubs ─────────────────────────────────────────────────────────────────
-  // Per-EMP_ID list of all QR voucher stubs. Changes only when HR uploads new
-  // stubs (batch UPSERT) or when a stub is used/expired. TTL=120s absorbs
-  // repeated page loads without serving stale data for more than 2 minutes.
-  // maxKeys=10000 covers the maximum user ceiling.
-  consumptionStubs: { ttl: 120, checkPeriod: 60, maxKeys: 10000 },
-
-  // ── Auth profile flags (/auth/me) ────────────────────────────────────────────
-  // Per-EMP_ID permission-flag object (or `false` sentinel for non-admins).
-  // /me fires on every page focus; the flags are UI hints only (never
-  // server-side gates), so 30s staleness is harmless. Flag writes invalidate
-  // surgically at the MealAdmModel write chokepoint (the only four write
-  // methods for T_EMP_MGMT_ADMIN). maxKeys=10000 covers the user ceiling.
-  authProfile: { ttl: 30, checkPeriod: 15, maxKeys: 10000 },
+    // ── Add project-specific cache stores below ───────────────────────────────────
+    // Example:
+    // myFeature: { ttl: 300, checkPeriod: 60, maxKeys: 200 },
 });
 
 // Cross-worker cache invalidation (ENABLE_CLUSTERING=true): apply sibling
@@ -178,8 +129,8 @@ app.use(defaultCookieParser.handle.bind(defaultCookieParser)); // lgtm[js/missin
 //    doubleCsrf only enforces on state-changing methods (POST/PUT/DELETE/PATCH);
 //    GET /csrf/token and other safe methods pass through automatically.
 app.use((req, res, next) => {
-  if (req.path.startsWith("/api/v1/csrf")) return next();
-  defaultCsrf.handle.bind(defaultCsrf)(req, res, next);
+    if (req.path.startsWith("/api/v1/csrf")) return next();
+    defaultCsrf.handle.bind(defaultCsrf)(req, res, next);
 });
 
 // 10. Capture response body for downstream logging

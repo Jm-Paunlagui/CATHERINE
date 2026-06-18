@@ -18,6 +18,7 @@ import SessionWarningModal from "./components/feedback/SessionWarningModal";
 import Footer from "./components/layout/Footer";
 import Navbar from "./components/layout/Navbar";
 import Sidebar from "./components/layout/Sidebar";
+import SidebarHeader from "./components/layout/SidebarHeader";
 import ProtectedRoute from "./components/routing/ProtectedRoute";
 import Breadcrumb from "./components/ui/Breadcrumb";
 import { useLayout } from "./contexts/layout/LayoutContext";
@@ -34,6 +35,7 @@ const AdminManagementView = lazy(() => import("./features/management/adminmanage
 
 // Other
 const ChangelogView = lazy(() => import("./features/other/changelog/Changelog.view"));
+const GettingStartedView = lazy(() => import("./features/other/gettingstarted/GettingStarted.view"));
 
 // Role constants — must match the strings stored in T_EMP_MGMT_ADMIN.EMP_ROLE
 // and returned in the JWT payload as user.role.
@@ -48,7 +50,7 @@ const ROLES = {
     ROBOT: "ROBOT",
 };
 
-const BARE_ROUTES = ["/auth", "/", "/user/logout", "/unauthorized", "/login-timeout", "/invalid-token", "/bad-request", "/page-not-found", "/service-is-currently-unavailable", "/signature-mismatch", "/auth/change-password"];
+const BARE_ROUTES = ["/auth", "/", "/user/logout", "/unauthorized", "/login-timeout", "/invalid-token", "/bad-request", "/page-not-found", "/service-is-currently-unavailable", "/signature-mismatch", "/auth/change-password", "/about/getting-started"];
 
 function isBareRoute(pathname) {
     return BARE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
@@ -70,11 +72,20 @@ function ConditionalSidebar() {
     return <Sidebar />;
 }
 
-function ConditionalBreadcrumb() {
+function ConditionalSidebarHeader() {
     const { pathname } = useLocation();
     const { layout } = useLayout();
     if (isBareRoute(pathname)) return null;
-    //if (layout === "sidebar") return null;
+    if (layout !== "sidebar") return null;
+    return <SidebarHeader />;
+}
+
+function ConditionalBreadcrumb() {
+    const { pathname } = useLocation();
+    if (isBareRoute(pathname)) return null;
+    // Breadcrumb handles its own visibility per layout mode:
+    // sidebar → hidden on lg+ (shown on tablet/mobile with sidebar toggle)
+    // topbar  → always visible
     return <Breadcrumb auto homeIcon separator="chevron" size="md" variant="bar" />;
 }
 
@@ -100,17 +111,23 @@ function AppContent() {
     const bare = isBareRoute(pathname);
 
     return (
-        <div className="flex min-h-screen bg-(--bg-surface) transition-colors duration-300">
-            <ConditionalSidebar />
-            <div className="flex flex-col flex-1 min-h-screen transition-all duration-300">
-                <ConditionalNavbar />
-                <ConditionalBreadcrumb />
-                <main className="grow">
-                    <Suspense fallback={<PageLoader />}>
-                        <AppRoutes />
-                    </Suspense>
-                </main>
-                <ConditionalFooter />
+        <div className={`flex flex-col bg-(--bg-surface) transition-colors duration-300 ${layout === "sidebar" ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+            {/* ── Full-width top bars (header + breadcrumb) ── */}
+            <ConditionalNavbar />
+            <ConditionalSidebarHeader />
+            <ConditionalBreadcrumb />
+
+            {/* ── Below the top bars: sidebar + main content side-by-side ── */}
+            <div className="relative flex flex-1 overflow-hidden">
+                <ConditionalSidebar />
+                <div className="flex flex-col flex-1 min-w-0 overflow-y-auto transition-all duration-300">
+                    <main className="grow">
+                        <Suspense fallback={<PageLoader />}>
+                            <AppRoutes />
+                        </Suspense>
+                    </main>
+                    <ConditionalFooter />
+                </div>
             </div>
             {!bare && <SessionWarningModal />}
         </div>
@@ -121,9 +138,10 @@ function AppRoutes() {
     return (
         <Routes>
             {/* Public */}
-            <Route path="/" element={<Navigate to="/auth" replace />} />
+            <Route path="/" element={<Navigate to="/about/getting-started" replace />} />
             <Route path="auth" element={<LoginView />} />
             <Route path="user/logout" element={<LogoutView />} />
+            <Route path="about/getting-started" element={<GettingStartedView />} />
 
             {/* Dashboard */}
             <Route path="dashboard" element={<DashboardView />} />

@@ -34,7 +34,7 @@ class ConsoleManager {
      */
     setProcessTitle() {
         try {
-            const title = process.env.APP_NAME || "MEAL Backend Server";
+            const title = process.env.APP_NAME || "CATHERINE Backend Server";
             process.title = title;
 
             // Verify the title was set

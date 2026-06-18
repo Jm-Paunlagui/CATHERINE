@@ -1,7 +1,7 @@
 // Apply encoding polyfills first (mirrors server.js startup order)
 require("../src/utils/encodingPolyfill");
 
-"use strict";
+("use strict");
 
 /**
  * Seed (or reset) the changelog encrypted store.
@@ -45,11 +45,10 @@ const ChangelogModel = require("../src/models/changelog.model");
 //   • bare X.Y.Z → normalised to X.Y.Z-dev.1
 
 const SEED_ENTRIES = [
-    // ── 2026-03-02 (Monday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0001-0000-0000-000000000001",
         displayDate: "2026-03-02",
-        version: "1.0.0-dev.1",
+        version: "0.0.0-dev.1",
         title: "Initial Template Scaffold",
         message:
             "First release of the Catherine full-stack template — a production-grade Express v5 + React 19 foundation with clean layered architecture and a standardized API contract.",
@@ -78,14 +77,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-03-02T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-03-06 (Friday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0002-0000-0000-000000000002",
         displayDate: "2026-03-06",
-        version: "1.1.0-dev.1",
+        version: "0.1.0-dev.1",
         title: "Security Middleware Suite",
         message:
             "Hardened the template with a full suite of security middleware covering response headers, CSRF, CORS, IP filtering, and scanner blocking.",
@@ -113,14 +110,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-03-06T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-03-11 (Wednesday) ────────────────────────────────────────────────
     {
         id: "ca7e1100-0003-0000-0000-000000000003",
         displayDate: "2026-03-11",
-        version: "1.2.0-dev.1",
+        version: "0.2.0-dev.1",
         title: "JWT Authentication & Dynamic Permissions",
         message:
             "Added JWT authentication with a data-driven permission model, per-user login lockout, and route guarding on the frontend.",
@@ -148,14 +143,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-03-11T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-03-16 (Monday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0004-0000-0000-000000000004",
         displayDate: "2026-03-16",
-        version: "1.3.0-dev.1",
+        version: "0.3.0-dev.1",
         title: "OracleDB Dual-Pool & Mongo-Style Wrapper",
         message:
             "Connected the template to OracleDB with a resilient dual-pool setup and a MongoDB-style query wrapper that makes Oracle SQL feel familiar.",
@@ -183,14 +176,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-03-16T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-03-20 (Friday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0005-0000-0000-000000000005",
         displayDate: "2026-03-20",
-        version: "1.4.0-dev.1",
+        version: "0.4.0-dev.1",
         title: "Rate Limiting, Traceability & Response Timing",
         message:
             "Added per-IP rate limiting, end-to-end request traceability, and response-time tracking with slow-response detection.",
@@ -215,14 +206,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-03-20T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-03-27 (Friday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0006-0000-0000-000000000006",
         displayDate: "2026-03-27",
-        version: "1.5.0-dev.1",
+        version: "0.5.0-dev.1",
         title: "Aumovio Design System Component Library",
         message:
             "Shipped the Aumovio Design System — a large, dark-mode-ready React component library covering forms, UI, charts, layout, and typography.",
@@ -256,14 +245,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-03-27T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-04-02 (Thursday) ─────────────────────────────────────────────────
     {
         id: "ca7e1100-0007-0000-0000-000000000007",
         displayDate: "2026-04-02",
-        version: "1.6.0-dev.1",
+        version: "0.6.0-dev.1",
         title: "Domain-Agnostic Cache Subsystem",
         message:
             "Added a reusable cache subsystem with a registry, deterministic key builder, and cache-aside middleware that ports cleanly to any project.",
@@ -288,14 +275,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-04-02T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-04-08 (Tuesday) ──────────────────────────────────────────────────
     {
         id: "ca7e1100-0008-0000-0000-000000000008",
         displayDate: "2026-04-08",
-        version: "1.7.0-dev.1",
+        version: "0.7.0-dev.1",
         title: "Metrics & Health Observability",
         message:
             "Added live request metrics and a health endpoint so the running service can be monitored at a glance.",
@@ -317,14 +302,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-04-08T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-04-14 (Monday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0009-0000-0000-000000000009",
         displayDate: "2026-04-14",
-        version: "1.8.0-dev.1",
+        version: "0.8.0-dev.1",
         title: "Audit Logging Module",
         message:
             "Added an audit logging module that records system activity for traceability and later investigation.",
@@ -343,14 +326,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-04-14T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-04-20 (Monday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0010-0000-0000-000000000010",
         displayDate: "2026-04-20",
-        version: "1.9.0-dev.1",
+        version: "0.9.0-dev.1",
         title: "RFC 5424 Logging & Session UX",
         message:
             "Upgraded the logger to the industry-standard RFC 5424 8-level hierarchy and added proactive session-expiry handling on the frontend.",
@@ -375,14 +356,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-04-20T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-04-24 (Friday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0011-0000-0000-000000000011",
         displayDate: "2026-04-24",
-        version: "1.10.0-dev.1",
+        version: "0.10.0-dev.1",
         title: "Theme Personalization",
         message:
             "Added a Personalize option so each user can pick the app's accent color theme, saved between sessions.",
@@ -401,14 +380,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-04-24T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-04-28 (Tuesday) ──────────────────────────────────────────────────
     {
         id: "ca7e1100-0012-0000-0000-000000000012",
         displayDate: "2026-04-28",
-        version: "1.11.0-dev.1",
+        version: "0.11.0-dev.1",
         title: "Changelog / Version History Module",
         message:
             "Added the Changelog module — an encrypted entry store on the backend and a timeline-style Version History page on the frontend.",
@@ -430,14 +407,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-04-28T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-05-04 (Monday) ───────────────────────────────────────────────────
     {
         id: "ca7e1100-0013-0000-0000-000000000013",
         displayDate: "2026-05-04",
-        version: "1.11.1-dev.1",
+        version: "0.11.1-dev.1",
         title: "Changelog Entry Format Upgrade",
         message:
             "Restructured changelog entries from a single summary field into a short headline message plus a structured 'What Changed' list, with automatic migration of older entries.",
@@ -459,17 +434,15 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-05-04T08:00:00.000Z",
-        updatedAt: "2026-06-05T07:02:41.355Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-06-05 (Friday) ───────────────────────────────────────────────────
     {
         id: "3d64de09-948a-433a-8101-554250fcbea9",
         displayDate: "2026-06-05",
-        version: "1.12.0-dev.1",
+        version: "0.12.0-dev.1",
         title: "Theme Personalization & Version History Upgrade",
         message:
-            "Personalize the app with a full color picker, more accent palettes that adapt to dark mode, and a layout switcher. The Version History page now shows grouped \"what changed\" detail per release.",
+            'Personalize the app with a full color picker, more accent palettes that adapt to dark mode, and a layout switcher. The Version History page now shows grouped "what changed" detail per release.',
         whatChanged: [
             {
                 text: "Appearance",
@@ -490,7 +463,7 @@ const SEED_ENTRIES = [
             {
                 text: "Version History",
                 items: [
-                    "Release entries now carry a short headline plus a grouped \"what changed\" list with sub-items",
+                    'Release entries now carry a short headline plus a grouped "what changed" list with sub-items',
                     "Added a `patch` release type",
                     "Reset/seed the history from a standalone script instead of bundled data",
                 ],
@@ -500,14 +473,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-06-05T07:16:54.728Z",
-        updatedAt: "2026-06-05T07:16:54.728Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-06-05 (Friday — second entry, same day) ──────────────────────────
     {
         id: "46d3d198-a38f-4717-ba4e-64374dca4053",
         displayDate: "2026-06-05",
-        version: "1.12.1-dev.1",
+        version: "0.12.1-dev.1",
         title: "Accurate Availability and Error Rate Metrics",
         message:
             "Availability no longer counts client errors (4xx) as failures, so the dashboard reflects true service health. Client and server errors now report as separate, clearly labelled rates.",
@@ -538,14 +509,12 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: [],
         createdAt: "2026-06-05T08:55:44.509Z",
-        updatedAt: "2026-06-05T08:55:44.509Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
     },
-
-    // ── 2026-06-08 (Monday) ───────────────────────────────────────────────────
     {
         id: "9625a063-623e-4a7a-a5e1-7a4de817f3d7",
         displayDate: "2026-06-08",
-        version: "1.12.2-dev.1",
+        version: "0.12.2-dev.1",
         title: "Accurate Heap Metrics And Leak Detection",
         message:
             "The system monitor now reports memory against Node's real heap ceiling instead of a misleading internal figure, so a healthy server no longer shows a near-full heap. New garbage-collection and leak-trend indicators make memory problems visible before they cause an outage.",
@@ -580,7 +549,50 @@ const SEED_ENTRIES = [
         authors: ["John Moises Paunlagui"],
         coAuthors: ["Claude Opus"],
         createdAt: "2026-06-08T04:01:36.924Z",
-        updatedAt: "2026-06-08T04:01:36.924Z",
+        updatedAt: "2026-06-15T03:44:46.579Z",
+    },
+    {
+        id: "3e6d718e-9a6c-40b5-a580-b94252d9c2a8",
+        displayDate: "2026-06-15",
+        version: "0.12.2-dev.2",
+        title: "Standardized Observability Dashboard",
+        message:
+            "The Logging & Observability page now follows industry-standard observability practice — one coherent five-tab layout built around the Four Golden Signals, with operational data the system was already collecting but never showing.",
+        whatChanged: [
+            {
+                text: "Reorganized into five tabs: Overview, Metrics, Audit Logs, Health, Log Retention",
+                items: [
+                    "Overview leads with the Four Golden Signals (Latency, Traffic, Errors, Saturation) plus Apdex and a health-at-a-glance strip",
+                    "Metrics consolidates RED, System, Dependencies, Frontend Vitals, and Alerts",
+                ],
+            },
+            {
+                text: "Added an Oracle Dependencies view showing live connection-pool utilization, open/in-use connections, and queue depth",
+            },
+            {
+                text: "Added a Frontend Vitals view — Core Web Vitals (LCP/CLS/INP) summaries with drill-down plus a client-side error log",
+            },
+            {
+                text: "Started collecting frontend performance and error telemetry that was previously inactive",
+            },
+            {
+                text: "Added a pool-saturation alert that warns above 80% and goes critical above 95% utilization",
+            },
+            {
+                text: "Added a one-click jump from a firing alert to the matching filtered audit logs",
+            },
+            {
+                text: "Surfaced the Apdex responsiveness score that was computed but never displayed",
+            },
+            {
+                text: "Improved dark-mode contrast on the historical date-range controls",
+            },
+        ],
+        type: "feat",
+        authors: ["John Moises Paunlagui"],
+        coAuthors: [],
+        createdAt: "2026-06-15T04:02:11.804Z",
+        updatedAt: "2026-06-15T04:02:11.804Z",
     },
 ];
 

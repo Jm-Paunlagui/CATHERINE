@@ -155,7 +155,6 @@ export default function OverviewPageTab({ metricsHook, logsHook }) {
                     {isLive && (
                         <span className="flex items-center gap-1 text-xs text-success-400 font-aumovio-bold">
                             <span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-ping" />
-                            SSE
                         </span>
                     )}
                 </div>

@@ -28,10 +28,14 @@ function loadLayout() {
 
 export function LayoutProvider({ children }) {
     const [layout, setLayoutState] = useState(loadLayout);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    // Sidebar overlay state — only affects tablet/mobile (< lg).
+    // On desktop (lg+), the sidebar is always visible via CSS.
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
-        try { localStorage.setItem(LAYOUT_KEY, layout); } catch {}
+        try {
+            localStorage.setItem(LAYOUT_KEY, layout);
+        } catch {}
     }, [layout]);
 
     const setLayout = useCallback((mode) => {
