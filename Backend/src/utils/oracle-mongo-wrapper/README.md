@@ -44,8 +44,9 @@ src/config/
 ├── adapters/
 │   └── oracle.js       ← Pool management: creates/reuses connection pools,
 │                          withConnection(), withTransaction(), health monitoring
-├── database.js          ← Connection registry: maps names like "userAccount"
+├── database.js          ← Connection registry: maps names like "appDb"
 │                          to { user, password, connectString } credentials
+│                          via buildSimpleConnectString / buildTNSConnectString
 └── index.js             ← Adapter factory: exports everything from the active
                            adapter + database.js as one unified import
 ```
@@ -56,7 +57,7 @@ src/config/
 .env  →  database.js (reads credentials)  →  oracle.js (creates pools)  →  config/index.js (exports API)
                                                                                     ↓
                                                                            oracle-mongo-wrapper/db.js
-                                                                           createDb("userAccount")
+                                                                           createDb("appDb")
 ```
 
 #### Step 1 — Set Up Your `.env` File
@@ -64,60 +65,75 @@ src/config/
 Create a `.env` file in your project root with your Oracle database credentials:
 
 ```env
-# ── Database connection ──────────────────────────────────────
+# ── Database engine ──────────────────────────────────────────
 NODE_ENV=development
-DB_TYPE=oracle
+DB_TYPE=oracle               # oracle is the only adapter today (MySQL/Postgres planned)
 
-# Connection details (used by database.js to build connect strings)
-DB_HOST=your-oracle-host.example.com
+# ── Connection details (used by database.js to build the connect string) ──
+DB_HOST=localhost
 DB_PORT=1521
-DB_SERVICE_NAME=ORCL
+DB_APP_SERVICE_NAME=XEPDB1   # service name (Simple/EZConnect) or SID (TNS) of your DB
 
-# "userAccount" connection credentials
-UA_DB_USERNAME=your_username
-UA_DB_PASSWORD=your_password
+# ── "appDb" connection credentials — the one connection a fresh template needs ──
+APP_DB_USERNAME=your_schema_user
+APP_DB_PASSWORD=your_schema_password
 
-# Add more connections as needed — just follow the pattern
-# for environment-specific configs, you can do:
-SI_DB_USERNAME=inventory_user
-SI_DB_PASSWORD=inventory_pass
-SI_TEST_DB_USERNAME=test_user
-SI_TEST_DB_PASSWORD=test_pass
-DB_TEST_HOST=test-oracle-host.example.com
-DB_TEST_PORT=1521
-DB_TEST_SID=TESTDB
+# Optional per-connection pool sizing (falls back to 2 / 10 when unset)
+APP_POOL_MIN=2
+APP_POOL_MAX=10
 
-# ── Oracle Instant Client (optional) ────────────────────────
-# Path to Oracle Instant Client directory. If not set, the system PATH is used.
-ORACLE_INSTANT_CLIENT=C:\oracle\instantclient_23_0
+# Add more connections by defining their own env vars, e.g.:
+# RPT_DB_USERNAME=reporting_user
+# RPT_DB_PASSWORD=reporting_pass
+# RPT_DB_HOST=localhost
+# RPT_DB_PORT=1521
+# RPT_DB_SERVICE_NAME=XEPDB1
+
+# ── Oracle Instant Client ────────────────────────────────────
+# Required for node-oracledb Thick mode. Point at the unzipped Instant Client folder.
+ORACLE_INSTANT_CLIENT=C:\oracle\instantclient_23_8
 ```
 
 #### Step 2 — Register Connections in `database.js`
 
-Each connection gets a name (like `"userAccount"`) and its credentials from `.env`. You never hardcode passwords here — only `process.env` references.
+Each connection gets a name (like `"appDb"`) and its credentials from `.env`. You never hardcode passwords here — only `process.env` references. Two helpers build the connect string for you:
+
+- `buildSimpleConnectString(host, port, service)` → `"host:port/service"` (EZConnect — simplest)
+- `buildTNSConnectString(host, port, sid)` → full `(DESCRIPTION=(ADDRESS=…)…)` with load-balance + failover
 
 ```js
 // src/config/database.js (already set up — add new connections as needed)
 
 const connections = {
-  // This is called with: createDb("userAccount")
-  userAccount: {
-    user: process.env.UA_DB_USERNAME,
-    password: process.env.UA_DB_PASSWORD,
-    connectString: `${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_SERVICE_NAME}`,
+  // appDb — the only connection a fresh template needs. Used by createDb("appDb").
+  // Skipped entirely when DEMO_MODE=true (no Oracle pool is opened).
+  appDb: {
+    user: process.env.APP_DB_USERNAME,
+    password: process.env.APP_DB_PASSWORD,
+    connectString: buildTNSConnectString(
+      process.env.DB_HOST,
+      process.env.DB_PORT,
+      process.env.DB_APP_SERVICE_NAME,
+    ),
+    poolMin: parseInt(process.env.APP_POOL_MIN, 10) || 2,
+    poolMax: parseInt(process.env.APP_POOL_MAX, 10) || 10,
   },
 
-  // Add more connections as needed:
+  // Add more connections as needed (EZConnect example):
   // reportingDb: {
-  //     user:          process.env.RPT_DB_USERNAME,
-  //     password:      process.env.RPT_DB_PASSWORD,
-  //     connectString: `${process.env.RPT_DB_HOST}:${process.env.RPT_DB_PORT}/${process.env.RPT_DB_SERVICE}`,
-  //     poolMax:       10,   // optional — override default pool size
+  //   user:          process.env.RPT_DB_USERNAME,
+  //   password:      process.env.RPT_DB_PASSWORD,
+  //   connectString: buildSimpleConnectString(
+  //     process.env.RPT_DB_HOST,
+  //     process.env.RPT_DB_PORT,
+  //     process.env.RPT_DB_SERVICE_NAME,
+  //   ),
+  //   poolMax: 10, // optional — overrides the global default
   // },
 };
 ```
 
-> **To add a new connection:** Add env vars to `.env`, add one entry to `connections`, then use `createDb("yourNewName")`. No other file needs to change.
+> **To add a new connection:** Add env vars to `.env`, add one entry to `connections` (reusing `buildSimpleConnectString` / `buildTNSConnectString`), then use `createDb("yourNewName")`. No other file needs to change.
 
 #### Step 3 — The Adapter (`oracle.js`) Handles the Rest
 
@@ -152,7 +168,7 @@ This file auto-detects the adapter from `DB_TYPE` env var (defaults to `"oracle"
 //             oracledb, and more.
 ```
 
-The wrapper's `db.js` imports from this file, so when you call `createDb("userAccount")`, it flows through:
+The wrapper's `db.js` imports from this file, so when you call `createDb("appDb")`, it flows through:
 `createDb() → config/index.js → config/adapters/oracle.js → database.js credentials → Oracle pool`
 
 ### Imports & Connection
@@ -171,7 +187,7 @@ const {
 } = require("./oracle-mongo-wrapper");
 
 // Connect to your database pool (configured in src/config/database.js)
-const db = createDb("userAccount");
+const db = createDb("appDb");
 ```
 
 That's it. `db` is your gateway to everything.

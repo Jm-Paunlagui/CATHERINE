@@ -9,63 +9,28 @@
  * developers can read it before setting up the database).
  */
 
-import { faArrowRight, faChartBar, faCheck, faCircleCheck, faCopy, faDatabase, faDownload, faKey, faLaptopCode, faLayerGroup, faPlay, faRocket, faServer, faShieldHalved, faTerminal, faUserShield } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faChartBar, faCircleCheck, faShieldHalved, faUserShield } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ANIMATE_ENTER_UP, ANIMATE_FADE_IN_UP, ANIM_DELAY_0, ANIM_DELAY_100, BASE_COLOR_BG, BASE_COLOR_TEXT, GRADIENT_COLOR_TEXT, HOVER_LIFT, STANDARD_BORDER, TITLE_COLOR_TEXT, TRANSITION_SMOOTH, TRANSITION_SPRING, staggerDelay } from "../../../assets/styles/pre-set-styles";
+import { ANIMATE_ENTER_UP, ANIMATE_FADE_IN_UP, ANIM_DELAY_0, ANIM_DELAY_100, BASE_COLOR_BG, BASE_COLOR_TEXT, GRADIENT_COLOR_TEXT, HOVER_LIFT, STANDARD_BORDER, TITLE_COLOR_TEXT, TRANSITION_SPRING, staggerDelay } from "../../../assets/styles/pre-set-styles";
 import { ErrorBoundary } from "../../../components/feedback/ErrorBoundary";
+import { CodeBlock, DocShell, WhereToGoNext } from "../../../components/shared/DocsPage";
 import { Badge } from "../../../components/ui/Badge";
 import { Tabs } from "../../../components/ui/Tabs";
 
-// ── Section registry — drives the sidebar TOC + scroll spy ────────────────────
+// ── Section registry — drives the "On this page" rail + scroll spy ────────────
 const SECTIONS = [
-    { id: "overview", label: "Overview", icon: faRocket },
-    { id: "prerequisites", label: "Prerequisites", icon: faLaptopCode },
-    { id: "quick-start", label: "Quick Start (Demo)", icon: faPlay },
-    { id: "backend-setup", label: "Backend Setup", icon: faServer },
-    { id: "secrets", label: "Generate Secrets", icon: faKey },
-    { id: "database", label: "Database Setup", icon: faDatabase },
-    { id: "frontend-setup", label: "Frontend Setup", icon: faLayerGroup },
-    { id: "running", label: "Running the App", icon: faTerminal },
-    { id: "demo-accounts", label: "Demo Accounts", icon: faUserShield },
-    { id: "features", label: "Features to Explore", icon: faShieldHalved },
-    { id: "troubleshooting", label: "Troubleshooting", icon: faDownload },
+    { id: "overview", label: "Overview" },
+    { id: "prerequisites", label: "Prerequisites" },
+    { id: "quick-start", label: "Quick Start (Demo)" },
+    { id: "backend-setup", label: "Backend Setup" },
+    { id: "secrets", label: "Generate Secrets" },
+    { id: "database", label: "Database Setup" },
+    { id: "frontend-setup", label: "Frontend Setup" },
+    { id: "running", label: "Running the App" },
+    { id: "demo-accounts", label: "Demo Accounts" },
+    { id: "features", label: "Features to Explore" },
+    { id: "troubleshooting", label: "Troubleshooting" },
 ];
-
-// ── Code block with copy button ───────────────────────────────────────────────
-function CodeBlock({ children, title, language = "bash" }) {
-    const [copied, setCopied] = useState(false);
-    const code = typeof children === "string" ? children.trim() : children;
-
-    const handleCopy = useCallback(() => {
-        navigator.clipboard.writeText(code).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        });
-    }, [code]);
-
-    return (
-        <div className="rounded-xl overflow-hidden border border-grey-700/50 bg-[#0d1117] dark:bg-[#0d1117] shadow-lg group">
-            {/* Header bar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-grey-700/40">
-                <span className="text-xs text-grey-400 font-mono">{title || language}</span>
-                <button
-                    onClick={handleCopy}
-                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md ${TRANSITION_SMOOTH}
-                        ${copied ? "text-success-400 bg-success-400/10" : "text-grey-400 hover:text-white hover:bg-white/10"}`}
-                    aria-label="Copy code"
-                >
-                    <FontAwesomeIcon icon={copied ? faCheck : faCopy} className="w-3 h-3" />
-                    {copied ? "Copied!" : "Copy"}
-                </button>
-            </div>
-            {/* Code body */}
-            <pre className="p-4 overflow-x-auto text-sm leading-relaxed font-mono">
-                <code className="text-grey-200">{code}</code>
-            </pre>
-        </div>
-    );
-}
 
 // ── Numbered step card ────────────────────────────────────────────────────────
 function StepCard({ number, title, children, className = "" }) {
@@ -130,71 +95,10 @@ function TroubleRow({ symptom, fix }) {
     );
 }
 
-// ── Sidebar TOC ───────────────────────────────────────────────────────────────
-function SidebarTOC({ activeSection }) {
-    return (
-        <nav className="space-y-0.5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-grey-400 mb-3 px-3">Getting Started</p>
-            {SECTIONS.map((s) => {
-                const isActive = activeSection === s.id;
-                return (
-                    <a
-                        key={s.id}
-                        href={`#${s.id}`}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm ${TRANSITION_SMOOTH}
-                            ${isActive ? "bg-orange-400/10 dark:bg-orange-400/15 text-orange-400 font-semibold border-l-2 border-orange-400" : `${BASE_COLOR_TEXT} opacity-65 hover:opacity-100 hover:bg-grey-100 dark:hover:bg-white/5 border-l-2 border-transparent`}`}
-                    >
-                        <FontAwesomeIcon icon={s.icon} className="w-3.5 h-3.5 shrink-0" />
-                        {s.label}
-                    </a>
-                );
-            })}
-        </nav>
-    );
-}
-
 // ── Main content ──────────────────────────────────────────────────────────────
 function GettingStartedContent() {
-    const [activeSection, setActiveSection] = useState("overview");
-    const observerRef = useRef(null);
-
-    // Scroll spy — IntersectionObserver tracks which section is in view
-    useEffect(() => {
-        const sectionEls = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean);
-        if (sectionEls.length === 0) return;
-
-        observerRef.current = new IntersectionObserver(
-            (entries) => {
-                for (const entry of entries) {
-                    if (entry.isIntersecting) {
-                        setActiveSection(entry.target.id);
-                        break;
-                    }
-                }
-            },
-            { rootMargin: "-80px 0px -60% 0px", threshold: 0.1 },
-        );
-
-        for (const el of sectionEls) observerRef.current.observe(el);
-        return () => observerRef.current?.disconnect();
-    }, []);
-
     return (
-        <div className="max-w-360 mx-auto px-4 sm:px-6 lg:px-8 py-8 font-aumovio">
-            <div className="flex gap-10">
-                {/* ── Left sidebar (desktop only) ──────────────────────────────── */}
-                <aside className="hidden xl:block w-56 shrink-0">
-                    <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2 pb-8">
-                        <SidebarTOC activeSection={activeSection} />
-                    </div>
-                </aside>
-
-                {/* ── Main content ─────────────────────────────────────────────── */}
-                <article className="min-w-0 flex-1 max-w-4xl">
+        <DocShell sections={SECTIONS}>
                     {/* ── Hero ──────────────────────────────────────────────────── */}
                     <header id="overview" className={`mb-12 scroll-mt-24 ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_0}`}>
                         <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-2">Getting Started</p>
@@ -247,8 +151,8 @@ function GettingStartedContent() {
                         </p>
 
                         <StepCard number={1} title="Clone & install">
-                            <CodeBlock title="Terminal">{`git clone https://github.com/Jm-Paunlagui/NodeExpress-Template.git
-cd NodeExpress-Template`}</CodeBlock>
+                            <CodeBlock title="Terminal">{`git clone https://github.com/Jm-Paunlagui/CATHERINE.git
+cd CATHERINE`}</CodeBlock>
                             <CodeBlock title="Terminal — Backend">{`cd Backend
 npm install`}</CodeBlock>
                             <CodeBlock title="Terminal — Frontend">{`cd ../Frontend
@@ -324,7 +228,7 @@ concurrently "cd Backend && npm start" "cd Frontend && npm run dev"`}</CodeBlock
 
                         <StepCard number={5} title="Open the app">
                             <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                                Open <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">http://localhost:5173</code> and log in with the demo credentials below. You'll see the full observability dashboard, admin management, and changelog — all running without a database.
+                                Open <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">http://192.168.0.193:5173</code> — your machine's LAN IP. CATHERINE binds to <code className="font-mono text-xs">0.0.0.0</code>, so use the IP, not localhost (see the <strong>CORS Setup</strong> guide). Log in with the demo credentials below to see the full observability dashboard, admin management, and changelog — all running without a database.
                             </p>
                         </StepCard>
                     </section>
@@ -465,7 +369,7 @@ cp .env.example .env`}</CodeBlock>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <EnvRow name="VITE_API_BASE_URL" purpose="Backend API base with trailing slash, e.g. http://localhost:2108/api/v1/" />
+                                        <EnvRow name="VITE_API_BASE_URL" purpose="Backend API base with trailing slash — use your LAN IP, e.g. http://192.168.0.193:2108/api/v1/" />
                                         <EnvRow name="VITE_APP_NAME" purpose="Display name (default: CATHERINE)." />
                                         <EnvRow name="VITE_SESSION_TIMEOUT_MS" purpose="Match the backend JWT_EXPIRES_IN (e.g. 1800000 = 30 min)." />
                                     </tbody>
@@ -473,7 +377,7 @@ cp .env.example .env`}</CodeBlock>
                             </div>
                             <div className={`mt-4 p-4 rounded-xl border border-blue-400/30 bg-blue-400/5`}>
                                 <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                                    💡 Make sure <code className="font-mono text-xs">VITE_API_BASE_URL</code> points at the port you set in <code className="font-mono text-xs">Backend/.env</code>. Also add your frontend origin to <code className="font-mono text-xs">CORS_ORIGINS</code> in the backend (e.g. <code className="font-mono text-xs">http://localhost:5173</code>).
+                                    💡 The example file ships <code className="font-mono text-xs">http://localhost:3000/api/v1/</code> — change it to your machine's LAN IP and the backend port (default <code className="font-mono text-xs">2108</code>), e.g. <code className="font-mono text-xs">http://192.168.0.193:2108/api/v1/</code>. Also add your frontend origin (e.g. <code className="font-mono text-xs">http://192.168.0.193:5173</code>) to <code className="font-mono text-xs">CORS_ORIGINS</code> in the backend — see the <strong>CORS Setup</strong> guide.
                                 </p>
                             </div>
                         </StepCard>
@@ -485,13 +389,13 @@ cp .env.example .env`}</CodeBlock>
                         <p className={`mb-6 ${BASE_COLOR_TEXT} opacity-75`}>Open two terminals:</p>
 
                         <CodeBlock title="Terminal 1 — Backend">{`cd Backend && npm start
-# → http://localhost:2108`}</CodeBlock>
+# HOST=0.0.0.0 → reachable at http://192.168.0.193:2108`}</CodeBlock>
                         <div className="h-4" />
                         <CodeBlock title="Terminal 2 — Frontend">{`cd Frontend && npm run dev
-# → http://localhost:5173`}</CodeBlock>
+# Vite prints the Network URL → http://192.168.0.193:5173`}</CodeBlock>
 
                         <p className={`mt-6 text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                            Health check: open <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">http://localhost:2108/api/v1/health</code> — it should return <code className="font-mono text-xs">{`{ "status": "success" }`}</code>.
+                            Both servers bind to <code className="font-mono text-xs">0.0.0.0</code>, so use your machine's <strong>LAN IP</strong> (shown in Vite's <em>Network</em> line), not localhost. Health check: open <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">http://192.168.0.193:2108/api/v1/health</code> — it should return <code className="font-mono text-xs">{`{ "status": "success" }`}</code>. See the <strong>CORS Setup</strong> guide for details.
                         </p>
                     </section>
 
@@ -667,7 +571,7 @@ cp .env.example .env`}</CodeBlock>
                         <div className="space-y-3">
                             <TroubleRow symptom="DPI-1047 / Oracle Client library not found" fix="Install Oracle Instant Client and set ORACLE_INSTANT_CLIENT to its folder in Backend/.env." />
                             <TroubleRow symptom="[CryptoVault] ARGON2_PEPPER must be ≥ 32 chars" fix={`Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" and set it in Backend/.env.`} />
-                            <TroubleRow symptom="Login works but the app can't call the API (CORS)" fix="Add your frontend origin (e.g. http://localhost:5173) to CORS_ORIGINS in Backend/.env." />
+                            <TroubleRow symptom="Login works but the app can't call the API (CORS)" fix="Add your frontend origin (e.g. http://192.168.0.193:5173) to CORS_ORIGINS in Backend/.env. See the CORS Setup guide." />
                             <TroubleRow symptom="Frontend hits the wrong port" fix="Set VITE_API_BASE_URL in Frontend/.env to your backend port (with trailing slash)." />
                             <TroubleRow symptom="Health check OK but DB calls fail" fix="Check the Oracle service name + credentials in Backend/.env. The pool retries lazily on first request." />
                             <TroubleRow symptom="Observability dashboard is empty" fix="Run Backend/sql/02_seed_demo.sql, or use Demo Mode (DEMO_MODE=true) which pre-populates 200 audit rows." />
@@ -677,28 +581,23 @@ cp .env.example .env`}</CodeBlock>
                     {/* ── Where to go next ──────────────────────────────────────── */}
                     <section className="mb-14 scroll-mt-24">
                         <h2 className={`text-2xl font-extrabold mb-6 ${TITLE_COLOR_TEXT}`}>Where to Go Next</h2>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            {[
-                                { label: "Backend/sql/README.md", desc: "The sample database in detail." },
-                                { label: "Backend/CLAUDE.md", desc: "Backend architecture, conventions, and the testing guide." },
-                                { label: "Frontend/Claude.md", desc: "UI component library, design tokens, and feature workflow." },
-                                { label: "Backend/src/utils/oracle-mongo-wrapper/README.md", desc: "The MongoDB-style Oracle API." },
-                            ].map((link) => (
-                                <div key={link.label} className={`p-4 rounded-xl ${BASE_COLOR_BG} ${STANDARD_BORDER} ${TRANSITION_SMOOTH} hover:border-orange-400/30`}>
-                                    <code className="text-xs font-mono text-orange-400 dark:text-orange-300">{link.label}</code>
-                                    <p className={`text-xs mt-1 ${BASE_COLOR_TEXT} opacity-70`}>{link.desc}</p>
-                                </div>
-                            ))}
-                        </div>
+                        <WhereToGoNext
+                            items={[
+                                { label: "Database Connection", to: "/about/database-connection", desc: "Configure .env, the connection registry, and the built-in ORM." },
+                                { label: "CORS Setup", to: "/about/cors-setup", desc: "LAN IP access and the CORS_ORIGINS allow-list." },
+                                { code: "Backend/sql/README.md", desc: "The sample database in detail." },
+                                { code: "Backend/CLAUDE.md", desc: "Backend architecture, conventions, and the testing guide." },
+                                { code: "Frontend/CLAUDE.md", desc: "UI component library, design tokens, and feature workflow." },
+                                { code: "Backend/src/utils/oracle-mongo-wrapper/README.md", desc: "The MongoDB-style Oracle API." },
+                            ]}
+                        />
                     </section>
 
                     {/* ── Footer ────────────────────────────────────────────────── */}
                     <footer className={`pt-8 border-t border-grey-200/30 dark:border-grey-700/30 text-center`}>
                         <p className={`text-sm ${BASE_COLOR_TEXT} opacity-50`}>CATHERINE Template · Built with Express 5 + React 19 + Tailwind v4</p>
                     </footer>
-                </article>
-            </div>
-        </div>
+        </DocShell>
     );
 }
 

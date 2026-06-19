@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { AuthMiddleware } from "../../../middleware/authentication/AuthMiddleware";
-import { AUTH_FLAT_LINKS, NAV_GROUPS, PUBLIC_LINKS } from "./nav.config";
+import { AUTH_FLAT_LINKS, NAV_GROUPS, PUBLIC_GROUPS, PUBLIC_LINKS } from "./nav.config";
 
 export function useNav() {
     const [user, setUser] = useState(null);
@@ -48,9 +48,12 @@ export function useNav() {
     const openProfile = useCallback(() => setProfileOpen(true), []);
     const closeProfile = useCallback(() => setProfileOpen(false), []);
 
-    // Role-based groups from config — empty array when unauthenticated or loading
+    // Nav groups from config. While the auth check is in flight → empty (no flash).
+    // Authenticated → the role's groups. Unauthenticated → PUBLIC_GROUPS (the public
+    // developer docs + Version History, readable without signing in).
     const navGroups = useMemo(() => {
-        if (isLoading || !user) return [];
+        if (isLoading) return [];
+        if (!user) return PUBLIC_GROUPS;
         return NAV_GROUPS[user.role] ?? NAV_GROUPS.USER ?? [];
     }, [isLoading, user]);
 

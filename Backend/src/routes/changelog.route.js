@@ -3,7 +3,7 @@
 /**
  * Changelog routes
  *
- *   GET    /api/v1/changelog                  list (all authenticated roles)
+ *   GET    /api/v1/changelog                  list (PUBLIC — read-only, no auth)
  *   POST   /api/v1/changelog                  create (SUPER_ADMIN only)
  *   PUT    /api/v1/changelog/:id              update (SUPER_ADMIN only)
  *   DELETE /api/v1/changelog/:id              delete (SUPER_ADMIN only)
@@ -28,10 +28,12 @@ const requireSuperAdmin = AuthMiddleware.requireAccess(
     (user) => user.role === "SUPER_ADMIN",
 );
 
-// ── Read — all authenticated roles ───────────────────────────────────────────
+// ── Read — PUBLIC (read-only) ────────────────────────────────────────────────
+// Version History is viewable without signing in. listAll() returns only
+// committed release entries (release-train drafts are derived separately by the
+// SUPER_ADMIN-only /release/current route). Mutations below remain SUPER_ADMIN.
 router.get(
     "/",
-    AuthMiddleware.authenticate,
     ChangelogController.list,
 );
 

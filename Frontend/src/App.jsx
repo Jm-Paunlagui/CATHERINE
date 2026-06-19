@@ -8,7 +8,7 @@
  * - Supports "top" (navbar) and "sidebar" layout modes via LayoutContext
  */
 
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -36,6 +36,9 @@ const AdminManagementView = lazy(() => import("./features/management/adminmanage
 // Other
 const ChangelogView = lazy(() => import("./features/other/changelog/Changelog.view"));
 const GettingStartedView = lazy(() => import("./features/other/gettingstarted/GettingStarted.view"));
+const DatabaseConnectionView = lazy(() => import("./features/other/databaseconnection/DatabaseConnection.view"));
+const MiraOrmView = lazy(() => import("./features/other/miraorm/MiraOrm.view"));
+const CORSSetupView = lazy(() => import("./features/other/corssetup/CORSSetup.view"));
 
 // Role constants — must match the strings stored in T_EMP_MGMT_ADMIN.EMP_ROLE
 // and returned in the JWT payload as user.role.
@@ -50,7 +53,10 @@ const ROLES = {
     ROBOT: "ROBOT",
 };
 
-const BARE_ROUTES = ["/auth", "/", "/user/logout", "/unauthorized", "/login-timeout", "/invalid-token", "/bad-request", "/page-not-found", "/service-is-currently-unavailable", "/signature-mismatch", "/auth/change-password", "/about/getting-started"];
+// NOTE: /about/getting-started is intentionally NOT bare — it renders inside the
+// normal app shell (sidebar + header + breadcrumb). Its own section navigation
+// lives in the page as a right-hand "On this page" rail, like the Tailwind docs.
+const BARE_ROUTES = ["/auth", "/", "/user/logout", "/unauthorized", "/login-timeout", "/invalid-token", "/bad-request", "/page-not-found", "/service-is-currently-unavailable", "/signature-mismatch", "/auth/change-password"];
 
 function isBareRoute(pathname) {
     return BARE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
@@ -97,6 +103,19 @@ function ConditionalFooter() {
     return <Footer />;
 }
 
+// Scroll the content area back to the top on every route change so navigating
+// (e.g. a "Where to Go Next" link) lands at the top of the destination page.
+// The scroll container differs by layout: sidebar mode = the inner content div
+// (#app-main-scroll); top mode = the window. Scroll both — the other is a no-op.
+function ScrollToTop() {
+    const { pathname } = useLocation();
+    useEffect(() => {
+        document.getElementById("app-main-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [pathname]);
+    return null;
+}
+
 function PageLoader() {
     return (
         <div className="flex items-center justify-center min-h-screen">
@@ -109,18 +128,24 @@ function AppContent() {
     const { pathname } = useLocation();
     const { layout } = useLayout();
     const bare = isBareRoute(pathname);
+    const isSidebar = layout === "sidebar";
 
     return (
-        <div className={`flex flex-col bg-(--bg-surface) transition-colors duration-300 ${layout === "sidebar" ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+        // Sidebar mode = bounded app-shell scroll (inner content area scrolls).
+        // Top mode = normal document scroll (window scrolls under the sticky Navbar);
+        // the inner overflow utilities are dropped so they don't trap `position: sticky`
+        // (e.g. the Getting Started "On this page" rail) inside a non-scrolling box.
+        <div className={`flex flex-col bg-(--bg-surface) transition-colors duration-300 ${isSidebar ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+            <ScrollToTop />
             {/* ── Full-width top bars (header + breadcrumb) ── */}
             <ConditionalNavbar />
             <ConditionalSidebarHeader />
             <ConditionalBreadcrumb />
 
             {/* ── Below the top bars: sidebar + main content side-by-side ── */}
-            <div className="relative flex flex-1 overflow-hidden">
+            <div className={`relative flex flex-1 ${isSidebar ? "overflow-hidden" : ""}`}>
                 <ConditionalSidebar />
-                <div className="flex flex-col flex-1 min-w-0 overflow-y-auto transition-all duration-300">
+                <div id="app-main-scroll" className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${isSidebar ? "overflow-y-auto" : ""}`}>
                     <main className="grow">
                         <Suspense fallback={<PageLoader />}>
                             <AppRoutes />
@@ -142,6 +167,11 @@ function AppRoutes() {
             <Route path="auth" element={<LoginView />} />
             <Route path="user/logout" element={<LogoutView />} />
             <Route path="about/getting-started" element={<GettingStartedView />} />
+            <Route path="about/database-connection" element={<DatabaseConnectionView />} />
+            <Route path="about/mira-orm" element={<MiraOrmView />} />
+            <Route path="about/cors-setup" element={<CORSSetupView />} />
+            {/* Version History — public read-only (backend GET /changelog is unauthenticated) */}
+            <Route path="about/changelog" element={<ChangelogView />} />
 
             {/* Dashboard */}
             <Route path="dashboard" element={<DashboardView />} />
@@ -161,11 +191,6 @@ function AppRoutes() {
             <Route element={<ProtectedRoute role={[ROLES.SADMIN]} />}>
                 <Route path="system/logging-and-observability" element={<LogsManagementView />} />
                 <Route path="system/admin-management" element={<AdminManagementView />} />
-            </Route>
-
-            {/* Other — Version History (all authenticated roles) */}
-            <Route element={<ProtectedRoute role={[ROLES.USER, ROLES.ADMIN, ROLES.SADMIN, ROLES.APPROVER, ROLES.VIEWER, ROLES.ROBOT]} />}>
-                <Route path="about/changelog" element={<ChangelogView />} />
             </Route>
 
             {/* Error pages */}
