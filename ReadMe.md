@@ -4,7 +4,7 @@
 
 ### A production-grade full-stack template — secure by default, fast under load, and beautiful out of the box.
 
-**React 19 + Tailwind v4 (Aumovio Design System v3.1)** on the front · **Node.js + Express v5 + OracleDB** on the back
+**React 19 + Tailwind v4** on the front · **Node.js + Express v5 + OracleDB** on the back
 Powered by **Mira** — a MongoDB-style query wrapper that compiles to safe, bind-variable Oracle SQL.
 
 </div>
@@ -21,7 +21,7 @@ Most templates give you a folder layout and a "hello world" route. CATHERINE shi
 | ⚡ **Fast** | Single-flight stampede protection · cache-aside layer · gzip · keyset pagination · per-route p50/p95/p99 metrics · response-time budgets |
 | 🧱 **Architected** | Class-based OOP backend · three-layer frontend features · zero raw `oracledb`/`axios` leakage · constants firewall |
 | 🗃️ **Mira** | Write MongoDB JS, get Oracle SQL — filters, aggregation, window functions, CTEs, joins, transactions, upserts, all injection-safe |
-| 🎨 **Designed** | Aumovio Design System v3.1 · 50+ components · full animation system · WCAG-checked dark mode parity |
+| 🎨 **Designed** | 50+ components · full animation system · WCAG-checked dark mode parity |
 | 🎛️ **Personal** | 40 accent palettes + custom-hex generator · light/dark/transparency · layout modes · contrast-safe per-palette tokens |
 | 🩺 **Observable** | Request tracing (`X-Request-Id`) · audit log · RED + system + Oracle metrics · changelog/release surface |
 | 📦 **Portable** | Compiles to a single standalone Windows `.exe` via `pkg` |
