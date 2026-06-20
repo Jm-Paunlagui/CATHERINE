@@ -11,7 +11,6 @@
  * per test to pick up the env change.
  */
 
-const { expect } = require("chai");
 
 function mockReq(origin) {
     return {
@@ -56,13 +55,12 @@ function setEnv(vars) {
 
 /** Re-requires CorsMiddleware with a clean module cache. */
 function freshCors(opts) {
-    const key = require.resolve(
-        "../../../../src/middleware/security/CorsMiddleware",
-    );
+    const key =
+        require.resolve("../../../../src/middleware/security/CorsMiddleware");
     delete require.cache[key];
-    const { CorsMiddleware } = require(
-        "../../../../src/middleware/security/CorsMiddleware",
-    );
+    const {
+        CorsMiddleware,
+    } = require("../../../../src/middleware/security/CorsMiddleware");
     return new CorsMiddleware(opts);
 }
 
@@ -81,45 +79,57 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             restore();
         });
 
-        it("allows 192.168.x.x private network origin in development", function (done) {
+        it("allows 192.168.x.x private network origin in development", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(
                 mockReq("http://192.168.1.50:3000"),
                 mockRes(),
                 (err) => {
-                    expect(err).to.be.undefined;
+                    expect(err).toBeUndefined();
                     done();
                 },
             );
-        });
+        
+            }));
 
-        it("allows .vpn intranet origin in development", function (done) {
+        it("allows .vpn intranet origin in development", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(
                 mockReq("https://host.vpn.company.com"),
                 mockRes(),
                 (err) => {
-                    expect(err).to.be.undefined;
+                    expect(err).toBeUndefined();
                     done();
                 },
             );
-        });
+        
+            }));
 
-        it("allows .local origin in development", function (done) {
+        it("allows .local origin in development", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(mockReq("http://mypc.local:8080"), mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
 
-        it("allows 10.x.x.x origin in development", function (done) {
+        it("allows 10.x.x.x origin in development", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(mockReq("http://10.0.1.100:4000"), mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
     });
 
     describe("production (NODE_ENV=production, CORS_ALLOW_BROAD_PATTERNS not set)", function () {
@@ -134,68 +144,84 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             restore();
         });
 
-        it("BLOCKS 192.168.x.x private network origin in production", function (done) {
+        it("BLOCKS 192.168.x.x private network origin in production", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(
                 mockReq("http://192.168.1.50:3000"),
                 mockRes(),
                 (err) => {
-                    expect(err).to.be.an("error");
-                    expect(err.message).to.include("not allowed by CORS");
+                    expect(err).toBeInstanceOf(Error);
+                    expect(err.message).toContain("not allowed by CORS");
                     done();
                 },
             );
-        });
+        
+            }));
 
-        it("BLOCKS .vpn intranet origin in production", function (done) {
+        it("BLOCKS .vpn intranet origin in production", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(
                 mockReq("https://host.vpn.company.com"),
                 mockRes(),
                 (err) => {
-                    expect(err).to.be.an("error");
+                    expect(err).toBeInstanceOf(Error);
                     done();
                 },
             );
-        });
+        
+            }));
 
-        it("BLOCKS .local origin in production", function (done) {
+        it("BLOCKS .local origin in production", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(mockReq("http://mypc.local:8080"), mockRes(), (err) => {
-                expect(err).to.be.an("error");
+                expect(err).toBeInstanceOf(Error);
                 done();
             });
-        });
+        
+            }));
 
-        it("BLOCKS 10.x.x.x origin in production", function (done) {
+        it("BLOCKS 10.x.x.x origin in production", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(mockReq("http://10.0.1.100:4000"), mockRes(), (err) => {
-                expect(err).to.be.an("error");
+                expect(err).toBeInstanceOf(Error);
                 done();
             });
-        });
+        
+            }));
 
-        it("STILL allows localhost origin in production (safe loopback)", function (done) {
+        it("STILL allows localhost origin in production (safe loopback)", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(mockReq("http://localhost:5173"), mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
 
-        it("STILL allows 127.0.0.1 origin in production (safe loopback)", function (done) {
+        it("STILL allows 127.0.0.1 origin in production (safe loopback)", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
-            cors.handle(
-                mockReq("http://127.0.0.1:3000"),
-                mockRes(),
-                (err) => {
-                    expect(err).to.be.undefined;
-                    done();
-                },
-            );
-        });
+            cors.handle(mockReq("http://127.0.0.1:3000"), mockRes(), (err) => {
+                expect(err).toBeUndefined();
+                done();
+            });
+        
+            }));
 
-        it("STILL allows explicit CORS_ORIGINS entry in production", function (done) {
+        it("STILL allows explicit CORS_ORIGINS entry in production", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const origOrigins = process.env.CORS_ORIGINS;
             process.env.CORS_ORIGINS = "https://app.example.com";
             const cors = freshCors();
@@ -206,11 +232,12 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
                     if (origOrigins !== undefined)
                         process.env.CORS_ORIGINS = origOrigins;
                     else delete process.env.CORS_ORIGINS;
-                    expect(err).to.be.undefined;
+                    expect(err).toBeUndefined();
                     done();
                 },
             );
-        });
+        
+            }));
     });
 
     describe("production with CORS_ALLOW_BROAD_PATTERNS=true (opt-in override)", function () {
@@ -225,28 +252,34 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             restore();
         });
 
-        it("allows 192.168.x.x when opt-in flag is set in production", function (done) {
+        it("allows 192.168.x.x when opt-in flag is set in production", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(
                 mockReq("http://192.168.1.50:3000"),
                 mockRes(),
                 (err) => {
-                    expect(err).to.be.undefined;
+                    expect(err).toBeUndefined();
                     done();
                 },
             );
-        });
+        
+            }));
 
-        it("allows .vpn when opt-in flag is set in production", function (done) {
+        it("allows .vpn when opt-in flag is set in production", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const cors = freshCors();
             cors.handle(
                 mockReq("https://host.vpn.company.com"),
                 mockRes(),
                 (err) => {
-                    expect(err).to.be.undefined;
+                    expect(err).toBeUndefined();
                     done();
                 },
             );
-        });
+        
+            }));
     });
 });

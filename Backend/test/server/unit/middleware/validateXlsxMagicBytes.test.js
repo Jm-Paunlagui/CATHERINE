@@ -14,7 +14,6 @@
  *  - req.file present but buffer is null/undefined → falls through
  */
 
-const { expect } = require("chai");
 const {
     validateXlsxMagicBytes,
 } = require("../../../../src/utils/validateXlsxMagicBytes");
@@ -83,155 +82,202 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
     // ── Happy path ────────────────────────────────────────────────────────────
 
     describe("happy path — valid XLSX buffer", function () {
-        it("calls next() without error for a valid OOXML/ZIP magic header", function (done) {
+        it("calls next() without error for a valid OOXML/ZIP magic header", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(validXlsxBuffer());
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
 
-        it("accepts a buffer that is exactly 4 bytes (minimum valid length)", function (done) {
+        it("accepts a buffer that is exactly 4 bytes (minimum valid length)", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const buf = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
             const req = mockReq(buf);
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
 
-        it("accepts a large realistic buffer with correct magic bytes", function (done) {
+        it("accepts a large realistic buffer with correct magic bytes", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(validXlsxBuffer(1024 * 100)); // 100 KB
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
     });
 
     // ── No file / null buffer — pass through ─────────────────────────────────
 
     describe("no file uploaded — pass through", function () {
-        it("calls next() without error when req.file is undefined", function (done) {
+        it("calls next() without error when req.file is undefined", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(undefined);
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
 
-        it("calls next() without error when req.file is null", function (done) {
+        it("calls next() without error when req.file is null", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = { file: null };
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
 
-        it("calls next() without error when req.file.buffer is null", function (done) {
+        it("calls next() without error when req.file.buffer is null", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(null); // file present, buffer null
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
     });
 
     // ── Buffer too small ──────────────────────────────────────────────────────
 
     describe("buffer too small — rejected", function () {
-        it("calls next(AppError) when buffer has 0 bytes", function (done) {
+        it("calls next(AppError) when buffer has 0 bytes", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(Buffer.alloc(0));
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.an("error");
-                expect(err.statusCode).to.equal(400);
-                expect(err.message).to.match(/too small|valid.*xlsx/i);
+                expect(err).toBeInstanceOf(Error);
+                expect(err.statusCode).toBe(400);
+                expect(err.message).toMatch(/too small|valid.*xlsx/i);
                 done();
             });
-        });
+        
+            }));
 
-        it("calls next(AppError) when buffer has only 3 bytes", function (done) {
+        it("calls next(AppError) when buffer has only 3 bytes", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(Buffer.from([0x50, 0x4b, 0x03]));
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.an("error");
-                expect(err.statusCode).to.equal(400);
+                expect(err).toBeInstanceOf(Error);
+                expect(err.statusCode).toBe(400);
                 done();
             });
-        });
+        
+            }));
 
-        it("AppError.details array is present for undersized buffer", function (done) {
+        it("AppError.details array is present for undersized buffer", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(Buffer.from([0x50]));
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.have.property("details").that.is.an("array");
-                expect(err.details[0]).to.have.property("field", "file");
+                expect(err).toHaveProperty("details");
+                expect(err.details[0]).toHaveProperty("field", "file");
                 done();
             });
-        });
+        
+            }));
     });
 
     // ── Magic bytes mismatch ──────────────────────────────────────────────────
 
     describe("magic bytes mismatch — rejected", function () {
-        it("rejects a PDF buffer (%PDF header)", function (done) {
+        it("rejects a PDF buffer (%PDF header)", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(pdfBuffer());
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.an("error");
-                expect(err.statusCode).to.equal(400);
-                expect(err.message).to.match(/magic bytes|valid.*xlsx/i);
+                expect(err).toBeInstanceOf(Error);
+                expect(err.statusCode).toBe(400);
+                expect(err.message).toMatch(/magic bytes|valid.*xlsx/i);
                 done();
             });
-        });
+        
+            }));
 
-        it("rejects a Windows EXE/PE buffer (MZ header)", function (done) {
+        it("rejects a Windows EXE/PE buffer (MZ header)", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(exeBuffer());
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.an("error");
-                expect(err.statusCode).to.equal(400);
+                expect(err).toBeInstanceOf(Error);
+                expect(err.statusCode).toBe(400);
                 done();
             });
-        });
+        
+            }));
 
-        it("rejects a buffer of all-zero bytes", function (done) {
+        it("rejects a buffer of all-zero bytes", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(Buffer.alloc(16));
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.an("error");
-                expect(err.statusCode).to.equal(400);
+                expect(err).toBeInstanceOf(Error);
+                expect(err.statusCode).toBe(400);
                 done();
             });
-        });
+        
+            }));
 
-        it("rejects a buffer starting with 50 4B 03 05 (not exactly 03 04)", function (done) {
+        it("rejects a buffer starting with 50 4B 03 05 (not exactly 03 04)", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const buf = Buffer.from([0x50, 0x4b, 0x03, 0x05, 0x00, 0x00]);
             const req = mockReq(buf);
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.be.an("error");
-                expect(err.statusCode).to.equal(400);
+                expect(err).toBeInstanceOf(Error);
+                expect(err.statusCode).toBe(400);
                 done();
             });
-        });
+        
+            }));
 
-        it("AppError.name is 'ValidationError' for mismatch", function (done) {
+        it("AppError.name is 'ValidationError' for mismatch", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(pdfBuffer());
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err.name).to.equal("ValidationError");
+                expect(err.name).toBe("ValidationError");
                 done();
             });
-        });
+        
+            }));
 
-        it("AppError.details[0].field is 'file' for mismatch", function (done) {
+        it("AppError.details[0].field is 'file' for mismatch", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             const req = mockReq(exeBuffer());
             validateXlsxMagicBytes(req, mockRes(), (err) => {
-                expect(err).to.have.property("details").that.is.an("array");
-                expect(err.details[0]).to.have.property("field", "file");
+                expect(err).toHaveProperty("details");
+                expect(err.details[0]).toHaveProperty("field", "file");
                 done();
             });
-        });
+        
+            }));
     });
 
     // ── Correct magic, wrong extension (extension spoofing attempted) ─────────
 
     describe("extension vs magic — magic wins", function () {
-        it("accepts a buffer with valid OOXML magic even if originalname ends in .csv", function (done) {
+        it("accepts a buffer with valid OOXML magic even if originalname ends in .csv", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
             // Magic bytes check only looks at the buffer — not the filename.
             // This is by design; MIME and extension checking is done by multer fileFilter.
             const req = {
@@ -243,9 +289,10 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
             };
             validateXlsxMagicBytes(req, mockRes(), (err) => {
                 // Middleware should pass — it only checks the bytes.
-                expect(err).to.be.undefined;
+                expect(err).toBeUndefined();
                 done();
             });
-        });
+        
+            }));
     });
 });

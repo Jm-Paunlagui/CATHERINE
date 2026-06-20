@@ -22,13 +22,13 @@
  *   - Expired token → 440
  */
 
-const { expect } = require("chai");
-const sinon      = require("sinon");
-const request    = require("supertest");
-const app        = require("../../../../src/app");
+const request = require("supertest");
+const app = require("../../../../src/app");
 const { signToken } = require("../../helpers/auth");
 const MetricsService = require("../../../../src/services/MetricsService");
-const { defaultRateLimiter } = require("../../../../src/middleware/security/RateLimiterMiddleware");
+const {
+    defaultRateLimiter,
+} = require("../../../../src/middleware/security/RateLimiterMiddleware");
 
 // ── Rate-limit isolation ───────────────────────────────────────────────────────
 // When the full suite runs, other test files fire many requests against the same
@@ -36,36 +36,45 @@ const { defaultRateLimiter } = require("../../../../src/middleware/security/Rate
 // in-process defaultRateLimiter store before this file executes.  Flushing the
 // store at the start of this file gives these tests a clean slate without
 // weakening the production limiter in any way (the store is in-memory only).
-before(function () {
-  defaultRateLimiter.flushAll();
+beforeAll(function () {
+    defaultRateLimiter.flushAll();
 });
 
 // ── Token factories ───────────────────────────────────────────────────────────
 
-const adminToken    = () => signToken({ userId: "ADM001", role: "ADMIN",       userLevel: 2 });
-const superToken    = () => signToken({ userId: "SA001",  role: "SUPER_ADMIN", userLevel: 3 });
-const approverToken = () => signToken({ userId: "APR001", role: "APPROVER",    userLevel: 1 });
+const adminToken = () =>
+    signToken({ userId: "ADM001", role: "ADMIN", userLevel: 2 });
+const superToken = () =>
+    signToken({ userId: "SA001", role: "SUPER_ADMIN", userLevel: 3 });
+const approverToken = () =>
+    signToken({ userId: "APR001", role: "APPROVER", userLevel: 1 });
 
 // ── Stub return values ────────────────────────────────────────────────────────
 
 const MOCK_SNAPSHOT = { requests: { total: 200, errors: 4 }, uptime: 3600 };
-const MOCK_SUMMARY  = { total: 200, errorRate: 0.02, topSlowRoutes: [] };
-const MOCK_ALERTS   = [];
+const MOCK_SUMMARY = { total: 200, errorRate: 0.02, topSlowRoutes: [] };
+const MOCK_ALERTS = [];
 
 // ── Assertion helpers ─────────────────────────────────────────────────────────
 
 function expectSuccessShape(body) {
-  expect(body).to.include.all.keys("status", "code", "message", "data");
-  expect(body.status).to.equal("success");
+    expect(body).toHaveProperty("status");
+    expect(body).toHaveProperty("code");
+    expect(body).toHaveProperty("message");
+    expect(body).toHaveProperty("data");
+    expect(body.status).toBe("success");
 }
 
 function expectErrorShape(body) {
-  expect(body).to.include.all.keys("status", "code", "message", "error");
-  expect(body.status).to.equal("error");
+    expect(body).toHaveProperty("status");
+    expect(body).toHaveProperty("code");
+    expect(body).toHaveProperty("message");
+    expect(body).toHaveProperty("error");
+    expect(body.status).toBe("error");
 }
 
 function expectRequestId(headers) {
-  expect(headers["x-request-id"]).to.match(/^req_/);
+    expect(headers["x-request-id"]).toMatch(/^req_/);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -73,67 +82,67 @@ function expectRequestId(headers) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("GET /api/v1/metrics — full snapshot", function () {
-  beforeEach(function () {
-    sinon.stub(MetricsService, "getSnapshot").returns(MOCK_SNAPSHOT);
-  });
+    beforeEach(function () {
+        vi.spyOn(MetricsService, "getSnapshot").mockReturnValue(MOCK_SNAPSHOT);
+    });
 
-  afterEach(function () {
-    sinon.restore();
-  });
+    afterEach(function () {
+        vi.restoreAllMocks();
+    });
 
-  it("returns 200 with snapshot in data (ADMIN, userLevel 2)", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics")
-      .set("Authorization", `Bearer ${adminToken()}`);
+    it("returns 200 with snapshot in data (ADMIN, userLevel 2)", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${adminToken()}`);
 
-    expect(res.status).to.equal(200);
-    expectSuccessShape(res.body);
-    expect(MetricsService.getSnapshot.calledOnce).to.be.true;
-  });
+        expect(res.status).toBe(200);
+        expectSuccessShape(res.body);
+        expect(MetricsService.getSnapshot).toHaveBeenCalledTimes(1);
+    });
 
-  it("returns 200 for SUPER_ADMIN (userLevel 3)", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics")
-      .set("Authorization", `Bearer ${superToken()}`);
-    expect(res.status).to.equal(200);
-  });
+    it("returns 200 for SUPER_ADMIN (userLevel 3)", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${superToken()}`);
+        expect(res.status).toBe(200);
+    });
 
-  it("returns 401 when no Authorization header is provided", async function () {
-    const res = await request(app).get("/api/v1/metrics");
-    expect(res.status).to.equal(401);
-    expectErrorShape(res.body);
-  });
+    it("returns 401 when no Authorization header is provided", async function () {
+        const res = await request(app).get("/api/v1/metrics");
+        expect(res.status).toBe(401);
+        expectErrorShape(res.body);
+    });
 
-  it("returns 403 for APPROVER (userLevel 1 < 2 required)", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics")
-      .set("Authorization", `Bearer ${approverToken()}`);
-    expect(res.status).to.equal(403);
-    expectErrorShape(res.body);
-  });
+    it("returns 403 for APPROVER (userLevel 1 < 2 required)", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${approverToken()}`);
+        expect(res.status).toBe(403);
+        expectErrorShape(res.body);
+    });
 
-  it("returns 440 for expired token (AuthMiddleware maps TokenExpiredError → 440)", async function () {
-    const expired = signToken({ userId: "ADM001" }, "-1s");
-    const res = await request(app)
-      .get("/api/v1/metrics")
-      .set("Authorization", `Bearer ${expired}`);
-    expect(res.status).to.equal(440);
-  });
+    it("returns 440 for expired token (AuthMiddleware maps TokenExpiredError → 440)", async function () {
+        const expired = signToken({ userId: "ADM001" }, "-1s");
+        const res = await request(app)
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${expired}`);
+        expect(res.status).toBe(440);
+    });
 
-  it("X-Request-ID is present on success", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics")
-      .set("Authorization", `Bearer ${adminToken()}`);
-    expectRequestId(res.headers);
-  });
+    it("X-Request-ID is present on success", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${adminToken()}`);
+        expectRequestId(res.headers);
+    });
 
-  it("responds in under 500ms", async function () {
-    const start = Date.now();
-    await request(app)
-      .get("/api/v1/metrics")
-      .set("Authorization", `Bearer ${adminToken()}`);
-    expect(Date.now() - start).to.be.lessThan(500);
-  });
+    it("responds in under 500ms", async function () {
+        const start = Date.now();
+        await request(app)
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${adminToken()}`);
+        expect(Date.now() - start).toBeLessThan(500);
+    });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -141,49 +150,49 @@ describe("GET /api/v1/metrics — full snapshot", function () {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("GET /api/v1/metrics/summary — summary", function () {
-  beforeEach(function () {
-    sinon.stub(MetricsService, "getSummary").returns(MOCK_SUMMARY);
-  });
+    beforeEach(function () {
+        vi.spyOn(MetricsService, "getSummary").mockReturnValue(MOCK_SUMMARY);
+    });
 
-  afterEach(function () {
-    sinon.restore();
-  });
+    afterEach(function () {
+        vi.restoreAllMocks();
+    });
 
-  it("returns 200 for APPROVER (userLevel 1 meets threshold)", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics/summary")
-      .set("Authorization", `Bearer ${approverToken()}`);
-    expect(res.status).to.equal(200);
-    expectSuccessShape(res.body);
-  });
+    it("returns 200 for APPROVER (userLevel 1 meets threshold)", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics/summary")
+            .set("Authorization", `Bearer ${approverToken()}`);
+        expect(res.status).toBe(200);
+        expectSuccessShape(res.body);
+    });
 
-  it("returns 200 for ADMIN (userLevel 2 > 1 required)", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics/summary")
-      .set("Authorization", `Bearer ${adminToken()}`);
-    expect(res.status).to.equal(200);
-  });
+    it("returns 200 for ADMIN (userLevel 2 > 1 required)", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics/summary")
+            .set("Authorization", `Bearer ${adminToken()}`);
+        expect(res.status).toBe(200);
+    });
 
-  it("returns 401 when unauthenticated", async function () {
-    const res = await request(app).get("/api/v1/metrics/summary");
-    expect(res.status).to.equal(401);
-    expectErrorShape(res.body);
-  });
+    it("returns 401 when unauthenticated", async function () {
+        const res = await request(app).get("/api/v1/metrics/summary");
+        expect(res.status).toBe(401);
+        expectErrorShape(res.body);
+    });
 
-  it("X-Request-ID is present", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics/summary")
-      .set("Authorization", `Bearer ${adminToken()}`);
-    expectRequestId(res.headers);
-  });
+    it("X-Request-ID is present", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics/summary")
+            .set("Authorization", `Bearer ${adminToken()}`);
+        expectRequestId(res.headers);
+    });
 
-  it("responds in under 500ms", async function () {
-    const start = Date.now();
-    await request(app)
-      .get("/api/v1/metrics/summary")
-      .set("Authorization", `Bearer ${adminToken()}`);
-    expect(Date.now() - start).to.be.lessThan(500);
-  });
+    it("responds in under 500ms", async function () {
+        const start = Date.now();
+        await request(app)
+            .get("/api/v1/metrics/summary")
+            .set("Authorization", `Bearer ${adminToken()}`);
+        expect(Date.now() - start).toBeLessThan(500);
+    });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -191,52 +200,53 @@ describe("GET /api/v1/metrics/summary — summary", function () {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("GET /api/v1/metrics/alerts — alert evaluations", function () {
-  beforeEach(function () {
-    sinon.stub(MetricsService, "evaluateAlerts").returns(MOCK_ALERTS);
-  });
+    beforeEach(function () {
+        vi.spyOn(MetricsService, "evaluateAlerts").mockReturnValue(MOCK_ALERTS);
+    });
 
-  afterEach(function () {
-    sinon.restore();
-  });
+    afterEach(function () {
+        vi.restoreAllMocks();
+    });
 
-  it("returns 200 with { alerts, count } in data (ADMIN)", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics/alerts")
-      .set("Authorization", `Bearer ${adminToken()}`);
+    it("returns 200 with { alerts, count } in data (ADMIN)", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics/alerts")
+            .set("Authorization", `Bearer ${adminToken()}`);
 
-    expect(res.status).to.equal(200);
-    expectSuccessShape(res.body);
-    expect(res.body.data).to.have.property("alerts").that.is.an("array");
-    expect(res.body.data).to.have.property("count").that.is.a("number");
-    expect(MetricsService.evaluateAlerts.calledOnce).to.be.true;
-  });
+        expect(res.status).toBe(200);
+        expectSuccessShape(res.body);
+        expect(res.body.data).toHaveProperty("alerts");
+        expect(res.body.data).toHaveProperty("count");
+        expect(res.body.data["count"]).toEqual(expect.any(Number));
+        expect(MetricsService.evaluateAlerts).toHaveBeenCalledTimes(1);
+    });
 
-  it("returns 401 when unauthenticated", async function () {
-    const res = await request(app).get("/api/v1/metrics/alerts");
-    expect(res.status).to.equal(401);
-  });
+    it("returns 401 when unauthenticated", async function () {
+        const res = await request(app).get("/api/v1/metrics/alerts");
+        expect(res.status).toBe(401);
+    });
 
-  it("returns 403 for APPROVER (userLevel 1 < 2 required)", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics/alerts")
-      .set("Authorization", `Bearer ${approverToken()}`);
-    expect(res.status).to.equal(403);
-  });
+    it("returns 403 for APPROVER (userLevel 1 < 2 required)", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics/alerts")
+            .set("Authorization", `Bearer ${approverToken()}`);
+        expect(res.status).toBe(403);
+    });
 
-  it("X-Request-ID is present", async function () {
-    const res = await request(app)
-      .get("/api/v1/metrics/alerts")
-      .set("Authorization", `Bearer ${adminToken()}`);
-    expectRequestId(res.headers);
-  });
+    it("X-Request-ID is present", async function () {
+        const res = await request(app)
+            .get("/api/v1/metrics/alerts")
+            .set("Authorization", `Bearer ${adminToken()}`);
+        expectRequestId(res.headers);
+    });
 
-  it("responds in under 500ms", async function () {
-    const start = Date.now();
-    await request(app)
-      .get("/api/v1/metrics/alerts")
-      .set("Authorization", `Bearer ${adminToken()}`);
-    expect(Date.now() - start).to.be.lessThan(500);
-  });
+    it("responds in under 500ms", async function () {
+        const start = Date.now();
+        await request(app)
+            .get("/api/v1/metrics/alerts")
+            .set("Authorization", `Bearer ${adminToken()}`);
+        expect(Date.now() - start).toBeLessThan(500);
+    });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -244,114 +254,120 @@ describe("GET /api/v1/metrics/alerts — alert evaluations", function () {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("POST /api/v1/metrics/frontend — frontend ingestion", function () {
-  let agent;
-  let csrfToken;
+    let agent;
+    let csrfToken;
 
-  before(async function () {
-    this.timeout(10_000);
-    agent = request.agent(app);
-    const tokenRes = await agent.get("/api/v1/csrf/token");
-    csrfToken = tokenRes.body?.token ?? "";
-  });
+    beforeAll(async function () {
+        agent = request.agent(app);
+        const tokenRes = await agent.get("/api/v1/csrf/token");
+        csrfToken = tokenRes.body?.token ?? "";
+    });
 
-  beforeEach(function () {
-    // Flush the module-level frontend ingest limiter (30 req/min per IP) —
-    // it persists across the whole mocha process, so earlier suites hitting
-    // /frontend from 127.0.0.1 can exhaust the window and cause spurious 429s.
-    const { frontendIngestLimiter } = require("../../../../src/routes/metrics.route");
-    frontendIngestLimiter.flushAll();
+    beforeEach(function () {
+        // Flush the module-level frontend ingest limiter (30 req/min per IP) —
+        // it persists across the whole mocha process, so earlier suites hitting
+        // /frontend from 127.0.0.1 can exhaust the window and cause spurious 429s.
+        const {
+            frontendIngestLimiter,
+        } = require("../../../../src/routes/metrics.route");
+        frontendIngestLimiter.flushAll();
 
-    sinon.stub(MetricsService, "ingestFrontendMetrics").resolves();
-  });
+        vi.spyOn(MetricsService, "ingestFrontendMetrics").mockResolvedValue();
+    });
 
-  afterEach(function () {
-    sinon.restore();
-  });
+    afterEach(function () {
+        vi.restoreAllMocks();
+    });
 
-  const validPayload = () => ({
-    events: [
-      { type: "web-vital", name: "LCP", value: 1200, timestamp: new Date().toISOString() },
-    ],
-  });
+    const validPayload = () => ({
+        events: [
+            {
+                type: "web-vital",
+                name: "LCP",
+                value: 1200,
+                timestamp: new Date().toISOString(),
+            },
+        ],
+    });
 
-  it("returns 200 with success shape when payload is valid (no auth required)", async function () {
-    const res = await agent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", csrfToken)
-      .send(validPayload());
+    it("returns 200 with success shape when payload is valid (no auth required)", async function () {
+        const res = await agent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .send(validPayload());
 
-    expect(res.status).to.equal(200);
-    expectSuccessShape(res.body);
-    expect(MetricsService.ingestFrontendMetrics.calledOnce).to.be.true;
-  });
+        expect(res.status).toBe(200);
+        expectSuccessShape(res.body);
+        expect(MetricsService.ingestFrontendMetrics).toHaveBeenCalledTimes(1);
+    });
 
-  it("works without an Authorization header (pre-auth endpoint)", async function () {
-    const res = await agent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", csrfToken)
-      .send(validPayload());
+    it("works without an Authorization header (pre-auth endpoint)", async function () {
+        const res = await agent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .send(validPayload());
 
-    expect(res.status).to.equal(200);
-  });
+        expect(res.status).toBe(200);
+    });
 
-  it("returns 403 when CSRF token is absent", async function () {
-    const res = await agent
-      .post("/api/v1/metrics/frontend")
-      .send(validPayload());
+    it("returns 403 when CSRF token is absent", async function () {
+        const res = await agent
+            .post("/api/v1/metrics/frontend")
+            .send(validPayload());
 
-    expect(res.status).to.equal(403);
-  });
+        expect(res.status).toBe(403);
+    });
 
-  it("returns 403 when CSRF token is forged", async function () {
-    const res = await agent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", "forged-csrf-xyz")
-      .send(validPayload());
+    it("returns 403 when CSRF token is forged", async function () {
+        const res = await agent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", "forged-csrf-xyz")
+            .send(validPayload());
 
-    expect(res.status).to.equal(403);
-  });
+        expect(res.status).toBe(403);
+    });
 
-  it("returns 413 when body exceeds size limit", async function () {
-    const huge = "x".repeat(11 * 1024 * 1024);
-    const res = await agent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", csrfToken)
-      .set("Content-Type", "application/json")
-      .send(JSON.stringify({ pad: huge }));
+    it("returns 413 when body exceeds size limit", async function () {
+        const huge = "x".repeat(11 * 1024 * 1024);
+        const res = await agent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .set("Content-Type", "application/json")
+            .send(JSON.stringify({ pad: huge }));
 
-    expect(res.status).to.equal(413);
-  });
+        expect(res.status).toBe(413);
+    });
 
-  it("returns 400 for malformed JSON body", async function () {
-    const res = await agent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", csrfToken)
-      .set("Content-Type", "application/json")
-      .send("{bad json}");
+    it("returns 400 for malformed JSON body", async function () {
+        const res = await agent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .set("Content-Type", "application/json")
+            .send("{bad json}");
 
-    expect(res.status).to.equal(400);
-  });
+        expect(res.status).toBe(400);
+    });
 
-  it("X-Request-ID is present", async function () {
-    const res = await agent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", csrfToken)
-      .send(validPayload());
+    it("X-Request-ID is present", async function () {
+        const res = await agent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .send(validPayload());
 
-    expectRequestId(res.headers);
-  });
+        expectRequestId(res.headers);
+    });
 
-  it("responds in under 500ms", async function () {
-    const start = Date.now();
-    await agent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", csrfToken)
-      .send(validPayload());
-    expect(Date.now() - start).to.be.lessThan(500);
-  });
+    it("responds in under 500ms", async function () {
+        const start = Date.now();
+        await agent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .send(validPayload());
+        expect(Date.now() - start).toBeLessThan(500);
+    });
 
-  it("GET /api/v1/metrics/frontend is not a valid route (404 or 405)", async function () {
-    const res = await agent.get("/api/v1/metrics/frontend");
-    expect([404, 405]).to.include(res.status);
-  });
+    it("GET /api/v1/metrics/frontend is not a valid route (404 or 405)", async function () {
+        const res = await agent.get("/api/v1/metrics/frontend");
+        expect([404, 405]).toContain(res.status);
+    });
 });

@@ -1,14 +1,12 @@
 "use strict";
 
-const { expect } = require("chai");
 const agent = require("../helpers/request");
 
 // Warm Express (JIT, routing table lookup) before timing assertions.
 // Uses /health/live — it never contacts Oracle, so timing reflects pure HTTP
 // stack latency. The legacy GET /health calls db.withConnection() which would
 // add Oracle round-trip variance and fail when Oracle is not reachable.
-before(async function () {
-    this.timeout(15_000);
+beforeAll(async function () {
     await agent.get("/api/v1/health/live");
 });
 
@@ -23,7 +21,7 @@ describe("Response Time Budgets", function () {
             }
             times.sort((a, b) => a - b);
             const p50 = times[Math.floor(times.length * 0.5)];
-            expect(p50).to.be.lessThan(50);
+            expect(p50).toBeLessThan(50);
         });
 
         it("p95 (95th percentile of 20 runs) is under 200ms", async function () {
@@ -35,14 +33,14 @@ describe("Response Time Budgets", function () {
             }
             times.sort((a, b) => a - b);
             const p95 = times[Math.floor(times.length * 0.95)];
-            expect(p95).to.be.lessThan(200);
+            expect(p95).toBeLessThan(200);
         });
 
         it("X-Response-Time header is present and numeric", async function () {
             const res = await agent.get("/api/v1/health/live");
-            const rt  = res.headers["x-response-time"];
-            expect(rt).to.match(/^\d+ms$/);
-            expect(parseInt(rt, 10)).to.be.a("number");
+            const rt = res.headers["x-response-time"];
+            expect(rt).toMatch(/^\d+ms$/);
+            expect(parseInt(rt, 10)).toEqual(expect.any(Number));
         });
     });
 });

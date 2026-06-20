@@ -1,58 +1,57 @@
 "use strict";
 
-const { expect } = require("chai");
 const { logger } = require("../../../../src/utils/logger");
 
 describe("Logger", function () {
   describe("core API", function () {
     it("exposes RFC 5424 level methods", function () {
-      expect(logger.emerg).to.be.a("function");
-      expect(logger.alert).to.be.a("function");
-      expect(logger.crit).to.be.a("function");
-      expect(logger.error).to.be.a("function");
-      expect(logger.warning).to.be.a("function");
-      expect(logger.notice).to.be.a("function");
-      expect(logger.info).to.be.a("function");
-      expect(logger.debug).to.be.a("function");
+      expect(logger.emerg).toBeInstanceOf(Function);
+      expect(logger.alert).toBeInstanceOf(Function);
+      expect(logger.crit).toBeInstanceOf(Function);
+      expect(logger.error).toBeInstanceOf(Function);
+      expect(logger.warning).toBeInstanceOf(Function);
+      expect(logger.notice).toBeInstanceOf(Function);
+      expect(logger.info).toBeInstanceOf(Function);
+      expect(logger.debug).toBeInstanceOf(Function);
     });
 
     it("retains warn() as a deprecated backward-compatible alias for warning()", function () {
-      expect(logger.warn).to.be.a("function");
+      expect(logger.warn).toBeInstanceOf(Function);
     });
 
     it("exposes specialized methods", function () {
-      expect(logger.cache).to.be.a("function");
-      expect(logger.database).to.be.a("function");
-      expect(logger.performance).to.be.a("function");
-      expect(logger.security).to.be.a("function");
+      expect(logger.cache).toBeInstanceOf(Function);
+      expect(logger.database).toBeInstanceOf(Function);
+      expect(logger.performance).toBeInstanceOf(Function);
+      expect(logger.security).toBeInstanceOf(Function);
     });
 
     it("exposes HTTP lifecycle methods", function () {
-      expect(logger.logIncomingRequest).to.be.a("function");
-      expect(logger.logHandlingRequest).to.be.a("function");
-      expect(logger.logCompletedRequest).to.be.a("function");
+      expect(logger.logIncomingRequest).toBeInstanceOf(Function);
+      expect(logger.logHandlingRequest).toBeInstanceOf(Function);
+      expect(logger.logCompletedRequest).toBeInstanceOf(Function);
     });
   });
 
   describe("log()", function () {
     it("does not throw when called with a valid level and message", function () {
-      expect(() => logger.info("test message")).to.not.throw();
+      expect(() => logger.info("test message")).not.toThrow();
     });
 
     it("does not throw with meta object", function () {
       expect(() =>
         logger.info("test message", { key: "value" }),
-      ).to.not.throw();
+      ).not.toThrow();
     });
 
     it("does not throw with null or undefined message", function () {
-      expect(() => logger.info(null)).to.not.throw();
-      expect(() => logger.info(undefined)).to.not.throw();
+      expect(() => logger.info(null)).not.toThrow();
+      expect(() => logger.info(undefined)).not.toThrow();
     });
 
     it("silently ignores empty string messages", function () {
-      expect(() => logger.info("")).to.not.throw();
-      expect(() => logger.info("   ")).to.not.throw();
+      expect(() => logger.info("")).not.toThrow();
+      expect(() => logger.info("   ")).not.toThrow();
     });
   });
 
@@ -60,29 +59,29 @@ describe("Logger", function () {
     it("cache() does not throw", function () {
       expect(() =>
         logger.cache("GET", "cache:users:1", "HIT", 3),
-      ).to.not.throw();
+      ).not.toThrow();
     });
 
     it("database() does not throw", function () {
-      expect(() => logger.database("SELECT", "USERS", 12, 5)).to.not.throw();
+      expect(() => logger.database("SELECT", "USERS", 12, 5)).not.toThrow();
     });
 
     it("performance() does not throw for fast operation", function () {
       expect(() =>
         logger.performance("render", 100, { rows: 10 }),
-      ).to.not.throw();
+      ).not.toThrow();
     });
 
     it("performance() does not throw for slow operation (>5s)", function () {
       expect(() =>
         logger.performance("slowQuery", 6000, { rows: 50000 }),
-      ).to.not.throw();
+      ).not.toThrow();
     });
 
     it("security() does not throw", function () {
       expect(() =>
         logger.security("IP_BLOCKED", { ip: "10.0.0.1" }),
-      ).to.not.throw();
+      ).not.toThrow();
     });
   });
 
@@ -105,26 +104,26 @@ describe("Logger", function () {
     }
 
     it("logIncomingRequest does not throw", function () {
-      expect(() => logger.logIncomingRequest(mockReq())).to.not.throw();
+      expect(() => logger.logIncomingRequest(mockReq())).not.toThrow();
     });
 
     it("logHandlingRequest does not throw", function () {
       expect(() =>
         logger.logHandlingRequest(mockReq(), { userId: 1 }),
-      ).to.not.throw();
+      ).not.toThrow();
     });
 
     it("logCompletedRequest does not throw", function () {
       expect(() =>
         logger.logCompletedRequest(mockReq(), mockRes(), 42),
-      ).to.not.throw();
+      ).not.toThrow();
     });
 
     it("logCompletedRequest uses ERROR level for 4xx/5xx status", function () {
       const res = { statusCode: 500 };
       expect(() =>
         logger.logCompletedRequest(mockReq(), res, 100),
-      ).to.not.throw();
+      ).not.toThrow();
     });
   });
 
@@ -132,10 +131,10 @@ describe("Logger", function () {
     it("returns an object (or rejects gracefully)", async function () {
       try {
         const stats = await logger.getLogStats();
-        expect(stats).to.be.an("object");
+        expect(stats).toBeInstanceOf(Object);
       } catch (err) {
         // May fail if log directory doesn't exist for today — acceptable
-        expect(err).to.be.an("error");
+        expect(err).toBeInstanceOf(Error);
       }
     });
   });

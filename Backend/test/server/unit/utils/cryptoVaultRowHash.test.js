@@ -6,8 +6,8 @@
 // primitive remains and is exercised here.
 
 const crypto = require("crypto");
-const { expect } = require("chai");
 const { CryptoVault } = require("../../../../src/utils/encryption/CryptoVault");
+// `expect`/`describe`/`it` are injected globally by Vitest (globals: true).
 
 // 64-char hex string that will never match a legitimate SHA-256 digest.
 const BAD_HASH = "a".repeat(64);
@@ -26,30 +26,30 @@ describe("CryptoVault.verifyRowHash", function () {
     const correctHash = sha256hex(canonical);
 
     it("returns true when canonical matches storedHash (uppercase)", function () {
-        expect(CryptoVault.verifyRowHash(canonical, correctHash)).to.be.true;
+        expect(CryptoVault.verifyRowHash(canonical, correctHash)).toBe(true);
     });
 
     it("returns true when storedHash is lowercase (case-insensitive)", function () {
-        expect(CryptoVault.verifyRowHash(canonical, correctHash.toLowerCase())).to.be.true;
+        expect(CryptoVault.verifyRowHash(canonical, correctHash.toLowerCase())).toBe(true);
     });
 
     it("returns false when hash does not match", function () {
-        expect(CryptoVault.verifyRowHash(canonical, BAD_HASH)).to.be.false;
+        expect(CryptoVault.verifyRowHash(canonical, BAD_HASH)).toBe(false);
     });
 
     it("returns false when canonical is null", function () {
-        expect(CryptoVault.verifyRowHash(null, correctHash)).to.be.false;
+        expect(CryptoVault.verifyRowHash(null, correctHash)).toBe(false);
     });
 
     it("returns false when storedHash is null", function () {
-        expect(CryptoVault.verifyRowHash(canonical, null)).to.be.false;
+        expect(CryptoVault.verifyRowHash(canonical, null)).toBe(false);
     });
 
     it("returns false when storedHash is wrong length", function () {
-        expect(CryptoVault.verifyRowHash(canonical, "ABCDEF")).to.be.false;
+        expect(CryptoVault.verifyRowHash(canonical, "ABCDEF")).toBe(false);
     });
 
     it("returns false when canonical is empty string", function () {
-        expect(CryptoVault.verifyRowHash("", correctHash)).to.be.false;
+        expect(CryptoVault.verifyRowHash("", correctHash)).toBe(false);
     });
 });

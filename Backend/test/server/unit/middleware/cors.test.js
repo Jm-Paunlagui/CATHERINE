@@ -1,148 +1,178 @@
 "use strict";
 
-const { expect } = require("chai");
 const {
-  CorsMiddleware,
+    CorsMiddleware,
 } = require("../../../../src/middleware/security/CorsMiddleware");
 
 describe("CorsMiddleware", function () {
-  describe("constructor", function () {
-    it("creates an instance with default options", function () {
-      const cors = new CorsMiddleware();
-      expect(cors).to.be.an("object");
-      expect(cors.handle).to.be.a("function");
+    describe("constructor", function () {
+        it("creates an instance with default options", function () {
+            const cors = new CorsMiddleware();
+            expect(cors).toBeInstanceOf(Object);
+            expect(cors.handle).toBeInstanceOf(Function);
+        });
+
+        it("accepts explicit origins", function () {
+            const cors = new CorsMiddleware({
+                origins: ["https://example.com"],
+            });
+            expect(cors).toBeInstanceOf(Object);
+        });
+
+        it("accepts custom patterns", function () {
+            const cors = new CorsMiddleware({
+                patterns: [/^https:\/\/custom\.dev$/],
+            });
+            expect(cors).toBeInstanceOf(Object);
+        });
     });
 
-    it("accepts explicit origins", function () {
-      const cors = new CorsMiddleware({
-        origins: ["https://example.com"],
-      });
-      expect(cors).to.be.an("object");
-    });
+    describe("origin handling", function () {
+        // Ensure broad-pattern tests run with NODE_ENV != production.
+        // corsProductionMode.test.js tests the production restriction separately.
+        let _savedNodeEnv;
+        beforeEach(function () {
+            _savedNodeEnv = process.env.NODE_ENV;
+            process.env.NODE_ENV = "test";
+        });
+        afterEach(function () {
+            if (_savedNodeEnv === undefined) delete process.env.NODE_ENV;
+            else process.env.NODE_ENV = _savedNodeEnv;
+        });
 
-    it("accepts custom patterns", function () {
-      const cors = new CorsMiddleware({
-        patterns: [/^https:\/\/custom\.dev$/],
-      });
-      expect(cors).to.be.an("object");
-    });
-  });
+        function mockReq(origin) {
+            return {
+                method: "GET",
+                headers: origin ? { origin } : {},
+                get(key) {
+                    return this.headers[key.toLowerCase()];
+                },
+            };
+        }
 
-  describe("origin handling", function () {
-    // Ensure broad-pattern tests run with NODE_ENV != production.
-    // corsProductionMode.test.js tests the production restriction separately.
-    let _savedNodeEnv;
-    beforeEach(function () {
-      _savedNodeEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "test";
-    });
-    afterEach(function () {
-      if (_savedNodeEnv === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = _savedNodeEnv;
-    });
+        function mockRes() {
+            const headers = {};
+            return {
+                setHeader(k, v) {
+                    headers[k] = v;
+                },
+                getHeader(k) {
+                    return headers[k];
+                },
+                _headers: headers,
+                statusCode: 200,
+                end() {},
+            };
+        }
 
-    function mockReq(origin) {
-      return {
-        method: "GET",
-        headers: origin ? { origin } : {},
-        get(key) {
-          return this.headers[key.toLowerCase()];
-        },
-      };
-    }
+        it("allows requests with no origin (same-origin)", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
 
-    function mockRes() {
-      const headers = {};
-      return {
-        setHeader(k, v) {
-          headers[k] = v;
-        },
-        getHeader(k) {
-          return headers[k];
-        },
-        _headers: headers,
-        statusCode: 200,
-        end() {},
-      };
-    }
+            const cors = new CorsMiddleware();
+            cors.handle(mockReq(null), mockRes(), (err) => {
+                expect(err).toBeUndefined();
+                done();
+            });
+        
+            }));
 
-    it("allows requests with no origin (same-origin)", function (done) {
-      const cors = new CorsMiddleware();
-      cors.handle(mockReq(null), mockRes(), (err) => {
-        expect(err).to.be.undefined;
-        done();
-      });
+        it("allows an explicitly listed origin", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
+            const cors = new CorsMiddleware({
+                origins: ["https://myapp.com"],
+            });
+            const res = mockRes();
+            cors.handle(mockReq("https://myapp.com"), res, (err) => {
+                expect(err).toBeUndefined();
+                done();
+            });
+        
+            }));
+
+        it("allows a private network origin via default patterns", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
+            const cors = new CorsMiddleware();
+            const res = mockRes();
+            cors.handle(mockReq("http://192.168.1.50:3000"), res, (err) => {
+                expect(err).toBeUndefined();
+                done();
+            });
+        
+            }));
+
+        it("allows localhost origin via default patterns", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
+            const cors = new CorsMiddleware();
+            const res = mockRes();
+            cors.handle(mockReq("http://localhost:5173"), res, (err) => {
+                expect(err).toBeUndefined();
+                done();
+            });
+        
+            }));
+
+        it("blocks a public origin not in the allowlist", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
+            const cors = new CorsMiddleware({ origins: [] });
+            const res = mockRes();
+            cors.handle(mockReq("https://evil.com"), res, (err) => {
+                expect(err).toBeInstanceOf(Error);
+                expect(err.message).toContain("not allowed by CORS");
+                done();
+            });
+        
+            }));
+
+        it("allows .local domains via default patterns", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
+            const cors = new CorsMiddleware();
+            cors.handle(mockReq("http://mypc.local:8080"), mockRes(), (err) => {
+                expect(err).toBeUndefined();
+                done();
+            });
+        
+            }));
+
+        it("allows .vpn domains via default patterns", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
+            const cors = new CorsMiddleware();
+            cors.handle(
+                mockReq("https://host.vpn.company.com"),
+                mockRes(),
+                (err) => {
+                    expect(err).toBeUndefined();
+                    done();
+                },
+            );
+        
+            }));
+
+        it("allows 10.x.x.x private network via default patterns", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
+            const cors = new CorsMiddleware();
+            cors.handle(mockReq("http://10.0.1.100:4000"), mockRes(), (err) => {
+                expect(err).toBeUndefined();
+                done();
+            });
+        
+            }));
+
+        it("allows 172.16-31.x.x private network via default patterns", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+
+            const cors = new CorsMiddleware();
+            cors.handle(mockReq("http://172.20.0.5:3001"), mockRes(), (err) => {
+                expect(err).toBeUndefined();
+                done();
+            });
+        
+            }));
     });
-
-    it("allows an explicitly listed origin", function (done) {
-      const cors = new CorsMiddleware({
-        origins: ["https://myapp.com"],
-      });
-      const res = mockRes();
-      cors.handle(mockReq("https://myapp.com"), res, (err) => {
-        expect(err).to.be.undefined;
-        done();
-      });
-    });
-
-    it("allows a private network origin via default patterns", function (done) {
-      const cors = new CorsMiddleware();
-      const res = mockRes();
-      cors.handle(mockReq("http://192.168.1.50:3000"), res, (err) => {
-        expect(err).to.be.undefined;
-        done();
-      });
-    });
-
-    it("allows localhost origin via default patterns", function (done) {
-      const cors = new CorsMiddleware();
-      const res = mockRes();
-      cors.handle(mockReq("http://localhost:5173"), res, (err) => {
-        expect(err).to.be.undefined;
-        done();
-      });
-    });
-
-    it("blocks a public origin not in the allowlist", function (done) {
-      const cors = new CorsMiddleware({ origins: [] });
-      const res = mockRes();
-      cors.handle(mockReq("https://evil.com"), res, (err) => {
-        expect(err).to.be.an("error");
-        expect(err.message).to.include("not allowed by CORS");
-        done();
-      });
-    });
-
-    it("allows .local domains via default patterns", function (done) {
-      const cors = new CorsMiddleware();
-      cors.handle(mockReq("http://mypc.local:8080"), mockRes(), (err) => {
-        expect(err).to.be.undefined;
-        done();
-      });
-    });
-
-    it("allows .vpn domains via default patterns", function (done) {
-      const cors = new CorsMiddleware();
-      cors.handle(mockReq("https://host.vpn.company.com"), mockRes(), (err) => {
-        expect(err).to.be.undefined;
-        done();
-      });
-    });
-
-    it("allows 10.x.x.x private network via default patterns", function (done) {
-      const cors = new CorsMiddleware();
-      cors.handle(mockReq("http://10.0.1.100:4000"), mockRes(), (err) => {
-        expect(err).to.be.undefined;
-        done();
-      });
-    });
-
-    it("allows 172.16-31.x.x private network via default patterns", function (done) {
-      const cors = new CorsMiddleware();
-      cors.handle(mockReq("http://172.20.0.5:3001"), mockRes(), (err) => {
-        expect(err).to.be.undefined;
-        done();
-      });
-    });
-  });
 });

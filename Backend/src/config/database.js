@@ -1,7 +1,11 @@
 "use strict";
 
-const dotenv = require("dotenv");
-dotenv.config({ path: ".env" });
+// Environment variables are loaded once at process startup by server.js (and by
+// each standalone script in scripts/, which call dotenv.config before requiring
+// this module). Config files MUST NOT call dotenv themselves — re-loading .env on
+// every require re-injects values the caller deliberately unset (e.g. unit tests
+// that delete an env var to assert a default). See Backend CLAUDE.md
+// "Environment Variables".
 
 // const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -48,8 +52,8 @@ const connections = {
             process.env.DB_PORT,
             process.env.DB_APP_SERVICE_NAME,
         ),
-        poolMin: parseInt(process.env.APP_POOL_MIN, 10) || 2,
-        poolMax: parseInt(process.env.APP_POOL_MAX, 10) || 10,
+        poolMin: parseInt(process.env.APP_POOL_MIN, 10) || 5,
+        poolMax: parseInt(process.env.APP_POOL_MAX, 10) || 20,
     },
 
     // ── Add new connections below ──────────────────────────────────────────

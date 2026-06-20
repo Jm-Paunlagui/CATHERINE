@@ -13,7 +13,6 @@
  *   - A throw in fn rejects the whole map (callers isolate per-item errors).
  */
 
-const { expect } = require("chai");
 const { mapWithConcurrency } = require("../../../../src/utils/concurrency");
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -25,7 +24,7 @@ describe("mapWithConcurrency", function () {
             await delay(ms);
             return ms * 2;
         });
-        expect(out).to.deep.equal([100, 20, 60, 10, 80]);
+        expect(out).toEqual([100, 20, 60, 10, 80]);
     });
 
     it("processes every item exactly once", async function () {
@@ -35,8 +34,8 @@ describe("mapWithConcurrency", function () {
             seen.add(x);
             return x;
         });
-        expect(out).to.deep.equal(input);
-        expect(seen.size).to.equal(100);
+        expect(out).toEqual(input);
+        expect(seen.size).toBe(100);
     });
 
     it("never exceeds the concurrency limit", async function () {
@@ -49,8 +48,8 @@ describe("mapWithConcurrency", function () {
             await delay(5);
             inFlight--;
         });
-        expect(peak).to.be.at.most(5);
-        expect(peak).to.be.greaterThan(1); // proves it actually parallelises
+        expect(peak).toBeLessThanOrEqual(5);
+        expect(peak).toBeGreaterThan(1); // proves it actually parallelises
     });
 
     it("empty input → empty array, fn never called", async function () {
@@ -58,22 +57,20 @@ describe("mapWithConcurrency", function () {
         const out = await mapWithConcurrency([], 4, async () => {
             called = true;
         });
-        expect(out).to.deep.equal([]);
-        expect(called).to.be.false;
+        expect(out).toEqual([]);
+        expect(called).toBe(false);
     });
 
     it("non-array input → empty array", async function () {
-        expect(await mapWithConcurrency(null, 4, async () => 1)).to.deep.equal(
+        expect(await mapWithConcurrency(null, 4, async () => 1)).toEqual([]);
+        expect(await mapWithConcurrency(undefined, 4, async () => 1)).toEqual(
             [],
         );
-        expect(
-            await mapWithConcurrency(undefined, 4, async () => 1),
-        ).to.deep.equal([]);
     });
 
     it("limit < 1 is clamped to serial (still correct)", async function () {
         const out = await mapWithConcurrency([1, 2, 3], 0, async (x) => x + 1);
-        expect(out).to.deep.equal([2, 3, 4]);
+        expect(out).toEqual([2, 3, 4]);
     });
 
     it("limit larger than item count does not over-spawn", async function () {
@@ -86,13 +83,17 @@ describe("mapWithConcurrency", function () {
             inFlight--;
             return x;
         });
-        expect(out).to.deep.equal([1, 2, 3]);
-        expect(peak).to.be.at.most(3);
+        expect(out).toEqual([1, 2, 3]);
+        expect(peak).toBeLessThanOrEqual(3);
     });
 
     it("passes the index as the second argument", async function () {
-        const out = await mapWithConcurrency(["a", "b", "c"], 2, async (v, i) => `${v}${i}`);
-        expect(out).to.deep.equal(["a0", "b1", "c2"]);
+        const out = await mapWithConcurrency(
+            ["a", "b", "c"],
+            2,
+            async (v, i) => `${v}${i}`,
+        );
+        expect(out).toEqual(["a0", "b1", "c2"]);
     });
 
     it("a throw in fn rejects the whole map", async function () {
@@ -105,7 +106,7 @@ describe("mapWithConcurrency", function () {
         } catch (e) {
             err = e;
         }
-        expect(err).to.be.instanceOf(Error);
-        expect(err.message).to.equal("boom");
+        expect(err).toBeInstanceOf(Error);
+        expect(err.message).toBe("boom");
     });
 });

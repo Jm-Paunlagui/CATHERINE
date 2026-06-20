@@ -23,18 +23,18 @@
         "simulate:excess:teardown": "node scripts/simulate-excess-deduction.js --teardown",
         "build": "pkg . --out-path dist --targets node18-win-x64",
         "build:debug": "pkg . --out-path dist --targets node18-win-x64 --debug",
-        "test": "mocha --file test/server/setup.js \"test/server/**/*.test.js\" --timeout 60000 --exit --recursive",
-        "test:unit": "mocha --file test/server/setup.js \"test/server/unit/**/*.test.js\" --timeout 10000 --exit",
-        "test:integration": "mocha --file test/server/setup.js \"test/server/integration/**/*.test.js\" --timeout 30000 --exit",
-        "test:security": "mocha --file test/server/setup.js \"test/server/security/**/*.test.js\" --timeout 30000 --exit",
-        "test:performance": "mocha --file test/server/setup.js \"test/server/performance/**/*.test.js\" --timeout 60000 --exit",
-        "test:reliability": "mocha --file test/server/setup.js \"test/server/reliability/**/*.test.js\" --timeout 60000 --exit",
-        "test:chaos": "mocha --file test/server/setup.js \"test/server/chaos/**/*.test.js\" --timeout 60000 --exit",
-        "test:metrics": "mocha --file test/server/setup.js \"test/server/unit/middleware/metricsStore*.test.js\" \"test/server/unit/middleware/metricsRouteLabel.test.js\" \"test/server/unit/services/metricsService.test.js\" \"test/server/integration/metrics.test.js\" \"test/server/chaos/metrics-chaos.test.js\" --timeout 30000 --exit",
-        "test:audit": "mocha \"test/unit/**/*.test.js\" --timeout 15000 --exit --recursive",
-        "test:audit:formula": "mocha \"test/unit/services/settlementFormula.test.js\" --timeout 10000 --exit",
-        "test:audit:service": "mocha \"test/unit/services/consumptionService.audit.test.js\" --timeout 15000 --exit",
-        "test:audit:model": "mocha \"test/unit/models/consumptionModel.audit.test.js\" --timeout 10000 --exit"
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "test:ui": "vitest --ui",
+        "test:unit": "vitest run test/server/unit",
+        "test:integration": "vitest run test/server/integration",
+        "test:security": "vitest run test/server/security",
+        "test:performance": "vitest run test/server/performance",
+        "test:reliability": "vitest run test/server/reliability",
+        "test:chaos": "vitest run test/server/chaos",
+        "test:metrics": "vitest run test/server/unit/middleware/metricsStore.test.js test/server/unit/middleware/metricsStore.memory.test.js test/server/unit/middleware/metricsRouteLabel.test.js test/server/unit/services/metricsService.test.js test/server/integration/metrics.test.js test/server/integration/metrics/metrics.test.js test/server/chaos/metrics-chaos.test.js",
+        "test:audit:formula": "vitest run test/unit/services/settlementFormula.test.js"
     },
     "dependencies": {
         "archiver": "^8.0.0",
@@ -58,7 +58,7 @@
         "multer": "^2.1.1",
         "nanoid": "^5.1.7",
         "node-cache": "^5.1.2",
-        "nodemailer": "^8.0.5",
+        "nodemailer": "^9.0.1",
         "oracledb": "^6.10.0",
         "pdfkit": "^0.18.0",
         "uuid": "^11.1.1"
@@ -100,11 +100,9 @@
         ]
     },
     "devDependencies": {
-        "chai": "^6.2.2",
-        "chai-as-promised": "^8.0.2",
-        "mocha": "^11.7.5",
-        "sinon": "^21.0.3",
-        "supertest": "^7.2.2"
+        "@vitest/coverage-v8": "^4.1.9",
+        "supertest": "^7.2.2",
+        "vitest": "^4.1.9"
     },
     "overrides": {
         "uuid": "^11.1.1"

@@ -1,6 +1,5 @@
 "use strict";
 
-const { expect } = require("chai");
 const request = require("supertest");
 const express = require("express");
 const jwt = require("jsonwebtoken");
@@ -69,21 +68,21 @@ describe("Auth Security", function () {
     let agent;
     let _originalJwtSecret;
 
-    before(function () {
+    beforeAll(function () {
         _originalJwtSecret = process.env.JWT_SECRET;
         process.env.JWT_SECRET = TEST_SECRET;
         agent = request(buildAuthTestApp());
     });
 
-    after(function () {
+    afterAll(function () {
         process.env.JWT_SECRET = _originalJwtSecret;
     });
 
     describe("missing token", function () {
         it("returns 401 when no Authorization header is provided", async function () {
             const res = await agent.get("/api/v1/protected");
-            expect(res.status).to.equal(401);
-            expect(res.body.error.type).to.equal("AuthenticationError");
+            expect(res.status).toBe(401);
+            expect(res.body.error.type).toBe("AuthenticationError");
         });
 
         it("returns 403 when Authorization header is malformed (M-11: tampered → 403)", async function () {
@@ -91,14 +90,14 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/protected")
                 .set("Authorization", "NotBearer abc");
-            expect(res.status).to.equal(403);
+            expect(res.status).toBe(403);
         });
 
         it("returns 401 when token is present in neither header nor cookie", async function () {
             const res = await agent
                 .get("/api/v1/protected")
                 .unset("Authorization");
-            expect(res.status).to.equal(401);
+            expect(res.status).toBe(401);
         });
     });
 
@@ -109,7 +108,7 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/protected")
                 .set("Authorization", `Bearer ${forged}`);
-            expect(res.status).to.equal(403);
+            expect(res.status).toBe(403);
         });
 
         it("returns 440 for an expired token", async function () {
@@ -117,7 +116,7 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/protected")
                 .set("Authorization", `Bearer ${expired}`);
-            expect(res.status).to.equal(440);
+            expect(res.status).toBe(440);
         });
 
         it("returns 401 for a structurally invalid JWT", async function () {
@@ -125,7 +124,7 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/protected")
                 .set("Authorization", "Bearer not.a.jwt");
-            expect(res.status).to.equal(401);
+            expect(res.status).toBe(401);
         });
 
         it("returns 403 for a token with a tampered payload (M-11: tampered → 403)", async function () {
@@ -139,7 +138,7 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/protected")
                 .set("Authorization", `Bearer ${tampered}`);
-            expect(res.status).to.equal(403);
+            expect(res.status).toBe(403);
         });
     });
 
@@ -149,8 +148,8 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/admin/dashboard")
                 .set("Authorization", `Bearer ${token}`);
-            expect(res.status).to.equal(403);
-            expect(res.body.error.type).to.equal("AuthorizationError");
+            expect(res.status).toBe(403);
+            expect(res.body.error.type).toBe("AuthorizationError");
         });
 
         it("returns 200 when user level meets route requirement", async function () {
@@ -158,8 +157,8 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/admin/dashboard")
                 .set("Authorization", `Bearer ${token}`);
-            expect(res.status).to.equal(200);
-            expect(res.body.status).to.equal("success");
+            expect(res.status).toBe(200);
+            expect(res.body.status).toBe("success");
         });
     });
 
@@ -171,10 +170,10 @@ describe("Auth Security", function () {
                 .get("/api/v1/protected")
                 .set(
                     "Cookie",
-                    `meal.access-token=${encodeURIComponent(signed)}`,
+                    `app.access-token=${encodeURIComponent(signed)}`,
                 );
-            expect(res.status).to.equal(200);
-            expect(res.body.status).to.equal("success");
+            expect(res.status).toBe(200);
+            expect(res.body.status).toBe("success");
         });
 
         it("returns 401 when an unsigned (plain) cookie token is provided", async function () {
@@ -182,8 +181,8 @@ describe("Auth Security", function () {
             const token = signToken({ userLevel: 1 });
             const res = await agent
                 .get("/api/v1/protected")
-                .set("Cookie", `meal.access-token=${token}`);
-            expect(res.status).to.equal(401);
+                .set("Cookie", `app.access-token=${token}`);
+            expect(res.status).toBe(401);
         });
 
         it("returns 401 when cookie is signed with the wrong secret", async function () {
@@ -193,9 +192,9 @@ describe("Auth Security", function () {
                 .get("/api/v1/protected")
                 .set(
                     "Cookie",
-                    `meal.access-token=${encodeURIComponent(badSigned)}`,
+                    `app.access-token=${encodeURIComponent(badSigned)}`,
                 );
-            expect(res.status).to.equal(401);
+            expect(res.status).toBe(401);
         });
 
         it("prefers Authorization header over signed cookie", async function () {
@@ -207,19 +206,19 @@ describe("Auth Security", function () {
                 .set("Authorization", `Bearer ${headerToken}`)
                 .set(
                     "Cookie",
-                    `meal.access-token=${encodeURIComponent(signed)}`,
+                    `app.access-token=${encodeURIComponent(signed)}`,
                 );
             // Header token has userLevel 3 → should pass the >= 2 check
-            expect(res.status).to.equal(200);
+            expect(res.status).toBe(200);
         });
     });
 
     describe("authenticateForDownload (HTML error responses)", function () {
         it("returns 401 HTML when no token is provided on a download route", async function () {
             const res = await agent.get("/api/v1/report/export/test");
-            expect(res.status).to.equal(401);
-            expect(res.headers["content-type"]).to.include("text/html");
-            expect(res.text).to.include("Authentication Required");
+            expect(res.status).toBe(401);
+            expect(res.headers["content-type"]).toContain("text/html");
+            expect(res.text).toContain("Authentication Required");
         });
 
         it("returns 440 HTML when an expired token is provided on a download route", async function () {
@@ -227,9 +226,9 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/report/export/test")
                 .set("Authorization", `Bearer ${expired}`);
-            expect(res.status).to.equal(440);
-            expect(res.headers["content-type"]).to.include("text/html");
-            expect(res.text).to.include("Session Expired");
+            expect(res.status).toBe(440);
+            expect(res.headers["content-type"]).toContain("text/html");
+            expect(res.text).toContain("Session Expired");
         });
 
         it("returns 403 HTML when a forged token is provided on a download route (M-11: tampered → 403)", async function () {
@@ -238,9 +237,9 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/report/export/test")
                 .set("Authorization", `Bearer ${forged}`);
-            expect(res.status).to.equal(403);
-            expect(res.headers["content-type"]).to.include("text/html");
-            expect(res.text).to.include("Access Denied");
+            expect(res.status).toBe(403);
+            expect(res.headers["content-type"]).toContain("text/html");
+            expect(res.text).toContain("Access Denied");
         });
 
         it("returns 200 JSON when a valid token is provided on a download route", async function () {
@@ -248,8 +247,8 @@ describe("Auth Security", function () {
             const res = await agent
                 .get("/api/v1/report/export/test")
                 .set("Authorization", `Bearer ${token}`);
-            expect(res.status).to.equal(200);
-            expect(res.body.status).to.equal("success");
+            expect(res.status).toBe(200);
+            expect(res.body.status).toBe("success");
         });
 
         it("returns 200 when a valid signed cookie is used on a download route", async function () {
@@ -259,9 +258,9 @@ describe("Auth Security", function () {
                 .get("/api/v1/report/export/test")
                 .set(
                     "Cookie",
-                    `meal.access-token=${encodeURIComponent(signed)}`,
+                    `app.access-token=${encodeURIComponent(signed)}`,
                 );
-            expect(res.status).to.equal(200);
+            expect(res.status).toBe(200);
         });
     });
 });

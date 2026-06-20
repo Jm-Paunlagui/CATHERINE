@@ -1,6 +1,5 @@
 "use strict";
 
-const { expect } = require("chai");
 const agent = require("../helpers/request");
 
 // Payloads that should never reach the DB or be reflected in a 500
@@ -31,7 +30,7 @@ describe("Injection Attack Mitigation", function () {
       it(`rejects or sanitizes: ${payload.slice(0, 40)}`, async function () {
         const res = await agent.get("/api/v1/users").query({ search: payload });
         // Must not crash the server with a 500
-        expect(res.status).to.not.equal(500);
+        expect(res.status).not.toBe(500);
       });
     });
   });
@@ -42,7 +41,7 @@ describe("Injection Attack Mitigation", function () {
         const res = await agent
           .post("/api/v1/auth/login")
           .send({ username: payload, password: "test" });
-        expect(res.status).to.not.equal(500);
+        expect(res.status).not.toBe(500);
       });
     });
   });
@@ -52,7 +51,7 @@ describe("Injection Attack Mitigation", function () {
       it(`path traversal blocked: ${payload}`, async function () {
         const res = await agent.get(`/api/v1/${encodeURIComponent(payload)}`);
         // Security filter should return 400, 403, or 404 — never 200
-        expect([400, 403, 404]).to.include(res.status);
+        expect([400, 403, 404]).toContain(res.status);
       });
     });
   });
@@ -62,8 +61,8 @@ describe("Injection Attack Mitigation", function () {
       it(`XSS payload not reflected: ${payload.slice(0, 40)}`, async function () {
         const res = await agent.get("/api/v1/search").query({ q: payload });
         // Response body must never echo the script tag verbatim
-        expect(JSON.stringify(res.body)).to.not.include("<script>");
-        expect(JSON.stringify(res.body)).to.not.include("onerror=");
+        expect(JSON.stringify(res.body)).not.toContain("<script>");
+        expect(JSON.stringify(res.body)).not.toContain("onerror=");
       });
     });
   });

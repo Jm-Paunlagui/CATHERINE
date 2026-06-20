@@ -12,7 +12,6 @@
  * Store: `adminList` (TTL 600s, maxKeys 50)
  *
  *   GET /        → key: adminList  (full roster, no query params)
- *   GET /search  → NOT cached (real-time HRIS search; user expects live results)
  *
  * Invalidation: any mutation (create, update, delete) triggers a namespace wipe
  * via `delByPattern('adminList')`. The roster is small (< 100 rows) so a full

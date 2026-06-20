@@ -11,7 +11,6 @@
  *   - frontend ingestion happy/sad paths (CSRF-protected POST)
  */
 
-const { expect } = require("chai");
 const request = require("supertest");
 const agent = require("../helpers/request");
 const app = require("../../../src/app");
@@ -21,113 +20,144 @@ const adminToken = signToken({ userLevel: 2 });
 const userToken = signToken({ userLevel: 1 });
 
 describe("GET /api/v1/metrics (snapshot, userLevel >= 2)", function () {
-  it("returns 401 without a token", async function () {
-    const res = await agent.get("/api/v1/metrics");
-    expect(res.status).to.equal(401);
-  });
+    it("returns 401 without a token", async function () {
+        const res = await agent.get("/api/v1/metrics");
+        expect(res.status).toBe(401);
+    });
 
-  it("returns 403 for an under-privileged user (level 1)", async function () {
-    const res = await agent.get("/api/v1/metrics").set("Authorization", `Bearer ${userToken}`);
-    expect(res.status).to.equal(403);
-  });
+    it("returns 403 for an under-privileged user (level 1)", async function () {
+        const res = await agent
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${userToken}`);
+        expect(res.status).toBe(403);
+    });
 
-  it("returns 200 with the standard envelope for an admin", async function () {
-    const res = await agent.get("/api/v1/metrics").set("Authorization", `Bearer ${adminToken}`);
-    expect(res.status).to.equal(200);
-    expect(res.body).to.include.keys("status", "code", "message", "data");
-    expect(res.body.status).to.equal("success");
-  });
+    it("returns 200 with the standard envelope for an admin", async function () {
+        const res = await agent
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${adminToken}`);
+        expect(res.status).toBe(200);
+        expect(res.body).toMatchObject({status: expect.anything(), code: expect.anything(), message: expect.anything(), data: expect.anything()});
+        expect(res.body.status).toBe("success");
+    });
 
-  it("snapshot exposes the real heap ceiling (heapSizeLimit)", async function () {
-    const res = await agent.get("/api/v1/metrics").set("Authorization", `Bearer ${adminToken}`);
-    const { memory } = res.body.data.system;
-    expect(memory).to.have.property("heapSizeLimit").that.is.a("number");
-    expect(memory.heapSizeLimit).to.be.greaterThan(memory.heapTotal);
-  });
+    it("snapshot exposes the real heap ceiling (heapSizeLimit)", async function () {
+        const res = await agent
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${adminToken}`);
+        const { memory } = res.body.data.system;
+        expect(memory).toHaveProperty("heapSizeLimit");
+        expect(memory["heapSizeLimit"]).toEqual(expect.any(Number));
+        expect(memory.heapSizeLimit).toBeGreaterThan(memory.heapTotal);
+    });
 
-  it("snapshot exposes GC breakdown, overhead, and the memoryTrend leak detector", async function () {
-    const res = await agent.get("/api/v1/metrics").set("Authorization", `Bearer ${adminToken}`);
-    const { gc, memoryTrend } = res.body.data.system;
-    expect(gc).to.include.keys("major", "minor", "incremental", "weakcb", "overheadPct", "recent");
-    expect(memoryTrend).to.include.keys("suspected", "growthBytesPerMin", "windowMs", "sampleCount");
-    expect(memoryTrend.suspected).to.be.a("boolean");
-  });
+    it("snapshot exposes GC breakdown, overhead, and the memoryTrend leak detector", async function () {
+        const res = await agent
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${adminToken}`);
+        const { gc, memoryTrend } = res.body.data.system;
+        expect(gc).toMatchObject({major: expect.anything(), minor: expect.anything(), incremental: expect.anything(), weakcb: expect.anything(), overheadPct: expect.anything(), recent: expect.anything()});
+        expect(memoryTrend).toMatchObject({suspected: expect.anything(), growthBytesPerMin: expect.anything(), windowMs: expect.anything(), sampleCount: expect.anything()});
+        expect(memoryTrend.suspected).toEqual(expect.any(Boolean));
+    });
 
-  it("sets X-Request-ID on the response", async function () {
-    const res = await agent.get("/api/v1/metrics").set("Authorization", `Bearer ${adminToken}`);
-    expect(res.headers).to.have.property("x-request-id");
-  });
+    it("sets X-Request-ID on the response", async function () {
+        const res = await agent
+            .get("/api/v1/metrics")
+            .set("Authorization", `Bearer ${adminToken}`);
+        expect(res.headers).toHaveProperty("x-request-id");
+    });
 });
 
 describe("GET /api/v1/metrics/summary (userLevel >= 1)", function () {
-  it("returns 401 without a token", async function () {
-    expect((await agent.get("/api/v1/metrics/summary")).status).to.equal(401);
-  });
+    it("returns 401 without a token", async function () {
+        expect((await agent.get("/api/v1/metrics/summary")).status).toBe(401);
+    });
 
-  it("returns 200 for a standard user and includes heapLimitMb", async function () {
-    const res = await agent.get("/api/v1/metrics/summary").set("Authorization", `Bearer ${userToken}`);
-    expect(res.status).to.equal(200);
-    expect(res.body.data.system).to.include.keys("heapUsedMb", "heapTotalMb", "heapLimitMb");
-  });
+    it("returns 200 for a standard user and includes heapLimitMb", async function () {
+        const res = await agent
+            .get("/api/v1/metrics/summary")
+            .set("Authorization", `Bearer ${userToken}`);
+        expect(res.status).toBe(200);
+        expect(res.body.data.system).toMatchObject({heapUsedMb: expect.anything(), heapTotalMb: expect.anything(), heapLimitMb: expect.anything()});
+    });
 });
 
 describe("GET /api/v1/metrics/alerts (userLevel >= 2)", function () {
-  it("returns 403 for an under-privileged user", async function () {
-    const res = await agent.get("/api/v1/metrics/alerts").set("Authorization", `Bearer ${userToken}`);
-    expect(res.status).to.equal(403);
-  });
+    it("returns 403 for an under-privileged user", async function () {
+        const res = await agent
+            .get("/api/v1/metrics/alerts")
+            .set("Authorization", `Bearer ${userToken}`);
+        expect(res.status).toBe(403);
+    });
 
-  it("returns an alerts array + count for an admin", async function () {
-    const res = await agent.get("/api/v1/metrics/alerts").set("Authorization", `Bearer ${adminToken}`);
-    expect(res.status).to.equal(200);
-    expect(res.body.data).to.have.property("alerts").that.is.an("array");
-    expect(res.body.data).to.have.property("count").that.is.a("number");
-  });
+    it("returns an alerts array + count for an admin", async function () {
+        const res = await agent
+            .get("/api/v1/metrics/alerts")
+            .set("Authorization", `Bearer ${adminToken}`);
+        expect(res.status).toBe(200);
+        expect(res.body.data).toHaveProperty("alerts");
+        expect(res.body.data).toHaveProperty("count");
+        expect(res.body.data["count"]).toEqual(expect.any(Number));
+    });
 });
 
 describe("POST /api/v1/metrics/frontend (CSRF-protected, no auth)", function () {
-  // A persistent agent retains the CSRF cookie between the token fetch and POST.
-  let csrfAgent;
-  let csrfToken;
+    // A persistent agent retains the CSRF cookie between the token fetch and POST.
+    let csrfAgent;
+    let csrfToken;
 
-  beforeEach(async function () {
-    // The frontend ingest limiter (30 req/min, keyed by IP) is module-level
-    // state shared across the entire mocha process; all supertest requests
-    // come from 127.0.0.1, so earlier suites can exhaust the window and turn
-    // these assertions into 429s. Flush it for deterministic results.
-    const { frontendIngestLimiter } = require("../../../src/routes/metrics.route");
-    frontendIngestLimiter.flushAll();
+    beforeEach(async function () {
+        // The frontend ingest limiter (30 req/min, keyed by IP) is module-level
+        // state shared across the entire mocha process; all supertest requests
+        // come from 127.0.0.1, so earlier suites can exhaust the window and turn
+        // these assertions into 429s. Flush it for deterministic results.
+        const {
+            frontendIngestLimiter,
+        } = require("../../../src/routes/metrics.route");
+        frontendIngestLimiter.flushAll();
 
-    csrfAgent = request.agent(app);
-    const tokenRes = await csrfAgent.get("/api/v1/csrf/token");
-    csrfToken = tokenRes.body.token;
-  });
+        csrfAgent = request.agent(app);
+        const tokenRes = await csrfAgent.get("/api/v1/csrf/token");
+        csrfToken = tokenRes.body.token;
+    });
 
-  it("rejects a POST with no CSRF token (403)", async function () {
-    const res = await csrfAgent.post("/api/v1/metrics/frontend").send([{ type: "vital", name: "LCP", value: 1 }]);
-    expect(res.status).to.equal(403);
-  });
+    it("rejects a POST with no CSRF token (403)", async function () {
+        const res = await csrfAgent
+            .post("/api/v1/metrics/frontend")
+            .send([{ type: "vital", name: "LCP", value: 1 }]);
+        expect(res.status).toBe(403);
+    });
 
-  it("accepts a valid vitals batch with a CSRF token (200)", async function () {
-    const res = await csrfAgent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", csrfToken)
-      .send([{ type: "vital", name: "LCP", value: 1234, rating: "good" }]);
-    expect(res.status).to.equal(200);
-    expect(res.body.status).to.equal("success");
-  });
+    it("accepts a valid vitals batch with a CSRF token (200)", async function () {
+        const res = await csrfAgent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .send([
+                { type: "vital", name: "LCP", value: 1234, rating: "good" },
+            ]);
+        expect(res.status).toBe(200);
+        expect(res.body.status).toBe("success");
+    });
 
-  it("rejects a non-array payload with 400 (not CSRF)", async function () {
-    const res = await csrfAgent
-      .post("/api/v1/metrics/frontend")
-      .set("x-csrf-token", csrfToken)
-      .send({ not: "an array" });
-    expect(res.status).to.equal(400);
-  });
+    it("rejects a non-array payload with 400 (not CSRF)", async function () {
+        const res = await csrfAgent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .send({ not: "an array" });
+        expect(res.status).toBe(400);
+    });
 
-  it("rejects an oversized batch (>50 events) with 400", async function () {
-    const payload = Array.from({ length: 51 }, () => ({ type: "vital", name: "CLS", value: 0.1 }));
-    const res = await csrfAgent.post("/api/v1/metrics/frontend").set("x-csrf-token", csrfToken).send(payload);
-    expect(res.status).to.equal(400);
-  });
+    it("rejects an oversized batch (>50 events) with 400", async function () {
+        const payload = Array.from({ length: 51 }, () => ({
+            type: "vital",
+            name: "CLS",
+            value: 0.1,
+        }));
+        const res = await csrfAgent
+            .post("/api/v1/metrics/frontend")
+            .set("x-csrf-token", csrfToken)
+            .send(payload);
+        expect(res.status).toBe(400);
+    });
 });

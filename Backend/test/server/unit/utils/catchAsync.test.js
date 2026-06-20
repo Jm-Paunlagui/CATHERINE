@@ -1,101 +1,112 @@
 "use strict";
 
-const { expect } = require("chai");
 const { catchAsync } = require("../../../../src/utils/catchAsync");
 
 describe("catchAsync", function () {
-  function mockReq() {
-    return { method: "GET", path: "/test" };
-  }
+    function mockReq() {
+        return { method: "GET", path: "/test" };
+    }
 
-  function mockRes() {
-    return {
-      status(code) {
-        this._status = code;
-        return this;
-      },
-      json(body) {
-        this._body = body;
-        return this;
-      },
-    };
-  }
+    function mockRes() {
+        return {
+            status(code) {
+                this._status = code;
+                return this;
+            },
+            json(body) {
+                this._body = body;
+                return this;
+            },
+        };
+    }
 
-  it("returns a function", function () {
-    const wrapped = catchAsync(async () => {});
-    expect(wrapped).to.be.a("function");
-  });
-
-  it("calls the wrapped function with req, res, next", function (done) {
-    const req = mockReq();
-    const res = mockRes();
-
-    const wrapped = catchAsync(async (r, s, n) => {
-      expect(r).to.equal(req);
-      expect(s).to.equal(res);
-      done();
+    it("returns a function", function () {
+        const wrapped = catchAsync(async () => {});
+        expect(wrapped).toBeInstanceOf(Function);
     });
 
-    wrapped(req, res, () => {});
-  });
+    it("calls the wrapped function with req, res, next", function (done) {
+        const req = mockReq();
+        const res = mockRes();
 
-  it("calls next() with the error when the async function rejects", function (done) {
-    const error = new Error("test failure");
+        const wrapped = catchAsync(async (r, s, n) => {
+            expect(r).toBe(req);
+            expect(s).toBe(res);
+            done();
+        });
 
-    const wrapped = catchAsync(async () => {
-      throw error;
+        wrapped(req, res, () => {});
     });
 
-    wrapped(mockReq(), mockRes(), (err) => {
-      expect(err).to.equal(error);
-      done();
-    });
-  });
+    it("calls next() with the error when the async function rejects", () => new Promise((resolve, reject) => {
+        const done = (e) => e ? reject(e) : resolve();
 
-  it("does not call next() when the async function resolves", function (done) {
-    const wrapped = catchAsync(async (req, res) => {
-      res.json({ ok: true });
-    });
+        const error = new Error("test failure");
 
-    const res = mockRes();
-    let nextCalled = false;
+        const wrapped = catchAsync(async () => {
+            throw error;
+        });
 
-    wrapped(mockReq(), res, () => {
-      nextCalled = true;
-    });
+        wrapped(mockReq(), mockRes(), (err) => {
+            expect(err).toBe(error);
+            done();
+        });
+    
+        }));
 
-    setTimeout(() => {
-      expect(nextCalled).to.be.false;
-      expect(res._body).to.deep.equal({ ok: true });
-      done();
-    }, 20);
-  });
+    it("does not call next() when the async function resolves", () => new Promise((resolve, reject) => {
+        const done = (e) => e ? reject(e) : resolve();
 
-  it("handles synchronous functions that return a value", function (done) {
-    const wrapped = catchAsync((req, res) => {
-      res.json({ sync: true });
-    });
+        const wrapped = catchAsync(async (req, res) => {
+            res.json({ ok: true });
+        });
 
-    const res = mockRes();
-    wrapped(mockReq(), res, (err) => {
-      done(new Error("next should not be called"));
-    });
+        const res = mockRes();
+        let nextCalled = false;
 
-    setTimeout(() => {
-      expect(res._body).to.deep.equal({ sync: true });
-      done();
-    }, 20);
-  });
+        wrapped(mockReq(), res, () => {
+            nextCalled = true;
+        });
 
-  it("forwards synchronous throws to next()", function (done) {
-    const error = new Error("sync throw");
-    const wrapped = catchAsync(() => {
-      throw error;
-    });
+        setTimeout(() => {
+            expect(nextCalled).toBe(false);
+            expect(res._body).toEqual({ ok: true });
+            done();
+        }, 20);
+    
+        }));
 
-    wrapped(mockReq(), mockRes(), (err) => {
-      expect(err).to.equal(error);
-      done();
-    });
-  });
+    it("handles synchronous functions that return a value", () => new Promise((resolve, reject) => {
+        const done = (e) => e ? reject(e) : resolve();
+
+        const wrapped = catchAsync((req, res) => {
+            res.json({ sync: true });
+        });
+
+        const res = mockRes();
+        wrapped(mockReq(), res, (err) => {
+            done(new Error("next should not be called"));
+        });
+
+        setTimeout(() => {
+            expect(res._body).toEqual({ sync: true });
+            done();
+        }, 20);
+    
+        }));
+
+    it("forwards synchronous throws to next()", () => new Promise((resolve, reject) => {
+        const done = (e) => e ? reject(e) : resolve();
+
+        const error = new Error("sync throw");
+        const wrapped = catchAsync(() => {
+            throw error;
+        });
+
+        wrapped(mockReq(), mockRes(), (err) => {
+            expect(err).toBe(error);
+            done();
+        });
+    
+        }));
 });

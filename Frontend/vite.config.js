@@ -26,7 +26,7 @@ export default defineConfig({
     plugins: [react(), tailwindcss(), babel({ presets: [reactCompilerPreset()] })],
     server: {
         host: true,
-        port: 5173,
+        port: 5174,
     },
     base: "/", // Important for IIS deployment
     build: {

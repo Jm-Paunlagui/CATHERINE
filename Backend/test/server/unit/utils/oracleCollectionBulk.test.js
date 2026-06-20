@@ -13,7 +13,6 @@
  * binding path), so no withTransaction wiring is needed.
  */
 
-const { expect } = require("chai");
 const {
     OracleCollection,
 } = require("../../../../src/utils/oracle-mongo-wrapper/core/OracleCollection");
@@ -50,13 +49,10 @@ describe("OracleCollection.insertMany — options", function () {
             outBinds: [{ out_ID: [1] }, { out_ID: [2] }],
         });
         const coll = new OracleCollection("USERS", fakeDb, conn);
-        const res = await coll.insertMany([
-            { NAME: "Ana" },
-            { NAME: "Ben" },
-        ]);
-        expect(conn.calls[0].sql).to.match(/RETURNING "ID" INTO :out_ID/);
-        expect(res.insertedCount).to.equal(2);
-        expect(res.insertedIds).to.deep.equal([1, 2]);
+        const res = await coll.insertMany([{ NAME: "Ana" }, { NAME: "Ben" }]);
+        expect(conn.calls[0].sql).toMatch(/RETURNING "ID" INTO :out_ID/);
+        expect(res.insertedCount).toBe(2);
+        expect(res.insertedIds).toEqual([1, 2]);
     });
 
     it("custom returning column maps result.returning per row", async function () {
@@ -66,16 +62,16 @@ describe("OracleCollection.insertMany — options", function () {
         });
         const coll = new OracleCollection("TAP_WALLET", fakeDb, conn);
         const res = await coll.insertMany(
-            [{ GID: 1, CUTOFF_ID: 5 }, { GID: 2, CUTOFF_ID: 5 }],
+            [
+                { GID: 1, CUTOFF_ID: 5 },
+                { GID: 2, CUTOFF_ID: 5 },
+            ],
             { returning: ["WALLET_ID"] },
         );
-        expect(conn.calls[0].sql).to.match(
+        expect(conn.calls[0].sql).toMatch(
             /RETURNING "WALLET_ID" INTO :out_WALLET_ID/,
         );
-        expect(res.returning).to.deep.equal([
-            { WALLET_ID: 7 },
-            { WALLET_ID: 8 },
-        ]);
+        expect(res.returning).toEqual([{ WALLET_ID: 7 }, { WALLET_ID: 8 }]);
     });
 
     it("returning: [] omits the RETURNING clause entirely", async function () {
@@ -84,7 +80,7 @@ describe("OracleCollection.insertMany — options", function () {
         await coll.insertMany([{ CUTOFF_ID: 100, PAY_PERIOD: "Jun-30" }], {
             returning: [],
         });
-        expect(conn.calls[0].sql).to.not.match(/RETURNING/);
+        expect(conn.calls[0].sql).not.toMatch(/RETURNING/);
     });
 
     it("batchErrors:true forwards the flag and maps reported offsets", async function () {
@@ -97,8 +93,8 @@ describe("OracleCollection.insertMany — options", function () {
             [{ GID: 1 }, { GID: 2 }, { GID: 3 }],
             { returning: [], batchErrors: true },
         );
-        expect(conn.calls[0].options.batchErrors).to.equal(true);
-        expect(res.batchErrors).to.deep.equal([
+        expect(conn.calls[0].options.batchErrors).toBe(true);
+        expect(res.batchErrors).toEqual([
             { offset: 1, message: "ORA-00001: unique" },
         ]);
     });
@@ -114,8 +110,8 @@ describe("OracleCollection.insertMany — options", function () {
         } catch (e) {
             threw = e;
         }
-        expect(threw).to.not.equal(null);
-        expect(threw.message).to.match(/mutually exclusive/);
+        expect(threw).not.toBe(null);
+        expect(threw.message).toMatch(/mutually exclusive/);
     });
 
     it("throws on an empty documents array", async function () {
@@ -126,7 +122,7 @@ describe("OracleCollection.insertMany — options", function () {
         } catch (e) {
             threw = e;
         }
-        expect(threw).to.not.equal(null);
+        expect(threw).not.toBe(null);
     });
 });
 
@@ -142,13 +138,13 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
             { keys: ["WALLET_ID"] },
         );
         const { sql, rows } = conn.calls[0];
-        expect(sql).to.match(
+        expect(sql).toMatch(
             /UPDATE "TAP_WALLET" SET "ROW_HASH" = :s0 WHERE "WALLET_ID" = :k0/,
         );
         // Each bind row carries its set value (s0) and key value (k0).
-        expect(rows[0]).to.deep.equal({ s0: "ab", k0: 7 });
-        expect(rows[1]).to.deep.equal({ s0: "cd", k0: 8 });
-        expect(res.modifiedCount).to.equal(2);
+        expect(rows[0]).toEqual({ s0: "ab", k0: 7 });
+        expect(rows[1]).toEqual({ s0: "cd", k0: 8 });
+        expect(res.modifiedCount).toBe(2);
     });
 
     it("supports composite keys (multiple WHERE columns)", async function () {
@@ -159,11 +155,9 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
             { keys: ["GID", "CARD_NUMBER"] },
         );
         const { sql, rows } = conn.calls[0];
-        expect(sql).to.match(/SET "EMP_NAME" = :s0/);
-        expect(sql).to.match(
-            /WHERE "GID" = :k0 AND "CARD_NUMBER" = :k1/,
-        );
-        expect(rows[0]).to.deep.equal({ s0: "NEW", k0: 1, k1: 100 });
+        expect(sql).toMatch(/SET "EMP_NAME" = :s0/);
+        expect(sql).toMatch(/WHERE "GID" = :k0 AND "CARD_NUMBER" = :k1/);
+        expect(rows[0]).toEqual({ s0: "NEW", k0: 1, k1: 100 });
     });
 
     it("throws when keys are missing", async function () {
@@ -174,7 +168,7 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
         } catch (e) {
             threw = e;
         }
-        expect(threw).to.not.equal(null);
+        expect(threw).not.toBe(null);
     });
 
     it("throws when no non-key columns remain to update", async function () {
@@ -185,7 +179,7 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
         } catch (e) {
             threw = e;
         }
-        expect(threw).to.not.equal(null);
+        expect(threw).not.toBe(null);
     });
 
     it("throws on an empty rows array", async function () {
@@ -196,7 +190,7 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
         } catch (e) {
             threw = e;
         }
-        expect(threw).to.not.equal(null);
+        expect(threw).not.toBe(null);
     });
 });
 
@@ -209,9 +203,9 @@ describe("OracleCollection bulk — bind-type inference & sizing", function () {
             returning: [],
         });
         const defs = conn.calls[0].options.bindDefs;
-        expect(defs.v0.type).to.equal(ORACLEDB.NUMBER);
-        expect(defs.v1.type).to.equal(ORACLEDB.DATE);
-        expect(defs.v2.type).to.equal(ORACLEDB.STRING);
+        expect(defs.v0.type).toBe(ORACLEDB.NUMBER);
+        expect(defs.v1.type).toBe(ORACLEDB.DATE);
+        expect(defs.v2.type).toBe(ORACLEDB.STRING);
     });
 
     it("sizes string binds by UTF-8 BYTE length, not character count", async function () {
@@ -222,10 +216,10 @@ describe("OracleCollection bulk — bind-type inference & sizing", function () {
         const name = "ñ".repeat(120); // 120 chars, 240 bytes
         await coll.insertMany([{ EMP_NAME: name }], { returning: [] });
         const def = conn.calls[0].options.bindDefs.v0;
-        expect(def.type).to.equal(ORACLEDB.STRING);
+        expect(def.type).toBe(ORACLEDB.STRING);
         // maxSize must be at least the true byte length (240), which the old
         // char-count sizing (chars only) would have under-counted.
-        expect(def.maxSize).to.be.at.least(Buffer.byteLength(name, "utf8"));
+        expect(def.maxSize).toBeGreaterThanOrEqual(Buffer.byteLength(name, "utf8"));
     });
 
     it("scans all rows for a non-null sample when the first row's column is null", async function () {
@@ -233,7 +227,7 @@ describe("OracleCollection bulk — bind-type inference & sizing", function () {
         const coll = new OracleCollection("T", fakeDb, conn);
         await coll.insertMany([{ N: null }, { N: 7 }], { returning: [] });
         // Type resolved from the second row's number, not defaulted to STRING.
-        expect(conn.calls[0].options.bindDefs.v0.type).to.equal(ORACLEDB.NUMBER);
+        expect(conn.calls[0].options.bindDefs.v0.type).toBe(ORACLEDB.NUMBER);
     });
 
     it("bulkUpdateByKeys sizes value binds by byte length too", async function () {
@@ -244,7 +238,7 @@ describe("OracleCollection bulk — bind-type inference & sizing", function () {
             keys: ["ID"],
         });
         const def = conn.calls[0].options.bindDefs.s0;
-        expect(def.maxSize).to.be.at.least(Buffer.byteLength(hash, "utf8"));
+        expect(def.maxSize).toBeGreaterThanOrEqual(Buffer.byteLength(hash, "utf8"));
     });
 });
 
@@ -254,12 +248,14 @@ describe("OracleCollection bulk — session binding", function () {
         const dbThatThrows = {
             oracledb: ORACLEDB,
             withTransaction() {
-                throw new Error("must not open a transaction when session-bound");
+                throw new Error(
+                    "must not open a transaction when session-bound",
+                );
             },
         };
         const coll = new OracleCollection("T", dbThatThrows, conn);
         await coll.insertMany([{ A: 1 }], { returning: [] });
-        expect(conn.calls).to.have.lengthOf(1); // ran straight on the conn
+        expect(conn.calls).toHaveLength(1); // ran straight on the conn
     });
 
     it("insertMany without a bound conn routes through db.withTransaction", async function () {
@@ -274,8 +270,8 @@ describe("OracleCollection bulk — session binding", function () {
         };
         const coll = new OracleCollection("T", db); // no conn
         await coll.insertMany([{ A: 1 }], { returning: [] });
-        expect(routed).to.equal(true);
-        expect(conn.calls).to.have.lengthOf(1);
+        expect(routed).toBe(true);
+        expect(conn.calls).toHaveLength(1);
     });
 
     it("bulkUpdateByKeys runs on the bound connection without a new transaction", async function () {
@@ -283,11 +279,13 @@ describe("OracleCollection bulk — session binding", function () {
         const dbThatThrows = {
             oracledb: ORACLEDB,
             withTransaction() {
-                throw new Error("must not open a transaction when session-bound");
+                throw new Error(
+                    "must not open a transaction when session-bound",
+                );
             },
         };
         const coll = new OracleCollection("T", dbThatThrows, conn);
         await coll.bulkUpdateByKeys([{ ID: 1, V: 2 }], { keys: ["ID"] });
-        expect(conn.calls).to.have.lengthOf(1);
+        expect(conn.calls).toHaveLength(1);
     });
 });

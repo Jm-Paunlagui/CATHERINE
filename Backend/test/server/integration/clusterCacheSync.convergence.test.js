@@ -16,8 +16,9 @@
  *   C5  an IPC send failure degrades gracefully (origin updated; no crash)
  */
 
-const { expect } = require("chai");
-const { CacheRegistry } = require("../../../src/middleware/cache/CacheRegistry");
+const {
+    CacheRegistry,
+} = require("../../../src/middleware/cache/CacheRegistry");
 const {
     ClusterCacheSync,
 } = require("../../../src/middleware/cache/ClusterCacheSync");
@@ -88,9 +89,9 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
                 .resolve("subsidy")
                 .keys()
                 .filter((k) => k.includes("subsidy"));
-            expect(subsidyKeys, `worker ${i} subsidy keys`).to.have.lengthOf(0);
+            expect(subsidyKeys, `worker ${i} subsidy keys`).toHaveLength(0);
             // Other namespaces are untouched on every worker.
-            expect(workers[i].resolve("billing").keys()).to.have.lengthOf(1);
+            expect(workers[i].resolve("billing").keys()).toHaveLength(1);
         }
     });
 
@@ -99,13 +100,13 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         originIndex = 0;
         workers[0].resolve("subsidy").del("subsidy:type=years");
         for (let i = 0; i < workers.length; i++) {
-            expect(workers[i].resolve("subsidy").has("subsidy:type=years")).to.equal(
-                false,
-            );
+            expect(
+                workers[i].resolve("subsidy").has("subsidy:type=years"),
+            ).toBe(false);
             // The other subsidy key survives (surgical, not a flush).
             expect(
                 workers[i].resolve("subsidy").has("subsidy:year=2026:month=3"),
-            ).to.equal(true);
+            ).toBe(true);
         }
     });
 
@@ -114,9 +115,11 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         originIndex = 5;
         workers[5].resolve("billing").flush();
         for (let i = 0; i < workers.length; i++) {
-            expect(workers[i].resolve("billing").keys()).to.have.lengthOf(0);
+            expect(workers[i].resolve("billing").keys()).toHaveLength(0);
             // subsidy store on every worker is untouched.
-            expect(workers[i].resolve("subsidy").keys().length).to.be.greaterThan(0);
+            expect(
+                workers[i].resolve("subsidy").keys().length,
+            ).toBeGreaterThan(0);
         }
     });
 
@@ -132,7 +135,7 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         workers[1].resolve("subsidy").delByPattern("subsidy");
         // Exactly ONE outbound broadcast (from the origin). The 7 relayed
         // applications must NOT trigger further broadcasts.
-        expect(sendCount).to.equal(1);
+        expect(sendCount).toBe(1);
     });
 
     // ── C4: a worker throwing during relay does not block the others ────────
@@ -160,18 +163,21 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
 
         expect(() =>
             workers[0].resolve("subsidy").delByPattern("subsidy"),
-        ).to.not.throw();
+        ).not.toThrow();
 
         // Every healthy worker converged; the guard is left clean for reuse.
         victim.delByPattern = realDel;
         for (let i = 0; i < workers.length; i++) {
             if (i === 4) continue;
             expect(
-                workers[i].resolve("subsidy").keys().filter((k) => k.includes("subsidy")),
+                workers[i]
+                    .resolve("subsidy")
+                    .keys()
+                    .filter((k) => k.includes("subsidy")),
                 `worker ${i}`,
-            ).to.have.lengthOf(0);
+            ).toHaveLength(0);
         }
-        expect(ClusterCacheSync._applyingRemote).to.equal(false);
+        expect(ClusterCacheSync._applyingRemote).toBe(false);
     });
 
     // ── C5: IPC send failure degrades gracefully ────────────────────────────
@@ -183,14 +189,20 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         // The write path must still succeed locally despite the relay failing.
         expect(() =>
             workers[3].resolve("subsidy").delByPattern("subsidy"),
-        ).to.not.throw();
+        ).not.toThrow();
         // Origin is updated; siblings are stale-until-TTL (acceptable bound).
         expect(
-            workers[3].resolve("subsidy").keys().filter((k) => k.includes("subsidy")),
-        ).to.have.lengthOf(0);
+            workers[3]
+                .resolve("subsidy")
+                .keys()
+                .filter((k) => k.includes("subsidy")),
+        ).toHaveLength(0);
         expect(
-            workers[0].resolve("subsidy").keys().filter((k) => k.includes("subsidy")),
-        ).to.have.lengthOf(2);
+            workers[0]
+                .resolve("subsidy")
+                .keys()
+                .filter((k) => k.includes("subsidy")),
+        ).toHaveLength(2);
     });
 
     // ── initPrimary relay tolerates a dead worker (w.send throws) ───────────
@@ -220,8 +232,8 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         // Worker 1 originates; relay must reach 3 even though 2 throws.
         expect(() =>
             handler(ClusterCacheSync._cluster.workers[1], msg),
-        ).to.not.throw();
-        expect(received.has(1)).to.equal(false); // origin skipped
-        expect(received.get(3)).to.deep.equal([msg]); // healthy sibling reached
+        ).not.toThrow();
+        expect(received.has(1)).toBe(false); // origin skipped
+        expect(received.get(3)).toEqual([msg]); // healthy sibling reached
     });
 });

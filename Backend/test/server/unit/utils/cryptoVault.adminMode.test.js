@@ -12,7 +12,6 @@
  * the hash round-trip is actually exercised.
  */
 
-const { expect } = require("chai");
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -22,9 +21,7 @@ const { expect } = require("chai");
  */
 function freshVault() {
     // Clear module cache for the vault and its lazy-init singletons
-    const key = require.resolve(
-        "../../../../src/utils/encryption/CryptoVault",
-    );
+    const key = require.resolve("../../../../src/utils/encryption/CryptoVault");
     delete require.cache[key];
     return require("../../../../src/utils/encryption/CryptoVault");
 }
@@ -60,7 +57,7 @@ const TEST_DATA_SIGNING_SECRET =
 // ─── Test suite ───────────────────────────────────────────────────────────────
 
 describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", function () {
-    this.timeout(20_000); // argon2 hashing can take several seconds
+
 
     // ── Mode resolution rules ──────────────────────────────────────────────────
 
@@ -76,7 +73,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 const { CryptoVault } = freshVault();
                 // In bcrypt mode, hashAdminPassword must produce a bcrypt hash
                 // We only test that it doesn't throw due to missing enc mode
-                expect(CryptoVault).to.exist;
+                expect(CryptoVault).toBeDefined();
             } finally {
                 restore();
             }
@@ -91,7 +88,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             });
             try {
                 const { CryptoVault } = freshVault();
-                expect(CryptoVault).to.exist;
+                expect(CryptoVault).toBeDefined();
             } finally {
                 restore();
             }
@@ -115,8 +112,10 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                     threw = true;
                     errorMsg = err.message;
                 }
-                expect(threw, "expected hashAdminPassword to reject").to.be.true;
-                expect(errorMsg).to.match(/PASSWORD_ENCRYPTION_MODE/);
+                expect(threw, "expected hashAdminPassword to reject").toBe(
+                    true,
+                );
+                expect(errorMsg).toMatch(/PASSWORD_ENCRYPTION_MODE/);
             } finally {
                 restore();
             }
@@ -138,8 +137,10 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                     threw = true;
                     errorMsg = err.message;
                 }
-                expect(threw, "expected hashAdminPassword to reject").to.be.true;
-                expect(errorMsg).to.match(/PASSWORD_ENCRYPTION_MODE/);
+                expect(threw, "expected hashAdminPassword to reject").toBe(
+                    true,
+                );
+                expect(errorMsg).toMatch(/PASSWORD_ENCRYPTION_MODE/);
             } finally {
                 restore();
             }
@@ -161,8 +162,10 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                     threw = true;
                     errorMsg = err.message;
                 }
-                expect(threw, "expected hashAdminPassword to reject").to.be.true;
-                expect(errorMsg).to.match(/bcrypt.*argon2|argon2.*bcrypt/i);
+                expect(threw, "expected hashAdminPassword to reject").toBe(
+                    true,
+                );
+                expect(errorMsg).toMatch(/bcrypt.*argon2|argon2.*bcrypt/i);
             } finally {
                 restore();
             }
@@ -178,7 +181,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             try {
                 const { CryptoVault } = freshVault();
                 // Should not throw on access
-                expect(CryptoVault).to.exist;
+                expect(CryptoVault).toBeDefined();
             } finally {
                 restore();
             }
@@ -194,7 +197,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             });
             try {
                 const { CryptoVault } = freshVault();
-                expect(CryptoVault).to.exist;
+                expect(CryptoVault).toBeDefined();
             } finally {
                 restore();
             }
@@ -214,7 +217,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             try {
                 const { CryptoVault } = freshVault();
                 const hash = await CryptoVault.hashAdminPassword("AdminPass1!");
-                expect(hash).to.match(/^\$argon2id\$/);
+                expect(hash).toMatch(/^\$argon2id\$/);
             } finally {
                 restore();
             }
@@ -229,7 +232,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             try {
                 const { CryptoVault } = freshVault();
                 const hash = await CryptoVault.hashAdminPassword("AdminPass1!");
-                expect(hash).to.match(/^\$2[ab]\$/);
+                expect(hash).toMatch(/^\$2[ab]\$/);
             } finally {
                 restore();
             }
@@ -246,7 +249,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             try {
                 const { CryptoVault } = freshVault();
                 const hash = await CryptoVault.hashAdminPassword("AdminPass1!");
-                expect(hash).to.match(/^\$argon2id\$/);
+                expect(hash).toMatch(/^\$argon2id\$/);
             } finally {
                 restore();
             }
@@ -262,7 +265,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             try {
                 const { CryptoVault } = freshVault();
                 const hash = await CryptoVault.hashAdminPassword("AdminPass1!");
-                expect(hash).to.match(/^\$2[ab]\$/);
+                expect(hash).toMatch(/^\$2[ab]\$/);
             } finally {
                 restore();
             }
@@ -277,7 +280,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 const { CryptoVault } = freshVault();
                 await expect(
                     CryptoVault.hashAdminPassword(""),
-                ).to.be.rejectedWith(TypeError);
+                ).rejects.toThrow(TypeError);
             } catch (err) {
                 // Some chai versions don't have rejectedWith without chai-as-promised
                 // Fallback: call directly and check
@@ -288,7 +291,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 } catch {
                     threw = true;
                 }
-                expect(threw).to.be.true;
+                expect(threw).toBe(true);
             } finally {
                 restore();
             }
@@ -309,8 +312,8 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 const hash = await CryptoVault.hashAdminPassword("Correct1!");
                 const { matched, newHash } =
                     await CryptoVault.verifyAdminPassword("Correct1!", hash);
-                expect(matched).to.be.true;
-                expect(newHash).to.be.null;
+                expect(matched).toBe(true);
+                expect(newHash).toBeNull();
             } finally {
                 restore();
             }
@@ -329,7 +332,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                     "Wrong1!",
                     hash,
                 );
-                expect(matched).to.be.false;
+                expect(matched).toBe(false);
             } finally {
                 restore();
             }
@@ -345,8 +348,8 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 const hash = await CryptoVault.hashAdminPassword("Correct1!");
                 const { matched, newHash } =
                     await CryptoVault.verifyAdminPassword("Correct1!", hash);
-                expect(matched).to.be.true;
-                expect(newHash).to.be.null;
+                expect(matched).toBe(true);
+                expect(newHash).toBeNull();
             } finally {
                 restore();
             }
@@ -372,8 +375,8 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                         "LegacyPass1!",
                         tripleDesHash,
                     );
-                expect(matched).to.be.true;
-                expect(newHash).to.match(
+                expect(matched).toBe(true);
+                expect(newHash).toMatch(
                     /^\$argon2id\$/,
                     "newHash should be argon2id for transparent migration",
                 );
@@ -398,8 +401,8 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                         "WrongPass!",
                         tripleDesHash,
                     );
-                expect(matched).to.be.false;
-                expect(newHash).to.be.null;
+                expect(matched).toBe(false);
+                expect(newHash).toBeNull();
             } finally {
                 restore();
             }
@@ -418,7 +421,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             try {
                 const { CryptoVault } = freshVault();
                 // A base64 string that is not a bcrypt or argon2 prefix
-                expect(CryptoVault.adminNeedsRehash("dGVzdA==")).to.be.true;
+                expect(CryptoVault.adminNeedsRehash("dGVzdA==")).toBe(true);
             } finally {
                 restore();
             }
@@ -433,7 +436,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             try {
                 const { CryptoVault } = freshVault();
                 const hash = await CryptoVault.hashAdminPassword("Fresh1!");
-                expect(CryptoVault.adminNeedsRehash(hash)).to.be.false;
+                expect(CryptoVault.adminNeedsRehash(hash)).toBe(false);
             } finally {
                 restore();
             }

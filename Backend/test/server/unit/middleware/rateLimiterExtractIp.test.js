@@ -13,7 +13,6 @@
  * per-IP rate limiting.
  */
 
-const { expect } = require("chai");
 const {
     RateLimiterMiddleware,
 } = require("../../../../src/middleware/security/RateLimiterMiddleware");
@@ -27,13 +26,13 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
                 headers: {},
             };
             const ip = RateLimiterMiddleware.extractIp(req);
-            expect(ip).to.equal("10.0.0.1");
+            expect(ip).toBe("10.0.0.1");
         });
 
         it("returns req.ip even when X-Forwarded-For header contains a different IP", function () {
             // Attacker sets XFF to 127.0.0.1 hoping to bypass rate limit
             const req = {
-                ip: "203.0.113.5",            // Express-resolved real IP
+                ip: "203.0.113.5", // Express-resolved real IP
                 method: "GET",
                 headers: {
                     "x-forwarded-for": "127.0.0.1", // forged
@@ -41,8 +40,8 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
             };
             const ip = RateLimiterMiddleware.extractIp(req);
             // Must return the Express-resolved IP, NOT the XFF value
-            expect(ip).to.equal("203.0.113.5");
-            expect(ip).to.not.equal("127.0.0.1");
+            expect(ip).toBe("203.0.113.5");
+            expect(ip).not.toBe("127.0.0.1");
         });
 
         it("does NOT return the first hop of X-Forwarded-For", function () {
@@ -54,8 +53,8 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
                 },
             };
             const ip = RateLimiterMiddleware.extractIp(req);
-            expect(ip).to.equal("198.51.100.7");
-            expect(ip).to.not.equal("1.2.3.4");
+            expect(ip).toBe("198.51.100.7");
+            expect(ip).not.toBe("1.2.3.4");
         });
 
         it("falls back to req.socket.remoteAddress when req.ip is undefined", function () {
@@ -66,7 +65,7 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
                 headers: {},
             };
             const ip = RateLimiterMiddleware.extractIp(req);
-            expect(ip).to.equal("192.168.1.99");
+            expect(ip).toBe("192.168.1.99");
         });
 
         it("returns 'unknown' when both req.ip and socket.remoteAddress are absent", function () {
@@ -77,7 +76,7 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
                 headers: {},
             };
             const ip = RateLimiterMiddleware.extractIp(req);
-            expect(ip).to.equal("unknown");
+            expect(ip).toBe("unknown");
         });
 
         it("returns 'unknown' when req.socket is absent entirely", function () {
@@ -87,13 +86,17 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
                 headers: {},
             };
             const ip = RateLimiterMiddleware.extractIp(req);
-            expect(ip).to.equal("unknown");
+            expect(ip).toBe("unknown");
         });
     });
 
     describe("rate limiting uses the correct IP (no XFF bypass)", function () {
-        it("rate-limits by req.ip, not by X-Forwarded-For value", function (done) {
-            const limiter = new RateLimiterMiddleware({ max: 1, windowMs: 60_000 });
+        it("rate-limits by req.ip, not by X-Forwarded-For value", () => new Promise((resolve, reject) => {
+            const done = (e) => e ? reject(e) : resolve();
+            const limiter = new RateLimiterMiddleware({
+                max: 1,
+                windowMs: 60_000,
+            });
 
             // Attacker sends two requests with forged XFF but same actual IP
             const realIp = "203.0.113.50";
@@ -112,10 +115,19 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
                 return {
                     _status: null,
                     headersSent: false,
-                    setHeader(k, v) { h[k] = v; },
-                    getHeader(k) { return h[k]; },
-                    status(c) { this._status = c; return this; },
-                    json(b) { this._body = b; },
+                    setHeader(k, v) {
+                        h[k] = v;
+                    },
+                    getHeader(k) {
+                        return h[k];
+                    },
+                    status(c) {
+                        this._status = c;
+                        return this;
+                    },
+                    json(b) {
+                        this._body = b;
+                    },
                     _headers: h,
                 };
             };
@@ -125,14 +137,18 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
                 // Second request: same real IP, different forged XFF — should be blocked
                 const res2 = mockRes();
                 limiter.handle(makeReq("1.2.3.4"), res2, () => {
-                    done(new Error("Second request should have been rate-limited"));
+                    done(
+                        new Error(
+                            "Second request should have been rate-limited",
+                        ),
+                    );
                 });
 
                 setTimeout(() => {
-                    expect(res2._status).to.equal(429);
+                    expect(res2._status).toBe(429);
                     done();
                 }, 20);
             });
-        });
+        }));
     });
 });

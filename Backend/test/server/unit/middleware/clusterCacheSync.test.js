@@ -11,7 +11,6 @@
  * relayed invalidation must NOT re-broadcast (no message storms).
  */
 
-const { expect } = require("chai");
 const {
     ClusterCacheSync,
 } = require("../../../../src/middleware/cache/ClusterCacheSync");
@@ -67,7 +66,7 @@ describe("ClusterCacheSync", function () {
             let sent = 0;
             ClusterCacheSync._send = () => sent++;
             ClusterCacheSync.broadcast("subsidy", "flush");
-            expect(sent).to.equal(0);
+            expect(sent).toBe(0);
         });
 
         it("sends a namespaced envelope when running as a worker", function () {
@@ -76,8 +75,8 @@ describe("ClusterCacheSync", function () {
             ClusterCacheSync._send = (m) => sent.push(m);
             ClusterCacheSync._applyingRemote = false;
             ClusterCacheSync.broadcast("billing", "delByPattern", "billing");
-            expect(sent).to.have.lengthOf(1);
-            expect(sent[0]).to.include({
+            expect(sent).toHaveLength(1);
+            expect(sent[0]).toMatchObject({
                 ch: ClusterCacheSync.CHANNEL,
                 store: "billing",
                 op: "delByPattern",
@@ -91,7 +90,7 @@ describe("ClusterCacheSync", function () {
             ClusterCacheSync._send = () => sent++;
             ClusterCacheSync._applyingRemote = true;
             ClusterCacheSync.broadcast("subsidy", "flush");
-            expect(sent).to.equal(0);
+            expect(sent).toBe(0);
         });
 
         it("swallows IPC send failures (stale-until-TTL fallback)", function () {
@@ -102,7 +101,7 @@ describe("ClusterCacheSync", function () {
             ClusterCacheSync._applyingRemote = false;
             expect(() =>
                 ClusterCacheSync.broadcast("subsidy", "flush"),
-            ).to.not.throw();
+            ).not.toThrow();
         });
     });
 
@@ -112,8 +111,8 @@ describe("ClusterCacheSync", function () {
             const reg = fakeRegistry({ subsidy: store });
             expect(
                 ClusterCacheSync.applyRemote(reg, { ch: "other", op: "flush" }),
-            ).to.equal(false);
-            expect(store.ops).to.have.lengthOf(0);
+            ).toBe(false);
+            expect(store.ops).toHaveLength(0);
         });
 
         it("applies a del op to the named store", function () {
@@ -125,8 +124,8 @@ describe("ClusterCacheSync", function () {
                 op: "del",
                 arg: ["k1", "k2"],
             });
-            expect(ok).to.equal(true);
-            expect(store.ops).to.deep.equal([["del", ["k1", "k2"]]]);
+            expect(ok).toBe(true);
+            expect(store.ops).toEqual([["del", ["k1", "k2"]]]);
         });
 
         it("applies delByPattern and flush ops", function () {
@@ -144,10 +143,7 @@ describe("ClusterCacheSync", function () {
                 op: "flush",
                 arg: null,
             });
-            expect(store.ops).to.deep.equal([
-                ["delByPattern", "billing"],
-                ["flush"],
-            ]);
+            expect(store.ops).toEqual([["delByPattern", "billing"], ["flush"]]);
         });
 
         it("sets the re-entrancy guard while applying, then clears it", function () {
@@ -163,8 +159,8 @@ describe("ClusterCacheSync", function () {
                 store: "subsidy",
                 op: "flush",
             });
-            expect(guardDuringApply).to.equal(true);
-            expect(ClusterCacheSync._applyingRemote).to.equal(false);
+            expect(guardDuringApply).toBe(true);
+            expect(ClusterCacheSync._applyingRemote).toBe(false);
         });
 
         it("returns false (does not throw) for an unregistered store", function () {
@@ -175,7 +171,7 @@ describe("ClusterCacheSync", function () {
                     store: "ghost",
                     op: "flush",
                 }),
-            ).to.equal(false);
+            ).toBe(false);
         });
     });
 
@@ -191,7 +187,11 @@ describe("ClusterCacheSync", function () {
             });
             let messageHandler;
             ClusterCacheSync._cluster = {
-                workers: { 1: makeWorker(1), 2: makeWorker(2), 3: makeWorker(3) },
+                workers: {
+                    1: makeWorker(1),
+                    2: makeWorker(2),
+                    3: makeWorker(3),
+                },
                 on(event, fn) {
                     if (event === "message") messageHandler = fn;
                 },
@@ -207,13 +207,19 @@ describe("ClusterCacheSync", function () {
             // Worker 1 originated the invalidation.
             messageHandler(ClusterCacheSync._cluster.workers[1], msg);
 
-            expect(relayed.has(1)).to.equal(false); // originator skipped
-            expect(relayed.get(2)).to.deep.equal([msg]);
-            expect(relayed.get(3)).to.deep.equal([msg]);
+            expect(relayed.has(1)).toBe(false); // originator skipped
+            expect(relayed.get(2)).toEqual([msg]);
+            expect(relayed.get(3)).toEqual([msg]);
         });
 
         it("ignores non-cache-sync messages on the primary", function () {
-            const w2 = { id: 2, sent: [], send(m) { this.sent.push(m); } };
+            const w2 = {
+                id: 2,
+                sent: [],
+                send(m) {
+                    this.sent.push(m);
+                },
+            };
             let messageHandler;
             ClusterCacheSync._cluster = {
                 workers: { 1: { id: 1, send() {} }, 2: w2 },
@@ -225,7 +231,7 @@ describe("ClusterCacheSync", function () {
             messageHandler(ClusterCacheSync._cluster.workers[1], {
                 ch: "something-else",
             });
-            expect(w2.sent).to.have.lengthOf(0);
+            expect(w2.sent).toHaveLength(0);
         });
     });
 });

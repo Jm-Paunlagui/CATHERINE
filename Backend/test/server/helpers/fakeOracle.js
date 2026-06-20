@@ -299,16 +299,15 @@ class FakeOracleConnection {
 }
 
 /**
- * Installs sinon stubs on the real `src/config` so the production model code
+ * Installs vi.spyOn mocks on the real `src/config` so the production model code
  * (which calls config.withTransaction / config.withConnection) runs against a
- * FakeOracleStore. Returns the store + a restore() to undo the stubs.
+ * FakeOracleStore. Returns the store + a restore() to undo the spies.
  *
- * @param {object} sinon  - the sinon instance the test already imports
  * @param {object} config - require("../../../src/config")
  * @param {object} schema - table schema for FakeOracleStore
  * @returns {{ store: FakeOracleStore, restore: () => void }}
  */
-function installFakeOracle(sinon, config, schema) {
+function installFakeOracle(config, schema) {
     const store = new FakeOracleStore(schema);
 
     const runTx = async (_name, fn) => {
@@ -342,14 +341,14 @@ function installFakeOracle(sinon, config, schema) {
         return fn(conn);
     };
 
-    sinon.stub(config, "withTransaction").callsFake(runTx);
-    sinon.stub(config, "withConnection").callsFake(runConn);
+    const txSpy = vi.spyOn(config, "withTransaction").mockImplementation(runTx);
+    const connSpy = vi.spyOn(config, "withConnection").mockImplementation(runConn);
 
     return {
         store,
         restore() {
-            if (config.withTransaction.restore) config.withTransaction.restore();
-            if (config.withConnection.restore) config.withConnection.restore();
+            txSpy.mockRestore();
+            connSpy.mockRestore();
         },
     };
 }

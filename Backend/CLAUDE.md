@@ -852,17 +852,32 @@ test/server/
 ## Test Stack
 
 ```
-mocha          — test runner (already a devDependency)
-chai           — assertions (already a devDependency)
-supertest      — HTTP integration testing against the Express app
-sinon          — spies, stubs, fakes (for isolating external dependencies)
+vitest             — test runner (devDependency)
+@vitest/coverage-v8 — V8 coverage provider
+supertest          — HTTP integration testing against the Express app
+expect (built-in)  — assertions (Vitest's Jest-compatible expect; replaces chai)
+vi (built-in)      — spies, stubs, fakes (replaces sinon)
 ```
 
-Install two additions:
+`describe`, `it`, `expect`, `vi`, and the `beforeAll`/`afterAll`/`beforeEach`/`afterEach`
+hooks are injected globally via `globals: true` in `vitest.config.js` — no per-file imports.
+
+Install (all dev-only):
 
 ```bash
-npm install --save-dev supertest sinon
+npm install --save-dev vitest @vitest/coverage-v8 supertest
 ```
+
+The runner is configured by `vitest.config.js` at the Backend root:
+
+- `pool: "forks"`, `fileParallelism: false` — each test file runs in its own child
+  process, sequentially, because the suite mutates shared in-memory middleware state.
+- `setupFiles: ["./test/server/setup.js"]` — sets `process.env.*` and stubs
+  `AuditLogService.insertAsync` before any module loads (see Test Setup below).
+- `include: ["test/**/*.test.js"]`; excludes `test/encryption/cryptosuite.test.js`
+  (custom async runner) and `test/oracle-mongo-wrapper/**` (standalone real-DB scripts
+  with their own `package.json`).
+- Coverage thresholds: branches 85, lines 80, functions 85, statements 80.
 
 ---
 
@@ -870,28 +885,58 @@ npm install --save-dev supertest sinon
 
 ```bash
 # All tests
-npx mocha 'test/**/*.test.js' --timeout 30000 --exit --recursive
+npm run test                # → vitest run
+
+# Watch mode / interactive UI
+npm run test:watch          # → vitest
+npm run test:ui             # → vitest --ui
+
+# Coverage (v8)
+npm run test:coverage       # → vitest run --coverage
 
 # Category by category
-npx mocha 'test/unit/**/*.test.js'         --timeout 10000 --exit
-npx mocha 'test/integration/**/*.test.js'  --timeout 30000 --exit
-npx mocha 'test/security/**/*.test.js'     --timeout 30000 --exit
-npx mocha 'test/performance/**/*.test.js'  --timeout 60000 --exit
-npx mocha 'test/reliability/**/*.test.js'  --timeout 60000 --exit
+npm run test:unit           # → vitest run test/server/unit
+npm run test:integration    # → vitest run test/server/integration
+npm run test:security       # → vitest run test/server/security
+npm run test:performance    # → vitest run test/server/performance
+npm run test:reliability    # → vitest run test/server/reliability
+npm run test:chaos          # → vitest run test/server/chaos
 ```
 
-Add to `package.json`:
+The `package.json` scripts:
 
 ```json
 "scripts": {
-  "test":              "mocha 'test/**/*.test.js' --timeout 30000 --exit --recursive",
-  "test:unit":         "mocha 'test/unit/**/*.test.js' --timeout 10000 --exit",
-  "test:integration":  "mocha 'test/integration/**/*.test.js' --timeout 30000 --exit",
-  "test:security":     "mocha 'test/security/**/*.test.js' --timeout 30000 --exit",
-  "test:performance":  "mocha 'test/performance/**/*.test.js' --timeout 60000 --exit",
-  "test:reliability":  "mocha 'test/reliability/**/*.test.js' --timeout 60000 --exit"
+  "test":             "vitest run",
+  "test:watch":       "vitest",
+  "test:coverage":    "vitest run --coverage",
+  "test:ui":          "vitest --ui",
+  "test:unit":        "vitest run test/server/unit",
+  "test:integration": "vitest run test/server/integration",
+  "test:security":    "vitest run test/server/security",
+  "test:performance": "vitest run test/server/performance",
+  "test:reliability": "vitest run test/server/reliability",
+  "test:chaos":       "vitest run test/server/chaos"
 }
 ```
+
+---
+
+## Test Setup
+
+`test/server/setup.js` (registered as a `setupFile`) runs before every test file:
+
+- Sets `process.env.*` (NODE_ENV=test, JWT/CSRF/COOKIE secrets, disabled IP filter
+  and clustering, unlimited rate limit, fake Oracle DSN). `dotenv.config()` never
+  overrides already-set vars, so these win regardless of the real `.env`.
+- In a global `beforeAll`, stubs `AuditLogService.insertAsync` with
+  `vi.spyOn(...).mockResolvedValue(undefined)` so the fire-and-forget audit write
+  after every response never tries to acquire a real Oracle connection (which would
+  starve the event loop and time out subsequent requests). `afterAll` calls
+  `vi.restoreAllMocks()`.
+
+Suites that test `AuditLogService` directly layer their own `vi.spyOn` on top; the
+inner mock wins while their block is active, then restores to this outer stub.
 
 ---
 
@@ -912,7 +957,7 @@ Unit tests verify individual classes and pure functions in complete isolation. N
 // test/unit/middleware/rateLimiter.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const {
   RateLimiterMiddleware,
 } = require("../../../src/middleware/security/RateLimiterMiddleware");
@@ -946,20 +991,20 @@ function mockRes() {
 describe("RateLimiterMiddleware", function () {
   describe("constructor validation", function () {
     it("throws RangeError when max <= 0", function () {
-      expect(() => new RateLimiterMiddleware({ max: 0 })).to.throw(RangeError);
-      expect(() => new RateLimiterMiddleware({ max: -1 })).to.throw(RangeError);
+      expect(() => new RateLimiterMiddleware({ max: 0 })).toThrow(RangeError);
+      expect(() => new RateLimiterMiddleware({ max: -1 })).toThrow(RangeError);
     });
 
     it("throws RangeError when windowMs <= 0", function () {
       expect(
         () => new RateLimiterMiddleware({ max: 10, windowMs: 0 }),
-      ).to.throw(RangeError);
+      ).toThrow(RangeError);
     });
 
     it("initializes with valid options", function () {
       expect(
         () => new RateLimiterMiddleware({ max: 10, windowMs: 60000 }),
-      ).to.not.throw();
+      ).not.toThrow();
     });
   });
 
@@ -985,8 +1030,8 @@ describe("RateLimiterMiddleware", function () {
       });
 
       setTimeout(() => {
-        expect(res._status).to.equal(429);
-        expect(res._body.status).to.equal("error");
+        expect(res._status).toBe(429);
+        expect(res._body.status).toBe("error");
         done();
       }, 10);
     });
@@ -995,9 +1040,9 @@ describe("RateLimiterMiddleware", function () {
       const limiter = new RateLimiterMiddleware({ max: 100, windowMs: 60000 });
       const res = mockRes();
       limiter.handle(mockReq(), res, () => {
-        expect(res._headers).to.have.property("RateLimit-Limit");
-        expect(res._headers).to.have.property("RateLimit-Remaining");
-        expect(res._headers).to.have.property("RateLimit-Reset");
+        expect(res._headers).toHaveProperty("RateLimit-Limit");
+        expect(res._headers).toHaveProperty("RateLimit-Remaining");
+        expect(res._headers).toHaveProperty("RateLimit-Reset");
         done();
       });
     });
@@ -1024,9 +1069,9 @@ describe("RateLimiterMiddleware", function () {
     it("returns a NodeCache stats object", function () {
       const limiter = new RateLimiterMiddleware({ max: 10, windowMs: 60000 });
       const stats = limiter.getStats();
-      expect(stats).to.be.an("object");
-      expect(stats).to.have.property("hits");
-      expect(stats).to.have.property("misses");
+      expect(stats).toBeTypeOf("object");
+      expect(stats).toHaveProperty("hits");
+      expect(stats).toHaveProperty("misses");
     });
   });
 });
@@ -1038,7 +1083,7 @@ describe("RateLimiterMiddleware", function () {
 // test/unit/middleware/ipFilter.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const {
   IpFilterMiddleware,
 } = require("../../../src/middleware/security/IpFilterMiddleware");
@@ -1110,15 +1155,17 @@ describe("IpFilterMiddleware", function () {
 
   describe("static helpers", function () {
     it("ipInCidr correctly classifies IPs", function () {
-      expect(IpFilterMiddleware.ipInCidr("192.168.1.5", "192.168.1.0/24")).to.be
-        .true;
-      expect(IpFilterMiddleware.ipInCidr("192.168.2.1", "192.168.1.0/24")).to.be
-        .false;
+      expect(
+        IpFilterMiddleware.ipInCidr("192.168.1.5", "192.168.1.0/24"),
+      ).toBe(true);
+      expect(
+        IpFilterMiddleware.ipInCidr("192.168.2.1", "192.168.1.0/24"),
+      ).toBe(false);
     });
 
     it("extractClientIp strips ::ffff: IPv4-mapped prefix", function () {
       const req = { ip: "::ffff:10.0.0.1", socket: {} };
-      expect(IpFilterMiddleware.extractClientIp(req)).to.equal("10.0.0.1");
+      expect(IpFilterMiddleware.extractClientIp(req)).toBe("10.0.0.1");
     });
   });
 });
@@ -1130,7 +1177,7 @@ describe("IpFilterMiddleware", function () {
 // test/unit/utils/cacheKeyBuilder.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const {
   CacheKeyBuilder,
 } = require("../../../src/middleware/cache/CacheKeyBuilder");
@@ -1147,7 +1194,7 @@ describe("CacheKeyBuilder", function () {
       year: 2025,
       division: "WH",
     });
-    expect(k1).to.equal(k2);
+    expect(k1).toBe(k2);
   });
 
   it('normalises null and undefined values to the string "null"', function () {
@@ -1155,27 +1202,27 @@ describe("CacheKeyBuilder", function () {
       division: null,
       year: undefined,
     });
-    expect(k).to.include("division=null");
-    expect(k).to.include("year=null");
+    expect(k).toContain("division=null");
+    expect(k).toContain("year=null");
   });
 
   it("sorts array parameters before joining", function () {
     const k1 = CacheKeyBuilder.build("ids", { ids: [3, 1, 2] });
     const k2 = CacheKeyBuilder.build("ids", { ids: [2, 3, 1] });
-    expect(k1).to.equal(k2);
+    expect(k1).toBe(k2);
   });
 
   it("hashes keys longer than 200 characters", function () {
     const longParams = {};
     for (let i = 0; i < 30; i++) longParams[`param${i}`] = `value${i}`;
     const key = CacheKeyBuilder.build("prefix", longParams);
-    expect(key.length).to.be.lessThan(220); // hashed — never obscenely long
-    expect(key).to.include("h=");
+    expect(key.length).toBeLessThan(220); // hashed — never obscenely long
+    expect(key).toContain("h=");
   });
 
   it("throws TypeError when prefix is empty", function () {
-    expect(() => new CacheKeyBuilder("")).to.throw(TypeError);
-    expect(() => new CacheKeyBuilder(null)).to.throw(TypeError);
+    expect(() => new CacheKeyBuilder("")).toThrow(TypeError);
+    expect(() => new CacheKeyBuilder(null)).toThrow(TypeError);
   });
 
   it("fluent builder and static build() produce identical keys", function () {
@@ -1184,7 +1231,7 @@ describe("CacheKeyBuilder", function () {
       .param("month", 3)
       .build();
     const stat = CacheKeyBuilder.build("report", { year: 2025, month: 3 });
-    expect(fluent).to.equal(stat);
+    expect(fluent).toBe(stat);
   });
 });
 ```
@@ -1234,35 +1281,35 @@ module.exports = { signToken };
 // test/integration/health.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 describe("GET /api/v1/health", function () {
   it('returns 200 with status "success"', async function () {
     const res = await agent.get("/api/v1/health");
-    expect(res.status).to.equal(200);
-    expect(res.body.status).to.equal("success");
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("success");
   });
 
   it("response body includes uptime, timestamp, environment, and host", async function () {
     const res = await agent.get("/api/v1/health");
     const { data } = res.body;
-    expect(data).to.have.property("uptime").that.is.a("number");
-    expect(data).to.have.property("timestamp");
-    expect(data).to.have.property("environment");
-    expect(data).to.have.property("host");
+    expect(data).toHaveProperty("uptime").that.is.a("number");
+    expect(data).toHaveProperty("timestamp");
+    expect(data).toHaveProperty("environment");
+    expect(data).toHaveProperty("host");
   });
 
   it("responds in under 500ms", async function () {
     const start = Date.now();
     await agent.get("/api/v1/health");
-    expect(Date.now() - start).to.be.lessThan(500);
+    expect(Date.now() - start).toBeLessThan(500);
   });
 
   it("sets X-Request-ID header on every response", async function () {
     const res = await agent.get("/api/v1/health");
-    expect(res.headers).to.have.property("x-request-id");
-    expect(res.headers["x-request-id"]).to.match(/^req_/);
+    expect(res.headers).toHaveProperty("x-request-id");
+    expect(res.headers["x-request-id"]).toMatch(/^req_/);
   });
 });
 ```
@@ -1273,34 +1320,37 @@ describe("GET /api/v1/health", function () {
 // test/integration/error-handling.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 describe("Error Handling", function () {
   describe("404 — unknown routes", function () {
     it("GET unknown path returns 404 JSON with error shape", async function () {
       const res = await agent.get("/api/v1/does-not-exist");
-      expect(res.status).to.equal(404);
-      expect(res.body.status).to.equal("error");
-      expect(res.body.code).to.equal(404);
-      expect(res.body.error).to.have.property("type", "NotFoundError");
+      expect(res.status).toBe(404);
+      expect(res.body.status).toBe("error");
+      expect(res.body.code).toBe(404);
+      expect(res.body.error).toHaveProperty("type", "NotFoundError");
     });
 
     it("POST unknown path returns 404 not 405", async function () {
       const res = await agent.post("/api/v1/does-not-exist").send({});
-      expect(res.status).to.equal(404);
+      expect(res.status).toBe(404);
     });
   });
 
   describe("global error shape contract", function () {
     it("every error response has status, code, message, error fields", async function () {
       const res = await agent.get("/api/v1/does-not-exist");
-      expect(res.body).to.have.all.keys("status", "code", "message", "error");
+      // chai's `.to.have.all.keys(...)` → assert the exact key set in Vitest
+      expect(Object.keys(res.body).sort()).toEqual(
+        ["code", "error", "message", "status"], // sorted
+      );
     });
 
     it("error.type is always a string", async function () {
       const res = await agent.get("/api/v1/does-not-exist");
-      expect(res.body.error.type).to.be.a("string");
+      expect(res.body.error.type).toBeTypeOf("string");
     });
   });
 });
@@ -1320,7 +1370,7 @@ Security tests are adversarial. Prove server correctly **rejects** dangerous or 
 // test/security/auth-bypass.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 const { signToken } = require("../helpers/auth");
 
@@ -1331,20 +1381,20 @@ describe("Auth Security", function () {
   describe("missing token", function () {
     it("returns 401 when no Authorization header is provided", async function () {
       const res = await agent.get(PROTECTED);
-      expect(res.status).to.equal(401);
-      expect(res.body.error.type).to.equal("AuthenticationError");
+      expect(res.status).toBe(401);
+      expect(res.body.error.type).toBe("AuthenticationError");
     });
 
     it("returns 401 when Authorization header is malformed", async function () {
       const res = await agent
         .get(PROTECTED)
         .set("Authorization", "NotBearer abc");
-      expect(res.status).to.equal(401);
+      expect(res.status).toBe(401);
     });
 
     it("returns 401 when token is present in neither header nor cookie", async function () {
       const res = await agent.get(PROTECTED).unset("Authorization");
-      expect(res.status).to.equal(401);
+      expect(res.status).toBe(401);
     });
   });
 
@@ -1357,7 +1407,7 @@ describe("Auth Security", function () {
       const res = await agent
         .get(PROTECTED)
         .set("Authorization", `Bearer ${forged}`);
-      expect(res.status).to.equal(403);
+      expect(res.status).toBe(403);
     });
 
     it("returns 403 for an expired token", async function () {
@@ -1365,14 +1415,14 @@ describe("Auth Security", function () {
       const res = await agent
         .get(PROTECTED)
         .set("Authorization", `Bearer ${expired}`);
-      expect(res.status).to.equal(403);
+      expect(res.status).toBe(403);
     });
 
     it("returns 403 for a structurally invalid JWT", async function () {
       const res = await agent
         .get(PROTECTED)
         .set("Authorization", "Bearer not.a.jwt");
-      expect(res.status).to.equal(403);
+      expect(res.status).toBe(403);
     });
 
     it("returns 403 for a token with a tampered payload", async function () {
@@ -1386,7 +1436,7 @@ describe("Auth Security", function () {
       const res = await agent
         .get(PROTECTED)
         .set("Authorization", `Bearer ${tampered}`);
-      expect(res.status).to.equal(403);
+      expect(res.status).toBe(403);
     });
   });
 
@@ -1397,8 +1447,8 @@ describe("Auth Security", function () {
       const res = await agent
         .get("/api/v1/admin/dashboard")
         .set("Authorization", `Bearer ${token}`);
-      expect(res.status).to.equal(403);
-      expect(res.body.error.type).to.equal("AuthorizationError");
+      expect(res.status).toBe(403);
+      expect(res.body.error.type).toBe("AuthorizationError");
     });
   });
 });
@@ -1410,7 +1460,7 @@ describe("Auth Security", function () {
 // test/security/headers.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 describe("Security Headers (Helmet)", function () {
@@ -1422,33 +1472,33 @@ describe("Security Headers (Helmet)", function () {
   });
 
   it("sets X-Content-Type-Options: nosniff", function () {
-    expect(headers["x-content-type-options"]).to.equal("nosniff");
+    expect(headers["x-content-type-options"]).toBe("nosniff");
   });
 
   it("sets X-Frame-Options to deny framing", function () {
-    expect(headers["x-frame-options"]).to.equal("DENY");
+    expect(headers["x-frame-options"]).toBe("DENY");
   });
 
   it("sets Strict-Transport-Security", function () {
-    expect(headers["strict-transport-security"]).to.exist;
-    expect(headers["strict-transport-security"]).to.include("max-age=");
+    expect(headers["strict-transport-security"]).toBeDefined();
+    expect(headers["strict-transport-security"]).toContain("max-age=");
   });
 
   it("sets Content-Security-Policy", function () {
-    expect(headers["content-security-policy"]).to.exist;
-    expect(headers["content-security-policy"]).to.include("default-src 'self'");
+    expect(headers["content-security-policy"]).toBeDefined();
+    expect(headers["content-security-policy"]).toContain("default-src 'self'");
   });
 
   it("does not expose X-Powered-By", function () {
-    expect(headers).to.not.have.property("x-powered-by");
+    expect(headers).not.toHaveProperty("x-powered-by");
   });
 
   it("sets Referrer-Policy", function () {
-    expect(headers["referrer-policy"]).to.exist;
+    expect(headers["referrer-policy"]).toBeDefined();
   });
 
   it("sets Cross-Origin-Opener-Policy", function () {
-    expect(headers["cross-origin-opener-policy"]).to.exist;
+    expect(headers["cross-origin-opener-policy"]).toBeDefined();
   });
 });
 ```
@@ -1459,7 +1509,7 @@ describe("Security Headers (Helmet)", function () {
 // test/security/injection.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 // Payloads that should never reach the DB or be reflected in a 500
@@ -1490,7 +1540,7 @@ describe("Injection Attack Mitigation", function () {
       it(`rejects or sanitizes: ${payload.slice(0, 40)}`, async function () {
         const res = await agent.get("/api/v1/users").query({ search: payload });
         // Must not crash the server with a 500
-        expect(res.status).to.not.equal(500);
+        expect(res.status).not.toBe(500);
       });
     });
   });
@@ -1501,7 +1551,7 @@ describe("Injection Attack Mitigation", function () {
         const res = await agent
           .post("/api/v1/auth/login")
           .send({ username: payload, password: "test" });
-        expect(res.status).to.not.equal(500);
+        expect(res.status).not.toBe(500);
       });
     });
   });
@@ -1511,7 +1561,7 @@ describe("Injection Attack Mitigation", function () {
       it(`path traversal blocked: ${payload}`, async function () {
         const res = await agent.get(`/api/v1/${encodeURIComponent(payload)}`);
         // Security filter should return 400, 403, or 404 — never 200
-        expect([400, 403, 404]).to.include(res.status);
+        expect([400, 403, 404]).toContain(res.status);
       });
     });
   });
@@ -1521,8 +1571,8 @@ describe("Injection Attack Mitigation", function () {
       it(`XSS payload not reflected: ${payload.slice(0, 40)}`, async function () {
         const res = await agent.get("/api/v1/search").query({ q: payload });
         // Response body must never echo the script tag verbatim
-        expect(JSON.stringify(res.body)).to.not.include("<script>");
-        expect(JSON.stringify(res.body)).to.not.include("onerror=");
+        expect(JSON.stringify(res.body)).not.toContain("<script>");
+        expect(JSON.stringify(res.body)).not.toContain("onerror=");
       });
     });
   });
@@ -1535,7 +1585,7 @@ describe("Injection Attack Mitigation", function () {
 // test/security/csrf.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const request = require("supertest");
 const app = require("../../src/app");
 
@@ -1549,11 +1599,11 @@ describe("CSRF Protection", function () {
 
   it("GET /api/v1/csrf/token returns a token and sets cookie", async function () {
     const res = await agent.get("/api/v1/csrf/token");
-    expect(res.status).to.equal(200);
-    expect(res.body).to.have.property("token").that.is.a("string");
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("token").that.is.a("string");
     // Cookie must be set
     const cookies = res.headers["set-cookie"] || [];
-    expect(cookies.some((c) => c.includes("csrf"))).to.be.true;
+    expect(cookies.some((c) => c.includes("csrf"))).toBe(true);
   });
 
   it("POST without CSRF token returns 403", async function () {
@@ -1562,8 +1612,8 @@ describe("CSRF Protection", function () {
     const res = await agent
       .post("/api/v1/auth/login")
       .send({ username: "test", password: "test" });
-    expect(res.status).to.equal(403);
-    expect(res.body.code).to.equal("CSRF_TOKEN_INVALID");
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("CSRF_TOKEN_INVALID");
   });
 
   it("POST with valid CSRF token is accepted (not blocked by CSRF)", async function () {
@@ -1576,7 +1626,7 @@ describe("CSRF Protection", function () {
       .send({ username: "nonexistent", password: "wrong" });
 
     // May be 400/401 due to bad credentials — but must NOT be 403 CSRF error
-    expect(res.status).to.not.equal(403);
+    expect(res.status).not.toBe(403);
   });
 
   it("POST with a forged CSRF token returns 403", async function () {
@@ -1585,15 +1635,15 @@ describe("CSRF Protection", function () {
       .post("/api/v1/auth/login")
       .set("x-csrf-token", "forged-token-abc123")
       .send({ username: "test", password: "test" });
-    expect(res.status).to.equal(403);
+    expect(res.status).toBe(403);
   });
 
   it("GET /csrf/status describes protection configuration", async function () {
     const res = await agent.get("/api/v1/csrf/status");
-    expect(res.status).to.equal(200);
-    expect(res.body.status.enabled).to.be.true;
-    expect(res.body.status.methods.protected).to.include("POST");
-    expect(res.body.status.methods.safe).to.include("GET");
+    expect(res.status).toBe(200);
+    expect(res.body.status.enabled).toBe(true);
+    expect(res.body.status.methods.protected).toContain("POST");
+    expect(res.body.status.methods.safe).toContain("GET");
   });
 });
 ```
@@ -1604,7 +1654,7 @@ describe("CSRF Protection", function () {
 // test/security/rate-limit.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 describe("Rate Limiting", function () {
@@ -1617,17 +1667,17 @@ describe("Rate Limiting", function () {
       ),
     );
     const tooMany = responses.filter((r) => r.status === 429);
-    expect(tooMany.length).to.be.greaterThan(0);
+    expect(tooMany.length).toBeGreaterThan(0);
   });
 
   it("429 response includes Retry-After header", async function () {
     const res = responses.find((r) => r.status === 429);
-    if (res) expect(res.headers).to.have.property("retry-after");
+    if (res) expect(res.headers).toHaveProperty("retry-after");
   });
 
   it("RateLimit-Policy header is present on every response", async function () {
     const res = await agent.get("/api/v1/health");
-    expect(res.headers).to.have.property("ratelimit-policy");
+    expect(res.headers).toHaveProperty("ratelimit-policy");
   });
 
   it("RateLimit-Remaining decreases with each request", async function () {
@@ -1635,7 +1685,7 @@ describe("Rate Limiting", function () {
     const r2 = await agent.get("/api/v1/health");
     const rem1 = parseInt(r1.headers["ratelimit-remaining"], 10);
     const rem2 = parseInt(r2.headers["ratelimit-remaining"], 10);
-    expect(rem2).to.be.lessThanOrEqual(rem1);
+    expect(rem2).toBeLessThanOrEqual(rem1);
   });
 });
 ```
@@ -1646,7 +1696,7 @@ describe("Rate Limiting", function () {
 // test/security/cors.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 describe("CORS Policy", function () {
@@ -1654,7 +1704,7 @@ describe("CORS Policy", function () {
     const res = await agent
       .get("/api/v1/health")
       .set("Origin", "http://localhost:3000");
-    expect(res.headers["access-control-allow-origin"]).to.equal(
+    expect(res.headers["access-control-allow-origin"]).toBe(
       "http://localhost:3000",
     );
   });
@@ -1663,7 +1713,7 @@ describe("CORS Policy", function () {
     const res = await agent
       .get("/api/v1/health")
       .set("Origin", "http://192.168.1.100:3000");
-    expect(res.headers["access-control-allow-origin"]).to.exist;
+    expect(res.headers["access-control-allow-origin"]).toBeDefined();
   });
 
   it("blocks requests from a random public origin", async function () {
@@ -1671,7 +1721,7 @@ describe("CORS Policy", function () {
       .get("/api/v1/health")
       .set("Origin", "https://evil.hacker.com");
     // Must not echo back the disallowed origin
-    expect(res.headers["access-control-allow-origin"]).to.not.equal(
+    expect(res.headers["access-control-allow-origin"]).not.toBe(
       "https://evil.hacker.com",
     );
   });
@@ -1682,8 +1732,8 @@ describe("CORS Policy", function () {
       .set("Origin", "http://localhost:3000")
       .set("Access-Control-Request-Method", "GET")
       .set("Access-Control-Request-Headers", "Authorization");
-    expect(res.status).to.equal(200);
-    expect(res.headers["access-control-allow-methods"]).to.exist;
+    expect(res.status).toBe(200);
+    expect(res.headers["access-control-allow-methods"]).toBeDefined();
   });
 
   it("exposes X-Request-ID and X-Response-Time in Access-Control-Expose-Headers", async function () {
@@ -1691,7 +1741,7 @@ describe("CORS Policy", function () {
       .get("/api/v1/health")
       .set("Origin", "http://localhost:3000");
     const exposed = res.headers["access-control-expose-headers"] || "";
-    expect(exposed.toLowerCase()).to.include("x-request-id");
+    expect(exposed.toLowerCase()).toContain("x-request-id");
   });
 });
 ```
@@ -1702,7 +1752,7 @@ describe("CORS Policy", function () {
 // test/security/scanner-blocking.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 const SCANNER_PATHS = [
@@ -1724,7 +1774,7 @@ describe("Security Filter — Scanner & Traversal Blocking", function () {
     it(`blocks scanner path: ${path}`, async function () {
       const res = await agent.get(path);
       // Must return 400, 403, or 404 — never 200
-      expect([400, 403, 404, 405]).to.include(res.status);
+      expect([400, 403, 404, 405]).toContain(res.status);
     });
   });
 
@@ -1736,7 +1786,7 @@ describe("Security Filter — Scanner & Traversal Blocking", function () {
           .options("/api/v1/health")
           .set("X-Method-Override", method));
       // Security filter should not allow through
-      expect([400, 403, 404, 405]).to.include(res.status);
+      expect([400, 403, 404, 405]).toContain(res.status);
     });
   });
 });
@@ -1758,7 +1808,7 @@ Performance tests assert timing guarantees. Not load-testing tools (k6, wrk) —
 // test/performance/response-time.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 // Warm the pool before running timing assertions
@@ -1778,7 +1828,7 @@ describe("Response Time Budgets", function () {
       }
       times.sort((a, b) => a - b);
       const p50 = times[Math.floor(times.length * 0.5)];
-      expect(p50).to.be.lessThan(50);
+      expect(p50).toBeLessThan(50);
     });
 
     it("p95 (95th percentile of 20 runs) is under 200ms", async function () {
@@ -1790,14 +1840,14 @@ describe("Response Time Budgets", function () {
       }
       times.sort((a, b) => a - b);
       const p95 = times[Math.floor(times.length * 0.95)];
-      expect(p95).to.be.lessThan(200);
+      expect(p95).toBeLessThan(200);
     });
 
     it("X-Response-Time header is present and numeric", async function () {
       const res = await agent.get("/api/v1/health");
       const rt = res.headers["x-response-time"];
-      expect(rt).to.match(/^\d+ms$/);
-      expect(parseInt(rt, 10)).to.be.a("number");
+      expect(rt).toMatch(/^\d+ms$/);
+      expect(parseInt(rt, 10)).toBeTypeOf("number");
     });
   });
 });
@@ -1807,7 +1857,7 @@ describe("Response Time Budgets", function () {
 // test/performance/concurrent.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 describe("Concurrent Request Correctness", function () {
@@ -1816,7 +1866,7 @@ describe("Concurrent Request Correctness", function () {
       Array.from({ length: 50 }, () => agent.get("/api/v1/health")),
     );
     const errors = results.filter((r) => r.status >= 500);
-    expect(errors.length).to.equal(0);
+    expect(errors.length).toBe(0);
   });
 
   it("every concurrent response has a unique X-Request-ID", async function () {
@@ -1825,7 +1875,7 @@ describe("Concurrent Request Correctness", function () {
     );
     const ids = results.map((r) => r.headers["x-request-id"]);
     const unique = new Set(ids);
-    expect(unique.size).to.equal(20);
+    expect(unique.size).toBe(20);
   });
 
   it("50 concurrent POSTs to login all receive a valid JSON error (not crash)", async function () {
@@ -1835,7 +1885,7 @@ describe("Concurrent Request Correctness", function () {
       ),
     );
     const crashes = results.filter((r) => r.status >= 500);
-    expect(crashes.length).to.equal(0);
+    expect(crashes.length).toBe(0);
   });
 });
 ```
@@ -1850,7 +1900,7 @@ Reliability tests verify graceful degradation, recovery from transient failures,
 // test/reliability/unhandled-errors.test.js
 "use strict";
 
-const { expect } = require("chai");
+// `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const agent = require("../helpers/request");
 
 describe("Unhandled Error Protection", function () {
@@ -1858,8 +1908,8 @@ describe("Unhandled Error Protection", function () {
     // If the app exposes a deliberate throw-test route in non-production
     const res = await agent.get("/api/v1/health");
     // In normal operation, the server must never crash on a single bad request
-    expect(res.status).to.be.lessThan(600);
-    expect(res.headers["content-type"]).to.include("application/json");
+    expect(res.status).toBeLessThan(600);
+    expect(res.headers["content-type"]).toContain("application/json");
   });
 
   it("sending a malformed JSON body returns 400 not 500", async function () {
@@ -1867,8 +1917,8 @@ describe("Unhandled Error Protection", function () {
       .post("/api/v1/auth/login")
       .set("Content-Type", "application/json")
       .send("{invalid json}");
-    expect(res.status).to.equal(400);
-    expect(res.body.status).to.equal("error");
+    expect(res.status).toBe(400);
+    expect(res.body.status).toBe("error");
   });
 
   it("sending an oversized body returns 413 not 500", async function () {
@@ -1877,7 +1927,7 @@ describe("Unhandled Error Protection", function () {
       .post("/api/v1/auth/login")
       .set("Content-Type", "application/json")
       .send(JSON.stringify({ data: huge }));
-    expect(res.status).to.equal(413);
+    expect(res.status).toBe(413);
   });
 });
 ```

@@ -1,6 +1,5 @@
 "use strict";
 
-const { expect } = require("chai");
 const agent = require("../../helpers/request");
 
 const SCANNER_PATHS = [
@@ -22,7 +21,7 @@ describe("Security Filter — Scanner & Traversal Blocking", function () {
     it(`blocks scanner path: ${path}`, async function () {
       const res = await agent.get(path);
       // Must return 400, 403, or 404 — never 200
-      expect([400, 403, 404, 405]).to.include(res.status);
+      expect([400, 403, 404, 405]).toContain(res.status);
     });
   });
 
@@ -34,7 +33,7 @@ describe("Security Filter — Scanner & Traversal Blocking", function () {
           .options("/api/v1/health")
           .set("X-Method-Override", method));
       // Security filter should not allow through
-      expect([400, 403, 404, 405]).to.include(res.status);
+      expect([400, 403, 404, 405]).toContain(res.status);
     });
   });
 });
