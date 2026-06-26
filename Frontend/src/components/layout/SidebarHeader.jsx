@@ -25,7 +25,7 @@ import { VersionBadge } from "../ui/VersionBadge";
 import { useNav } from "./config/useNav";
 
 const APP_DISPLAY_NAME = import.meta.env.VITE_APP_NAME || null;
-const CHANGELOG_HREF = "/other/changelog";
+const CHANGELOG_HREF = "/about/changelog";
 
 // ── Role helpers (shared with Navbar) ─────────────────────────────────────────
 function resolveRoleLabel(role) {

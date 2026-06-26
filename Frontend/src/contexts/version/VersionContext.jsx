@@ -22,7 +22,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useLocation } from "react-router-dom";
 
 import { APP_STAGE, APP_VERSION, parseStageFromVersion } from "../../config/appVersion";
-import { changelogApi } from "../../features/other/changelog/changelog.api";
+import { changelogApi } from "../../features/support/changelog/changelog.api";
 import { AuthMiddleware } from "../../middleware/authentication/AuthMiddleware";
 
 const VersionContext = createContext(null);
