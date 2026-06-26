@@ -126,11 +126,18 @@ app.use(defaultCookieParser.handle.bind(defaultCookieParser)); // lgtm[js/missin
 // 9. CSRF protection — must come after cookie-parser so the secret cookie is readable.
 //    The CSRF token endpoints (/api/v1/csrf/*) are excluded to avoid a catch-22 where
 //    a valid token is required to obtain or refresh a token.
+//    POST /api/v1/metrics/frontend is also excluded: it is an unauthenticated,
+//    pre-auth web-vitals telemetry sink, frequently delivered via
+//    navigator.sendBeacon — which cannot attach the x-csrf-token header. CSRF
+//    (which protects authenticated, session-riding mutations) adds nothing here;
+//    a forged cross-site POST could only inject junk telemetry, already bounded
+//    by the route's dedicated 30 req/min rate limiter (CWE-352 risk accepted).
 //    doubleCsrf only enforces on state-changing methods (POST/PUT/DELETE/PATCH);
 //    GET /csrf/token and other safe methods pass through automatically.
+const CSRF_EXEMPT_PATHS = ["/api/v1/csrf", "/api/v1/metrics/frontend"];
 app.use((req, res, next) => {
-    if (req.path.startsWith("/api/v1/csrf")) return next();
-    defaultCsrf.handle.bind(defaultCsrf)(req, res, next);
+  if (CSRF_EXEMPT_PATHS.some((p) => req.path.startsWith(p))) return next();
+  defaultCsrf.handle.bind(defaultCsrf)(req, res, next);
 });
 
 // 10. Capture response body for downstream logging
