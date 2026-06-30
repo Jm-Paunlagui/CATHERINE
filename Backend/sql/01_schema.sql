@@ -3,10 +3,9 @@
 --------------------------------------------------------------------------------
 -- This is the SAMPLE database for the NodeExpress / CATHERINE template.
 --
--- It is intentionally GENERIC and self-contained: it has NOTHING to do with the
--- HRIS (U_USERS / U_PERSONALINFOS) or Meal (T_EMP_MGMT_ADMIN / T_EMP_MASTER_LIST)
--- projects. Drop this into any fresh Oracle schema and the template can
--- authenticate, authorise (RBAC), and write audit logs on its own.
+-- It is intentionally GENERIC and self-contained. Drop this into any fresh
+-- Oracle schema and the template can authenticate, authorise (RBAC), and write
+-- audit logs on its own.
 --
 -- Tables created:
 --   T_USERS_DEV       — regular end-user accounts (Argon2id password hash)

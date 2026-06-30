@@ -25,16 +25,26 @@ const AdminManagementService = require("../../../src/services/AdminManagementSer
 let stubs = [];
 
 beforeAll(function () {
-    stubs.push(vi.spyOn(AdminManagementService, "listAdmins").mockResolvedValue([]));
-    stubs.push(vi.spyOn(AdminManagementService, "addAdmin").mockResolvedValue({}));
-    stubs.push(vi.spyOn(AdminManagementService, "updateAdmin").mockResolvedValue({}));
+    stubs.push(
+        vi.spyOn(AdminManagementService, "listAdmins").mockResolvedValue([]),
+    );
+    stubs.push(
+        vi.spyOn(AdminManagementService, "addAdmin").mockResolvedValue({}),
+    );
+    stubs.push(
+        vi.spyOn(AdminManagementService, "updateAdmin").mockResolvedValue({}),
+    );
     stubs.push(
         vi.spyOn(AdminManagementService, "resetPassword").mockResolvedValue({}),
     );
     stubs.push(
-        vi.spyOn(AdminManagementService, "resetSignature").mockResolvedValue({}),
+        vi
+            .spyOn(AdminManagementService, "resetSignature")
+            .mockResolvedValue({}),
     );
-    stubs.push(vi.spyOn(AdminManagementService, "deleteAdmin").mockResolvedValue({}));
+    stubs.push(
+        vi.spyOn(AdminManagementService, "deleteAdmin").mockResolvedValue({}),
+    );
 });
 
 afterAll(function () {
@@ -51,9 +61,7 @@ async function getCsrfToken() {
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 
-const ADMIN_ROUTES = [
-    { method: "get", path: "/api/v1/admin-management" },
-];
+const ADMIN_ROUTES = [{ method: "get", path: "/api/v1/admin-management" }];
 
 const ADMIN_MUTATING_ROUTES = [
     {
@@ -189,7 +197,7 @@ describe("Admin Management Security — role escalation prevention", function ()
 
 describe("Admin Management Security — injection attack mitigation", function () {
     const SQL_PAYLOADS = [
-        "'; DROP TABLE T_EMP_MGMT_ADMIN; --",
+        "'; DROP TABLE T_ADMINS_DEV; --",
         "' OR '1'='1",
         "1; SELECT * FROM DUAL; --",
         "admin'--",
@@ -264,7 +272,7 @@ describe("Admin Management Security — path traversal via empId", function () {
     const TRAVERSAL_EMPIDS = [
         "../../../etc/passwd",
         "..%2F..%2F..%2Fetc%2Fpasswd",
-        "EMP001;DROP TABLE T_EMP_MGMT_ADMIN",
+        "EMP001;DROP TABLE T_ADMINS_DEV",
     ];
 
     TRAVERSAL_EMPIDS.forEach((empId) => {

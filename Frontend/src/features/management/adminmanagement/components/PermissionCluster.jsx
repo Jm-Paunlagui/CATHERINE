@@ -2,7 +2,7 @@
  * PermissionCluster.jsx — Compact inline permission-indicator cluster.
  *
  * Renders six colour-coded dots (or mini icons) representing the six
- * actionable permission flags for a T_EMP_MGMT_ADMIN row.
+ * actionable permission flags for an admin row.
  * Grouped visually into two domains separated by a thin divider:
  *
  *   Reset domain  | Billing domain
@@ -24,49 +24,49 @@
  * The whole cluster fits within ~120px (six 18px dots + divider + gaps).
  */
 
-import { Tooltip } from "../../../../components/ui/Tooltip";
 import { TRANSITION_COLORS } from "../../../../assets/styles/pre-set-styles";
+import { Tooltip } from "../../../../components/ui/Tooltip";
 
 // ─── Dot descriptor table ─────────────────────────────────────────────────────
 
 const DOTS = [
     // Reset domain
     {
-        key:     "canApproveReset",
-        label:   "Approve Wallet Reset",
-        abbr:    "AR",
-        domain:  "reset",
+        key: "canApproveReset",
+        label: "Approve Wallet Reset",
+        abbr: "AR",
+        domain: "reset",
     },
     {
-        key:     "canRejectReset",
-        label:   "Reject Wallet Reset",
-        abbr:    "RR",
-        domain:  "reset",
+        key: "canRejectReset",
+        label: "Reject Wallet Reset",
+        abbr: "RR",
+        domain: "reset",
     },
     // Billing domain
     {
-        key:     "canApproveBilling",
-        label:   "Approve Billing Download",
-        abbr:    "AB",
-        domain:  "billing",
+        key: "canApproveBilling",
+        label: "Approve Billing Download",
+        abbr: "AB",
+        domain: "billing",
     },
     {
-        key:     "canRejectBilling",
-        label:   "Reject Billing Download",
-        abbr:    "RB",
-        domain:  "billing",
+        key: "canRejectBilling",
+        label: "Reject Billing Download",
+        abbr: "RB",
+        domain: "billing",
     },
     {
-        key:     "canReceiveBilling",
-        label:   "Receive Auto-Billing Email",
-        abbr:    "CB",
-        domain:  "billing",
+        key: "canReceiveBilling",
+        label: "Receive Auto-Billing Email",
+        abbr: "CB",
+        domain: "billing",
     },
     {
-        key:     "canExportBilling",
-        label:   "Export Billing Report",
-        abbr:    "EB",
-        domain:  "billing",
+        key: "canExportBilling",
+        label: "Export Billing Report",
+        abbr: "EB",
+        domain: "billing",
     },
 ];
 
@@ -83,31 +83,11 @@ const DOTS = [
 function PermDot({ abbr, label, granted, muted }) {
     const tooltipText = `${label} — ${granted ? "granted" : "denied"}`;
 
-    const dotClass = granted
-        ? [
-              "bg-(--accent-icon)/90 dark:bg-(--accent-icon)/80",
-              "text-white dark:text-white",
-              "border border-(--accent-icon)/40",
-          ].join(" ")
-        : [
-              "bg-grey-100 dark:bg-grey-800/60",
-              "text-grey-400 dark:text-grey-500",
-              "border border-grey-300/60 dark:border-grey-600/40",
-          ].join(" ");
+    const dotClass = granted ? ["bg-(--accent-icon)/90 dark:bg-(--accent-icon)/80", "text-white dark:text-white", "border border-(--accent-icon)/40"].join(" ") : ["bg-grey-100 dark:bg-grey-800/60", "text-grey-400 dark:text-grey-500", "border border-grey-300/60 dark:border-grey-600/40"].join(" ");
 
     return (
         <Tooltip content={tooltipText} placement="top">
-            <span
-                className={[
-                    "inline-flex items-center justify-center",
-                    "w-[18px] h-[18px] rounded-full",
-                    "text-[8px] font-aumovio-bold leading-none select-none",
-                    TRANSITION_COLORS,
-                    dotClass,
-                    muted ? "opacity-40" : "",
-                ].join(" ")}
-                aria-label={tooltipText}
-            >
+            <span className={["inline-flex items-center justify-center", "w-[18px] h-[18px] rounded-full", "text-[8px] font-aumovio-bold leading-none select-none", TRANSITION_COLORS, dotClass, muted ? "opacity-40" : ""].join(" ")} aria-label={tooltipText}>
                 {abbr}
             </span>
         </Tooltip>
@@ -129,25 +109,29 @@ export function PermissionCluster({ row, onClick }) {
     const isInactive = row.isActive === "N";
     const isInteractive = typeof onClick === "function";
 
-    const resetDots  = DOTS.filter((d) => d.domain === "reset");
+    const resetDots = DOTS.filter((d) => d.domain === "reset");
     const billingDots = DOTS.filter((d) => d.domain === "billing");
 
-    const wrapClass = [
-        "inline-flex items-center gap-0.5",
-        isInteractive ? "cursor-pointer group" : "cursor-default",
-    ].join(" ");
+    const wrapClass = ["inline-flex items-center gap-0.5", isInteractive ? "cursor-pointer group" : "cursor-default"].join(" ");
 
     const content = (
-        <span className={wrapClass} onClick={isInteractive ? onClick : undefined} role={isInteractive ? "button" : undefined} tabIndex={isInteractive ? 0 : undefined} onKeyDown={isInteractive ? (e) => { if (e.key === "Enter" || e.key === " ") onClick(); } : undefined} aria-label="Permission flags — click to edit">
+        <span
+            className={wrapClass}
+            onClick={isInteractive ? onClick : undefined}
+            role={isInteractive ? "button" : undefined}
+            tabIndex={isInteractive ? 0 : undefined}
+            onKeyDown={
+                isInteractive
+                    ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") onClick();
+                      }
+                    : undefined
+            }
+            aria-label="Permission flags — click to edit"
+        >
             {/* Reset domain dots */}
             {resetDots.map((d) => (
-                <PermDot
-                    key={d.key}
-                    abbr={d.abbr}
-                    label={d.label}
-                    granted={row[d.key] === "Y"}
-                    muted={isInactive}
-                />
+                <PermDot key={d.key} abbr={d.abbr} label={d.label} granted={row[d.key] === "Y"} muted={isInactive} />
             ))}
 
             {/* Domain divider */}
@@ -155,13 +139,7 @@ export function PermissionCluster({ row, onClick }) {
 
             {/* Billing domain dots */}
             {billingDots.map((d) => (
-                <PermDot
-                    key={d.key}
-                    abbr={d.abbr}
-                    label={d.label}
-                    granted={row[d.key] === "Y"}
-                    muted={isInactive}
-                />
+                <PermDot key={d.key} abbr={d.abbr} label={d.label} granted={row[d.key] === "Y"} muted={isInactive} />
             ))}
         </span>
     );

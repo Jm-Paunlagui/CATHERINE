@@ -287,7 +287,7 @@ const resolveMode = () => {
 };
 
 /**
- * Resolves the effective hashing mode for T_EMP_MGMT_ADMIN passwords.
+ * Resolves the effective hashing mode for admin (T_ADMINS_DEV) passwords.
  *
  * Rules:
  *  1. When PASSWORD_HASH_MODE is already strong (bcrypt | argon2),
@@ -316,7 +316,7 @@ const resolveAdminMode = () => {
             "[CryptoVault] PASSWORD_HASH_MODE is set to a weak mode " +
                 `("${hashMode}") but PASSWORD_ENCRYPTION_MODE is not configured. ` +
                 "Set PASSWORD_ENCRYPTION_MODE=bcrypt or PASSWORD_ENCRYPTION_MODE=argon2 " +
-                "to ensure T_EMP_MGMT_ADMIN passwords are stored with a strong one-way hash.",
+                "to ensure admin passwords are stored with a strong one-way hash.",
         );
     }
 
@@ -615,10 +615,10 @@ class CryptoVault {
     // ───────────────────────────────────────────────────────────────────────
     // hashAdminPassword — always uses a strong mode (argon2 | bcrypt)
     //
-    // Routes T_EMP_MGMT_ADMIN passwords through getAdminMode() rather than
-    // getMode(). When PASSWORD_HASH_MODE is weak (tripledes, plain) and
+    // Routes admin (T_ADMINS_DEV) passwords through getAdminMode() rather
+    // than getMode(). When PASSWORD_HASH_MODE is weak (tripledes, plain) and
     // PASSWORD_ENCRYPTION_MODE is set, admin passwords are hashed with the
-    // strong mode regardless of the global HRIS mode.
+    // strong mode regardless of the global mode.
     //
     // Migration / rehash-on-next-login:
     //   If an existing stored hash starts with a TripleDES-base64 pattern
@@ -634,7 +634,7 @@ class CryptoVault {
      * PASSWORD_HASH_MODE is already strong).
      *
      * Always uses bcrypt or argon2 — never plain or tripledes.
-     * This method MUST be used for all T_EMP_MGMT_ADMIN password writes.
+     * This method MUST be used for all admin (T_ADMINS_DEV) password writes.
      *
      * @param {string} password - The plaintext password to hash.
      * @returns {Promise<string>} Strong hash string.
@@ -716,10 +716,7 @@ class CryptoVault {
         }
 
         // ── Modern: bcrypt hash ──
-        if (
-            storedHash.startsWith("$2b$") ||
-            storedHash.startsWith("$2a$")
-        ) {
+        if (storedHash.startsWith("$2b$") || storedHash.startsWith("$2a$")) {
             const bcrypt = require("bcryptjs");
             try {
                 const matched = await bcrypt.compare(password, storedHash);
@@ -760,9 +757,11 @@ class CryptoVault {
     static adminNeedsRehash(storedHash) {
         if (!storedHash) return true;
         // Legacy TripleDES / plain — always needs rehash
-        if (!storedHash.startsWith("$2b$") &&
+        if (
+            !storedHash.startsWith("$2b$") &&
             !storedHash.startsWith("$2a$") &&
-            !storedHash.startsWith("$argon2")) {
+            !storedHash.startsWith("$argon2")
+        ) {
             return true;
         }
         // Argon2 parameter upgrade detection
@@ -991,13 +990,13 @@ class CryptoVault {
      * @returns {Promise<string>}
      *
      * @example
-     * // MEAL project — admin table
-     * const sig = await CryptoVault.signRecord('T_EMP_MGMT_ADMIN', {
-     *     EMP_ID: 'ADMIN01', EMP_PW: hash, EMP_ROLE: 'SuperAdmin',
+     * // Admin table
+     * const sig = await CryptoVault.signRecord('T_ADMINS_DEV', {
+     *     USERNAME: 'admin01', PASSWORD: hash, ROLE: 'SUPER_ADMIN',
      * });
      *
      * @example
-     * // Any other project
+     * // Any other table
      * const sig = await CryptoVault.signRecord('USERS', {
      *     USER_ID: 42, USERNAME: 'jsmith', ROLE: 'editor',
      * });
@@ -1016,8 +1015,8 @@ class CryptoVault {
      * @returns {Promise<boolean>}
      *
      * @example
-     * const ok = await CryptoVault.verifyRecord('T_EMP_MGMT_ADMIN', {
-     *     EMP_ID: row.EMP_ID, EMP_PW: row.EMP_PW, EMP_ROLE: row.EMP_ROLE,
+     * const ok = await CryptoVault.verifyRecord('T_ADMINS_DEV', {
+     *     USERNAME: row.USERNAME, PASSWORD: row.PASSWORD, ROLE: row.ROLE,
      * }, row.SYSSIGNATURE);
      */
     static async verifyRecord(context, fields, signature) {
@@ -1552,29 +1551,20 @@ if (require.main === module) {
 
             // ── signRecord / verifyRecord round-trip ──
             const fields = {
-                EMP_ID: "EMP001",
-                EMP_PW: "$argon2id$v=19$m=19456$...",
-                EMP_ROLE: "SuperAdmin",
+                USERNAME: "admin01",
+                PASSWORD: "$argon2id$v=19$m=19456$...",
+                ROLE: "SUPER_ADMIN",
             };
-            const recSig = await CryptoVault.signRecord(
-                "T_EMP_MGMT_ADMIN",
-                fields,
-            );
-            if (
-                await CryptoVault.verifyRecord(
-                    "T_EMP_MGMT_ADMIN",
-                    fields,
-                    recSig,
-                )
-            )
+            const recSig = await CryptoVault.signRecord("T_ADMINS_DEV", fields);
+            if (await CryptoVault.verifyRecord("T_ADMINS_DEV", fields, recSig))
                 pass("signRecord / verifyRecord round-trip");
             else fail("signRecord round-trip", { message: "Should be true" });
 
             // wrong field value
-            const badFields = { ...fields, EMP_ROLE: "USER" };
+            const badFields = { ...fields, ROLE: "USER" };
             if (
                 !(await CryptoVault.verifyRecord(
-                    "T_EMP_MGMT_ADMIN",
+                    "T_ADMINS_DEV",
                     badFields,
                     recSig,
                 ))
@@ -1592,13 +1582,7 @@ if (require.main === module) {
             else fail("verifyRecord context", { message: "Should be false" });
 
             // null / missing signature handled gracefully
-            if (
-                !(await CryptoVault.verifyRecord(
-                    "T_EMP_MGMT_ADMIN",
-                    fields,
-                    null,
-                ))
-            )
+            if (!(await CryptoVault.verifyRecord("T_ADMINS_DEV", fields, null)))
                 pass("verifyRecord: null signature returns false");
             else fail("verifyRecord null sig", { message: "Should be false" });
 

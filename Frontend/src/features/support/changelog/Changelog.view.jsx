@@ -366,7 +366,7 @@ function ChangelogContent() {
                     <h1 className={`text-3xl font-extrabold ${TITLE_COLOR_TEXT}`}>
                         Version <span className={GRADIENT_COLOR_TEXT}>History</span>
                     </h1>
-                    <p className={`mt-1 text-sm ${BASE_COLOR_TEXT} opacity-70`}>What&apos;s changed in the eMeal Monitoring System</p>
+                    <p className={`mt-1 text-sm ${BASE_COLOR_TEXT} opacity-70`}>Track all changes, improvements, and fixes</p>
                 </div>
                 {hook.isSuperAdmin && (
                     <Button variant="primary" size="sm" onClick={hook.openCreate} disabled={!hook.releaseState?.drafts?.content}>

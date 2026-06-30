@@ -24,12 +24,12 @@ const authMessages = {
         `SYSSIGNATURE mismatch for EMP_ID ${empId} — record may have been tampered with. Login blocked.`,
     SYS_SIGNATURE_TAMPERED_ROLE_FALLBACK: (empId) =>
         `SYSSIGNATURE mismatch for EMP_ID ${empId} — record may have been tampered with. Defaulting to USER role.`,
-    AUTH_FALLBACK_MEAL: (userId) =>
-        `USER ${userId} not found in userAccount DB — falling back to T_EMP_MGMT_ADMIN authentication.`,
+    AUTH_FALLBACK_ADMIN: (userId) =>
+        `USER ${userId} not found in primary auth table — falling back to admin table authentication.`,
     AUTH_UA_PRIMARY: (userId) =>
         `Authenticating user ${userId} via userAccount (U_USERS).`,
     AUTH_ADMIN_PASSWORD: (userId) =>
-        `USER ${userId} authenticated via admin password (T_EMP_MGMT_ADMIN) — HRIS password did not match.`,
+        `USER ${userId} authenticated via admin password (T_ADMINS_DEV) — primary password did not match.`,
     LOGIN_ATTEMPT_FAILED: (userId, failCount, currentMax) =>
         `Failed login attempt for ${userId} (${failCount}/${currentMax}).`,
     LOGIN_LOCKOUT_ENGAGED: (userId, durationMs, cycles) =>

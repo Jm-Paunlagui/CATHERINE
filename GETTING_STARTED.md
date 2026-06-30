@@ -120,9 +120,8 @@ PORT=2108
 HOST=0.0.0.0
 ```
 
-Set the Oracle service name + credentials for your schema. (For the standalone
-schema you only need one app connection; the legacy `UA_*` / `MEAL_*` vars are only
-used by the legacy auth path.)
+Set the Oracle service name + credentials for your schema. Only the `APP_*`
+connection variables are required for the standalone schema.
 
 ### 3.5 Start the backend
 

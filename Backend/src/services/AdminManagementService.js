@@ -4,7 +4,7 @@
  * @fileoverview Admin Management business logic.
  *
  * Owns all operations on T_ADMINS_DEV (CRUD, password reset, signature reset).
- * Uses the standalone AdminModel (T_ADMINS_DEV) — no HRIS or Meal dependencies.
+ * Uses the standalone AdminModel (T_ADMINS_DEV) — no external dependencies.
  *
  * Security:
  *  - SYSSIGNATURE is verified before every write and delete operation.
@@ -368,11 +368,6 @@ class AdminManagementService {
             );
         }
     }
-
-    // ── Legacy methods removed — template uses AdminModel directly ──────────
-    // The following old MealAdmModel-based methods have been replaced by the
-    // new AdminModel-based methods above. This comment is a tombstone.
-    //
 }
 
 module.exports = AdminManagementService;

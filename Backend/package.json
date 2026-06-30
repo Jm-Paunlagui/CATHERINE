@@ -64,7 +64,7 @@
         "uuid": "^11.1.1"
     },
     "bin": {
-        "meal_backend": "./server.js"
+        "catherine_backend": "./server.js"
     },
     "pkg": {
         "scripts": [

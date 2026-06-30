@@ -44,7 +44,7 @@ const { logger } = require("../../utils/logger");
 const { cacheMessages } = require("../../constants/messages");
 
 /** IPC envelope discriminator — namespaced to avoid colliding with other IPC users. */
-const CHANNEL = "meal:cache-sync";
+const CHANNEL = "app:cache-sync";
 
 /**
  * @class ClusterCacheSync

@@ -149,7 +149,7 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
 
     it("supports composite keys (multiple WHERE columns)", async function () {
         const conn = fakeConn({ rowsAffected: 1 });
-        const coll = new OracleCollection("T_EMP_MASTER_LIST", fakeDb, conn);
+        const coll = new OracleCollection("T_SAMPLE_TABLE", fakeDb, conn);
         await coll.bulkUpdateByKeys(
             [{ GID: 1, CARD_NUMBER: 100, EMP_NAME: "NEW" }],
             { keys: ["GID", "CARD_NUMBER"] },
@@ -219,7 +219,9 @@ describe("OracleCollection bulk — bind-type inference & sizing", function () {
         expect(def.type).toBe(ORACLEDB.STRING);
         // maxSize must be at least the true byte length (240), which the old
         // char-count sizing (chars only) would have under-counted.
-        expect(def.maxSize).toBeGreaterThanOrEqual(Buffer.byteLength(name, "utf8"));
+        expect(def.maxSize).toBeGreaterThanOrEqual(
+            Buffer.byteLength(name, "utf8"),
+        );
     });
 
     it("scans all rows for a non-null sample when the first row's column is null", async function () {
@@ -238,7 +240,9 @@ describe("OracleCollection bulk — bind-type inference & sizing", function () {
             keys: ["ID"],
         });
         const def = conn.calls[0].options.bindDefs.s0;
-        expect(def.maxSize).toBeGreaterThanOrEqual(Buffer.byteLength(hash, "utf8"));
+        expect(def.maxSize).toBeGreaterThanOrEqual(
+            Buffer.byteLength(hash, "utf8"),
+        );
     });
 });
 

@@ -35,15 +35,15 @@ const { sendSuccess, sendError } = require("../constants/responses");
  * @returns {Promise<{ status: string, latencyMs?: number, error?: string }>}
  */
 async function probePool(poolName) {
-  const start = Date.now();
-  try {
-    await db.withConnection(poolName, async (conn) => {
-      await conn.execute("SELECT 1 FROM DUAL");
-    });
-    return { status: "up", latencyMs: Date.now() - start };
-  } catch (err) {
-    return { status: "down", error: err.message || "Connection failed" };
-  }
+    const start = Date.now();
+    try {
+        await db.withConnection(poolName, async (conn) => {
+            await conn.execute("SELECT 1 FROM DUAL");
+        });
+        return { status: "up", latencyMs: Date.now() - start };
+    } catch (err) {
+        return { status: "down", error: err.message || "Connection failed" };
+    }
 }
 
 // ─── GET /health/live → mounted at /api/v1/health/live ───────────────────────
@@ -55,12 +55,14 @@ async function probePool(poolName) {
  * Never performs any DB check so it cannot false-positive due to DB flakiness.
  */
 router.get("/live", (_req, res) => {
-  res.json(sendSuccess("OK", {
-    alive: true,
-    pid: process.pid,
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-  }));
+    res.json(
+        sendSuccess("OK", {
+            alive: true,
+            pid: process.pid,
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString(),
+        }),
+    );
 });
 
 // ─── GET /health/ready → mounted at /api/v1/health/ready ────────────────────
@@ -71,29 +73,34 @@ router.get("/live", (_req, res) => {
  * Returns 200 when all deps are up, 503 when any dep is down.
  * Load-balancers should stop routing traffic on 503.
  */
-router.get("/ready", catchAsync(async (_req, res) => {
-  const results = await Promise.all(POOL_NAMES.map(probePool));
+router.get(
+    "/ready",
+    catchAsync(async (_req, res) => {
+        const results = await Promise.all(POOL_NAMES.map(probePool));
 
-  // Build a friendlier key name: "oracle_userAccount", "oracle_Meal"
-  const namedChecks = {};
-  for (let i = 0; i < POOL_NAMES.length; i++) {
-    namedChecks[`oracle_${POOL_NAMES[i]}`] = results[i];
-  }
+        // Build a friendlier key name: "oracle_appDb"
+        const namedChecks = {};
+        for (let i = 0; i < POOL_NAMES.length; i++) {
+            namedChecks[`oracle_${POOL_NAMES[i]}`] = results[i];
+        }
 
-  const allUp = results.every((r) => r.status === "up");
-  const payload = { ready: allUp, checks: namedChecks };
+        const allUp = results.every((r) => r.status === "up");
+        const payload = { ready: allUp, checks: namedChecks };
 
-  if (allUp) {
-    res.json(sendSuccess("Ready", payload));
-  } else {
-    // Return error status (consistent with sendError contract) but include
-    // data.ready + data.checks so monitoring can identify which pool is down.
-    res.status(503).json({
-      ...sendError("Service Unavailable", 503, { type: "ServiceUnavailableError" }),
-      data: payload,
-    });
-  }
-}));
+        if (allUp) {
+            res.json(sendSuccess("Ready", payload));
+        } else {
+            // Return error status (consistent with sendError contract) but include
+            // data.ready + data.checks so monitoring can identify which pool is down.
+            res.status(503).json({
+                ...sendError("Service Unavailable", 503, {
+                    type: "ServiceUnavailableError",
+                }),
+                data: payload,
+            });
+        }
+    }),
+);
 
 // ─── GET / → mounted at /api/v1/health (legacy combined) ────────────────────
 
@@ -102,26 +109,29 @@ router.get("/ready", catchAsync(async (_req, res) => {
  * monitoring integrations that hit this endpoint. Returns 200 regardless of
  * DB status (database field reflects actual connectivity).
  */
-router.get("/", catchAsync(async (_req, res) => {
-  const data = {
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
-    host: os.hostname(),
-    pid: process.pid,
-    database: "unknown",
-  };
+router.get(
+    "/",
+    catchAsync(async (_req, res) => {
+        const data = {
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || "development",
+            host: os.hostname(),
+            pid: process.pid,
+            database: "unknown",
+        };
 
-  try {
-    await db.withConnection(POOL_NAMES[0], async (conn) => {
-      await conn.execute("SELECT 1 FROM DUAL");
-    });
-    data.database = "connected";
-  } catch {
-    data.database = "disconnected";
-  }
+        try {
+            await db.withConnection(POOL_NAMES[0], async (conn) => {
+                await conn.execute("SELECT 1 FROM DUAL");
+            });
+            data.database = "connected";
+        } catch {
+            data.database = "disconnected";
+        }
 
-  res.json(sendSuccess("OK", data));
-}));
+        res.json(sendSuccess("OK", data));
+    }),
+);
 
 module.exports = router;

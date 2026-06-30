@@ -1,8 +1,7 @@
 # Sample Authentication Database (Oracle)
 
 This folder contains the **standalone, project-agnostic** SQL for the template's
-authentication, RBAC, and audit-log features. It is **not** tied to the HRIS
-(`U_USERS`) or Meal (`T_EMP_MGMT_ADMIN`) databases — drop it into any fresh Oracle
+authentication, RBAC, and audit-log features. Drop it into any fresh Oracle
 schema and the backend has its own users, admins, and audit trail.
 
 | File               | What it does                                                                            |

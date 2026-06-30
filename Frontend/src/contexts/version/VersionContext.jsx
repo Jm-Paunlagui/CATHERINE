@@ -29,7 +29,7 @@ const VersionContext = createContext(null);
 
 const FALLBACK = { version: APP_VERSION, stage: APP_STAGE, resolved: false, refresh: () => {} };
 
-const STORAGE_KEY = "emeal_ver";
+const STORAGE_KEY = "app_ver";
 
 // Read the last-known version from sessionStorage so that a page refresh shows
 // the correct version immediately instead of flashing the build-time fallback
@@ -82,7 +82,7 @@ export function VersionProvider({ children }) {
                     const v = String(latest).trim();
                     cachedVersion = v;
                     writeStoredVersion(v); // always write — not gated on mount state
-                    setVersion(v);         // React 18: safe no-op if called post-unmount
+                    setVersion(v); // React 18: safe no-op if called post-unmount
                     setResolved(true);
                 }
             } catch {

@@ -33,17 +33,17 @@ const DashboardView = lazy(() => import("./features/dashboard/Dashboard.view"));
 const LogsManagementView = lazy(() => import("./features/management/logsmanagement/LogsManagement.view"));
 const AdminManagementView = lazy(() => import("./features/management/adminmanagement/AdminManagement.view"));
 
-// Other
-const ChangelogView = lazy(() => import("./features/other/changelog/Changelog.view"));
+// Support
+const ChangelogView = lazy(() => import("./features/support/changelog/Changelog.view"));
 const GettingStartedView = lazy(() => import("./features/other/gettingstarted/GettingStarted.view"));
 const DatabaseConnectionView = lazy(() => import("./features/other/databaseconnection/DatabaseConnection.view"));
 const MiraOrmView = lazy(() => import("./features/other/miraorm/MiraOrm.view"));
 const CORSSetupView = lazy(() => import("./features/other/corssetup/CORSSetup.view"));
 
-// Role constants — must match the strings stored in T_EMP_MGMT_ADMIN.EMP_ROLE
+// Role constants — must match the strings stored in T_ADMINS_DEV.ROLE
 // and returned in the JWT payload as user.role.
 // APPROVER and VIEWER are valid admin roles introduced in the Admin Management feature.
-// ROBOT is an RPA/automation account that accesses RFID Management and Subsidy Management Upload.
+// ROBOT is an RPA/automation account for system integrations.
 const ROLES = {
     SADMIN: "SUPER_ADMIN",
     ADMIN: "ADMIN",

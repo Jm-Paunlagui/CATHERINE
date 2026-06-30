@@ -116,7 +116,7 @@ class Session {
      *
      * @example
      *   await session.execute(
-     *     'LOCK TABLE "MEAL"."T_CUTOFF_DATE" IN EXCLUSIVE MODE NOWAIT',
+     *     'LOCK TABLE "MY_SCHEMA"."MY_TABLE" IN EXCLUSIVE MODE NOWAIT',
      *   );
      *   const r = await session.execute("SELECT MY_SEQ.NEXTVAL FROM DUAL");
      *   const nextId = Number(r.rows[0][0]);

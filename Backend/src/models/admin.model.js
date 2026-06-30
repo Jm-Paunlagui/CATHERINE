@@ -3,7 +3,7 @@
 /**
  * @fileoverview AdminModel — standalone privileged accounts (T_ADMINS_DEV) with RBAC.
  *
- * Generic, project-agnostic replacement for the Meal T_EMP_MGMT_ADMIN coupling.
+ * Standalone privileged accounts with RBAC and tamper-evident signatures.
  * RBAC role ∈ { SUPER_ADMIN, ADMIN, USER }. Each row carries a tamper-evident
  * SYSSIGNATURE (HMAC-SHA256 over the signed fields). The caller (auth.service /
  * AdminManagementService) computes the signature via CryptoVault.signRecord and

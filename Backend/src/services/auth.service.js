@@ -3,7 +3,7 @@
 /**
  * @fileoverview AuthService — standalone username/password authentication.
  *
- * Project-agnostic replacement for the HRIS/Meal auth coupling. Credentials live
+ * Standalone username/password authentication. Credentials live
  * in two tables (or the in-memory demo store when DEMO_MODE=true):
  *
  *   T_ADMINS_DEV  — privileged accounts with RBAC (SUPER_ADMIN/ADMIN/USER) and a

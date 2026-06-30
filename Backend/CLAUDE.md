@@ -1,4 +1,4 @@
-# Project: MEAL Backend — Node.js Express API Template
+# Project: CATHERINE Backend — Node.js Express API Template
 
 Production-grade Node.js Express API template. Class-based OOP architecture, clean separation of concerns, maintainable by any developer.
 
@@ -136,20 +136,20 @@ Every middleware module exports **instantiated class** whose `handle()` method i
 ```js
 // ✅ CORRECT — Class-based middleware
 class RateLimiterMiddleware {
-  constructor(options = {}) {
-    this._max = options.max ?? parseInt(process.env.RATE_LIMIT_MAX, 10);
-    this._windowMs =
-      options.windowMs ?? parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10);
-    this._store = new NodeCache({ stdTTL: 3600, useClones: false });
-  }
+    constructor(options = {}) {
+        this._max = options.max ?? parseInt(process.env.RATE_LIMIT_MAX, 10);
+        this._windowMs =
+            options.windowMs ?? parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10);
+        this._store = new NodeCache({ stdTTL: 3600, useClones: false });
+    }
 
-  handle(req, res, next) {
-    // ... middleware logic
-  }
+    handle(req, res, next) {
+        // ... middleware logic
+    }
 
-  getStats() {
-    return this._store.getStats();
-  }
+    getStats() {
+        return this._store.getStats();
+    }
 }
 
 // Export a default instance + the class for custom instances
@@ -160,7 +160,7 @@ module.exports = { RateLimiterMiddleware, defaultRateLimiter };
 ```js
 // app.js usage
 const {
-  defaultRateLimiter,
+    defaultRateLimiter,
 } = require("./middleware/security/RateLimiterMiddleware");
 app.use(defaultRateLimiter.handle.bind(defaultRateLimiter));
 ```
@@ -171,15 +171,15 @@ Controllers are **classes** with static methods (or bound instance methods). One
 
 ```js
 class UserController {
-  static getById = catchAsync(async (req, res) => {
-    const user = await UserService.getById(req.params.id);
-    res.json(sendSuccess("User fetched", user));
-  });
+    static getById = catchAsync(async (req, res) => {
+        const user = await UserService.getById(req.params.id);
+        res.json(sendSuccess("User fetched", user));
+    });
 
-  static create = catchAsync(async (req, res) => {
-    const user = await UserService.create(req.body);
-    res.status(HTTP_STATUS.CREATED).json(sendSuccess("User created", user));
-  });
+    static create = catchAsync(async (req, res) => {
+        const user = await UserService.create(req.body);
+        res.status(HTTP_STATUS.CREATED).json(sendSuccess("User created", user));
+    });
 }
 
 module.exports = UserController;
@@ -191,12 +191,15 @@ Services are **classes** owning all business logic for a domain. Talk to models/
 
 ```js
 class UserService {
-  static async getById(id) {
-    const user = await UserModel.findById(id);
-    if (!user)
-      throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, HTTP_STATUS.NOT_FOUND);
-    return user;
-  }
+    static async getById(id) {
+        const user = await UserModel.findById(id);
+        if (!user)
+            throw new AppError(
+                AUTH_ERRORS.USER_NOT_FOUND,
+                HTTP_STATUS.NOT_FOUND,
+            );
+        return user;
+    }
 }
 
 module.exports = UserService;
@@ -231,11 +234,11 @@ constants/messages/
 ```js
 // ✅ constants/messages/index.js
 module.exports = {
-  ...require("./oracle.messages"), // { oracleMessages }
-  ...require("./oracleWrapper.messages"), // { oracleMongoWrapperMessages }
-  ...require("./auth.messages"), // { authMessages }
-  ...require("./middleware.messages"), // { middlewareMessages }
-  ...require("./database.messages"), // { databaseMessages }
+    ...require("./oracle.messages"), // { oracleMessages }
+    ...require("./oracleWrapper.messages"), // { oracleMongoWrapperMessages }
+    ...require("./auth.messages"), // { authMessages }
+    ...require("./middleware.messages"), // { middlewareMessages }
+    ...require("./database.messages"), // { databaseMessages }
 };
 ```
 
@@ -256,21 +259,22 @@ Permissions are **data-driven**, not hardcoded. JWT payload carries `permissions
 ```js
 // ✅ CORRECT — Dynamic access control
 class AuthMiddleware {
-  // Attach decoded JWT to req.user
-  static authenticate(req, res, next) {
-    /* ... */
-  }
+    // Attach decoded JWT to req.user
+    static authenticate(req, res, next) {
+        /* ... */
+    }
 
-  // Factory: returns middleware that checks a predicate against req.user
-  // predicate: (user) => boolean
-  static requireAccess(predicate, options = {}) {
-    return (req, res, next) => {
-      if (!req.user) return next(new AppError(AUTH_ERRORS.USER_NOT_FOUND, 401));
-      if (!predicate(req.user))
-        return next(new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, 403));
-      next();
-    };
-  }
+    // Factory: returns middleware that checks a predicate against req.user
+    // predicate: (user) => boolean
+    static requireAccess(predicate, options = {}) {
+        return (req, res, next) => {
+            if (!req.user)
+                return next(new AppError(AUTH_ERRORS.USER_NOT_FOUND, 401));
+            if (!predicate(req.user))
+                return next(new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, 403));
+            next();
+        };
+    }
 }
 ```
 
@@ -279,31 +283,32 @@ class AuthMiddleware {
 ```js
 // Project A: role-based only
 router.get(
-  "/report",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.requireAccess((user) => user.userLevel >= 2),
-  ReportController.get,
+    "/report",
+    AuthMiddleware.authenticate,
+    AuthMiddleware.requireAccess((user) => user.userLevel >= 2),
+    ReportController.get,
 );
 
 // Project B: area/permission-based
 router.post(
-  "/inventory",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.requireAccess((user) => {
-    const areas = (user.area ?? "").split(",").map((a) => a.trim());
-    return areas.includes("INV_CON");
-  }),
-  InventoryController.create,
+    "/inventory",
+    AuthMiddleware.authenticate,
+    AuthMiddleware.requireAccess((user) => {
+        const areas = (user.area ?? "").split(",").map((a) => a.trim());
+        return areas.includes("INV_CON");
+    }),
+    InventoryController.create,
 );
 
 // Project C: combined
 router.delete(
-  "/admin",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.requireAccess(
-    (user) => user.userLevel >= 3 && user.permissions?.includes("DELETE_USERS"),
-  ),
-  AdminController.deleteUser,
+    "/admin",
+    AuthMiddleware.authenticate,
+    AuthMiddleware.requireAccess(
+        (user) =>
+            user.userLevel >= 3 && user.permissions?.includes("DELETE_USERS"),
+    ),
+    AdminController.deleteUser,
 );
 ```
 
@@ -329,27 +334,27 @@ router.delete(
 
 ### RFC 5424 Level Hierarchy
 
-| Priority | Level name | Method call | When to use |
-|----------|-----------|-------------|-------------|
-| 0 | EMERG | `logger.emerg(...)` | System is unusable — unrecoverable panic. Should never occur in a running process. |
-| 1 | ALERT | `logger.alert(...)` | Action must be taken immediately. E.g. DB pool completely down, critical dependency unreachable. |
-| 2 | CRIT | `logger.crit(...)` | Critical conditions. E.g. health check hard failure, certificate expiry, disk full. |
-| 3 | ERROR | `logger.error(...)` | Recoverable error conditions. E.g. a request failed, a query threw, an external call timed out. |
-| 4 | WARNING | `logger.warning(...)` | Warning conditions — something unexpected but non-fatal. E.g. slow pool, rate limit hit, CORS blocked. |
-| 5 | NOTICE | `logger.notice(...)` | Normal but significant events. E.g. server startup complete, configuration change, admin action. |
-| 6 | INFO | `logger.info(...)` | Routine informational messages. E.g. request handled, cache hit, pool created. |
-| 7 | DEBUG | `logger.debug(...)` | Verbose diagnostic detail. Only emitted when `LOG_LEVEL=DEBUG`. |
+| Priority | Level name | Method call           | When to use                                                                                            |
+| -------- | ---------- | --------------------- | ------------------------------------------------------------------------------------------------------ |
+| 0        | EMERG      | `logger.emerg(...)`   | System is unusable — unrecoverable panic. Should never occur in a running process.                     |
+| 1        | ALERT      | `logger.alert(...)`   | Action must be taken immediately. E.g. DB pool completely down, critical dependency unreachable.       |
+| 2        | CRIT       | `logger.crit(...)`    | Critical conditions. E.g. health check hard failure, certificate expiry, disk full.                    |
+| 3        | ERROR      | `logger.error(...)`   | Recoverable error conditions. E.g. a request failed, a query threw, an external call timed out.        |
+| 4        | WARNING    | `logger.warning(...)` | Warning conditions — something unexpected but non-fatal. E.g. slow pool, rate limit hit, CORS blocked. |
+| 5        | NOTICE     | `logger.notice(...)`  | Normal but significant events. E.g. server startup complete, configuration change, admin action.       |
+| 6        | INFO       | `logger.info(...)`    | Routine informational messages. E.g. request handled, cache hit, pool created.                         |
+| 7        | DEBUG      | `logger.debug(...)`   | Verbose diagnostic detail. Only emitted when `LOG_LEVEL=DEBUG`.                                        |
 
 **Priority rule:** A log at RFC 5424 level N is written when `N <= currentLevel`. Lower number = higher priority = always shown. `LOG_LEVEL=INFO` (default) shows levels 0–6 and suppresses 7.
 
 **Backward-compat mapping:**
 
-| Old call (pre-v5) | New call (v5+) | Notes |
-|-------------------|----------------|-------|
-| `logger.error(...)` | `logger.error(...)` | Same name, now priority 3 |
-| `logger.warn(...)` | `logger.warning(...)` | Renamed — `warn` is deprecated alias |
-| `logger.info(...)` | `logger.info(...)` | Same name, now priority 6 |
-| `logger.debug(...)` | `logger.debug(...)` | Same name, now priority 7 |
+| Old call (pre-v5)   | New call (v5+)        | Notes                                |
+| ------------------- | --------------------- | ------------------------------------ |
+| `logger.error(...)` | `logger.error(...)`   | Same name, now priority 3            |
+| `logger.warn(...)`  | `logger.warning(...)` | Renamed — `warn` is deprecated alias |
+| `logger.info(...)`  | `logger.info(...)`    | Same name, now priority 6            |
+| `logger.debug(...)` | `logger.debug(...)`   | Same name, now priority 7            |
 
 ---
 
@@ -388,10 +393,15 @@ const { logger } = require("../utils/logger");
 
 // RFC 5424 levels — use the right level for the right condition
 logger.emerg("Database cluster unreachable — process cannot continue");
-logger.alert("Connection pool completely exhausted — immediate action required");
-logger.crit("Health check hard failure", { subsystem: "oracle", pool: "userAccount" });
+logger.alert(
+    "Connection pool completely exhausted — immediate action required",
+);
+logger.crit("Health check hard failure", {
+    subsystem: "oracle",
+    pool: "userAccount",
+});
 logger.error("Query failed", { table: "T_OPITS_USERS", err: err.message });
-logger.warning("Slow pool response", { connectionName, elapsed });   // ← NOT logger.warn()
+logger.warning("Slow pool response", { connectionName, elapsed }); // ← NOT logger.warn()
 logger.notice("Server startup complete", { port: 3000, env: "production" });
 logger.info("Request handled", { route: "/api/v1/health", ms: 12 });
 logger.debug("Cache key resolved", { key: "users:page:1:limit:20" });
@@ -402,10 +412,10 @@ logger.logHandlingRequest(req, { userId: 12345 });
 logger.logCompletedRequest(req, res, durationMs);
 
 // Specialized convenience methods (internally route to correct RFC level)
-logger.cache("GET", "cache:users:42", "HIT", 3);          // → DEBUG
-logger.database("SELECT", "USERS", 12, 5);                 // → DEBUG
+logger.cache("GET", "cache:users:42", "HIT", 3); // → DEBUG
+logger.database("SELECT", "USERS", 12, 5); // → DEBUG
 logger.performance("generateReport", 4200, { rows: 50000 }); // → WARNING if > 5 000ms, else INFO
-logger.security("IP_BLOCKED", { ip: "10.0.0.1" });        // → WARNING
+logger.security("IP_BLOCKED", { ip: "10.0.0.1" }); // → WARNING
 ```
 
 ### Logger Integration in Classes
@@ -416,19 +426,19 @@ const { logger } = require("../../utils/logger");
 const { oracleMessages } = require("../../constants/messages");
 
 class OracleAdapter {
-  async #createPool(name, config, attempt = 0) {
-    logger.info(oracleMessages.POOL_CREATING(name));
-    try {
-      const pool = await oracledb.createPool(config);
-      logger.info(oracleMessages.POOL_READY(name, pool));
-      return pool;
-    } catch (err) {
-      logger.error(
-        oracleMessages.POOL_FAILED(name, attempt + 1, 4, err.message),
-      );
-      throw err;
+    async #createPool(name, config, attempt = 0) {
+        logger.info(oracleMessages.POOL_CREATING(name));
+        try {
+            const pool = await oracledb.createPool(config);
+            logger.info(oracleMessages.POOL_READY(name, pool));
+            return pool;
+        } catch (err) {
+            logger.error(
+                oracleMessages.POOL_FAILED(name, attempt + 1, 4, err.message),
+            );
+            throw err;
+        }
     }
-  }
 }
 ```
 
@@ -438,18 +448,18 @@ class OracleAdapter {
 
 Apply in this priority order:
 
-| # | Condition | Level |
-|---|-----------|-------|
-| 1 | Server lifecycle events: process start, graceful shutdown begin/end, config loaded, pool initialised | `notice` |
-| 2 | Catch block — Oracle adapter / DB pool / connection errors (all retries exhausted, pool marked unhealthy) | `crit` |
-| 3 | Catch block — cert expiry, health-check hard fail, external payment gateway total failure | `crit` |
-| 4 | Catch block — expected business error (record not found, auth failed, validation rejected, email missing) | `warning` |
-| 5 | Catch block — unexpected application error (unhandled exception, null deref, contract violation) | `error` |
-| 6 | Catch block inside retry logic — first attempt failed, retrying | `warning` |
-| 7 | Catch block inside retry logic — all retries exhausted | `error` or `crit` depending on subsystem |
-| 8 | Routine mid-flow checkpoints ("fetching records", "found N rows", "cache hit", "processing request") | `info` |
-| 9 | Deprecated API called, optional env var missing, optional config oddity, non-fatal config issue, fallback used | `warning` |
-| 10 | Pool recovered after failures | `notice` |
+| #   | Condition                                                                                                      | Level                                    |
+| --- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| 1   | Server lifecycle events: process start, graceful shutdown begin/end, config loaded, pool initialised           | `notice`                                 |
+| 2   | Catch block — Oracle adapter / DB pool / connection errors (all retries exhausted, pool marked unhealthy)      | `crit`                                   |
+| 3   | Catch block — cert expiry, health-check hard fail, external payment gateway total failure                      | `crit`                                   |
+| 4   | Catch block — expected business error (record not found, auth failed, validation rejected, email missing)      | `warning`                                |
+| 5   | Catch block — unexpected application error (unhandled exception, null deref, contract violation)               | `error`                                  |
+| 6   | Catch block inside retry logic — first attempt failed, retrying                                                | `warning`                                |
+| 7   | Catch block inside retry logic — all retries exhausted                                                         | `error` or `crit` depending on subsystem |
+| 8   | Routine mid-flow checkpoints ("fetching records", "found N rows", "cache hit", "processing request")           | `info`                                   |
+| 9   | Deprecated API called, optional env var missing, optional config oddity, non-fatal config issue, fallback used | `warning`                                |
+| 10  | Pool recovered after failures                                                                                  | `notice`                                 |
 
 **Quick reference:**
 
@@ -577,9 +587,9 @@ Always use helpers from `constants/responses/`. **Never return raw data.**
 ```js
 // In controllers
 res.json(sendSuccess(RESPONSE_MESSAGES.USER_FETCHED, user));
-res
-  .status(HTTP_STATUS.CREATED)
-  .json(sendSuccess(RESPONSE_MESSAGES.USER_CREATED, user));
+res.status(HTTP_STATUS.CREATED).json(
+    sendSuccess(RESPONSE_MESSAGES.USER_CREATED, user),
+);
 
 // In error handler (via AppError)
 throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, HTTP_STATUS.UNAUTHORIZED);
@@ -598,8 +608,8 @@ throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, HTTP_STATUS.UNAUTHORIZED);
 ```js
 // AppError usage
 throw new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, HTTP_STATUS.FORBIDDEN, {
-  type: "AuthorizationError",
-  hint: "You do not have the required permission for this resource.",
+    type: "AuthorizationError",
+    hint: "You do not have the required permission for this resource.",
 });
 ```
 
@@ -668,8 +678,8 @@ POST /api/v1/auth/logout
 // Usage everywhere else in the app
 const db = require("../config");
 await db.withConnection("userAccount", async (conn) => {
-  const result = await conn.execute("SELECT 1 FROM DUAL");
-  return result.rows;
+    const result = await conn.execute("SELECT 1 FROM DUAL");
+    return result.rows;
 });
 ```
 
@@ -697,7 +707,7 @@ Full API documented in `src/utils/oracle-mongo-wrapper/README.md`.
 Compile into standalone Windows executable via `pkg`:
 
 ```bash
-npm run build        # Produces dist/meal_backend.exe
+npm run build        # Produces dist/catherine_backend.exe
 npm run build:debug  # With debug output
 ```
 
@@ -959,121 +969,147 @@ Unit tests verify individual classes and pure functions in complete isolation. N
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const {
-  RateLimiterMiddleware,
+    RateLimiterMiddleware,
 } = require("../../../src/middleware/security/RateLimiterMiddleware");
 
 function mockReq(ip = "127.0.0.1", path = "/api/v1/users") {
-  return { ip, path, method: "GET", headers: {}, route: null };
+    return { ip, path, method: "GET", headers: {}, route: null };
 }
 
 function mockRes() {
-  const headers = {};
-  return {
-    headersSent: false,
-    setHeader(k, v) {
-      headers[k] = v;
-    },
-    getHeader(k) {
-      return headers[k];
-    },
-    status(code) {
-      this._status = code;
-      return this;
-    },
-    json(body) {
-      this._body = body;
-      return this;
-    },
-    _headers: headers,
-  };
+    const headers = {};
+    return {
+        headersSent: false,
+        setHeader(k, v) {
+            headers[k] = v;
+        },
+        getHeader(k) {
+            return headers[k];
+        },
+        status(code) {
+            this._status = code;
+            return this;
+        },
+        json(body) {
+            this._body = body;
+            return this;
+        },
+        _headers: headers,
+    };
 }
 
 describe("RateLimiterMiddleware", function () {
-  describe("constructor validation", function () {
-    it("throws RangeError when max <= 0", function () {
-      expect(() => new RateLimiterMiddleware({ max: 0 })).toThrow(RangeError);
-      expect(() => new RateLimiterMiddleware({ max: -1 })).toThrow(RangeError);
+    describe("constructor validation", function () {
+        it("throws RangeError when max <= 0", function () {
+            expect(() => new RateLimiterMiddleware({ max: 0 })).toThrow(
+                RangeError,
+            );
+            expect(() => new RateLimiterMiddleware({ max: -1 })).toThrow(
+                RangeError,
+            );
+        });
+
+        it("throws RangeError when windowMs <= 0", function () {
+            expect(
+                () => new RateLimiterMiddleware({ max: 10, windowMs: 0 }),
+            ).toThrow(RangeError);
+        });
+
+        it("initializes with valid options", function () {
+            expect(
+                () => new RateLimiterMiddleware({ max: 10, windowMs: 60000 }),
+            ).not.toThrow();
+        });
     });
 
-    it("throws RangeError when windowMs <= 0", function () {
-      expect(
-        () => new RateLimiterMiddleware({ max: 10, windowMs: 0 }),
-      ).toThrow(RangeError);
+    describe("handle()", function () {
+        it("calls next() when under the limit", function (done) {
+            const limiter = new RateLimiterMiddleware({
+                max: 5,
+                windowMs: 60000,
+            });
+            const req = mockReq();
+            const res = mockRes();
+            limiter.handle(req, res, done);
+        });
+
+        it("responds 429 after exceeding max requests", function (done) {
+            const limiter = new RateLimiterMiddleware({
+                max: 2,
+                windowMs: 60000,
+            });
+            const req = mockReq("10.0.0.1");
+            const res = mockRes();
+            const noop = () => {};
+
+            limiter.handle(req, mockRes(), noop);
+            limiter.handle(req, mockRes(), noop);
+
+            limiter.handle(req, res, () => {
+                done(
+                    new Error(
+                        "next() should not be called when limit is exceeded",
+                    ),
+                );
+            });
+
+            setTimeout(() => {
+                expect(res._status).toBe(429);
+                expect(res._body.status).toBe("error");
+                done();
+            }, 10);
+        });
+
+        it("sets RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset headers", function (done) {
+            const limiter = new RateLimiterMiddleware({
+                max: 100,
+                windowMs: 60000,
+            });
+            const res = mockRes();
+            limiter.handle(mockReq(), res, () => {
+                expect(res._headers).toHaveProperty("RateLimit-Limit");
+                expect(res._headers).toHaveProperty("RateLimit-Remaining");
+                expect(res._headers).toHaveProperty("RateLimit-Reset");
+                done();
+            });
+        });
+
+        it("bypasses OPTIONS requests", function (done) {
+            const limiter = new RateLimiterMiddleware({
+                max: 1,
+                windowMs: 60000,
+            });
+            const req = { ...mockReq(), method: "OPTIONS" };
+            limiter.handle(req, mockRes(), done);
+            limiter.handle(req, mockRes(), done); // second call must also pass
+        });
+
+        it("clears a specific key with clearKey()", function (done) {
+            const limiter = new RateLimiterMiddleware({
+                max: 1,
+                windowMs: 60000,
+            });
+            const req = mockReq("192.168.1.5");
+            limiter.handle(req, mockRes(), () => {}); // exhaust
+            limiter.clearKey("rl:ip:192.168.1.5");
+
+            // Should pass after clear
+            limiter.handle(req, mockRes(), done);
+        });
     });
 
-    it("initializes with valid options", function () {
-      expect(
-        () => new RateLimiterMiddleware({ max: 10, windowMs: 60000 }),
-      ).not.toThrow();
+    describe("getStats()", function () {
+        it("returns a NodeCache stats object", function () {
+            const limiter = new RateLimiterMiddleware({
+                max: 10,
+                windowMs: 60000,
+            });
+            const stats = limiter.getStats();
+            expect(stats).toBeTypeOf("object");
+            expect(stats).toHaveProperty("hits");
+            expect(stats).toHaveProperty("misses");
+        });
     });
-  });
-
-  describe("handle()", function () {
-    it("calls next() when under the limit", function (done) {
-      const limiter = new RateLimiterMiddleware({ max: 5, windowMs: 60000 });
-      const req = mockReq();
-      const res = mockRes();
-      limiter.handle(req, res, done);
-    });
-
-    it("responds 429 after exceeding max requests", function (done) {
-      const limiter = new RateLimiterMiddleware({ max: 2, windowMs: 60000 });
-      const req = mockReq("10.0.0.1");
-      const res = mockRes();
-      const noop = () => {};
-
-      limiter.handle(req, mockRes(), noop);
-      limiter.handle(req, mockRes(), noop);
-
-      limiter.handle(req, res, () => {
-        done(new Error("next() should not be called when limit is exceeded"));
-      });
-
-      setTimeout(() => {
-        expect(res._status).toBe(429);
-        expect(res._body.status).toBe("error");
-        done();
-      }, 10);
-    });
-
-    it("sets RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset headers", function (done) {
-      const limiter = new RateLimiterMiddleware({ max: 100, windowMs: 60000 });
-      const res = mockRes();
-      limiter.handle(mockReq(), res, () => {
-        expect(res._headers).toHaveProperty("RateLimit-Limit");
-        expect(res._headers).toHaveProperty("RateLimit-Remaining");
-        expect(res._headers).toHaveProperty("RateLimit-Reset");
-        done();
-      });
-    });
-
-    it("bypasses OPTIONS requests", function (done) {
-      const limiter = new RateLimiterMiddleware({ max: 1, windowMs: 60000 });
-      const req = { ...mockReq(), method: "OPTIONS" };
-      limiter.handle(req, mockRes(), done);
-      limiter.handle(req, mockRes(), done); // second call must also pass
-    });
-
-    it("clears a specific key with clearKey()", function (done) {
-      const limiter = new RateLimiterMiddleware({ max: 1, windowMs: 60000 });
-      const req = mockReq("192.168.1.5");
-      limiter.handle(req, mockRes(), () => {}); // exhaust
-      limiter.clearKey("rl:ip:192.168.1.5");
-
-      // Should pass after clear
-      limiter.handle(req, mockRes(), done);
-    });
-  });
-
-  describe("getStats()", function () {
-    it("returns a NodeCache stats object", function () {
-      const limiter = new RateLimiterMiddleware({ max: 10, windowMs: 60000 });
-      const stats = limiter.getStats();
-      expect(stats).toBeTypeOf("object");
-      expect(stats).toHaveProperty("hits");
-      expect(stats).toHaveProperty("misses");
-    });
-  });
 });
 ```
 
@@ -1085,89 +1121,89 @@ describe("RateLimiterMiddleware", function () {
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const {
-  IpFilterMiddleware,
+    IpFilterMiddleware,
 } = require("../../../src/middleware/security/IpFilterMiddleware");
 
 describe("IpFilterMiddleware", function () {
-  describe("when disabled", function () {
-    it("always calls next()", function (done) {
-      const filter = new IpFilterMiddleware({ enabled: false });
-      filter.handle({ ip: "1.2.3.4", path: "/" }, {}, done);
-    });
-  });
-
-  describe("when enabled", function () {
-    it("allows an exact IP on the allowlist", function (done) {
-      const filter = new IpFilterMiddleware({
-        enabled: true,
-        allowedIps: ["192.168.1.10"],
-      });
-      filter.handle({ ip: "192.168.1.10", path: "/" }, {}, done);
+    describe("when disabled", function () {
+        it("always calls next()", function (done) {
+            const filter = new IpFilterMiddleware({ enabled: false });
+            filter.handle({ ip: "1.2.3.4", path: "/" }, {}, done);
+        });
     });
 
-    it("blocks an IP not on the allowlist", function (done) {
-      const filter = new IpFilterMiddleware({
-        enabled: true,
-        allowedIps: ["192.168.1.10"],
-      });
-      const res = {
-        status(c) {
-          this._status = c;
-          return this;
-        },
-        json(b) {
-          this._body = b;
-          done();
-        },
-      };
-      filter.handle({ ip: "10.0.0.5", path: "/api" }, res, () => {
-        done(new Error("should have been blocked"));
-      });
+    describe("when enabled", function () {
+        it("allows an exact IP on the allowlist", function (done) {
+            const filter = new IpFilterMiddleware({
+                enabled: true,
+                allowedIps: ["192.168.1.10"],
+            });
+            filter.handle({ ip: "192.168.1.10", path: "/" }, {}, done);
+        });
+
+        it("blocks an IP not on the allowlist", function (done) {
+            const filter = new IpFilterMiddleware({
+                enabled: true,
+                allowedIps: ["192.168.1.10"],
+            });
+            const res = {
+                status(c) {
+                    this._status = c;
+                    return this;
+                },
+                json(b) {
+                    this._body = b;
+                    done();
+                },
+            };
+            filter.handle({ ip: "10.0.0.5", path: "/api" }, res, () => {
+                done(new Error("should have been blocked"));
+            });
+        });
+
+        it("allows an IP within a CIDR range", function (done) {
+            const filter = new IpFilterMiddleware({
+                enabled: true,
+                allowedIps: ["10.0.0.0/24"],
+            });
+            filter.handle({ ip: "10.0.0.99", path: "/" }, {}, done);
+        });
+
+        it("blocks an IP outside the CIDR range", function (done) {
+            const filter = new IpFilterMiddleware({
+                enabled: true,
+                allowedIps: ["10.0.0.0/24"],
+            });
+            const res = {
+                status(c) {
+                    this._status = c;
+                    return this;
+                },
+                json() {
+                    done();
+                },
+            };
+            filter.handle({ ip: "10.0.1.1", path: "/api" }, res, () => {
+                done(new Error("should have been blocked"));
+            });
+        });
     });
 
-    it("allows an IP within a CIDR range", function (done) {
-      const filter = new IpFilterMiddleware({
-        enabled: true,
-        allowedIps: ["10.0.0.0/24"],
-      });
-      filter.handle({ ip: "10.0.0.99", path: "/" }, {}, done);
-    });
+    describe("static helpers", function () {
+        it("ipInCidr correctly classifies IPs", function () {
+            expect(
+                IpFilterMiddleware.ipInCidr("192.168.1.5", "192.168.1.0/24"),
+            ).toBe(true);
+            expect(
+                IpFilterMiddleware.ipInCidr("192.168.2.1", "192.168.1.0/24"),
+            ).toBe(false);
+        });
 
-    it("blocks an IP outside the CIDR range", function (done) {
-      const filter = new IpFilterMiddleware({
-        enabled: true,
-        allowedIps: ["10.0.0.0/24"],
-      });
-      const res = {
-        status(c) {
-          this._status = c;
-          return this;
-        },
-        json() {
-          done();
-        },
-      };
-      filter.handle({ ip: "10.0.1.1", path: "/api" }, res, () => {
-        done(new Error("should have been blocked"));
-      });
+        it("extractClientIp strips ::ffff: IPv4-mapped prefix", function () {
+            const req = { ip: "::ffff:10.0.0.1", socket: {} };
+            expect(IpFilterMiddleware.extractClientIp(req)).toBe("10.0.0.1");
+        });
     });
-  });
-
-  describe("static helpers", function () {
-    it("ipInCidr correctly classifies IPs", function () {
-      expect(
-        IpFilterMiddleware.ipInCidr("192.168.1.5", "192.168.1.0/24"),
-      ).toBe(true);
-      expect(
-        IpFilterMiddleware.ipInCidr("192.168.2.1", "192.168.1.0/24"),
-      ).toBe(false);
-    });
-
-    it("extractClientIp strips ::ffff: IPv4-mapped prefix", function () {
-      const req = { ip: "::ffff:10.0.0.1", socket: {} };
-      expect(IpFilterMiddleware.extractClientIp(req)).toBe("10.0.0.1");
-    });
-  });
 });
 ```
 
@@ -1179,60 +1215,60 @@ describe("IpFilterMiddleware", function () {
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
 const {
-  CacheKeyBuilder,
+    CacheKeyBuilder,
 } = require("../../../src/middleware/cache/CacheKeyBuilder");
 
 describe("CacheKeyBuilder", function () {
-  it("produces the same key regardless of parameter insertion order", function () {
-    const k1 = CacheKeyBuilder.build("users", {
-      division: "WH",
-      year: 2025,
-      month: 1,
+    it("produces the same key regardless of parameter insertion order", function () {
+        const k1 = CacheKeyBuilder.build("users", {
+            division: "WH",
+            year: 2025,
+            month: 1,
+        });
+        const k2 = CacheKeyBuilder.build("users", {
+            month: 1,
+            year: 2025,
+            division: "WH",
+        });
+        expect(k1).toBe(k2);
     });
-    const k2 = CacheKeyBuilder.build("users", {
-      month: 1,
-      year: 2025,
-      division: "WH",
+
+    it('normalises null and undefined values to the string "null"', function () {
+        const k = CacheKeyBuilder.build("users", {
+            division: null,
+            year: undefined,
+        });
+        expect(k).toContain("division=null");
+        expect(k).toContain("year=null");
     });
-    expect(k1).toBe(k2);
-  });
 
-  it('normalises null and undefined values to the string "null"', function () {
-    const k = CacheKeyBuilder.build("users", {
-      division: null,
-      year: undefined,
+    it("sorts array parameters before joining", function () {
+        const k1 = CacheKeyBuilder.build("ids", { ids: [3, 1, 2] });
+        const k2 = CacheKeyBuilder.build("ids", { ids: [2, 3, 1] });
+        expect(k1).toBe(k2);
     });
-    expect(k).toContain("division=null");
-    expect(k).toContain("year=null");
-  });
 
-  it("sorts array parameters before joining", function () {
-    const k1 = CacheKeyBuilder.build("ids", { ids: [3, 1, 2] });
-    const k2 = CacheKeyBuilder.build("ids", { ids: [2, 3, 1] });
-    expect(k1).toBe(k2);
-  });
+    it("hashes keys longer than 200 characters", function () {
+        const longParams = {};
+        for (let i = 0; i < 30; i++) longParams[`param${i}`] = `value${i}`;
+        const key = CacheKeyBuilder.build("prefix", longParams);
+        expect(key.length).toBeLessThan(220); // hashed — never obscenely long
+        expect(key).toContain("h=");
+    });
 
-  it("hashes keys longer than 200 characters", function () {
-    const longParams = {};
-    for (let i = 0; i < 30; i++) longParams[`param${i}`] = `value${i}`;
-    const key = CacheKeyBuilder.build("prefix", longParams);
-    expect(key.length).toBeLessThan(220); // hashed — never obscenely long
-    expect(key).toContain("h=");
-  });
+    it("throws TypeError when prefix is empty", function () {
+        expect(() => new CacheKeyBuilder("")).toThrow(TypeError);
+        expect(() => new CacheKeyBuilder(null)).toThrow(TypeError);
+    });
 
-  it("throws TypeError when prefix is empty", function () {
-    expect(() => new CacheKeyBuilder("")).toThrow(TypeError);
-    expect(() => new CacheKeyBuilder(null)).toThrow(TypeError);
-  });
-
-  it("fluent builder and static build() produce identical keys", function () {
-    const fluent = CacheKeyBuilder.of("report")
-      .param("year", 2025)
-      .param("month", 3)
-      .build();
-    const stat = CacheKeyBuilder.build("report", { year: 2025, month: 3 });
-    expect(fluent).toBe(stat);
-  });
+    it("fluent builder and static build() produce identical keys", function () {
+        const fluent = CacheKeyBuilder.of("report")
+            .param("year", 2025)
+            .param("month", 3)
+            .build();
+        const stat = CacheKeyBuilder.build("report", { year: 2025, month: 3 });
+        expect(fluent).toBe(stat);
+    });
 });
 ```
 
@@ -1265,11 +1301,11 @@ module.exports = request(app);
 const jwt = require("jsonwebtoken");
 
 function signToken(payload = {}, expiresIn = "1h") {
-  return jwt.sign(
-    { sub: "test-user", userLevel: 1, ...payload },
-    process.env.JWT_SECRET || "test-secret",
-    { expiresIn },
-  );
+    return jwt.sign(
+        { sub: "test-user", userLevel: 1, ...payload },
+        process.env.JWT_SECRET || "test-secret",
+        { expiresIn },
+    );
 }
 
 module.exports = { signToken };
@@ -1285,32 +1321,32 @@ module.exports = { signToken };
 const agent = require("../helpers/request");
 
 describe("GET /api/v1/health", function () {
-  it('returns 200 with status "success"', async function () {
-    const res = await agent.get("/api/v1/health");
-    expect(res.status).toBe(200);
-    expect(res.body.status).toBe("success");
-  });
+    it('returns 200 with status "success"', async function () {
+        const res = await agent.get("/api/v1/health");
+        expect(res.status).toBe(200);
+        expect(res.body.status).toBe("success");
+    });
 
-  it("response body includes uptime, timestamp, environment, and host", async function () {
-    const res = await agent.get("/api/v1/health");
-    const { data } = res.body;
-    expect(data).toHaveProperty("uptime").that.is.a("number");
-    expect(data).toHaveProperty("timestamp");
-    expect(data).toHaveProperty("environment");
-    expect(data).toHaveProperty("host");
-  });
+    it("response body includes uptime, timestamp, environment, and host", async function () {
+        const res = await agent.get("/api/v1/health");
+        const { data } = res.body;
+        expect(data).toHaveProperty("uptime").that.is.a("number");
+        expect(data).toHaveProperty("timestamp");
+        expect(data).toHaveProperty("environment");
+        expect(data).toHaveProperty("host");
+    });
 
-  it("responds in under 500ms", async function () {
-    const start = Date.now();
-    await agent.get("/api/v1/health");
-    expect(Date.now() - start).toBeLessThan(500);
-  });
+    it("responds in under 500ms", async function () {
+        const start = Date.now();
+        await agent.get("/api/v1/health");
+        expect(Date.now() - start).toBeLessThan(500);
+    });
 
-  it("sets X-Request-ID header on every response", async function () {
-    const res = await agent.get("/api/v1/health");
-    expect(res.headers).toHaveProperty("x-request-id");
-    expect(res.headers["x-request-id"]).toMatch(/^req_/);
-  });
+    it("sets X-Request-ID header on every response", async function () {
+        const res = await agent.get("/api/v1/health");
+        expect(res.headers).toHaveProperty("x-request-id");
+        expect(res.headers["x-request-id"]).toMatch(/^req_/);
+    });
 });
 ```
 
@@ -1324,35 +1360,35 @@ describe("GET /api/v1/health", function () {
 const agent = require("../helpers/request");
 
 describe("Error Handling", function () {
-  describe("404 — unknown routes", function () {
-    it("GET unknown path returns 404 JSON with error shape", async function () {
-      const res = await agent.get("/api/v1/does-not-exist");
-      expect(res.status).toBe(404);
-      expect(res.body.status).toBe("error");
-      expect(res.body.code).toBe(404);
-      expect(res.body.error).toHaveProperty("type", "NotFoundError");
+    describe("404 — unknown routes", function () {
+        it("GET unknown path returns 404 JSON with error shape", async function () {
+            const res = await agent.get("/api/v1/does-not-exist");
+            expect(res.status).toBe(404);
+            expect(res.body.status).toBe("error");
+            expect(res.body.code).toBe(404);
+            expect(res.body.error).toHaveProperty("type", "NotFoundError");
+        });
+
+        it("POST unknown path returns 404 not 405", async function () {
+            const res = await agent.post("/api/v1/does-not-exist").send({});
+            expect(res.status).toBe(404);
+        });
     });
 
-    it("POST unknown path returns 404 not 405", async function () {
-      const res = await agent.post("/api/v1/does-not-exist").send({});
-      expect(res.status).toBe(404);
-    });
-  });
+    describe("global error shape contract", function () {
+        it("every error response has status, code, message, error fields", async function () {
+            const res = await agent.get("/api/v1/does-not-exist");
+            // chai's `.to.have.all.keys(...)` → assert the exact key set in Vitest
+            expect(Object.keys(res.body).sort()).toEqual(
+                ["code", "error", "message", "status"], // sorted
+            );
+        });
 
-  describe("global error shape contract", function () {
-    it("every error response has status, code, message, error fields", async function () {
-      const res = await agent.get("/api/v1/does-not-exist");
-      // chai's `.to.have.all.keys(...)` → assert the exact key set in Vitest
-      expect(Object.keys(res.body).sort()).toEqual(
-        ["code", "error", "message", "status"], // sorted
-      );
+        it("error.type is always a string", async function () {
+            const res = await agent.get("/api/v1/does-not-exist");
+            expect(res.body.error.type).toBeTypeOf("string");
+        });
     });
-
-    it("error.type is always a string", async function () {
-      const res = await agent.get("/api/v1/does-not-exist");
-      expect(res.body.error.type).toBeTypeOf("string");
-    });
-  });
 });
 ```
 
@@ -1378,79 +1414,79 @@ const { signToken } = require("../helpers/auth");
 const PROTECTED = "/api/v1/users/me";
 
 describe("Auth Security", function () {
-  describe("missing token", function () {
-    it("returns 401 when no Authorization header is provided", async function () {
-      const res = await agent.get(PROTECTED);
-      expect(res.status).toBe(401);
-      expect(res.body.error.type).toBe("AuthenticationError");
+    describe("missing token", function () {
+        it("returns 401 when no Authorization header is provided", async function () {
+            const res = await agent.get(PROTECTED);
+            expect(res.status).toBe(401);
+            expect(res.body.error.type).toBe("AuthenticationError");
+        });
+
+        it("returns 401 when Authorization header is malformed", async function () {
+            const res = await agent
+                .get(PROTECTED)
+                .set("Authorization", "NotBearer abc");
+            expect(res.status).toBe(401);
+        });
+
+        it("returns 401 when token is present in neither header nor cookie", async function () {
+            const res = await agent.get(PROTECTED).unset("Authorization");
+            expect(res.status).toBe(401);
+        });
     });
 
-    it("returns 401 when Authorization header is malformed", async function () {
-      const res = await agent
-        .get(PROTECTED)
-        .set("Authorization", "NotBearer abc");
-      expect(res.status).toBe(401);
+    describe("invalid token", function () {
+        it("returns 403 for a token signed with the wrong secret", async function () {
+            const forged = require("jsonwebtoken").sign(
+                { sub: "hacker" },
+                "wrong-secret",
+            );
+            const res = await agent
+                .get(PROTECTED)
+                .set("Authorization", `Bearer ${forged}`);
+            expect(res.status).toBe(403);
+        });
+
+        it("returns 403 for an expired token", async function () {
+            const expired = signToken({ sub: "test" }, "-1s");
+            const res = await agent
+                .get(PROTECTED)
+                .set("Authorization", `Bearer ${expired}`);
+            expect(res.status).toBe(403);
+        });
+
+        it("returns 403 for a structurally invalid JWT", async function () {
+            const res = await agent
+                .get(PROTECTED)
+                .set("Authorization", "Bearer not.a.jwt");
+            expect(res.status).toBe(403);
+        });
+
+        it("returns 403 for a token with a tampered payload", async function () {
+            // Sign a valid token, then corrupt the payload segment
+            const valid = signToken({ userLevel: 1 });
+            const parts = valid.split(".");
+            parts[1] = Buffer.from(
+                JSON.stringify({ sub: "hacker", userLevel: 99 }),
+            ).toString("base64url");
+            const tampered = parts.join(".");
+            const res = await agent
+                .get(PROTECTED)
+                .set("Authorization", `Bearer ${tampered}`);
+            expect(res.status).toBe(403);
+        });
     });
 
-    it("returns 401 when token is present in neither header nor cookie", async function () {
-      const res = await agent.get(PROTECTED).unset("Authorization");
-      expect(res.status).toBe(401);
+    describe("authorization (permission level)", function () {
+        it("returns 403 when user level is below route requirement", async function () {
+            // Route requires userLevel >= 2; token has userLevel 1
+            const token = signToken({ userLevel: 1 });
+            const res = await agent
+                .get("/api/v1/admin/dashboard")
+                .set("Authorization", `Bearer ${token}`);
+            expect(res.status).toBe(403);
+            expect(res.body.error.type).toBe("AuthorizationError");
+        });
     });
-  });
-
-  describe("invalid token", function () {
-    it("returns 403 for a token signed with the wrong secret", async function () {
-      const forged = require("jsonwebtoken").sign(
-        { sub: "hacker" },
-        "wrong-secret",
-      );
-      const res = await agent
-        .get(PROTECTED)
-        .set("Authorization", `Bearer ${forged}`);
-      expect(res.status).toBe(403);
-    });
-
-    it("returns 403 for an expired token", async function () {
-      const expired = signToken({ sub: "test" }, "-1s");
-      const res = await agent
-        .get(PROTECTED)
-        .set("Authorization", `Bearer ${expired}`);
-      expect(res.status).toBe(403);
-    });
-
-    it("returns 403 for a structurally invalid JWT", async function () {
-      const res = await agent
-        .get(PROTECTED)
-        .set("Authorization", "Bearer not.a.jwt");
-      expect(res.status).toBe(403);
-    });
-
-    it("returns 403 for a token with a tampered payload", async function () {
-      // Sign a valid token, then corrupt the payload segment
-      const valid = signToken({ userLevel: 1 });
-      const parts = valid.split(".");
-      parts[1] = Buffer.from(
-        JSON.stringify({ sub: "hacker", userLevel: 99 }),
-      ).toString("base64url");
-      const tampered = parts.join(".");
-      const res = await agent
-        .get(PROTECTED)
-        .set("Authorization", `Bearer ${tampered}`);
-      expect(res.status).toBe(403);
-    });
-  });
-
-  describe("authorization (permission level)", function () {
-    it("returns 403 when user level is below route requirement", async function () {
-      // Route requires userLevel >= 2; token has userLevel 1
-      const token = signToken({ userLevel: 1 });
-      const res = await agent
-        .get("/api/v1/admin/dashboard")
-        .set("Authorization", `Bearer ${token}`);
-      expect(res.status).toBe(403);
-      expect(res.body.error.type).toBe("AuthorizationError");
-    });
-  });
 });
 ```
 
@@ -1464,42 +1500,44 @@ describe("Auth Security", function () {
 const agent = require("../helpers/request");
 
 describe("Security Headers (Helmet)", function () {
-  let headers;
+    let headers;
 
-  before(async function () {
-    const res = await agent.get("/api/v1/health");
-    headers = res.headers;
-  });
+    before(async function () {
+        const res = await agent.get("/api/v1/health");
+        headers = res.headers;
+    });
 
-  it("sets X-Content-Type-Options: nosniff", function () {
-    expect(headers["x-content-type-options"]).toBe("nosniff");
-  });
+    it("sets X-Content-Type-Options: nosniff", function () {
+        expect(headers["x-content-type-options"]).toBe("nosniff");
+    });
 
-  it("sets X-Frame-Options to deny framing", function () {
-    expect(headers["x-frame-options"]).toBe("DENY");
-  });
+    it("sets X-Frame-Options to deny framing", function () {
+        expect(headers["x-frame-options"]).toBe("DENY");
+    });
 
-  it("sets Strict-Transport-Security", function () {
-    expect(headers["strict-transport-security"]).toBeDefined();
-    expect(headers["strict-transport-security"]).toContain("max-age=");
-  });
+    it("sets Strict-Transport-Security", function () {
+        expect(headers["strict-transport-security"]).toBeDefined();
+        expect(headers["strict-transport-security"]).toContain("max-age=");
+    });
 
-  it("sets Content-Security-Policy", function () {
-    expect(headers["content-security-policy"]).toBeDefined();
-    expect(headers["content-security-policy"]).toContain("default-src 'self'");
-  });
+    it("sets Content-Security-Policy", function () {
+        expect(headers["content-security-policy"]).toBeDefined();
+        expect(headers["content-security-policy"]).toContain(
+            "default-src 'self'",
+        );
+    });
 
-  it("does not expose X-Powered-By", function () {
-    expect(headers).not.toHaveProperty("x-powered-by");
-  });
+    it("does not expose X-Powered-By", function () {
+        expect(headers).not.toHaveProperty("x-powered-by");
+    });
 
-  it("sets Referrer-Policy", function () {
-    expect(headers["referrer-policy"]).toBeDefined();
-  });
+    it("sets Referrer-Policy", function () {
+        expect(headers["referrer-policy"]).toBeDefined();
+    });
 
-  it("sets Cross-Origin-Opener-Policy", function () {
-    expect(headers["cross-origin-opener-policy"]).toBeDefined();
-  });
+    it("sets Cross-Origin-Opener-Policy", function () {
+        expect(headers["cross-origin-opener-policy"]).toBeDefined();
+    });
 });
 ```
 
@@ -1514,68 +1552,74 @@ const agent = require("../helpers/request");
 
 // Payloads that should never reach the DB or be reflected in a 500
 const SQL_PAYLOADS = [
-  "'; DROP TABLE USERS; --",
-  "' OR '1'='1",
-  "' OR 1=1--",
-  "admin'--",
-  "1; SELECT * FROM information_schema.tables",
+    "'; DROP TABLE USERS; --",
+    "' OR '1'='1",
+    "' OR 1=1--",
+    "admin'--",
+    "1; SELECT * FROM information_schema.tables",
 ];
 
 const PATH_TRAVERSAL_PAYLOADS = [
-  "../../../etc/passwd",
-  "..\\..\\..\\windows\\system32",
-  "%2e%2e%2f%2e%2e%2f",
-  "....//....//etc/passwd",
+    "../../../etc/passwd",
+    "..\\..\\..\\windows\\system32",
+    "%2e%2e%2f%2e%2e%2f",
+    "....//....//etc/passwd",
 ];
 
 const XSS_PAYLOADS = [
-  "<script>alert(1)</script>",
-  '"><img src=x onerror=alert(1)>',
-  "javascript:alert(1)",
+    "<script>alert(1)</script>",
+    '"><img src=x onerror=alert(1)>',
+    "javascript:alert(1)",
 ];
 
 describe("Injection Attack Mitigation", function () {
-  describe("SQL injection via query string", function () {
-    SQL_PAYLOADS.forEach((payload) => {
-      it(`rejects or sanitizes: ${payload.slice(0, 40)}`, async function () {
-        const res = await agent.get("/api/v1/users").query({ search: payload });
-        // Must not crash the server with a 500
-        expect(res.status).not.toBe(500);
-      });
+    describe("SQL injection via query string", function () {
+        SQL_PAYLOADS.forEach((payload) => {
+            it(`rejects or sanitizes: ${payload.slice(0, 40)}`, async function () {
+                const res = await agent
+                    .get("/api/v1/users")
+                    .query({ search: payload });
+                // Must not crash the server with a 500
+                expect(res.status).not.toBe(500);
+            });
+        });
     });
-  });
 
-  describe("SQL injection via request body", function () {
-    SQL_PAYLOADS.forEach((payload) => {
-      it(`body payload blocked: ${payload.slice(0, 40)}`, async function () {
-        const res = await agent
-          .post("/api/v1/auth/login")
-          .send({ username: payload, password: "test" });
-        expect(res.status).not.toBe(500);
-      });
+    describe("SQL injection via request body", function () {
+        SQL_PAYLOADS.forEach((payload) => {
+            it(`body payload blocked: ${payload.slice(0, 40)}`, async function () {
+                const res = await agent
+                    .post("/api/v1/auth/login")
+                    .send({ username: payload, password: "test" });
+                expect(res.status).not.toBe(500);
+            });
+        });
     });
-  });
 
-  describe("path traversal via URL", function () {
-    PATH_TRAVERSAL_PAYLOADS.forEach((payload) => {
-      it(`path traversal blocked: ${payload}`, async function () {
-        const res = await agent.get(`/api/v1/${encodeURIComponent(payload)}`);
-        // Security filter should return 400, 403, or 404 — never 200
-        expect([400, 403, 404]).toContain(res.status);
-      });
+    describe("path traversal via URL", function () {
+        PATH_TRAVERSAL_PAYLOADS.forEach((payload) => {
+            it(`path traversal blocked: ${payload}`, async function () {
+                const res = await agent.get(
+                    `/api/v1/${encodeURIComponent(payload)}`,
+                );
+                // Security filter should return 400, 403, or 404 — never 200
+                expect([400, 403, 404]).toContain(res.status);
+            });
+        });
     });
-  });
 
-  describe("XSS via query parameters", function () {
-    XSS_PAYLOADS.forEach((payload) => {
-      it(`XSS payload not reflected: ${payload.slice(0, 40)}`, async function () {
-        const res = await agent.get("/api/v1/search").query({ q: payload });
-        // Response body must never echo the script tag verbatim
-        expect(JSON.stringify(res.body)).not.toContain("<script>");
-        expect(JSON.stringify(res.body)).not.toContain("onerror=");
-      });
+    describe("XSS via query parameters", function () {
+        XSS_PAYLOADS.forEach((payload) => {
+            it(`XSS payload not reflected: ${payload.slice(0, 40)}`, async function () {
+                const res = await agent
+                    .get("/api/v1/search")
+                    .query({ q: payload });
+                // Response body must never echo the script tag verbatim
+                expect(JSON.stringify(res.body)).not.toContain("<script>");
+                expect(JSON.stringify(res.body)).not.toContain("onerror=");
+            });
+        });
     });
-  });
 });
 ```
 
@@ -1590,61 +1634,61 @@ const request = require("supertest");
 const app = require("../../src/app");
 
 describe("CSRF Protection", function () {
-  let agent;
+    let agent;
 
-  beforeEach(function () {
-    // Use a persistent agent so cookies are retained between requests
-    agent = request.agent(app);
-  });
+    beforeEach(function () {
+        // Use a persistent agent so cookies are retained between requests
+        agent = request.agent(app);
+    });
 
-  it("GET /api/v1/csrf/token returns a token and sets cookie", async function () {
-    const res = await agent.get("/api/v1/csrf/token");
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty("token").that.is.a("string");
-    // Cookie must be set
-    const cookies = res.headers["set-cookie"] || [];
-    expect(cookies.some((c) => c.includes("csrf"))).toBe(true);
-  });
+    it("GET /api/v1/csrf/token returns a token and sets cookie", async function () {
+        const res = await agent.get("/api/v1/csrf/token");
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty("token").that.is.a("string");
+        // Cookie must be set
+        const cookies = res.headers["set-cookie"] || [];
+        expect(cookies.some((c) => c.includes("csrf"))).toBe(true);
+    });
 
-  it("POST without CSRF token returns 403", async function () {
-    // First get a session so CSRF cookie is set, then attempt mutation without token
-    await agent.get("/api/v1/csrf/token");
-    const res = await agent
-      .post("/api/v1/auth/login")
-      .send({ username: "test", password: "test" });
-    expect(res.status).toBe(403);
-    expect(res.body.code).toBe("CSRF_TOKEN_INVALID");
-  });
+    it("POST without CSRF token returns 403", async function () {
+        // First get a session so CSRF cookie is set, then attempt mutation without token
+        await agent.get("/api/v1/csrf/token");
+        const res = await agent
+            .post("/api/v1/auth/login")
+            .send({ username: "test", password: "test" });
+        expect(res.status).toBe(403);
+        expect(res.body.code).toBe("CSRF_TOKEN_INVALID");
+    });
 
-  it("POST with valid CSRF token is accepted (not blocked by CSRF)", async function () {
-    const tokenRes = await agent.get("/api/v1/csrf/token");
-    const csrfToken = tokenRes.body.token;
+    it("POST with valid CSRF token is accepted (not blocked by CSRF)", async function () {
+        const tokenRes = await agent.get("/api/v1/csrf/token");
+        const csrfToken = tokenRes.body.token;
 
-    const res = await agent
-      .post("/api/v1/auth/login")
-      .set("x-csrf-token", csrfToken)
-      .send({ username: "nonexistent", password: "wrong" });
+        const res = await agent
+            .post("/api/v1/auth/login")
+            .set("x-csrf-token", csrfToken)
+            .send({ username: "nonexistent", password: "wrong" });
 
-    // May be 400/401 due to bad credentials — but must NOT be 403 CSRF error
-    expect(res.status).not.toBe(403);
-  });
+        // May be 400/401 due to bad credentials — but must NOT be 403 CSRF error
+        expect(res.status).not.toBe(403);
+    });
 
-  it("POST with a forged CSRF token returns 403", async function () {
-    await agent.get("/api/v1/csrf/token");
-    const res = await agent
-      .post("/api/v1/auth/login")
-      .set("x-csrf-token", "forged-token-abc123")
-      .send({ username: "test", password: "test" });
-    expect(res.status).toBe(403);
-  });
+    it("POST with a forged CSRF token returns 403", async function () {
+        await agent.get("/api/v1/csrf/token");
+        const res = await agent
+            .post("/api/v1/auth/login")
+            .set("x-csrf-token", "forged-token-abc123")
+            .send({ username: "test", password: "test" });
+        expect(res.status).toBe(403);
+    });
 
-  it("GET /csrf/status describes protection configuration", async function () {
-    const res = await agent.get("/api/v1/csrf/status");
-    expect(res.status).toBe(200);
-    expect(res.body.status.enabled).toBe(true);
-    expect(res.body.status.methods.protected).toContain("POST");
-    expect(res.body.status.methods.safe).toContain("GET");
-  });
+    it("GET /csrf/status describes protection configuration", async function () {
+        const res = await agent.get("/api/v1/csrf/status");
+        expect(res.status).toBe(200);
+        expect(res.body.status.enabled).toBe(true);
+        expect(res.body.status.methods.protected).toContain("POST");
+        expect(res.body.status.methods.safe).toContain("GET");
+    });
 });
 ```
 
@@ -1658,35 +1702,37 @@ describe("CSRF Protection", function () {
 const agent = require("../helpers/request");
 
 describe("Rate Limiting", function () {
-  it("returns 429 after exceeding the configured limit from a single IP", async function () {
-    // authRateLimiter is set to max: 10 per 15 minutes
-    // We fire 15 requests and expect at least one 429
-    const responses = await Promise.all(
-      Array.from({ length: 15 }, () =>
-        agent.post("/api/v1/auth/login").send({ username: "x", password: "x" }),
-      ),
-    );
-    const tooMany = responses.filter((r) => r.status === 429);
-    expect(tooMany.length).toBeGreaterThan(0);
-  });
+    it("returns 429 after exceeding the configured limit from a single IP", async function () {
+        // authRateLimiter is set to max: 10 per 15 minutes
+        // We fire 15 requests and expect at least one 429
+        const responses = await Promise.all(
+            Array.from({ length: 15 }, () =>
+                agent
+                    .post("/api/v1/auth/login")
+                    .send({ username: "x", password: "x" }),
+            ),
+        );
+        const tooMany = responses.filter((r) => r.status === 429);
+        expect(tooMany.length).toBeGreaterThan(0);
+    });
 
-  it("429 response includes Retry-After header", async function () {
-    const res = responses.find((r) => r.status === 429);
-    if (res) expect(res.headers).toHaveProperty("retry-after");
-  });
+    it("429 response includes Retry-After header", async function () {
+        const res = responses.find((r) => r.status === 429);
+        if (res) expect(res.headers).toHaveProperty("retry-after");
+    });
 
-  it("RateLimit-Policy header is present on every response", async function () {
-    const res = await agent.get("/api/v1/health");
-    expect(res.headers).toHaveProperty("ratelimit-policy");
-  });
+    it("RateLimit-Policy header is present on every response", async function () {
+        const res = await agent.get("/api/v1/health");
+        expect(res.headers).toHaveProperty("ratelimit-policy");
+    });
 
-  it("RateLimit-Remaining decreases with each request", async function () {
-    const r1 = await agent.get("/api/v1/health");
-    const r2 = await agent.get("/api/v1/health");
-    const rem1 = parseInt(r1.headers["ratelimit-remaining"], 10);
-    const rem2 = parseInt(r2.headers["ratelimit-remaining"], 10);
-    expect(rem2).toBeLessThanOrEqual(rem1);
-  });
+    it("RateLimit-Remaining decreases with each request", async function () {
+        const r1 = await agent.get("/api/v1/health");
+        const r2 = await agent.get("/api/v1/health");
+        const rem1 = parseInt(r1.headers["ratelimit-remaining"], 10);
+        const rem2 = parseInt(r2.headers["ratelimit-remaining"], 10);
+        expect(rem2).toBeLessThanOrEqual(rem1);
+    });
 });
 ```
 
@@ -1700,49 +1746,49 @@ describe("Rate Limiting", function () {
 const agent = require("../helpers/request");
 
 describe("CORS Policy", function () {
-  it("allows requests from an explicitly allowed origin", async function () {
-    const res = await agent
-      .get("/api/v1/health")
-      .set("Origin", "http://localhost:3000");
-    expect(res.headers["access-control-allow-origin"]).toBe(
-      "http://localhost:3000",
-    );
-  });
+    it("allows requests from an explicitly allowed origin", async function () {
+        const res = await agent
+            .get("/api/v1/health")
+            .set("Origin", "http://localhost:3000");
+        expect(res.headers["access-control-allow-origin"]).toBe(
+            "http://localhost:3000",
+        );
+    });
 
-  it("allows requests from a private network IP", async function () {
-    const res = await agent
-      .get("/api/v1/health")
-      .set("Origin", "http://192.168.1.100:3000");
-    expect(res.headers["access-control-allow-origin"]).toBeDefined();
-  });
+    it("allows requests from a private network IP", async function () {
+        const res = await agent
+            .get("/api/v1/health")
+            .set("Origin", "http://192.168.1.100:3000");
+        expect(res.headers["access-control-allow-origin"]).toBeDefined();
+    });
 
-  it("blocks requests from a random public origin", async function () {
-    const res = await agent
-      .get("/api/v1/health")
-      .set("Origin", "https://evil.hacker.com");
-    // Must not echo back the disallowed origin
-    expect(res.headers["access-control-allow-origin"]).not.toBe(
-      "https://evil.hacker.com",
-    );
-  });
+    it("blocks requests from a random public origin", async function () {
+        const res = await agent
+            .get("/api/v1/health")
+            .set("Origin", "https://evil.hacker.com");
+        // Must not echo back the disallowed origin
+        expect(res.headers["access-control-allow-origin"]).not.toBe(
+            "https://evil.hacker.com",
+        );
+    });
 
-  it("responds to preflight OPTIONS with correct CORS headers", async function () {
-    const res = await agent
-      .options("/api/v1/health")
-      .set("Origin", "http://localhost:3000")
-      .set("Access-Control-Request-Method", "GET")
-      .set("Access-Control-Request-Headers", "Authorization");
-    expect(res.status).toBe(200);
-    expect(res.headers["access-control-allow-methods"]).toBeDefined();
-  });
+    it("responds to preflight OPTIONS with correct CORS headers", async function () {
+        const res = await agent
+            .options("/api/v1/health")
+            .set("Origin", "http://localhost:3000")
+            .set("Access-Control-Request-Method", "GET")
+            .set("Access-Control-Request-Headers", "Authorization");
+        expect(res.status).toBe(200);
+        expect(res.headers["access-control-allow-methods"]).toBeDefined();
+    });
 
-  it("exposes X-Request-ID and X-Response-Time in Access-Control-Expose-Headers", async function () {
-    const res = await agent
-      .get("/api/v1/health")
-      .set("Origin", "http://localhost:3000");
-    const exposed = res.headers["access-control-expose-headers"] || "";
-    expect(exposed.toLowerCase()).toContain("x-request-id");
-  });
+    it("exposes X-Request-ID and X-Response-Time in Access-Control-Expose-Headers", async function () {
+        const res = await agent
+            .get("/api/v1/health")
+            .set("Origin", "http://localhost:3000");
+        const exposed = res.headers["access-control-expose-headers"] || "";
+        expect(exposed.toLowerCase()).toContain("x-request-id");
+    });
 });
 ```
 
@@ -1756,39 +1802,39 @@ describe("CORS Policy", function () {
 const agent = require("../helpers/request");
 
 const SCANNER_PATHS = [
-  "/robots.txt",
-  "/.env",
-  "/wp-admin",
-  "/phpinfo.php",
-  "/admin.php",
-  "/login.jsp",
-  "/../etc/passwd",
-  "/weblogic/login",
-  "/_layouts/15/error.aspx",
+    "/robots.txt",
+    "/.env",
+    "/wp-admin",
+    "/phpinfo.php",
+    "/admin.php",
+    "/login.jsp",
+    "/../etc/passwd",
+    "/weblogic/login",
+    "/_layouts/15/error.aspx",
 ];
 
 const BLOCKED_METHODS = ["TRACE", "TRACK", "PROPFIND"];
 
 describe("Security Filter — Scanner & Traversal Blocking", function () {
-  SCANNER_PATHS.forEach((path) => {
-    it(`blocks scanner path: ${path}`, async function () {
-      const res = await agent.get(path);
-      // Must return 400, 403, or 404 — never 200
-      expect([400, 403, 404, 405]).toContain(res.status);
+    SCANNER_PATHS.forEach((path) => {
+        it(`blocks scanner path: ${path}`, async function () {
+            const res = await agent.get(path);
+            // Must return 400, 403, or 404 — never 200
+            expect([400, 403, 404, 405]).toContain(res.status);
+        });
     });
-  });
 
-  BLOCKED_METHODS.forEach((method) => {
-    it(`blocks HTTP method: ${method}`, async function () {
-      const res =
-        (await agent[method.toLowerCase()]?.("/api/v1/health")) ||
-        (await agent
-          .options("/api/v1/health")
-          .set("X-Method-Override", method));
-      // Security filter should not allow through
-      expect([400, 403, 404, 405]).toContain(res.status);
+    BLOCKED_METHODS.forEach((method) => {
+        it(`blocks HTTP method: ${method}`, async function () {
+            const res =
+                (await agent[method.toLowerCase()]?.("/api/v1/health")) ||
+                (await agent
+                    .options("/api/v1/health")
+                    .set("X-Method-Override", method));
+            // Security filter should not allow through
+            expect([400, 403, 404, 405]).toContain(res.status);
+        });
     });
-  });
 });
 ```
 
@@ -1813,43 +1859,43 @@ const agent = require("../helpers/request");
 
 // Warm the pool before running timing assertions
 before(async function () {
-  this.timeout(15_000);
-  await agent.get("/api/v1/health");
+    this.timeout(15_000);
+    await agent.get("/api/v1/health");
 });
 
 describe("Response Time Budgets", function () {
-  describe("GET /api/v1/health", function () {
-    it("p50 (median of 20 runs) is under 50ms", async function () {
-      const times = [];
-      for (let i = 0; i < 20; i++) {
-        const start = process.hrtime.bigint();
-        await agent.get("/api/v1/health");
-        times.push(Number(process.hrtime.bigint() - start) / 1e6);
-      }
-      times.sort((a, b) => a - b);
-      const p50 = times[Math.floor(times.length * 0.5)];
-      expect(p50).toBeLessThan(50);
-    });
+    describe("GET /api/v1/health", function () {
+        it("p50 (median of 20 runs) is under 50ms", async function () {
+            const times = [];
+            for (let i = 0; i < 20; i++) {
+                const start = process.hrtime.bigint();
+                await agent.get("/api/v1/health");
+                times.push(Number(process.hrtime.bigint() - start) / 1e6);
+            }
+            times.sort((a, b) => a - b);
+            const p50 = times[Math.floor(times.length * 0.5)];
+            expect(p50).toBeLessThan(50);
+        });
 
-    it("p95 (95th percentile of 20 runs) is under 200ms", async function () {
-      const times = [];
-      for (let i = 0; i < 20; i++) {
-        const start = process.hrtime.bigint();
-        await agent.get("/api/v1/health");
-        times.push(Number(process.hrtime.bigint() - start) / 1e6);
-      }
-      times.sort((a, b) => a - b);
-      const p95 = times[Math.floor(times.length * 0.95)];
-      expect(p95).toBeLessThan(200);
-    });
+        it("p95 (95th percentile of 20 runs) is under 200ms", async function () {
+            const times = [];
+            for (let i = 0; i < 20; i++) {
+                const start = process.hrtime.bigint();
+                await agent.get("/api/v1/health");
+                times.push(Number(process.hrtime.bigint() - start) / 1e6);
+            }
+            times.sort((a, b) => a - b);
+            const p95 = times[Math.floor(times.length * 0.95)];
+            expect(p95).toBeLessThan(200);
+        });
 
-    it("X-Response-Time header is present and numeric", async function () {
-      const res = await agent.get("/api/v1/health");
-      const rt = res.headers["x-response-time"];
-      expect(rt).toMatch(/^\d+ms$/);
-      expect(parseInt(rt, 10)).toBeTypeOf("number");
+        it("X-Response-Time header is present and numeric", async function () {
+            const res = await agent.get("/api/v1/health");
+            const rt = res.headers["x-response-time"];
+            expect(rt).toMatch(/^\d+ms$/);
+            expect(parseInt(rt, 10)).toBeTypeOf("number");
+        });
     });
-  });
 });
 ```
 
@@ -1861,32 +1907,34 @@ describe("Response Time Budgets", function () {
 const agent = require("../helpers/request");
 
 describe("Concurrent Request Correctness", function () {
-  it("handles 50 concurrent health checks without error", async function () {
-    const results = await Promise.all(
-      Array.from({ length: 50 }, () => agent.get("/api/v1/health")),
-    );
-    const errors = results.filter((r) => r.status >= 500);
-    expect(errors.length).toBe(0);
-  });
+    it("handles 50 concurrent health checks without error", async function () {
+        const results = await Promise.all(
+            Array.from({ length: 50 }, () => agent.get("/api/v1/health")),
+        );
+        const errors = results.filter((r) => r.status >= 500);
+        expect(errors.length).toBe(0);
+    });
 
-  it("every concurrent response has a unique X-Request-ID", async function () {
-    const results = await Promise.all(
-      Array.from({ length: 20 }, () => agent.get("/api/v1/health")),
-    );
-    const ids = results.map((r) => r.headers["x-request-id"]);
-    const unique = new Set(ids);
-    expect(unique.size).toBe(20);
-  });
+    it("every concurrent response has a unique X-Request-ID", async function () {
+        const results = await Promise.all(
+            Array.from({ length: 20 }, () => agent.get("/api/v1/health")),
+        );
+        const ids = results.map((r) => r.headers["x-request-id"]);
+        const unique = new Set(ids);
+        expect(unique.size).toBe(20);
+    });
 
-  it("50 concurrent POSTs to login all receive a valid JSON error (not crash)", async function () {
-    const results = await Promise.all(
-      Array.from({ length: 50 }, () =>
-        agent.post("/api/v1/auth/login").send({ username: "x", password: "x" }),
-      ),
-    );
-    const crashes = results.filter((r) => r.status >= 500);
-    expect(crashes.length).toBe(0);
-  });
+    it("50 concurrent POSTs to login all receive a valid JSON error (not crash)", async function () {
+        const results = await Promise.all(
+            Array.from({ length: 50 }, () =>
+                agent
+                    .post("/api/v1/auth/login")
+                    .send({ username: "x", password: "x" }),
+            ),
+        );
+        const crashes = results.filter((r) => r.status >= 500);
+        expect(crashes.length).toBe(0);
+    });
 });
 ```
 
@@ -1904,31 +1952,31 @@ Reliability tests verify graceful degradation, recovery from transient failures,
 const agent = require("../helpers/request");
 
 describe("Unhandled Error Protection", function () {
-  it("synchronous errors in routes are caught and return 500 JSON", async function () {
-    // If the app exposes a deliberate throw-test route in non-production
-    const res = await agent.get("/api/v1/health");
-    // In normal operation, the server must never crash on a single bad request
-    expect(res.status).toBeLessThan(600);
-    expect(res.headers["content-type"]).toContain("application/json");
-  });
+    it("synchronous errors in routes are caught and return 500 JSON", async function () {
+        // If the app exposes a deliberate throw-test route in non-production
+        const res = await agent.get("/api/v1/health");
+        // In normal operation, the server must never crash on a single bad request
+        expect(res.status).toBeLessThan(600);
+        expect(res.headers["content-type"]).toContain("application/json");
+    });
 
-  it("sending a malformed JSON body returns 400 not 500", async function () {
-    const res = await agent
-      .post("/api/v1/auth/login")
-      .set("Content-Type", "application/json")
-      .send("{invalid json}");
-    expect(res.status).toBe(400);
-    expect(res.body.status).toBe("error");
-  });
+    it("sending a malformed JSON body returns 400 not 500", async function () {
+        const res = await agent
+            .post("/api/v1/auth/login")
+            .set("Content-Type", "application/json")
+            .send("{invalid json}");
+        expect(res.status).toBe(400);
+        expect(res.body.status).toBe("error");
+    });
 
-  it("sending an oversized body returns 413 not 500", async function () {
-    const huge = Buffer.alloc(11 * 1024 * 1024, "x").toString(); // 11 MB > 10MB limit
-    const res = await agent
-      .post("/api/v1/auth/login")
-      .set("Content-Type", "application/json")
-      .send(JSON.stringify({ data: huge }));
-    expect(res.status).toBe(413);
-  });
+    it("sending an oversized body returns 413 not 500", async function () {
+        const huge = Buffer.alloc(11 * 1024 * 1024, "x").toString(); // 11 MB > 10MB limit
+        const res = await agent
+            .post("/api/v1/auth/login")
+            .set("Content-Type", "application/json")
+            .send(JSON.stringify({ data: huge }));
+        expect(res.status).toBe(413);
+    });
 });
 ```
 
@@ -1973,55 +2021,55 @@ Add to `.github/workflows/ci.yml`:
 name: CI
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm"
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+                  cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+            - name: Install dependencies
+              run: npm ci
 
-      - name: Run unit tests
-        run: npm run test:unit
-        env:
-          NODE_ENV: test
-          JWT_SECRET: ci-test-secret
-          CSRF_SECRET: ci-csrf-secret
+            - name: Run unit tests
+              run: npm run test:unit
+              env:
+                  NODE_ENV: test
+                  JWT_SECRET: ci-test-secret
+                  CSRF_SECRET: ci-csrf-secret
 
-      - name: Run integration tests
-        run: npm run test:integration
-        env:
-          NODE_ENV: test
-          JWT_SECRET: ci-test-secret
-          CSRF_SECRET: ci-csrf-secret
-          PORT: 4000
+            - name: Run integration tests
+              run: npm run test:integration
+              env:
+                  NODE_ENV: test
+                  JWT_SECRET: ci-test-secret
+                  CSRF_SECRET: ci-csrf-secret
+                  PORT: 4000
 
-      - name: Run security tests
-        run: npm run test:security
-        env:
-          NODE_ENV: test
-          JWT_SECRET: ci-test-secret
-          CSRF_SECRET: ci-csrf-secret
-          PORT: 4001
+            - name: Run security tests
+              run: npm run test:security
+              env:
+                  NODE_ENV: test
+                  JWT_SECRET: ci-test-secret
+                  CSRF_SECRET: ci-csrf-secret
+                  PORT: 4001
 
-      - name: Run performance tests
-        run: npm run test:performance
-        env:
-          NODE_ENV: test
-          JWT_SECRET: ci-test-secret
-          PORT: 4002
+            - name: Run performance tests
+              run: npm run test:performance
+              env:
+                  NODE_ENV: test
+                  JWT_SECRET: ci-test-secret
+                  PORT: 4002
 ```
 
 ---
