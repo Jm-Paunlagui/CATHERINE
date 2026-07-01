@@ -40,7 +40,13 @@ const {
 } = require("../constants/messages/changelog.messages");
 const { AppError, CHANGELOG_ERRORS } = require("../constants/errors");
 
-const DATA_DIR = path.resolve(__dirname, "../../data");
+// In compiled (pkg) builds, __dirname points to the read-only snapshot
+// (C:\snapshot\...) where mkdir/writeFile fail. Resolve data/ relative to
+// the executable so the encrypted store lives next to the .exe at runtime.
+const PROJECT_ROOT = process.pkg
+    ? path.dirname(process.execPath)
+    : path.resolve(__dirname, "../..");
+const DATA_DIR = path.join(PROJECT_ROOT, "data");
 const STORE_PATH = path.join(DATA_DIR, "changelog.enc");
 const ALG = "aes-256-gcm";
 const IV_BYTES = 12;
@@ -211,7 +217,9 @@ class ChangelogModel {
             version: data.version,
             title: data.title,
             message: data.message,
-            whatChanged: Array.isArray(data.whatChanged) ? data.whatChanged : [],
+            whatChanged: Array.isArray(data.whatChanged)
+                ? data.whatChanged
+                : [],
             type: data.type,
             authors: Array.isArray(data.authors) ? data.authors : [],
             coAuthors: Array.isArray(data.coAuthors) ? data.coAuthors : [],
