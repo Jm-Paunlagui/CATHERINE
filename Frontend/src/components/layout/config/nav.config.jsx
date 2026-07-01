@@ -28,7 +28,7 @@ const icon = (Glyph) => <Glyph size={SIZE} strokeWidth={STROKE} />;
 
 // ── Unauthenticated flat links ────────────────────────────────────────────────
 export const PUBLIC_LINKS = [
-    { name: "Home", href: "/", icon: icon(LuHouse) },
+    { name: "Home", href: "/home", icon: icon(LuHouse) },
     { name: "Sign In", href: "/auth", icon: icon(LuLogIn) },
 ];
 

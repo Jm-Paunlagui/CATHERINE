@@ -5,9 +5,11 @@ const {
 } = require("../../../../src/middleware/security/SecurityFilterMiddleware");
 
 function mockReq(options = {}) {
+    const path = options.path || "/test";
     return {
         ip: options.ip || "127.0.0.1",
-        path: options.path || "/test",
+        path,
+        originalUrl: options.originalUrl || path,
         method: options.method || "GET",
         connection: { remoteAddress: options.ip || "127.0.0.1" },
     };
@@ -35,40 +37,44 @@ function mockRes() {
 
 describe("SecurityFilterMiddleware (unit)", function () {
     describe("whitelisted paths", function () {
-        it("allows root path /", () => new Promise((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+        it("allows root path /", () =>
+            new Promise((resolve, reject) => {
+                const done = (e) => (e ? reject(e) : resolve());
 
-            const filter = new SecurityFilterMiddleware();
-            filter.handle(mockReq({ path: "/" }), mockRes(), done);
-        
+                const filter = new SecurityFilterMiddleware();
+                filter.handle(mockReq({ path: "/" }), mockRes(), done);
             }));
 
-        it("allows /health", () => new Promise((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+        it("allows /health", () =>
+            new Promise((resolve, reject) => {
+                const done = (e) => (e ? reject(e) : resolve());
 
-            const filter = new SecurityFilterMiddleware();
-            filter.handle(mockReq({ path: "/health" }), mockRes(), done);
-        
+                const filter = new SecurityFilterMiddleware();
+                filter.handle(mockReq({ path: "/health" }), mockRes(), done);
             }));
 
-        it("allows /api/ prefixed paths", () => new Promise((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+        it("allows /api/ prefixed paths", () =>
+            new Promise((resolve, reject) => {
+                const done = (e) => (e ? reject(e) : resolve());
 
-            const filter = new SecurityFilterMiddleware();
-            filter.handle(mockReq({ path: "/api/v1/users" }), mockRes(), done);
-        
+                const filter = new SecurityFilterMiddleware();
+                filter.handle(
+                    mockReq({ path: "/api/v1/users" }),
+                    mockRes(),
+                    done,
+                );
             }));
 
-        it("allows /api-docs paths", () => new Promise((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+        it("allows /api-docs paths", () =>
+            new Promise((resolve, reject) => {
+                const done = (e) => (e ? reject(e) : resolve());
 
-            const filter = new SecurityFilterMiddleware();
-            filter.handle(
-                mockReq({ path: "/api-docs/swagger" }),
-                mockRes(),
-                done,
-            );
-        
+                const filter = new SecurityFilterMiddleware();
+                filter.handle(
+                    mockReq({ path: "/api-docs/swagger" }),
+                    mockRes(),
+                    done,
+                );
             }));
     });
 
@@ -114,11 +120,10 @@ describe("SecurityFilterMiddleware (unit)", function () {
         });
     });
 
-    describe("malicious patterns", function () {
+    describe("malicious patterns (path-only → 404)", function () {
         const MALICIOUS_PATHS = [
             "/robots.txt",
             "/wp-admin/admin.php",
-            "/../etc/passwd",
             "/weblogic/login",
             "/_layouts/15/error.aspx",
             "/login.php",
@@ -139,6 +144,16 @@ describe("SecurityFilterMiddleware (unit)", function () {
             });
         });
 
+        it("blocks /../etc/passwd with 403 (traversal → injection pattern)", function () {
+            const filter = new SecurityFilterMiddleware();
+            const res = mockRes();
+            filter.handle(mockReq({ path: "/../etc/passwd" }), res, () => {
+                throw new Error("should not call next");
+            });
+            expect(res._status).toBe(403);
+            expect(res._body.error.type).toBe("ForbiddenError");
+        });
+
         it("blocks script injection in path", function () {
             const filter = new SecurityFilterMiddleware();
             const res = mockRes();
@@ -149,7 +164,8 @@ describe("SecurityFilterMiddleware (unit)", function () {
                     throw new Error("should not call next");
                 },
             );
-            expect(res._status).toBe(404);
+            // Injection patterns return 403 (checked against full URL)
+            expect(res._status).toBe(403);
         });
 
         it("blocks path traversal with ..", function () {
@@ -162,8 +178,122 @@ describe("SecurityFilterMiddleware (unit)", function () {
                     throw new Error("should not call next");
                 },
             );
-            expect(res._status).toBe(404);
+            expect(res._status).toBe(403);
         });
+    });
+
+    describe("injection patterns (query string)", function () {
+        it("blocks SQL injection OR '1'='1 in query string", function () {
+            const filter = new SecurityFilterMiddleware();
+            const res = mockRes();
+            filter.handle(
+                mockReq({
+                    path: "/api/v1/health/live",
+                    originalUrl: "/api/v1/health/live?id=1' OR '1'='1",
+                }),
+                res,
+                () => {
+                    throw new Error("should not call next");
+                },
+            );
+            expect(res._status).toBe(403);
+            expect(res._body.error.type).toBe("ForbiddenError");
+        });
+
+        it("blocks UNION SELECT in query string", function () {
+            const filter = new SecurityFilterMiddleware();
+            const res = mockRes();
+            filter.handle(
+                mockReq({
+                    path: "/api/v1/users",
+                    originalUrl:
+                        "/api/v1/users?id=1 UNION SELECT * FROM admins--",
+                }),
+                res,
+                () => {
+                    throw new Error("should not call next");
+                },
+            );
+            expect(res._status).toBe(403);
+        });
+
+        it("blocks stacked query ;DROP TABLE in query string", function () {
+            const filter = new SecurityFilterMiddleware();
+            const res = mockRes();
+            filter.handle(
+                mockReq({
+                    path: "/api/v1/users",
+                    originalUrl: "/api/v1/users?id=1;DROP TABLE users;--",
+                }),
+                res,
+                () => {
+                    throw new Error("should not call next");
+                },
+            );
+            expect(res._status).toBe(403);
+        });
+
+        it("blocks XSS <script> in query string", function () {
+            const filter = new SecurityFilterMiddleware();
+            const res = mockRes();
+            filter.handle(
+                mockReq({
+                    path: "/api/v1/search",
+                    originalUrl: "/api/v1/search?q=<script>alert(1)</script>",
+                }),
+                res,
+                () => {
+                    throw new Error("should not call next");
+                },
+            );
+            expect(res._status).toBe(403);
+        });
+
+        it("blocks onerror= in query string", function () {
+            const filter = new SecurityFilterMiddleware();
+            const res = mockRes();
+            filter.handle(
+                mockReq({
+                    path: "/api/v1/test",
+                    originalUrl: "/api/v1/test?img=x onerror=alert(1)",
+                }),
+                res,
+                () => {
+                    throw new Error("should not call next");
+                },
+            );
+            expect(res._status).toBe(403);
+        });
+
+        it("blocks command injection in query string", function () {
+            const filter = new SecurityFilterMiddleware();
+            const res = mockRes();
+            filter.handle(
+                mockReq({
+                    path: "/api/v1/ping",
+                    originalUrl: "/api/v1/ping?host=127.0.0.1; cat /etc/passwd",
+                }),
+                res,
+                () => {
+                    throw new Error("should not call next");
+                },
+            );
+            expect(res._status).toBe(403);
+        });
+
+        it("allows clean query strings through", () =>
+            new Promise((resolve, reject) => {
+                const done = (e) => (e ? reject(e) : resolve());
+                const filter = new SecurityFilterMiddleware();
+                filter.handle(
+                    mockReq({
+                        path: "/api/v1/users",
+                        originalUrl: "/api/v1/users?page=1&limit=20&sort=name",
+                    }),
+                    mockRes(),
+                    done,
+                );
+            }));
     });
 
     describe("IP auto-blocking", function () {
@@ -219,13 +349,14 @@ describe("SecurityFilterMiddleware (unit)", function () {
     });
 
     describe("clean paths pass through", function () {
-        it("allows normal non-whitelisted, non-malicious paths", () => new Promise((resolve) => {
-            const filter = new SecurityFilterMiddleware();
-            filter.handle(
-                mockReq({ path: "/some/custom/endpoint" }),
-                mockRes(),
-                resolve,
-            );
-        }));
+        it("allows normal non-whitelisted, non-malicious paths", () =>
+            new Promise((resolve) => {
+                const filter = new SecurityFilterMiddleware();
+                filter.handle(
+                    mockReq({ path: "/some/custom/endpoint" }),
+                    mockRes(),
+                    resolve,
+                );
+            }));
     });
 });

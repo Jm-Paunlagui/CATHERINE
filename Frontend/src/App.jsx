@@ -39,6 +39,7 @@ const GettingStartedView = lazy(() => import("./features/other/gettingstarted/Ge
 const DatabaseConnectionView = lazy(() => import("./features/other/databaseconnection/DatabaseConnection.view"));
 const MiraOrmView = lazy(() => import("./features/other/miraorm/MiraOrm.view"));
 const CORSSetupView = lazy(() => import("./features/other/corssetup/CORSSetup.view"));
+const HomeView = lazy(() => import("./features/home/Home.view"));
 
 // Role constants — must match the strings stored in T_ADMINS_DEV.ROLE
 // and returned in the JWT payload as user.role.
@@ -163,7 +164,8 @@ function AppRoutes() {
     return (
         <Routes>
             {/* Public */}
-            <Route path="/" element={<Navigate to="/about/getting-started" replace />} />
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="home" element={<HomeView />} />
             <Route path="auth" element={<LoginView />} />
             <Route path="user/logout" element={<LogoutView />} />
             <Route path="about/getting-started" element={<GettingStartedView />} />
