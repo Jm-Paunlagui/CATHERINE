@@ -48,6 +48,7 @@
  * @module utils/snowflake
  */
 
+const crypto = require("crypto");
 const os = require("os");
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
@@ -67,10 +68,13 @@ const MAX_MACHINE_ID = 1023;
 /** Maximum sequence value per millisecond (12-bit equivalent: 0–4095). */
 const MAX_SEQUENCE = 4095;
 
+/** Upper bound (exclusive) for the random nonce mixed into the tail segment. */
+const NONCE_RANGE = 10000; // 0000–9999
+
 /** Padding widths for each segment — ensures fixed-width, lexicographic sorting. */
 const TIMESTAMP_PAD = 13; // ms since epoch, up to 9999999999999 (~317 years)
 const MACHINE_PAD = 4; // 0000–1023
-const SEQUENCE_PAD = 4; // 0000–4095
+const TAIL_PAD = 4; // 0000–9999
 
 /** Regex for parsing a segmented Snowflake ID. */
 const SNOWFLAKE_RE = /^(\d{13})-(\d{4})-(\d{4})$/;
@@ -146,6 +150,9 @@ class Snowflake {
         /** @type {number} Per-millisecond sequence counter (0–4095). */
         this._sequence = 0;
 
+        /** @type {number} Random base mixed into the tail segment. Refreshed each ms. */
+        this._nonce = crypto.randomInt(NONCE_RANGE);
+
         // Pre-compute the padded machine ID segment (immutable per instance).
         /** @type {string} */
         this._machineSegment = String(this._machineId).padStart(
@@ -157,8 +164,15 @@ class Snowflake {
     /**
      * Generate the next Snowflake ID in segmented format.
      *
-     * Format: `{timestamp 13}-{machineId 4}-{sequence 4}`
-     * Example: `"0078812966528-0448-0000"`
+     * Format: `{timestamp 13}-{machineId 4}-{tail 4}`
+     * Example: `"0078812966528-0448-7293"`
+     *
+     * The tail segment combines the internal sequence counter with a
+     * crypto-random nonce so every ID looks visually distinct — even when
+     * requests are seconds apart and the sequence would otherwise always
+     * be 0000. Within the same millisecond the sequence still increments
+     * monotonically (collision-free), but the random base makes the
+     * displayed value unpredictable.
      *
      * Thread-safety note: Node.js is single-threaded for JS execution, so no
      * mutex is needed. Worker threads would need their own Snowflake instance
@@ -169,7 +183,7 @@ class Snowflake {
      *
      * @returns {string} Segmented Snowflake ID (fixed 23 chars).
      * @example
-     * snowflake.nextId(); // "0078812966528-0448-0000"
+     * snowflake.nextId(); // "0078812966528-0448-7293"
      */
     nextId() {
         let now = Date.now() - this._epoch;
@@ -186,32 +200,37 @@ class Snowflake {
                 }
             }
         } else {
-            // New millisecond — reset sequence
+            // New millisecond — reset sequence and pick a fresh random base
             this._sequence = 0;
+            this._nonce = crypto.randomInt(NONCE_RANGE);
         }
 
         this._lastTimestamp = now;
 
         const ts = String(now).padStart(TIMESTAMP_PAD, "0");
-        const seq = String(this._sequence).padStart(SEQUENCE_PAD, "0");
+        // Mix sequence + nonce so the tail is both unique (sequence) and
+        // visually distinct (nonce). Wraps at 10000 to stay 4 digits.
+        const tail = String(
+            (this._sequence + this._nonce) % NONCE_RANGE,
+        ).padStart(TAIL_PAD, "0");
 
-        return `${ts}-${this._machineSegment}-${seq}`;
+        return `${ts}-${this._machineSegment}-${tail}`;
     }
 
     /**
      * Deconstruct a segmented Snowflake ID into its constituent parts.
      *
      * Useful for forensic analysis in the Trace modal — extract the exact
-     * generation timestamp, originating machine, and intra-millisecond sequence.
+     * generation timestamp, originating machine, and the tail nonce.
      *
      * O(1) time, O(1) space.
      *
-     * @param {string} id - The segmented Snowflake ID (e.g. "0078812966528-0448-0000").
-     * @returns {{ timestamp: number, machineId: number, sequence: number, date: Date }}
+     * @param {string} id - The segmented Snowflake ID (e.g. "0078812966528-0448-7293").
+     * @returns {{ timestamp: number, machineId: number, tail: number, date: Date }}
      * @throws {Error} When the ID does not match the expected format.
      * @example
-     * snowflake.deconstruct("0078812966528-0448-0000");
-     * // { timestamp: 1719753600123, machineId: 448, sequence: 0, date: Date(...) }
+     * snowflake.deconstruct("0078812966528-0448-7293");
+     * // { timestamp: 1719753600123, machineId: 448, tail: 7293, date: Date(...) }
      */
     deconstruct(id) {
         const match = SNOWFLAKE_RE.exec(id);
@@ -220,12 +239,12 @@ class Snowflake {
         }
         const epochMs = parseInt(match[1], 10);
         const machineId = parseInt(match[2], 10);
-        const sequence = parseInt(match[3], 10);
+        const tail = parseInt(match[3], 10);
         const timestamp = epochMs + this._epoch;
         return {
             timestamp,
             machineId,
-            sequence,
+            tail,
             date: new Date(timestamp),
         };
     }

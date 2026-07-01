@@ -95,25 +95,26 @@ describe("Snowflake ID Generator", () => {
 
     // ── Monotonic ordering ──────────────────────────────────────────────────
 
-    describe("monotonic ordering", () => {
-        it("generates lexicographically increasing IDs within a burst", async () => {
-            const { snowflake } = await freshImport();
-            let prev = snowflake.nextId();
-            for (let i = 0; i < 5_000; i++) {
-                const cur = snowflake.nextId();
-                expect(cur > prev).toBe(true);
-                prev = cur;
-            }
-        });
-
-        it("IDs sort correctly as plain strings (no padding needed)", async () => {
+    describe("ordering", () => {
+        it("IDs generated across different milliseconds sort by timestamp", async () => {
             const { snowflake } = await freshImport();
             const ids = [];
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 5; i++) {
+                await new Promise((r) => setTimeout(r, 2));
                 ids.push(snowflake.nextId());
             }
+            // Timestamp is the leading segment — cross-ms IDs always sort correctly
             const sorted = [...ids].sort();
             expect(ids).toEqual(sorted);
+        });
+
+        it("all IDs in a rapid burst are unique (same-ms collision-free)", async () => {
+            const { snowflake } = await freshImport();
+            const ids = new Set();
+            for (let i = 0; i < 5_000; i++) {
+                ids.add(snowflake.nextId());
+            }
+            expect(ids.size).toBe(5_000);
         });
     });
 
@@ -128,15 +129,15 @@ describe("Snowflake ID Generator", () => {
             expect(info.machineId).toBe(42);
         });
 
-        it("round-trips the sequence (first ID in a ms has sequence 0)", async () => {
+        it("returns a tail value in 0–9999 range", async () => {
             const { Snowflake } = await freshImport();
             const sf = new Snowflake({ machineId: 0 });
 
-            // Wait 2ms to ensure a fresh millisecond
             await new Promise((r) => setTimeout(r, 2));
             const id = sf.nextId();
             const info = sf.deconstruct(id);
-            expect(info.sequence).toBe(0);
+            expect(info.tail).toBeGreaterThanOrEqual(0);
+            expect(info.tail).toBeLessThan(10000);
         });
 
         it("extracts a timestamp within 100ms of Date.now()", async () => {
@@ -241,46 +242,46 @@ describe("Snowflake ID Generator", () => {
         });
     });
 
-    // ── Sequence counter ────────────────────────────────────────────────────
+    // ── Tail nonce ────────────────────────────────────────────────────────
 
-    describe("sequence counter", () => {
-        it("increments within the same millisecond", async () => {
+    describe("tail nonce", () => {
+        it("produces visually distinct tails across spaced requests", async () => {
             const { Snowflake } = await freshImport();
             const sf = new Snowflake({ machineId: 0 });
 
-            // Generate many IDs rapidly — some will share a millisecond
-            const infos = [];
-            for (let i = 0; i < 100; i++) {
+            // Generate IDs with 3ms gaps — each should get a fresh random nonce
+            const tails = new Set();
+            for (let i = 0; i < 10; i++) {
+                await new Promise((r) => setTimeout(r, 3));
                 const id = sf.nextId();
-                infos.push(sf.deconstruct(id));
+                tails.add(id.split("-")[2]);
             }
-
-            // Find IDs that share a timestamp — their sequences should be increasing
-            const byTs = new Map();
-            for (const info of infos) {
-                const key = info.timestamp;
-                if (!byTs.has(key)) byTs.set(key, []);
-                byTs.get(key).push(info.sequence);
-            }
-
-            for (const [, seqs] of byTs) {
-                if (seqs.length > 1) {
-                    for (let i = 1; i < seqs.length; i++) {
-                        expect(seqs[i]).toBeGreaterThan(seqs[i - 1]);
-                    }
-                }
-            }
+            // With random nonces, we expect most tails to be distinct.
+            // 10 draws from 0–9999 — collision probability is negligible.
+            expect(tails.size).toBeGreaterThanOrEqual(5);
         });
 
-        it("resets to 0 on a new millisecond", async () => {
+        it("burst IDs within the same millisecond are all unique", async () => {
             const { Snowflake } = await freshImport();
             const sf = new Snowflake({ machineId: 0 });
 
-            sf.nextId(); // prime the generator
-            await new Promise((r) => setTimeout(r, 5)); // wait for a new ms
-            const id = sf.nextId();
-            const info = sf.deconstruct(id);
-            expect(info.sequence).toBe(0);
+            const ids = new Set();
+            for (let i = 0; i < 100; i++) {
+                ids.add(sf.nextId());
+            }
+            expect(ids.size).toBe(100);
+        });
+
+        it("tail values are in 0000–9999 range", async () => {
+            const { Snowflake } = await freshImport();
+            const sf = new Snowflake({ machineId: 0 });
+
+            for (let i = 0; i < 50; i++) {
+                const id = sf.nextId();
+                const tail = parseInt(id.split("-")[2], 10);
+                expect(tail).toBeGreaterThanOrEqual(0);
+                expect(tail).toBeLessThan(10000);
+            }
         });
     });
 
@@ -356,7 +357,9 @@ describe("Snowflake ID Generator", () => {
 
             expect(ts).toHaveLength(13);
             expect(mid).toBe("0042");
-            expect(seq).toBe("0000");
+            expect(seq).toHaveLength(4); // 4-digit tail nonce
+            expect(parseInt(seq, 10)).toBeGreaterThanOrEqual(0);
+            expect(parseInt(seq, 10)).toBeLessThan(10000);
 
             // Timestamp segment should be a reasonable ms-since-epoch value
             const epochMs = parseInt(ts, 10);
