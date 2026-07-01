@@ -250,7 +250,9 @@ describe("POST /api/v1/client/errors", function () {
             .set("x-csrf-token", csrfToken)
             .send(validPayload());
 
-        expect(res.headers["x-request-id"]).toMatch(/^req_/);
+        expect(res.headers["x-request-id"]).toMatch(
+            /^(\d{13}-\d{4}-\d{4}|req_.+)$/,
+        );
     });
 
     // ─── 7. Response time ─────────────────────────────────────────────────────

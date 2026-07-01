@@ -53,17 +53,32 @@ const MOCK_BUFFER_ZIP = Buffer.from("PK\x03\x04mock-zip-content");
 // ── Assertion helpers ─────────────────────────────────────────────────────────
 
 function expectSuccessShape(body) {
-    expect(body).toEqual(expect.objectContaining({status: expect.anything(), code: expect.anything(), message: expect.anything(), data: expect.anything()}));
+    expect(body).toEqual(
+        expect.objectContaining({
+            status: expect.anything(),
+            code: expect.anything(),
+            message: expect.anything(),
+            data: expect.anything(),
+        }),
+    );
     expect(body.status).toBe("success");
 }
 
 function expectErrorShape(body) {
-    expect(body).toEqual(expect.objectContaining({status: expect.anything(), code: expect.anything(), message: expect.anything(), error: expect.anything()}));
+    expect(body).toEqual(
+        expect.objectContaining({
+            status: expect.anything(),
+            code: expect.anything(),
+            message: expect.anything(),
+            error: expect.anything(),
+        }),
+    );
     expect(body.status).toBe("error");
 }
 
 function expectRequestId(headers) {
-    expect(headers["x-request-id"]).toMatch(/^req_/);
+    // Accepts both legacy "req_*" format and new segmented Snowflake "0000000000000-0000-0000"
+    expect(headers["x-request-id"]).toMatch(/^(\d{13}-\d{4}-\d{4}|req_.+)$/);
 }
 
 // ─── Agent with CSRF (needed for DELETE) ─────────────────────────────────────
@@ -248,7 +263,9 @@ describe("GET /api/v1/audit-logs — paginated list", function () {
 
 describe("GET /api/v1/audit-logs/:requestId/logs", function () {
     beforeEach(function () {
-        vi.spyOn(AuditLogService, "getRequestLogs").mockResolvedValue(MOCK_LOGS);
+        vi.spyOn(AuditLogService, "getRequestLogs").mockResolvedValue(
+            MOCK_LOGS,
+        );
     });
 
     afterEach(function () {
@@ -304,7 +321,9 @@ describe("GET /api/v1/audit-logs/:requestId/logs", function () {
 
 describe("GET /api/v1/audit-logs/export/excel — binary xlsx export", function () {
     beforeEach(function () {
-        vi.spyOn(AuditLogService, "exportToExcel").mockResolvedValue(MOCK_BUFFER_XLSX);
+        vi.spyOn(AuditLogService, "exportToExcel").mockResolvedValue(
+            MOCK_BUFFER_XLSX,
+        );
     });
 
     afterEach(function () {
@@ -370,7 +389,9 @@ describe("GET /api/v1/audit-logs/export/excel — binary xlsx export", function 
 
 describe("GET /api/v1/audit-logs/export/logs — binary zip export", function () {
     beforeEach(function () {
-        vi.spyOn(AuditLogService, "exportToZip").mockResolvedValue(MOCK_BUFFER_ZIP);
+        vi.spyOn(AuditLogService, "exportToZip").mockResolvedValue(
+            MOCK_BUFFER_ZIP,
+        );
     });
 
     afterEach(function () {
@@ -418,9 +439,9 @@ describe("GET /api/v1/audit-logs/export/logs — binary zip export", function ()
 
 describe("GET /api/v1/audit-logs/:requestId/export/trace — per-request trace xlsx", function () {
     beforeEach(function () {
-        vi
-            .spyOn(AuditLogService, "exportTraceExcel")
-            .mockResolvedValue(MOCK_BUFFER_XLSX);
+        vi.spyOn(AuditLogService, "exportTraceExcel").mockResolvedValue(
+            MOCK_BUFFER_XLSX,
+        );
     });
 
     afterEach(function () {
@@ -470,7 +491,9 @@ describe("GET /api/v1/audit-logs/:requestId/export/trace — per-request trace x
 
 describe("DELETE /api/v1/audit-logs — range delete", function () {
     beforeEach(function () {
-        vi.spyOn(AuditLogService, "deleteRange").mockResolvedValue(MOCK_DELETE_RESULT);
+        vi.spyOn(AuditLogService, "deleteRange").mockResolvedValue(
+            MOCK_DELETE_RESULT,
+        );
     });
 
     afterEach(function () {
@@ -598,7 +621,9 @@ describe("REGRESSION — GET /api/v1/audit-logs with ?search= param (2.6% error 
     const MOCK_SEARCH_LIST = { rows: [], total: 0, page: 1, pageSize: 20 };
 
     beforeEach(function () {
-        vi.spyOn(AuditLogService, "getList").mockResolvedValue(MOCK_SEARCH_LIST);
+        vi.spyOn(AuditLogService, "getList").mockResolvedValue(
+            MOCK_SEARCH_LIST,
+        );
     });
 
     afterEach(function () {
@@ -689,8 +714,12 @@ describe("REGRESSION — GET /api/v1/audit-logs with ?search= param (2.6% error 
 describe("route ordering — static segments not matched as :requestId", function () {
     beforeEach(function () {
         vi.spyOn(AuditLogService, "getStats").mockResolvedValue(MOCK_STATS);
-        vi.spyOn(AuditLogService, "exportToExcel").mockResolvedValue(MOCK_BUFFER_XLSX);
-        vi.spyOn(AuditLogService, "exportToZip").mockResolvedValue(MOCK_BUFFER_ZIP);
+        vi.spyOn(AuditLogService, "exportToExcel").mockResolvedValue(
+            MOCK_BUFFER_XLSX,
+        );
+        vi.spyOn(AuditLogService, "exportToZip").mockResolvedValue(
+            MOCK_BUFFER_ZIP,
+        );
     });
 
     afterEach(function () {

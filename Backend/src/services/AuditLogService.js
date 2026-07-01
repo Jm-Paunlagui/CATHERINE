@@ -154,6 +154,7 @@ class AuditLogService {
             const orClauses = [
                 { USERNAME: { $regex: safeSearch } },
                 { CLIENT_IP: { $regex: safeSearch } },
+                { REQUEST_ID: { $regex: safeSearch } },
             ];
             // USER_ID is NUMBER (stores GID/EMP_ID); $regex is invalid on NUMBER columns —
             // add an exact equality match only when the search term is a valid integer.
@@ -269,12 +270,22 @@ class AuditLogService {
      * daily log directory. Lines are merged across all three level files and sorted
      * chronologically by their embedded [YYYY-MM-DD HH:MM:SS] timestamp.
      *
-     * @param {string} requestId  - Request ID (e.g. "req_abc1234567").
+     * @param {string} requestId  - Request ID (e.g. "0078812966528-0448-0000").
      * @param {string} dateStr    - ISO date string YYYY-MM-DD (the day to search).
      * @returns {Promise<{ requestId: string, lines: string[] }>}
      */
     static async getRequestLogs(requestId, dateStr) {
-        if (!requestId || !/^req_[A-Za-z0-9_-]{1,30}$/.test(requestId)) {
+        // Accepts three formats for backward compatibility:
+        //   1. Segmented Snowflake: "0078812966528-0448-0000" (current)
+        //   2. Legacy Snowflake:    "req_330283683508125696"
+        //   3. Legacy nanoid:       "req_UvNZUayhzL"
+        if (
+            !requestId ||
+            !(
+                /^\d{13}-\d{4}-\d{4}$/.test(requestId) ||
+                /^req_[A-Za-z0-9_-]{1,30}$/.test(requestId)
+            )
+        ) {
             throw new AppError(
                 AUDIT_LOG_ERRORS.AUDIT_LOG_INVALID_REQUEST_ID,
                 400,
@@ -380,6 +391,7 @@ class AuditLogService {
         const sheet1 = workbook.addWorksheet("Audit Records");
         sheet1.columns = [
             { header: "Date", key: "CREATED_AT", width: 22 },
+            { header: "Request ID", key: "REQUEST_ID", width: 20 },
             { header: "Username", key: "USERNAME", width: 20 },
             { header: "Method", key: "METHOD", width: 10 },
             { header: "Endpoint", key: "ENDPOINT", width: 50 },
@@ -406,6 +418,7 @@ class AuditLogService {
                 CREATED_AT: row.CREATED_AT
                     ? new Date(row.CREATED_AT).toISOString()
                     : "",
+                REQUEST_ID: row.REQUEST_ID ?? "",
                 USERNAME: row.USERNAME ?? "",
                 METHOD: row.METHOD ?? "",
                 ENDPOINT: row.ENDPOINT ?? "",
@@ -450,14 +463,24 @@ class AuditLogService {
      *   Sheet 1 — "Request Summary"  (one row: Method, Status Code, Duration, User, Endpoint, Params)
      *   Sheet 2 — "Log Trace"        (one row per log line: Timestamp, Phase, Message, Location)
      *
-     * @param {string} requestId - Request ID (e.g. "req_abc1234567").
+     * @param {string} requestId - Request ID (e.g. "0078812966528-0448-0000").
      * @param {string} dateStr   - ISO date string YYYY-MM-DD (the day to search for log lines).
      * @returns {Promise<Buffer>} Excel file as a Buffer.
      * @throws {AppError} 400 when requestId or dateStr format is invalid.
      * @throws {AppError} 404 when no audit record is found for the requestId.
      */
     static async exportTraceExcel(requestId, dateStr) {
-        if (!requestId || !/^req_[A-Za-z0-9_-]{1,30}$/.test(requestId)) {
+        // Accepts three formats for backward compatibility:
+        //   1. Segmented Snowflake: "0078812966528-0448-0000" (current)
+        //   2. Legacy Snowflake:    "req_330283683508125696"
+        //   3. Legacy nanoid:       "req_UvNZUayhzL"
+        if (
+            !requestId ||
+            !(
+                /^\d{13}-\d{4}-\d{4}$/.test(requestId) ||
+                /^req_[A-Za-z0-9_-]{1,30}$/.test(requestId)
+            )
+        ) {
             throw new AppError(
                 AUDIT_LOG_ERRORS.AUDIT_LOG_INVALID_REQUEST_ID,
                 400,

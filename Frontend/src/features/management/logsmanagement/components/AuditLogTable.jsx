@@ -81,6 +81,7 @@ const STATUS_OPTIONS = [
 
 const COLUMNS = [
     { key: "CREATED_AT", label: "Date" },
+    { key: "REQUEST_ID", label: "Request ID" },
     { key: "USERNAME", label: "User" },
     { key: "METHOD", label: "Method" },
     { key: "ENDPOINT", label: "Endpoint" },
@@ -97,6 +98,9 @@ function renderCell(row, col) {
     switch (col.key) {
         case "CREATED_AT":
             return new Date(row.CREATED_AT).toLocaleString();
+
+        case "REQUEST_ID":
+            return <span className="font-mono text-xs text-grey-600 dark:text-white/60">{row.REQUEST_ID ?? "—"}</span>;
 
         case "USERNAME":
             return row.USERNAME || "—";
@@ -176,7 +180,7 @@ export default function AuditLogTable({ hook }) {
                 <Select label="Method" options={METHOD_OPTIONS} value={filters.method} onChange={(v) => handleFilterChange("method", v)} className="w-44" />
                 <Select label="Status" options={STATUS_OPTIONS} value={filters.statusCategory} onChange={(v) => handleFilterChange("statusCategory", v)} className="w-52" />
                 <div className="flex-1 min-w-0">
-                    <SearchInput placeholder="GID / EMP ID, Username, Client IP…" value={filters.search} onChange={(v) => handleFilterChange("search", v)} debounce={400} />
+                    <SearchInput placeholder="Request ID, GID / EMP ID, Username, Client IP…" value={filters.search} onChange={(v) => handleFilterChange("search", v)} debounce={400} />
                 </div>
             </div>
 

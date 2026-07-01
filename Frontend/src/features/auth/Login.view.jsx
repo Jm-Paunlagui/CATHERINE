@@ -8,6 +8,7 @@
 import { LockClosedIcon, UserIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ApiErrorAlert from "../../components/feedback/ApiErrorAlert";
 import { ErrorBoundary } from "../../components/feedback/ErrorBoundary";
 
 import aumovio from "../../assets/img/aumovio.jpeg";
@@ -85,102 +86,98 @@ export default function LoginView() {
         if (!ok) setErrorEffect(true);
     };
 
-    const displayError = localError || error;
+    const displayError = localError || error?.message;
 
     return (
         <ErrorBoundary>
-        <div className="fixed flex items-center w-full h-full min-h-screen font-aumovio">
-            {/* Background image */}
-            <div className="absolute inset-0 -z-10">
-                <img alt="" className="object-cover w-full h-full" src={aumovio} />
-            </div>
+            <div className="fixed flex items-center w-full h-full min-h-screen font-aumovio">
+                {/* Background image */}
+                <div className="absolute inset-0 -z-10">
+                    <img alt="" className="object-cover w-full h-full" src={aumovio} />
+                </div>
 
-            {/* Top-left logo — always on dark background image */}
-            <div className="absolute z-50 top-2 left-2">
-                <Logo variant="white" className="w-auto h-16 md:h-20 lg:h-24" />
-            </div>
+                {/* Top-left logo — always on dark background image */}
+                <div className="absolute z-50 top-2 left-2">
+                    <Logo variant="white" className="w-auto h-16 md:h-20 lg:h-24" />
+                </div>
 
-            {/* Blur overlay */}
-            <div className="absolute inset-0 z-0">
-                <div className="w-full h-full transition-colors duration-500 bg-white/20 dark:bg-black/90 backdrop-blur-3xl" />
-            </div>
+                {/* Blur overlay */}
+                <div className="absolute inset-0 z-0">
+                    <div className="w-full h-full transition-colors duration-500 bg-white/20 dark:bg-black/90 backdrop-blur-3xl" />
+                </div>
 
-            {/* Page content */}
-            <div className="relative z-10 w-full">
-                <div className="container h-full mx-auto">
-                    <div className="flex items-center justify-center h-full min-h-screen py-8">
-                        <div className="w-11/12 md:w-7/12 lg:w-6/12 xl:w-5/12">
-                            {/* Login Card */}
-                            <Card variant="default" padding="none" className={`transition-smooth backface-hidden ${errorEffect ? "animate-shake ring-2 ring-danger-400" : ""}`} onAnimationEnd={() => setErrorEffect(false)}>
-                                <div className="px-6 py-8 lg:px-16">
-                                    {/* Card Logo — theme-aware */}
-                                    <div className="flex items-center justify-center mb-2 animate-fade-in-up">
-                                        <Logo className="w-auto h-16 transition-transform duration-300 hover:scale-110 hover:rotate-6 drop-shadow-lg" />
-                                    </div>
-
-                                    <Divider variant="gradient" spacing="sm" />
-
-                                    {/* Title */}
-                                    <H4 align="center" className="animate-fade-in-up">
-                                        Sign in to {APP_NAME}
-                                    </H4>
-
-                                    {/* Subtitle */}
-                                    <Paragraph size="sm" color="muted" className="mt-2 text-center opacity-80 animate-fade-in-up">
-                                        Welcome back! Please sign in to your account
-                                    </Paragraph>
-
-                                    {/* Form */}
-                                    <form className="mt-8 space-y-5 animate-fade-in-up" style={{ animationDelay: "0.2s" }} onSubmit={handleSubmit}>
-                                        <Input label="Username" name="username" type="text" placeholder="Username or USER ID" value={form.username} onChange={handleChange} autoComplete="username" leftIcon={UserIcon} error={errorEffect && localError === "Username is required" ? localError : undefined} />
-
-                                        <Input label="Password" name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} autoComplete="current-password" leftIcon={LockClosedIcon} error={errorEffect && localError === "Password is required" ? localError : undefined} />
-
-                                        {/* Rate-limit lockout alert */}
-                                        {countdown > 0 && (
-                                            <Alert variant="warning" title="Too many sign-in attempts" size="sm">
-                                                Please wait {formatCountdown(countdown)} before trying again.
-                                            </Alert>
-                                        )}
-
-                                        {/* Permanent lockout alert (HR-reset required) */}
-                                        {accountLocked && (
-                                            <Alert variant="danger" title="Account Permanently Locked" size="sm">
-                                                Your account has been locked after too many failed sign-in attempts. Please contact HR to reset your password.
-                                            </Alert>
-                                        )}
-
-                                        {/* Account integrity error (tampered/corrupted record) */}
-                                        {integrityError && displayError && countdown === 0 && (
-                                            <Alert variant="warning" title="Account Issue Detected" size="sm" dismissible>
-                                                {displayError}
-                                            </Alert>
-                                        )}
-
-                                        {/* Server error (non-rate-limit, non-integrity) */}
-                                        {!integrityError && !accountLocked && displayError && localError !== displayError && countdown === 0 && (
-                                            <Alert variant="danger" size="sm" dismissible>
-                                                {displayError}
-                                            </Alert>
-                                        )}
-
-                                        {/* Actions */}
-                                        <div className="flex flex-col gap-3 pt-2 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
-                                            <Text variant="italic" align="center">
-                                                Use your HRIS or eFeedback credentials to log in.
-                                            </Text>
-                                            <Button type="submit" variant="gradient" size="lg" fullWidth loading={loading} disabled={loading || countdown > 0 || accountLocked}>
-                                                {loading ? "Signing In…" : countdown > 0 ? `Locked out — ${formatCountdown(countdown)}` : accountLocked ? "Account Locked" : "Sign In"}
-                                            </Button>
+                {/* Page content */}
+                <div className="relative z-10 w-full">
+                    <div className="container h-full mx-auto">
+                        <div className="flex items-center justify-center h-full min-h-screen py-8">
+                            <div className="w-11/12 md:w-7/12 lg:w-6/12 xl:w-5/12">
+                                {/* Login Card */}
+                                <Card variant="default" padding="none" className={`transition-smooth backface-hidden ${errorEffect ? "animate-shake ring-2 ring-danger-400" : ""}`} onAnimationEnd={() => setErrorEffect(false)}>
+                                    <div className="px-6 py-8 lg:px-16">
+                                        {/* Card Logo — theme-aware */}
+                                        <div className="flex items-center justify-center mb-2 animate-fade-in-up">
+                                            <Logo className="w-auto h-16 transition-transform duration-300 hover:scale-110 hover:rotate-6 drop-shadow-lg" />
                                         </div>
-                                    </form>
-                                </div>
-                            </Card>
+
+                                        <Divider variant="gradient" spacing="sm" />
+
+                                        {/* Title */}
+                                        <H4 align="center" className="animate-fade-in-up">
+                                            Sign in to {APP_NAME}
+                                        </H4>
+
+                                        {/* Subtitle */}
+                                        <Paragraph size="sm" color="muted" className="mt-2 text-center opacity-80 animate-fade-in-up">
+                                            Welcome back! Please sign in to your account
+                                        </Paragraph>
+
+                                        {/* Form */}
+                                        <form className="mt-8 space-y-5 animate-fade-in-up" style={{ animationDelay: "0.2s" }} onSubmit={handleSubmit}>
+                                            <Input label="Username" name="username" type="text" placeholder="Username or USER ID" value={form.username} onChange={handleChange} autoComplete="username" leftIcon={UserIcon} error={errorEffect && localError === "Username is required" ? localError : undefined} />
+
+                                            <Input label="Password" name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} autoComplete="current-password" leftIcon={LockClosedIcon} error={errorEffect && localError === "Password is required" ? localError : undefined} />
+
+                                            {/* Rate-limit lockout alert */}
+                                            {countdown > 0 && (
+                                                <Alert variant="warning" title="Too many sign-in attempts" size="sm">
+                                                    Please wait {formatCountdown(countdown)} before trying again.
+                                                </Alert>
+                                            )}
+
+                                            {/* Permanent lockout alert (HR-reset required) */}
+                                            {accountLocked && (
+                                                <Alert variant="danger" title="Account Permanently Locked" size="sm">
+                                                    Your account has been locked after too many failed sign-in attempts. Please contact HR to reset your password.
+                                                </Alert>
+                                            )}
+
+                                            {/* Account integrity error (tampered/corrupted record) */}
+                                            {integrityError && displayError && countdown === 0 && (
+                                                <Alert variant="warning" title="Account Issue Detected" size="sm" dismissible>
+                                                    {displayError}
+                                                </Alert>
+                                            )}
+
+                                            {/* Server error (non-rate-limit, non-integrity) */}
+                                            {!integrityError && !accountLocked && error && !localError && countdown === 0 && <ApiErrorAlert error={error} onDismiss={() => {}} />}
+
+                                            {/* Actions */}
+                                            <div className="flex flex-col gap-3 pt-2 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+                                                <Text variant="italic" align="center">
+                                                    Use your HRIS or eFeedback credentials to log in.
+                                                </Text>
+                                                <Button type="submit" variant="gradient" size="lg" fullWidth loading={loading} disabled={loading || countdown > 0 || accountLocked}>
+                                                    {loading ? "Signing In…" : countdown > 0 ? `Locked out — ${formatCountdown(countdown)}` : accountLocked ? "Account Locked" : "Sign In"}
+                                                </Button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </Card>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         </ErrorBoundary>
     );
 }

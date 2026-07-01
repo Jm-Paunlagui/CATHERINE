@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "../../../components/ui/toast.utils";
+import { extractApiError, toast } from "../../../components/ui/toast.utils";
 import { useVersion } from "../../../contexts/version/VersionContext";
 import { AuthMiddleware } from "../../../middleware/authentication/AuthMiddleware";
 import { changelogApi } from "./changelog.api";
@@ -128,8 +128,8 @@ export function useChangelog() {
         try {
             const res = await changelogApi.list();
             setEntries(res.data?.data ?? []);
-        } catch {
-            toast.error("Failed to load version history.");
+        } catch (err) {
+            toast.apiError(err, "Failed to load version history.");
         } finally {
             setLoading(false);
         }
@@ -172,6 +172,7 @@ export function useChangelog() {
             version: d?.version ?? "",
             type: d?.type ?? "feat",
         });
+        setApiError(null);
         setCreateOpen(true);
     }, [releaseState]);
 
@@ -193,8 +194,12 @@ export function useChangelog() {
         setCreateOpen(true);
     }, []);
 
+    // ── Inline API error state (replaces toast for form/modal actions) ─────────
+    const [apiError, setApiError] = useState(null);
+
     const handleCreate = useCallback(async () => {
         setSaving(true);
+        setApiError(null);
         try {
             const payload = buildPayload(form);
             const res = await changelogApi.create(payload);
@@ -204,7 +209,7 @@ export function useChangelog() {
             refreshVersionBadge?.();
             closeCreate();
         } catch (err) {
-            toast.error(err.response?.data?.message ?? "Failed to create entry.");
+            setApiError(extractApiError(err, "Failed to create entry."));
         } finally {
             setSaving(false);
         }
@@ -213,6 +218,7 @@ export function useChangelog() {
     // ── Edit ──────────────────────────────────────────────────────────────────
     const openEdit = useCallback((entry) => {
         setEditTarget(entry);
+        setApiError(null);
         setForm({
             displayDate: entry.displayDate ?? "",
             version: entry.version ?? "",
@@ -242,7 +248,7 @@ export function useChangelog() {
             refreshVersionBadge?.();
             closeEdit();
         } catch (err) {
-            toast.error(err.response?.data?.message ?? "Failed to update entry.");
+            setApiError(extractApiError(err, "Failed to update entry."));
         } finally {
             setSaving(false);
         }
@@ -263,7 +269,7 @@ export function useChangelog() {
             refreshVersionBadge?.();
             closeDelete();
         } catch (err) {
-            toast.error(err.response?.data?.message ?? "Failed to delete entry.");
+            setApiError(extractApiError(err, "Failed to delete entry."));
         } finally {
             setDeleting(false);
         }
@@ -305,6 +311,10 @@ export function useChangelog() {
         // Release train
         releaseState,
         openReleaseDraft,
+
+        // Inline API error
+        apiError,
+        setApiError,
     };
 }
 

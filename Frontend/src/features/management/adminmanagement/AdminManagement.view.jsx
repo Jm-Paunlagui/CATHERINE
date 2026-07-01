@@ -31,6 +31,7 @@
 import { ArrowPathIcon, CpuChipIcon, MagnifyingGlassIcon, PencilIcon, ShieldCheckIcon, TrashIcon, UserGroupIcon, UserPlusIcon } from "@heroicons/react/24/outline";
 import { useEffect } from "react";
 import { ANIMATE_ENTER_UP, ANIMATE_PAGE_ENTER, HOVER_LIFT_SM, TRANSITION_COLORS, TRANSITION_SMOOTH, staggerDelay } from "../../../assets/styles/pre-set-styles";
+import ApiErrorAlert from "../../../components/feedback/ApiErrorAlert";
 import ErrorBoundary from "../../../components/feedback/ErrorBoundary";
 import { Input } from "../../../components/forms/Input";
 import { Select } from "../../../components/forms/Select";
@@ -418,13 +419,16 @@ function AdminManagementView() {
                 title="Add Admin"
                 size={hook.addForm.selectedEmployee ? "lg" : "md"}
                 footer={
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={hook.closeAddModal} disabled={hook.actionLoading}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" loading={hook.actionLoading} onClick={hook.submitAddAdmin} disabled={!hook.addForm.selectedEmployee}>
-                            Create Admin
-                        </Button>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeAddModal} disabled={hook.actionLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" loading={hook.actionLoading} onClick={hook.submitAddAdmin} disabled={!hook.addForm.selectedEmployee}>
+                                Create Admin
+                            </Button>
+                        </div>
                     </div>
                 }
             >
@@ -483,13 +487,16 @@ function AdminManagementView() {
                 title="Add Robot Account"
                 size={hook.addRobotForm.selectedEmployee ? "lg" : "md"}
                 footer={
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={hook.closeAddRobotModal} disabled={hook.actionLoading}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" loading={hook.actionLoading} onClick={hook.submitAddRobot} disabled={!hook.addRobotForm.selectedEmployee}>
-                            Create Robot Account
-                        </Button>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeAddRobotModal} disabled={hook.actionLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" loading={hook.actionLoading} onClick={hook.submitAddRobot} disabled={!hook.addRobotForm.selectedEmployee}>
+                                Create Robot Account
+                            </Button>
+                        </div>
                     </div>
                 }
             >
@@ -546,13 +553,16 @@ function AdminManagementView() {
                 title={`Edit ${hook.targetAdmin?.empRole === "ROBOT" ? "Robot" : "Admin"} — ${hook.targetAdmin?.empId ?? ""}`}
                 size="md"
                 footer={
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={hook.closeEditModal} disabled={hook.actionLoading}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" loading={hook.actionLoading} onClick={hook.submitEditAdmin}>
-                            Save Changes
-                        </Button>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeEditModal} disabled={hook.actionLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" loading={hook.actionLoading} onClick={hook.submitEditAdmin}>
+                                Save Changes
+                            </Button>
+                        </div>
                     </div>
                 }
             >
@@ -587,13 +597,16 @@ function AdminManagementView() {
                 variant="default"
                 size="sm"
                 footer={
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={hook.closeResetPwModal} disabled={hook.actionLoading}>
-                            Cancel
-                        </Button>
-                        <Button variant="warning" loading={hook.actionLoading} onClick={hook.confirmResetPassword}>
-                            Reset Password
-                        </Button>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeResetPwModal} disabled={hook.actionLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="warning" loading={hook.actionLoading} onClick={hook.confirmResetPassword}>
+                                Reset Password
+                            </Button>
+                        </div>
                     </div>
                 }
             >
@@ -611,13 +624,16 @@ function AdminManagementView() {
                 title="Reset Record Signature"
                 size="sm"
                 footer={
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={hook.closeResetSigModal} disabled={hook.actionLoading}>
-                            Cancel
-                        </Button>
-                        <Button variant="accent" loading={hook.actionLoading} onClick={hook.confirmResetSignature}>
-                            Recompute Signature
-                        </Button>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeResetSigModal} disabled={hook.actionLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="accent" loading={hook.actionLoading} onClick={hook.confirmResetSignature}>
+                                Recompute Signature
+                            </Button>
+                        </div>
                     </div>
                 }
             >
@@ -636,13 +652,16 @@ function AdminManagementView() {
                 variant="danger"
                 size="sm"
                 footer={
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={hook.closeDeleteModal} disabled={hook.actionLoading}>
-                            Cancel
-                        </Button>
-                        <Button variant="danger" loading={hook.actionLoading} onClick={hook.confirmDelete}>
-                            {hook.targetAdmin?.empRole === "ROBOT" ? "Remove Robot" : "Remove Admin"}
-                        </Button>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeDeleteModal} disabled={hook.actionLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="danger" loading={hook.actionLoading} onClick={hook.confirmDelete}>
+                                {hook.targetAdmin?.empRole === "ROBOT" ? "Remove Robot" : "Remove Admin"}
+                            </Button>
+                        </div>
                     </div>
                 }
             >
@@ -660,13 +679,16 @@ function AdminManagementView() {
                 title={`Permissions — ${hook.targetAdmin?.empId ?? ""}`}
                 size="md"
                 footer={
-                    <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={hook.closePermissionsModal} disabled={hook.actionLoading}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" loading={hook.actionLoading} onClick={hook.submitPermissions}>
-                            Save Permissions
-                        </Button>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closePermissionsModal} disabled={hook.actionLoading}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" loading={hook.actionLoading} onClick={hook.submitPermissions}>
+                                Save Permissions
+                            </Button>
+                        </div>
                     </div>
                 }
             >

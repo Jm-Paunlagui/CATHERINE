@@ -28,6 +28,8 @@ describe("GET /api/v1/health", function () {
     it("sets X-Request-ID header on every response", async function () {
         const res = await agent.get("/api/v1/health");
         expect(res.headers).toHaveProperty("x-request-id");
-        expect(res.headers["x-request-id"]).toMatch(/^req_/);
+        expect(res.headers["x-request-id"]).toMatch(
+            /^(\d{13}-\d{4}-\d{4}|req_.+)$/,
+        );
     });
 });

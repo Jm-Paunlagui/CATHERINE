@@ -88,12 +88,12 @@ const useLogsManagement = () => {
     const [isLive, setIsLive] = useState(false);
     const [lastHeartbeat, setLastHeartbeat] = useState(null);
     const [trafficSnapshot, setTrafficSnapshot] = useState(null); // latest { red, totals, system, rates }
-    const [trafficSeries, setTrafficSeries] = useState([]);        // rolling per-tick deltas for the stacked bar
+    const [trafficSeries, setTrafficSeries] = useState([]); // rolling per-tick deltas for the stacked bar
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const esRef = useRef(null);            // open EventSource, or null when closed
+    const esRef = useRef(null); // open EventSource, or null when closed
     const isRefreshingRef = useRef(false); // guard against concurrent manual refreshes
-    const prevTotalsRef = useRef(null);    // previous cumulative totals — for delta-based traffic buckets
+    const prevTotalsRef = useRef(null); // previous cumulative totals — for delta-based traffic buckets
 
     /**
      * Manual refresh — fetches fresh stats + list independently of the SSE stream.
@@ -171,7 +171,9 @@ const useLogsManagement = () => {
                     if (!cancelled) setIsLive(false);
                 },
             });
-            es.onopen = () => { if (!cancelled) setIsLive(true); };
+            es.onopen = () => {
+                if (!cancelled) setIsLive(true);
+            };
             esRef.current = es;
         };
 
@@ -242,9 +244,9 @@ const useLogsManagement = () => {
             const date = _localDateStr(new Date(row.CREATED_AT));
             const data = await auditLogApi.requestLogs(row.REQUEST_ID, date);
             setRequestLogsData(data);
-        } catch {
+        } catch (err) {
             setRequestLogsData({ status: "error", data: { lines: [] } });
-            toast.error("Could not load log trace for this request.");
+            toast.apiError(err, "Could not load log trace for this request.");
         } finally {
             setRequestLogsLoading(false);
         }
@@ -275,8 +277,8 @@ const useLogsManagement = () => {
             a.download = `trace-${row.REQUEST_ID}-${date.replace(/-/g, "")}.xlsx`;
             a.click();
             URL.revokeObjectURL(url);
-        } catch {
-            toast.error("Failed to export trace. Please try again.");
+        } catch (err) {
+            toast.apiError(err, "Failed to export trace. Please try again.");
         }
     };
 
@@ -304,8 +306,8 @@ const useLogsManagement = () => {
             a.click();
             URL.revokeObjectURL(url);
             triggerRefresh();
-        } catch {
-            toast.error("Failed to generate Excel export.");
+        } catch (err) {
+            toast.apiError(err, "Failed to generate Excel export.");
         }
     };
 
@@ -326,8 +328,8 @@ const useLogsManagement = () => {
             a.click();
             URL.revokeObjectURL(url);
             triggerRefresh();
-        } catch {
-            toast.error("Failed to generate log ZIP.");
+        } catch (err) {
+            toast.apiError(err, "Failed to generate log ZIP.");
         }
     };
 
@@ -345,8 +347,8 @@ const useLogsManagement = () => {
             toast.success("Audit records and log files permanently deleted.");
             setDeleteStep(3);
             triggerRefresh();
-        } catch {
-            toast.error("Deletion failed. Please try again.");
+        } catch (err) {
+            toast.apiError(err, "Deletion failed. Please try again.");
         } finally {
             setDeleting(false);
         }

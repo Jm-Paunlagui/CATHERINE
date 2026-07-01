@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "../../components/ui/toast.utils";
+import { extractApiError, toast } from "../../components/ui/toast.utils";
 import AuthMiddleware from "../../middleware/authentication/AuthMiddleware";
 import { changePasswordApi } from "./changePassword.api";
 
@@ -33,6 +33,7 @@ export const useChangePassword = () => {
     const [form, setForm] = useState(EMPTY_FORM);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [apiError, setApiError] = useState(null);
     const [isPasswordValid, setIsPasswordValid] = useState(false);
     const [shaking, setShaking] = useState(false);
     const [isDefaultPassword, setIsDefaultPassword] = useState(false);
@@ -47,7 +48,9 @@ export const useChangePassword = () => {
                 setIsDefaultPassword(user.isDefaultPassword === true);
             }
         });
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const handleChange = useCallback((e) => {
@@ -94,6 +97,7 @@ export const useChangePassword = () => {
 
             setLoading(true);
             setError("");
+            setApiError(null);
             try {
                 const res = await changePasswordApi.changePassword({
                     currentPassword: form.currentPassword,
@@ -113,10 +117,8 @@ export const useChangePassword = () => {
                 navigate(user?.role === "ROBOT" ? robotRedirect : "/dashboard");
                 return true;
             } catch (err) {
-                const message = err.response?.data?.message || err.message || "Failed to change password.";
-                setError(message);
+                setApiError(extractApiError(err, "Failed to change password."));
                 setShaking(true);
-                toast.error(message);
                 return false;
             } finally {
                 setLoading(false);
@@ -131,6 +133,8 @@ export const useChangePassword = () => {
         loading,
         error,
         setError,
+        apiError,
+        setApiError,
         isPasswordValid,
         setIsPasswordValid,
         shaking,

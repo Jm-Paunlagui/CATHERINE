@@ -67,7 +67,15 @@ function expectSuccessShape(body) {
 }
 
 function expectErrorShape(body) {
-    expect(body).toEqual(expect.objectContaining({status: expect.anything(), code: expect.anything(), title: expect.anything(), message: expect.anything(), error: expect.anything()}));
+    expect(body).toEqual(
+        expect.objectContaining({
+            status: expect.anything(),
+            code: expect.anything(),
+            title: expect.anything(),
+            message: expect.anything(),
+            error: expect.anything(),
+        }),
+    );
     expect(body.status).toBe("error");
     expect(body.error).toHaveProperty("type");
     expect(body.error["type"]).toEqual(expect.any(String));
@@ -75,7 +83,7 @@ function expectErrorShape(body) {
 
 function expectRequestId(headers) {
     expect(headers).toHaveProperty("x-request-id");
-    expect(headers["x-request-id"]).toMatch(/^req_/);
+    expect(headers["x-request-id"]).toMatch(/^(\d{13}-\d{4}-\d{4}|req_.+)$/);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -297,7 +305,14 @@ describe("POST /api/v1/admin-management", function () {
             .set("x-csrf-token", agent._csrfToken)
             .send(validBody());
 
-        expect(res.body).toEqual(expect.objectContaining({status: expect.anything(), code: expect.anything(), message: expect.anything(), data: expect.anything()}));
+        expect(res.body).toEqual(
+            expect.objectContaining({
+                status: expect.anything(),
+                code: expect.anything(),
+                message: expect.anything(),
+                data: expect.anything(),
+            }),
+        );
         expect(res.body.code).toBe(200);
     });
 
@@ -454,7 +469,14 @@ describe("PUT /api/v1/admin-management/:empId", function () {
             .set("x-csrf-token", agent._csrfToken)
             .send(validBody());
 
-        expect(res.body).toEqual(expect.objectContaining({status: expect.anything(), code: expect.anything(), message: expect.anything(), data: expect.anything()}));
+        expect(res.body).toEqual(
+            expect.objectContaining({
+                status: expect.anything(),
+                code: expect.anything(),
+                message: expect.anything(),
+                data: expect.anything(),
+            }),
+        );
     });
 
     // ✅ 8. X-Request-ID present
@@ -581,7 +603,14 @@ describe("PATCH /api/v1/admin-management/:empId/reset-password", function () {
             .set("Authorization", `Bearer ${superAdminToken()}`)
             .set("x-csrf-token", agent._csrfToken);
 
-        expect(res.body).toEqual(expect.objectContaining({status: expect.anything(), code: expect.anything(), message: expect.anything(), data: expect.anything()}));
+        expect(res.body).toEqual(
+            expect.objectContaining({
+                status: expect.anything(),
+                code: expect.anything(),
+                message: expect.anything(),
+                data: expect.anything(),
+            }),
+        );
     });
 
     // ✅ 6. X-Request-ID present
@@ -703,7 +732,14 @@ describe("PATCH /api/v1/admin-management/:empId/reset-signature", function () {
             .set("Authorization", `Bearer ${superAdminToken()}`)
             .set("x-csrf-token", agent._csrfToken);
 
-        expect(res.body).toEqual(expect.objectContaining({status: expect.anything(), code: expect.anything(), message: expect.anything(), data: expect.anything()}));
+        expect(res.body).toEqual(
+            expect.objectContaining({
+                status: expect.anything(),
+                code: expect.anything(),
+                message: expect.anything(),
+                data: expect.anything(),
+            }),
+        );
     });
 
     // ✅ 6. X-Request-ID present
@@ -728,7 +764,10 @@ describe("PATCH /api/v1/admin-management/:empId/reset-signature", function () {
 
     // ✅ 8. SUPER_ADMIN can reset a SUPER_ADMIN signature
     it("allows SUPER_ADMIN to reset any admin's signature", async function () {
-        resetSigStub.mockResolvedValue({ empId: "SA001", empRole: "SUPER_ADMIN" });
+        resetSigStub.mockResolvedValue({
+            empId: "SA001",
+            empRole: "SUPER_ADMIN",
+        });
 
         const res = await agent
             .patch("/api/v1/admin-management/SA001/reset-signature")
@@ -834,7 +873,14 @@ describe("DELETE /api/v1/admin-management/:empId", function () {
             .set("Authorization", `Bearer ${superAdminToken()}`)
             .set("x-csrf-token", agent._csrfToken);
 
-        expect(res.body).toEqual(expect.objectContaining({status: expect.anything(), code: expect.anything(), message: expect.anything(), data: expect.anything()}));
+        expect(res.body).toEqual(
+            expect.objectContaining({
+                status: expect.anything(),
+                code: expect.anything(),
+                message: expect.anything(),
+                data: expect.anything(),
+            }),
+        );
     });
 
     // ✅ 7. X-Request-ID present

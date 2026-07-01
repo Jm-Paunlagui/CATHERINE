@@ -47,14 +47,15 @@ describe("GET /api/v1/health/live — liveness probe", function () {
         expect(data["uptime"]).toEqual(expect.any(Number));
         expect(data.uptime).toBeGreaterThan(0);
         expect(data).toHaveProperty("timestamp");
-        expect(new Date(data.timestamp).getTime())
-            .toBeGreaterThan(0);
+        expect(new Date(data.timestamp).getTime()).toBeGreaterThan(0);
     });
 
-    it("X-Request-ID header is present and prefixed req_", async function () {
+    it("X-Request-ID header is present", async function () {
         const res = await request(app).get("/api/v1/health/live");
         expect(res.headers).toHaveProperty("x-request-id");
-        expect(res.headers["x-request-id"]).toMatch(/^req_/);
+        expect(res.headers["x-request-id"]).toMatch(
+            /^(\d{13}-\d{4}-\d{4}|req_.+)$/,
+        );
     });
 
     it("responds in under 100ms (no DB call — pure process info)", async function () {
@@ -87,20 +88,17 @@ describe("GET /api/v1/health/live — liveness probe", function () {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("GET /api/v1/health/ready — readiness probe", function () {
-
     // Stub db.withConnection so the pool probe resolves immediately as "down"
     // instead of waiting up to 15 s for Oracle's connectTimeout + retries.
     // Without this stub, each probe attempt takes ~15 s × 3 retries = 45 s+,
     // exceeding the 10 s test timeout before a response is even sent.
     beforeEach(function () {
         if (!db.withConnection.mock !== undefined) {
-            vi
-                .spyOn(db, "withConnection")
-                .mockRejectedValue(
-                    new Error(
-                        "ORA-12541: TNS:no listener — test environment, Oracle not available",
-                    ),
-                );
+            vi.spyOn(db, "withConnection").mockRejectedValue(
+                new Error(
+                    "ORA-12541: TNS:no listener — test environment, Oracle not available",
+                ),
+            );
         }
     });
     afterEach(function () {
@@ -170,7 +168,9 @@ describe("GET /api/v1/health/ready — readiness probe", function () {
 
     it("X-Request-ID header is present", async function () {
         const res = await request(app).get("/api/v1/health/ready");
-        expect(res.headers["x-request-id"]).toMatch(/^req_/);
+        expect(res.headers["x-request-id"]).toMatch(
+            /^(\d{13}-\d{4}-\d{4}|req_.+)$/,
+        );
     });
 
     it("does not require auth token", async function () {

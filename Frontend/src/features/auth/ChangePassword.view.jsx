@@ -19,6 +19,7 @@ import { LockClosedIcon } from "@heroicons/react/24/outline";
 import PasswordChecklist from "react-password-checklist";
 
 import aumovio from "../../assets/img/aumovio.jpeg";
+import ApiErrorAlert from "../../components/feedback/ApiErrorAlert";
 import ErrorBoundary from "../../components/feedback/ErrorBoundary";
 import Input from "../../components/forms/Input";
 import Alert from "../../components/ui/Alert";
@@ -99,12 +100,15 @@ function ChangePasswordView() {
                                             </div>
                                         )}
 
-                                        {/* Server error */}
+                                        {/* Client validation error */}
                                         {hook.error && (
                                             <Alert variant="danger" size="sm" dismissible>
                                                 {hook.error}
                                             </Alert>
                                         )}
+
+                                        {/* Server API error with Request ID */}
+                                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
 
                                         {/* Actions */}
                                         <div className="flex flex-col gap-3 pt-2 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>

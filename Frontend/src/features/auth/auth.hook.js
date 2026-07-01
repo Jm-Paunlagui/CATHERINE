@@ -7,7 +7,7 @@
 
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "../../components/ui/toast.utils";
+import { extractApiError, toast } from "../../components/ui/toast.utils";
 import AuthMiddleware from "../../middleware/authentication/AuthMiddleware";
 import CsrfMiddleware from "../../middleware/security/CsrfMiddleware";
 import { authApi } from "./auth.api";
@@ -54,9 +54,7 @@ export const useAuth = () => {
 
                 // Set the non-PII session hint, clear the stale cache, and write
                 // the minimal traceability identity for X-Client-Username headers.
-                AuthMiddleware.authenticate(
-                    user ? { firstName: user.firstName, lastName: user.lastName, userId: user.userId } : null,
-                );
+                AuthMiddleware.authenticate(user ? { firstName: user.firstName, lastName: user.lastName, userId: user.userId } : null);
 
                 // Redirect to change-password flow when the account is using
                 // the system default password or when the server explicitly
@@ -65,7 +63,7 @@ export const useAuth = () => {
                     toast.info("Please change your password before continuing.");
                     navigate("/auth/change-password");
                 } else {
-                    const landingPath = user?.role === "ROBOT" ? (import.meta.env.VITE_ROBOT_REDIRECT || redirectPath) : redirectPath;
+                    const landingPath = user?.role === "ROBOT" ? import.meta.env.VITE_ROBOT_REDIRECT || redirectPath : redirectPath;
                     navigate(landingPath);
                 }
                 toast.success(response.data?.message || "Welcome!");
@@ -73,7 +71,7 @@ export const useAuth = () => {
             } catch (err) {
                 const message = err.response?.data?.message || err.message || "Login failed";
                 const errorType = err.response?.data?.error?.type;
-                setError(message);
+                setError(extractApiError(err, message));
                 if (err.response?.status === 422 && errorType === "DataIntegrityError") {
                     setIntegrityError(true);
                 } else if (err.response?.status === 429) {
@@ -84,7 +82,6 @@ export const useAuth = () => {
                 } else if (err.response?.status === 423) {
                     setAccountLocked(true);
                 }
-                toast.error(message);
                 return false;
             } finally {
                 setLoading(false);

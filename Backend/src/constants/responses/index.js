@@ -65,11 +65,12 @@ function getStatusTitle(code) {
  * @param {number} [code=200]
  * @returns {{ status: string, code: number, message: string, data: * }}
  */
-function sendSuccess(message, data = null, code = 200) {
+function sendSuccess(message, data = null, code = 200, requestId = null) {
     return {
         status: "success",
         code,
         message,
+        requestId,
         data,
     };
 }
@@ -93,6 +94,7 @@ function sendError(message, code = 500, opts = {}) {
         code,
         title: getStatusTitle(code),
         message,
+        requestId: opts.requestId ?? null,
         error: {
             type: opts.type ?? "AppError",
             ...(opts.details ? { details: opts.details } : {}),
@@ -129,28 +131,29 @@ const RESPONSE_MESSAGES = {
     BILLING_AUTO_SENT: "Billing report sent to opted-in admins.",
 
     // Audit Log
-    AUDIT_LOG_LIST_FETCHED:  "Audit log records fetched successfully.",
+    AUDIT_LOG_LIST_FETCHED: "Audit log records fetched successfully.",
     AUDIT_LOG_STATS_FETCHED: "Audit log statistics fetched successfully.",
-    AUDIT_LOG_DELETED:       "Audit log records and server log files permanently deleted.",
+    AUDIT_LOG_DELETED:
+        "Audit log records and server log files permanently deleted.",
     AUDIT_LOG_TRACE_FETCHED: "Request log trace fetched successfully.",
 
     // Metrics
-    METRICS_FETCHED:           "Metrics snapshot retrieved successfully.",
-    METRICS_SUMMARY_FETCHED:   "Metrics summary retrieved successfully.",
-    METRICS_ALERTS_FETCHED:    "Alert evaluations retrieved successfully.",
+    METRICS_FETCHED: "Metrics snapshot retrieved successfully.",
+    METRICS_SUMMARY_FETCHED: "Metrics summary retrieved successfully.",
+    METRICS_ALERTS_FETCHED: "Alert evaluations retrieved successfully.",
     METRICS_FRONTEND_INGESTED: "Frontend metrics received.",
 
     // Client-side error ingestion (ErrorBoundary → POST /client/errors)
     CLIENT_ERROR_LOGGED: "Error logged successfully.",
 
     // Changelog
-    CHANGELOG_LIST_FETCHED:    "Changelog entries fetched successfully.",
-    CHANGELOG_ENTRY_CREATED:   "Changelog entry created successfully.",
-    CHANGELOG_ENTRY_UPDATED:   "Changelog entry updated successfully.",
-    CHANGELOG_ENTRY_DELETED:   "Changelog entry deleted successfully.",
+    CHANGELOG_LIST_FETCHED: "Changelog entries fetched successfully.",
+    CHANGELOG_ENTRY_CREATED: "Changelog entry created successfully.",
+    CHANGELOG_ENTRY_UPDATED: "Changelog entry updated successfully.",
+    CHANGELOG_ENTRY_DELETED: "Changelog entry deleted successfully.",
 
     // Release train (read-only — transitions are written via the changelog create path)
-    RELEASE_STATE_FETCHED:     "Release state retrieved successfully.",
+    RELEASE_STATE_FETCHED: "Release state retrieved successfully.",
 };
 
 module.exports = {

@@ -108,12 +108,18 @@ function _statusFor(i) {
 function _buildAuditLogs(count = 200) {
     const rows = [];
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    // Demo Snowflake IDs: segmented format {timestamp13}-{machine4}-{seq4}.
+    // Machine ID 0, sequence = row index. Timestamp derived from CREATED_AT.
+    const demoEpoch = new Date("2024-01-01T00:00:00.000Z").getTime();
     for (let i = 1; i <= count; i++) {
         const uid = i % 6 === 0 ? 0 : i % 6; // ~1/6 anonymous
         const sc = _statusFor(i);
+        const createdAt = new Date(Date.now() - Math.random() * sevenDaysMs);
+        const ts = String(createdAt.getTime() - demoEpoch).padStart(13, "0");
+        const seq = String(i % 4096).padStart(4, "0");
         rows.push({
             ID: i,
-            REQUEST_ID: `req_demo${String(i).padStart(5, "0")}`,
+            REQUEST_ID: `${ts}-0000-${seq}`,
             USER_ID: uid,
             USERNAME: uid === 0 ? null : `demo_user${uid}`,
             METHOD: METHODS[i % METHODS.length],
@@ -125,7 +131,7 @@ function _buildAuditLogs(count = 200) {
                 Math.round(8 + Math.random() * 342) + (sc >= 500 ? 280 : 0),
             CLIENT_IP: `192.168.1.${(i % 254) + 1}`,
             SERVER_IP: "10.0.0.10",
-            CREATED_AT: new Date(Date.now() - Math.random() * sevenDaysMs),
+            CREATED_AT: createdAt,
         });
     }
     return rows;

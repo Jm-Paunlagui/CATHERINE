@@ -11,6 +11,7 @@ import { faArrowUp, faBug, faChevronDown, faChevronUp, faCodeBranch, faCodeMerge
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 
+import ApiErrorAlert from "../../../components/feedback/ApiErrorAlert";
 import { ErrorBoundary } from "../../../components/feedback/ErrorBoundary";
 import { Input } from "../../../components/forms/Input";
 import { Select } from "../../../components/forms/Select";
@@ -440,14 +441,17 @@ function ChangelogContent() {
                 onClose={hook.closeCreate}
                 title="New Changelog Entry"
                 footer={
-                    <>
-                        <Button variant="ghost" onClick={hook.closeCreate} disabled={hook.saving}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" loading={hook.saving} onClick={hook.handleCreate}>
-                            Create Entry
-                        </Button>
-                    </>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeCreate} disabled={hook.saving}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" loading={hook.saving} onClick={hook.handleCreate}>
+                                Create Entry
+                            </Button>
+                        </div>
+                    </div>
                 }
             >
                 <ChangelogForm form={hook.form} onChange={hook.handleFormChange} />
@@ -459,14 +463,17 @@ function ChangelogContent() {
                 onClose={hook.closeEdit}
                 title="Edit Changelog Entry"
                 footer={
-                    <>
-                        <Button variant="ghost" onClick={hook.closeEdit} disabled={hook.saving}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" loading={hook.saving} onClick={hook.handleUpdate}>
-                            Save Changes
-                        </Button>
-                    </>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeEdit} disabled={hook.saving}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" loading={hook.saving} onClick={hook.handleUpdate}>
+                                Save Changes
+                            </Button>
+                        </div>
+                    </div>
                 }
             >
                 <ChangelogForm form={hook.form} onChange={hook.handleFormChange} />
@@ -479,14 +486,17 @@ function ChangelogContent() {
                 title="Delete Entry"
                 variant="danger"
                 footer={
-                    <>
-                        <Button variant="ghost" onClick={hook.closeDelete} disabled={hook.deleting}>
-                            Cancel
-                        </Button>
-                        <Button variant="danger" loading={hook.deleting} onClick={hook.handleDelete}>
-                            Delete
-                        </Button>
-                    </>
+                    <div className="flex flex-col gap-3 w-full">
+                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={hook.closeDelete} disabled={hook.deleting}>
+                                Cancel
+                            </Button>
+                            <Button variant="danger" loading={hook.deleting} onClick={hook.handleDelete}>
+                                Delete
+                            </Button>
+                        </div>
+                    </div>
                 }
             >
                 <p className={`text-sm ${BASE_COLOR_TEXT}`}>

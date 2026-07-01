@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "../../../components/ui/toast.utils";
+import { extractApiError, toast } from "../../../components/ui/toast.utils";
 import useDebounce from "../../../hooks/useDebounce";
 import { invalidateCache, useRequest } from "../../../hooks/useRequest";
 import AuthMiddleware from "../../../middleware/authentication/AuthMiddleware";
@@ -33,13 +33,13 @@ const VALID_ROLES = ["ADMIN", "SUPER_ADMIN", "APPROVER", "VIEWER", "ROBOT"];
  * is exactly what will be stored if they do not change anything.
  */
 const EMPTY_ADD_FLAGS = {
-    canApproveReset:   "Y",
-    canRejectReset:    "Y",
+    canApproveReset: "Y",
+    canRejectReset: "Y",
     canApproveBilling: "Y",
-    canRejectBilling:  "Y",
+    canRejectBilling: "Y",
     canReceiveBilling: "N",
-    canExportBilling:  "Y",
-    isActive:          "Y",
+    canExportBilling: "Y",
+    isActive: "Y",
 };
 
 const EMPTY_ADD_FORM = {
@@ -61,13 +61,13 @@ const EMPTY_EDIT_FORM = {
  * except CAN_RECEIVE_BILLING which opt-in defaults to 'N').
  */
 const EMPTY_PERMISSIONS_FORM = {
-    canApproveReset:   "Y",
-    canRejectReset:    "Y",
+    canApproveReset: "Y",
+    canRejectReset: "Y",
     canApproveBilling: "Y",
-    canRejectBilling:  "Y",
+    canRejectBilling: "Y",
     canReceiveBilling: "N",
-    canExportBilling:  "Y",
-    isActive:          "Y",
+    canExportBilling: "Y",
+    isActive: "Y",
 };
 
 /**
@@ -119,6 +119,9 @@ export const useAdminManagement = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searchLoading, setSearchLoading] = useState(false);
 
+    // ── Inline API error state (replaces toast for form/modal actions) ─────────
+    const [apiError, setApiError] = useState(null);
+
     const { value: debouncedQuery, isPending: isDebouncing } = useDebounce(searchQuery, 600);
 
     /**
@@ -139,7 +142,7 @@ export const useAdminManagement = () => {
             const res = await adminManagementApi.search(term);
             setSearchResults(res.data?.data ?? []);
         } catch (err) {
-            toast.error(err.response?.data?.message || "Search failed.");
+            setApiError(extractApiError(err, "Search failed."));
             setSearchResults([]);
         } finally {
             setSearchLoading(false);
@@ -181,6 +184,7 @@ export const useAdminManagement = () => {
     const openAddModal = useCallback(() => {
         setAddForm(EMPTY_ADD_FORM);
         clearSearch();
+        setApiError(null);
         setAddModalOpen(true);
     }, [clearSearch]);
 
@@ -270,7 +274,7 @@ export const useAdminManagement = () => {
             closeAddModal();
             return true;
         } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to create admin.");
+            setApiError(extractApiError(err, "Failed to create admin."));
             return false;
         } finally {
             setActionLoading(false);
@@ -285,6 +289,7 @@ export const useAdminManagement = () => {
     const openAddRobotModal = useCallback(() => {
         setAddRobotForm(EMPTY_ADD_ROBOT_FORM);
         clearSearch();
+        setApiError(null);
         setAddRobotModalOpen(true);
     }, [clearSearch]);
 
@@ -348,7 +353,7 @@ export const useAdminManagement = () => {
             closeAddRobotModal();
             return true;
         } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to create robot account.");
+            setApiError(extractApiError(err, "Failed to create robot account."));
             return false;
         } finally {
             setActionLoading(false);
@@ -365,6 +370,7 @@ export const useAdminManagement = () => {
     const openEditModal = useCallback((admin) => {
         setTargetAdmin(admin);
         setEditForm({ role: admin.empRole, changePassword: false, newPassword: "" });
+        setApiError(null);
         setEditModalOpen(true);
     }, []);
 
@@ -420,7 +426,7 @@ export const useAdminManagement = () => {
             closeEditModal();
             return true;
         } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to update admin.");
+            setApiError(extractApiError(err, "Failed to update admin."));
             return false;
         } finally {
             setActionLoading(false);
@@ -436,6 +442,7 @@ export const useAdminManagement = () => {
      */
     const openResetPwModal = useCallback((admin) => {
         setTargetAdmin(admin);
+        setApiError(null);
         setResetPwModalOpen(true);
     }, []);
 
@@ -463,7 +470,7 @@ export const useAdminManagement = () => {
             closeResetPwModal();
             return true;
         } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to reset password.");
+            setApiError(extractApiError(err, "Failed to reset password."));
             return false;
         } finally {
             setActionLoading(false);
@@ -479,6 +486,7 @@ export const useAdminManagement = () => {
      */
     const openResetSigModal = useCallback((admin) => {
         setTargetAdmin(admin);
+        setApiError(null);
         setResetSigModalOpen(true);
     }, []);
 
@@ -506,7 +514,7 @@ export const useAdminManagement = () => {
             closeResetSigModal();
             return true;
         } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to reset signature.");
+            setApiError(extractApiError(err, "Failed to reset signature."));
             return false;
         } finally {
             setActionLoading(false);
@@ -522,6 +530,7 @@ export const useAdminManagement = () => {
      */
     const openDeleteModal = useCallback((admin) => {
         setTargetAdmin(admin);
+        setApiError(null);
         setDeleteModalOpen(true);
     }, []);
 
@@ -566,14 +575,15 @@ export const useAdminManagement = () => {
      */
     const openPermissionsModal = useCallback((admin) => {
         setTargetAdmin(admin);
+        setApiError(null);
         setPermissionsForm({
-            canApproveReset:   admin.canApproveReset   ?? "Y",
-            canRejectReset:    admin.canRejectReset     ?? "Y",
-            canApproveBilling: admin.canApproveBilling  ?? "Y",
-            canRejectBilling:  admin.canRejectBilling   ?? "Y",
-            canReceiveBilling: admin.canReceiveBilling  ?? "N",
-            canExportBilling:  admin.canExportBilling   ?? "Y",
-            isActive:          admin.isActive           ?? "Y",
+            canApproveReset: admin.canApproveReset ?? "Y",
+            canRejectReset: admin.canRejectReset ?? "Y",
+            canApproveBilling: admin.canApproveBilling ?? "Y",
+            canRejectBilling: admin.canRejectBilling ?? "Y",
+            canReceiveBilling: admin.canReceiveBilling ?? "N",
+            canExportBilling: admin.canExportBilling ?? "Y",
+            isActive: admin.isActive ?? "Y",
         });
         setPermissionsModalOpen(true);
     }, []);
@@ -610,10 +620,7 @@ export const useAdminManagement = () => {
         if (!targetAdmin) return false;
         setActionLoading(true);
         try {
-            const res = await adminManagementApi.updatePermissions(
-                targetAdmin.empId,
-                permissionsForm,
-            );
+            const res = await adminManagementApi.updatePermissions(targetAdmin.empId, permissionsForm);
             toast.success(res.data?.message || "Permissions updated successfully.");
             invalidateCache(CACHE_KEY);
             refetchAdmins();
@@ -621,9 +628,7 @@ export const useAdminManagement = () => {
             return true;
         } catch (err) {
             // Zero-approver guard and other 4xx errors — show message from backend
-            toast.error(
-                err.response?.data?.message || "Failed to update permissions.",
-            );
+            toast.error(err.response?.data?.message || "Failed to update permissions.");
             return false;
         } finally {
             setActionLoading(false);
@@ -717,5 +722,9 @@ export const useAdminManagement = () => {
         targetAdmin,
         actionLoading,
         VALID_ROLES,
+
+        // Inline API error
+        apiError,
+        setApiError,
     };
 };

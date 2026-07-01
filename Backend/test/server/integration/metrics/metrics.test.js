@@ -74,7 +74,7 @@ function expectErrorShape(body) {
 }
 
 function expectRequestId(headers) {
-    expect(headers["x-request-id"]).toMatch(/^req_/);
+    expect(headers["x-request-id"]).toMatch(/^(\d{13}-\d{4}-\d{4}|req_.+)$/);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
