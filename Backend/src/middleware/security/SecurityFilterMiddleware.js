@@ -148,7 +148,20 @@ class SecurityFilterMiddleware {
         const method = req.method;
         // originalUrl includes the query string (e.g. /api/v1/users?id=1' OR '1'='1)
         // so injection patterns can catch payloads in query parameters.
-        const fullUrl = decodeURIComponent(req.originalUrl || reqPath);
+        // L2: Decode twice to catch double-encoded payloads (%2527 → %27 → ').
+        // Attackers use double-encoding to bypass single-decode WAFs.
+        let fullUrl;
+        try {
+            const once = decodeURIComponent(req.originalUrl || reqPath);
+            fullUrl = decodeURIComponent(once);
+        } catch {
+            // Malformed percent-encoding — use the single-decoded or raw value
+            try {
+                fullUrl = decodeURIComponent(req.originalUrl || reqPath);
+            } catch {
+                fullUrl = req.originalUrl || reqPath;
+            }
+        }
 
         // Always check if IP is currently blocked (applies to all paths).
         const record = this._suspiciousIPs.get(ip);

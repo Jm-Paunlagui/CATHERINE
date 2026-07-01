@@ -175,9 +175,6 @@ function AppRoutes() {
             {/* Version History — public read-only (backend GET /changelog is unauthenticated) */}
             <Route path="about/changelog" element={<ChangelogView />} />
 
-            {/* Dashboard */}
-            <Route path="dashboard" element={<DashboardView />} />
-
             {/* Change password — accessible to all valid roles including APPROVER/VIEWER/ROBOT.
                 Listed in BARE_ROUTES so no navbar/sidebar renders during this flow. */}
             <Route element={<ProtectedRoute role={[ROLES.USER, ROLES.ADMIN, ROLES.SADMIN, ROLES.APPROVER, ROLES.VIEWER, ROLES.ROBOT]} />}>

@@ -87,7 +87,9 @@ class AuthService {
     static async refresh(refreshToken) {
         let decoded;
         try {
-            decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+            decoded = jwt.verify(refreshToken, process.env.JWT_SECRET, {
+                algorithms: ["HS256"],
+            });
         } catch {
             throw new AppError(AUTH_ERRORS.TOKEN_INVALID, 403, {
                 type: "AuthenticationError",
@@ -139,9 +141,15 @@ class AuthService {
     // ─── Cookie option helpers (used by the controller) ───────────────────────
 
     static accessCookieOptions() {
+        // H2: In production, cookies are always Secure regardless of USE_HTTPS.
+        // The app may sit behind a TLS-terminating proxy where USE_HTTPS=false
+        // but the external connection is still encrypted.
+        const isProduction = process.env.NODE_ENV === "production";
+        const secure = process.env.USE_HTTPS === "true" || isProduction;
+
         return {
             httpOnly: true,
-            secure: process.env.USE_HTTPS === "true",
+            secure,
             sameSite: "strict",
             signed: true,
             maxAge: AuthService._parseDuration(
@@ -151,9 +159,12 @@ class AuthService {
     }
 
     static refreshCookieOptions() {
+        const isProduction = process.env.NODE_ENV === "production";
+        const secure = process.env.USE_HTTPS === "true" || isProduction;
+
         return {
             httpOnly: true,
-            secure: process.env.USE_HTTPS === "true",
+            secure,
             sameSite: "strict",
             signed: true,
             path: "/api/v1/auth/refresh",
@@ -355,12 +366,16 @@ class AuthService {
         };
 
         const accessToken = jwt.sign(userPayload, process.env.JWT_SECRET, {
+            algorithm: "HS256",
             expiresIn: process.env.JWT_EXPIRES_IN || "30m",
         });
         const refreshToken = jwt.sign(
             { sub: String(claims.username), type: "refresh" },
             process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d" },
+            {
+                algorithm: "HS256",
+                expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
+            },
         );
 
         return { user: userPayload, accessToken, refreshToken };

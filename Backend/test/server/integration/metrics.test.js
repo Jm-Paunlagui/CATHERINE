@@ -37,7 +37,12 @@ describe("GET /api/v1/metrics (snapshot, userLevel >= 2)", function () {
             .get("/api/v1/metrics")
             .set("Authorization", `Bearer ${adminToken}`);
         expect(res.status).toBe(200);
-        expect(res.body).toMatchObject({status: expect.anything(), code: expect.anything(), message: expect.anything(), data: expect.anything()});
+        expect(res.body).toMatchObject({
+            status: expect.anything(),
+            code: expect.anything(),
+            message: expect.anything(),
+            data: expect.anything(),
+        });
         expect(res.body.status).toBe("success");
     });
 
@@ -56,8 +61,20 @@ describe("GET /api/v1/metrics (snapshot, userLevel >= 2)", function () {
             .get("/api/v1/metrics")
             .set("Authorization", `Bearer ${adminToken}`);
         const { gc, memoryTrend } = res.body.data.system;
-        expect(gc).toMatchObject({major: expect.anything(), minor: expect.anything(), incremental: expect.anything(), weakcb: expect.anything(), overheadPct: expect.anything(), recent: expect.anything()});
-        expect(memoryTrend).toMatchObject({suspected: expect.anything(), growthBytesPerMin: expect.anything(), windowMs: expect.anything(), sampleCount: expect.anything()});
+        expect(gc).toMatchObject({
+            major: expect.anything(),
+            minor: expect.anything(),
+            incremental: expect.anything(),
+            weakcb: expect.anything(),
+            overheadPct: expect.anything(),
+            recent: expect.anything(),
+        });
+        expect(memoryTrend).toMatchObject({
+            suspected: expect.anything(),
+            growthBytesPerMin: expect.anything(),
+            windowMs: expect.anything(),
+            sampleCount: expect.anything(),
+        });
         expect(memoryTrend.suspected).toEqual(expect.any(Boolean));
     });
 
@@ -79,7 +96,11 @@ describe("GET /api/v1/metrics/summary (userLevel >= 1)", function () {
             .get("/api/v1/metrics/summary")
             .set("Authorization", `Bearer ${userToken}`);
         expect(res.status).toBe(200);
-        expect(res.body.data.system).toMatchObject({heapUsedMb: expect.anything(), heapTotalMb: expect.anything(), heapLimitMb: expect.anything()});
+        expect(res.body.data.system).toMatchObject({
+            heapUsedMb: expect.anything(),
+            heapTotalMb: expect.anything(),
+            heapLimitMb: expect.anything(),
+        });
     });
 });
 
@@ -102,16 +123,16 @@ describe("GET /api/v1/metrics/alerts (userLevel >= 2)", function () {
     });
 });
 
-describe("POST /api/v1/metrics/frontend (CSRF-protected, no auth)", function () {
-    // A persistent agent retains the CSRF cookie between the token fetch and POST.
+describe("POST /api/v1/metrics/frontend (CSRF-exempt, no auth)", function () {
+    // This endpoint is intentionally CSRF-exempt: it is a pre-auth web-vitals
+    // telemetry sink delivered via fetch+keepalive (page-unload path) which
+    // cannot attach the x-csrf-token header. CSRF protects authenticated
+    // session-riding mutations — this endpoint has no session to ride.
+    // Abuse is bounded by the route's dedicated 30 req/min rate limiter.
     let csrfAgent;
     let csrfToken;
 
     beforeEach(async function () {
-        // The frontend ingest limiter (30 req/min, keyed by IP) is module-level
-        // state shared across the entire mocha process; all supertest requests
-        // come from 127.0.0.1, so earlier suites can exhaust the window and turn
-        // these assertions into 429s. Flush it for deterministic results.
         const {
             frontendIngestLimiter,
         } = require("../../../src/routes/metrics.route");
@@ -122,11 +143,12 @@ describe("POST /api/v1/metrics/frontend (CSRF-protected, no auth)", function () 
         csrfToken = tokenRes.body.token;
     });
 
-    it("rejects a POST with no CSRF token (403)", async function () {
+    it("accepts a POST without a CSRF token (CSRF-exempt endpoint)", async function () {
         const res = await csrfAgent
             .post("/api/v1/metrics/frontend")
             .send([{ type: "vital", name: "LCP", value: 1 }]);
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(200);
+        expect(res.body.status).toBe("success");
     });
 
     it("accepts a valid vitals batch with a CSRF token (200)", async function () {

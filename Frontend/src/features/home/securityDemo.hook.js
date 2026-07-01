@@ -401,15 +401,44 @@ export function useSecurityDemo() {
     const activeScenario = DEMO_SCENARIOS.find((s) => s.id === activeId) ?? DEMO_SCENARIOS[0];
     const result = results[activeId] ?? null;
 
+    // H4: In production builds, probes are sandboxed — they return a simulated
+    // result instead of firing real malicious HTTP requests. This prevents the
+    // SecurityFilterMiddleware from blocking the visitor's own IP (or worse,
+    // a shared proxy IP) for 1 hour after ~10 hits.
+    const isProduction = import.meta.env.PROD;
+
     const runProbe = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fireProbe(activeScenario);
-            setResults((prev) => ({ ...prev, [activeScenario.id]: res }));
+            if (isProduction) {
+                // Simulate a blocked response without hitting the real backend
+                await new Promise((r) => setTimeout(r, 150 + Math.random() * 200));
+                const simulated = {
+                    success: true,
+                    blocked: true,
+                    status: activeScenario.method === "TRACE" || activeScenario.method === "PROPFIND" ? 405 : 403,
+                    statusText: activeScenario.method === "TRACE" || activeScenario.method === "PROPFIND" ? "Method Not Allowed" : "Forbidden",
+                    responseTime: Math.round(150 + Math.random() * 200),
+                    headers: {
+                        "x-content-type-options": "nosniff",
+                        "x-frame-options": "SAMEORIGIN",
+                        "referrer-policy": "strict-origin-when-cross-origin",
+                    },
+                    data: {
+                        status: "error",
+                        message: activeScenario.method === "TRACE" || activeScenario.method === "PROPFIND" ? "Method Not Allowed" : "Forbidden",
+                    },
+                    simulated: true,
+                };
+                setResults((prev) => ({ ...prev, [activeScenario.id]: simulated }));
+            } else {
+                const res = await fireProbe(activeScenario);
+                setResults((prev) => ({ ...prev, [activeScenario.id]: res }));
+            }
         } finally {
             setLoading(false);
         }
-    }, [activeScenario]);
+    }, [activeScenario, isProduction]);
 
     return {
         scenarios: DEMO_SCENARIOS,

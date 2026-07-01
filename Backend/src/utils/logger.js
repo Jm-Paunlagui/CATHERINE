@@ -673,7 +673,7 @@ class Logger {
      */
     critical(...args) {
         const { message, meta } = this.#normalizeLogArguments(args);
-        return this.log("critical", message, meta);
+        return this.log("CRITICAL", message, meta);
     }
 
     /**

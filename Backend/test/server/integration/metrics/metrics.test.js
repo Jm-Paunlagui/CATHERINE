@@ -310,21 +310,25 @@ describe("POST /api/v1/metrics/frontend — frontend ingestion", function () {
         expect(res.status).toBe(200);
     });
 
-    it("returns 403 when CSRF token is absent", async function () {
+    // This endpoint is intentionally CSRF-exempt: it is a pre-auth web-vitals
+    // telemetry sink delivered via fetch+keepalive (page-unload path) which
+    // cannot attach the x-csrf-token header. Abuse is bounded by the route's
+    // dedicated 30 req/min rate limiter.
+    it("accepts request without CSRF token (CSRF-exempt endpoint)", async function () {
         const res = await agent
             .post("/api/v1/metrics/frontend")
             .send(validPayload());
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(200);
     });
 
-    it("returns 403 when CSRF token is forged", async function () {
+    it("accepts request with any CSRF token (CSRF-exempt endpoint)", async function () {
         const res = await agent
             .post("/api/v1/metrics/frontend")
             .set("x-csrf-token", "forged-csrf-xyz")
             .send(validPayload());
 
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(200);
     });
 
     it("returns 413 when body exceeds size limit", async function () {

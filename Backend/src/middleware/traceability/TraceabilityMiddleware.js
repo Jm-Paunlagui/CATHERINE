@@ -26,6 +26,16 @@ const SENSITIVE_PATTERNS = [
     "privatekey",
     "creditcard",
     "cardnumber",
+    // L4: PII fields — redact to prevent personal data from appearing in logs
+    "email",
+    "firstname",
+    "lastname",
+    "fullname",
+    "phonenumber",
+    "phone",
+    "address",
+    "dateofbirth",
+    "dob",
 ];
 
 function isSensitiveKey(key) {

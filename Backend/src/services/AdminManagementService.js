@@ -324,6 +324,63 @@ class AdminManagementService {
         return existing;
     }
 
+    // ─── Role validation (I1) ────────────────────────────────────────────────
+
+    /**
+     * Validates that the given role is in the canonical VALID_ROLES set.
+     * Throws 400 if the role is unknown — prevents invalid data from reaching
+     * the database.
+     *
+     * @param {string} role
+     * @throws {AppError} 400 if role is not in VALID_ROLES
+     */
+    static _validateRole(role) {
+        if (!VALID_ROLES.includes(role)) {
+            throw new AppError(
+                VALIDATION_ERRORS.INVALID_INPUT,
+                HTTP_STATUS.BAD_REQUEST,
+                {
+                    type: "ValidationError",
+                    details: [
+                        {
+                            field: "role",
+                            issue: `Invalid role "${role}". Allowed: ${VALID_ROLES.join(", ")}.`,
+                        },
+                    ],
+                },
+            );
+        }
+    }
+
+    // ─── Default password guard (I1) ──────────────────────────────────────────
+
+    /**
+     * Rejects a password that matches the system default password.
+     * Prevents admins from setting (or keeping) the default password as their
+     * actual password — a CWE-1393 (use of default credentials) mitigation.
+     *
+     * @param {string} password
+     * @throws {AppError} 400 if password equals ADMIN_DEFAULT_PASSWORD
+     */
+    static _rejectDefaultPassword(password) {
+        const defaultPw = process.env.ADMIN_DEFAULT_PASSWORD;
+        if (defaultPw && password === defaultPw) {
+            throw new AppError(
+                ADMIN_ERRORS.DEFAULT_PASSWORD_FORBIDDEN,
+                HTTP_STATUS.BAD_REQUEST,
+                {
+                    type: "ValidationError",
+                    details: [
+                        {
+                            field: "password",
+                            issue: "The new password cannot be the same as the system default password.",
+                        },
+                    ],
+                },
+            );
+        }
+    }
+
     /** @deprecated — kept for backward compatibility; template has no flags. */
     static _validateFlags(flags) {
         const ALLOWED_FLAG_KEYS = [

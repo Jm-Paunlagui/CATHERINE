@@ -211,23 +211,55 @@ class ErrorHandlerMiddleware {
 
     // ─── Response body capture ────────────────────────────────────────────────
 
+    /**
+     * Captures the response body for downstream audit logging.
+     *
+     * Exemptions (M2 — memory safety):
+     *   - SSE streams (Accept: text/event-stream) — unbounded, never terminates
+     *   - Binary downloads (Content-Disposition: attachment) — large, not loggable
+     *   - Captured body is capped at 64 KiB to prevent memory exhaustion from
+     *     unexpectedly large JSON responses.
+     */
     captureResponseBody(req, res, next) {
+        // Skip SSE streams — they never end, so buffering would leak memory.
+        const accept = req.headers.accept || "";
+        if (accept.includes("text/event-stream")) {
+            return next();
+        }
+
+        const MAX_CAPTURE_BYTES = 64 * 1024; // 64 KiB cap
         const oldWrite = res.write;
         const oldEnd = res.end;
         const chunks = [];
+        let totalBytes = 0;
+        let capped = false;
 
         res.write = function (chunk, ...args) {
-            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+            if (!capped) {
+                const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+                totalBytes += buf.length;
+                if (totalBytes <= MAX_CAPTURE_BYTES) {
+                    chunks.push(buf);
+                } else {
+                    capped = true;
+                }
+            }
             oldWrite.apply(res, [chunk, ...args]);
         };
 
         res.end = function (chunk, ...args) {
-            if (chunk) {
-                chunks.push(
-                    Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk),
-                );
+            if (chunk && !capped) {
+                const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+                totalBytes += buf.length;
+                if (totalBytes <= MAX_CAPTURE_BYTES) {
+                    chunks.push(buf);
+                } else {
+                    capped = true;
+                }
             }
-            res.locals.body = Buffer.concat(chunks).toString("utf8");
+            res.locals.body = capped
+                ? "[response body too large — capture skipped]"
+                : Buffer.concat(chunks).toString("utf8");
             oldEnd.apply(res, [chunk, ...args]);
         };
 

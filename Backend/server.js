@@ -21,6 +21,12 @@ if (!process.env.UV_THREADPOOL_SIZE) {
 const dotenv = require("dotenv");
 dotenv.config({ path: ".env" });
 
+// ─── Boot guard — fail-fast on placeholder secrets / unsafe config ────────────
+// Must run after dotenv.config() but before any app/db requires so the process
+// exits before opening pools or listening on a port.
+const { validateSecrets } = require("./src/config/bootGuard");
+validateSecrets();
+
 const cluster = require("cluster");
 const os = require("os");
 const http = require("http");

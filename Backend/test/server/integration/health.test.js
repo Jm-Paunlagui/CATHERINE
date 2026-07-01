@@ -9,14 +9,17 @@ describe("GET /api/v1/health", function () {
         expect(res.body.status).toBe("success");
     });
 
-    it("response body includes uptime, timestamp, environment, and host", async function () {
+    it("response body includes uptime and timestamp but NOT environment or host (L3)", async function () {
         const res = await agent.get("/api/v1/health");
         const { data } = res.body;
         expect(data).toHaveProperty("uptime");
         expect(data["uptime"]).toEqual(expect.any(Number));
         expect(data).toHaveProperty("timestamp");
-        expect(data).toHaveProperty("environment");
-        expect(data).toHaveProperty("host");
+        // L3: environment and host are no longer exposed on the public
+        // /health endpoint to prevent information leakage.
+        expect(data).not.toHaveProperty("environment");
+        expect(data).not.toHaveProperty("host");
+        expect(data).not.toHaveProperty("pid");
     });
 
     it("responds in under 500ms", async function () {

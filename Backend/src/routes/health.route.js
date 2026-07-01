@@ -112,12 +112,11 @@ router.get(
 router.get(
     "/",
     catchAsync(async (_req, res) => {
+        // L3: Do not expose host, pid, or environment to unauthenticated callers.
+        // These are available on /health/live (internal probes only).
         const data = {
             uptime: process.uptime(),
             timestamp: new Date().toISOString(),
-            environment: process.env.NODE_ENV || "development",
-            host: os.hostname(),
-            pid: process.pid,
             database: "unknown",
         };
 

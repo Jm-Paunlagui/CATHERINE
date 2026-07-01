@@ -3,6 +3,29 @@
 const express = require("express");
 const app = express();
 
+// ─── Trust proxy (H1) ─────────────────────────────────────────────────────────
+// When behind a reverse proxy / load balancer, Express must trust the proxy so
+// that req.ip reflects the real client IP (from X-Forwarded-For) rather than
+// the proxy's IP. Without this, rate limiting, IP filtering, security filter
+// blocking, and audit logging all operate on the wrong address.
+//
+// TRUST_PROXY values:
+//   false (default) — direct connection, no proxy
+//   true            — trust the first proxy hop
+//   1, 2, …         — number of trusted proxy hops
+//   "loopback"      — trust loopback addresses only
+//   "10.0.0.0/8"    — trust a specific CIDR range
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy && trustProxy !== "false") {
+    // Numeric string → number, boolean string → boolean, else pass as-is
+    const parsed = /^\d+$/.test(trustProxy)
+        ? parseInt(trustProxy, 10)
+        : trustProxy === "true"
+          ? true
+          : trustProxy;
+    app.set("trust proxy", parsed);
+}
+
 // ─── Security middleware ──────────────────────────────────────────────────────
 const { defaultHelmet } = require("./middleware/security/HelmetMiddleware");
 const { defaultCors } = require("./middleware/security/CorsMiddleware");
@@ -127,17 +150,16 @@ app.use(defaultCookieParser.handle.bind(defaultCookieParser)); // lgtm[js/missin
 //    The CSRF token endpoints (/api/v1/csrf/*) are excluded to avoid a catch-22 where
 //    a valid token is required to obtain or refresh a token.
 //    POST /api/v1/metrics/frontend is also excluded: it is an unauthenticated,
-//    pre-auth web-vitals telemetry sink, frequently delivered via
-//    navigator.sendBeacon — which cannot attach the x-csrf-token header. CSRF
-//    (which protects authenticated, session-riding mutations) adds nothing here;
-//    a forged cross-site POST could only inject junk telemetry, already bounded
-//    by the route's dedicated 30 req/min rate limiter (CWE-352 risk accepted).
+//    pre-auth web-vitals telemetry sink delivered via fetch+keepalive (page-unload
+//    path) which cannot attach the x-csrf-token header. CSRF protects
+//    authenticated session-riding mutations — this endpoint has no session to
+//    ride. Abuse is bounded by the route's dedicated 30 req/min rate limiter.
 //    doubleCsrf only enforces on state-changing methods (POST/PUT/DELETE/PATCH);
 //    GET /csrf/token and other safe methods pass through automatically.
 const CSRF_EXEMPT_PATHS = ["/api/v1/csrf", "/api/v1/metrics/frontend"];
 app.use((req, res, next) => {
-  if (CSRF_EXEMPT_PATHS.some((p) => req.path.startsWith(p))) return next();
-  defaultCsrf.handle.bind(defaultCsrf)(req, res, next);
+    if (CSRF_EXEMPT_PATHS.some((p) => req.path.startsWith(p))) return next();
+    defaultCsrf.handle.bind(defaultCsrf)(req, res, next);
 });
 
 // 10. Capture response body for downstream logging
