@@ -1,5 +1,6 @@
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import ApiErrorAlert from "../../../../components/feedback/ApiErrorAlert";
 import Badge from "../../../../components/ui/Badge";
 import Button from "../../../../components/ui/Button";
 import { Modal } from "../../../../components/ui/Modal";
@@ -147,11 +148,14 @@ export default function RequestLogsModal({ hook }) {
             title={selectedRow ? `Trace — ${selectedRow.REQUEST_ID ?? "—"}` : "Trace"}
             size="xl"
             footer={
-                <div className="flex justify-end">
-                    <Button variant="ghost" size="sm" disabled={!canExport} onClick={() => handleExportTrace(selectedRow, date)}>
-                        <FontAwesomeIcon icon={faDownload} className="w-4 h-4 mr-1.5" />
-                        Export Trace
-                    </Button>
+                <div className="flex flex-col gap-3 w-full">
+                    <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+                    <div className="flex justify-end">
+                        <Button variant="ghost" size="sm" disabled={!canExport} onClick={() => handleExportTrace(selectedRow, date)}>
+                            <FontAwesomeIcon icon={faDownload} className="w-4 h-4 mr-1.5" />
+                            Export Trace
+                        </Button>
+                    </div>
                 </div>
             }
         >

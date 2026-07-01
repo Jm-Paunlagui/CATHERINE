@@ -243,19 +243,19 @@ export const useAdminManagement = () => {
      */
     const submitAddAdmin = useCallback(async () => {
         if (!addForm.selectedEmployee) {
-            toast.error("Please select an employee from the search results.");
+            setApiError({ message: "Please select an employee from the search results.", requestId: null });
             return false;
         }
         if (!VALID_ROLES.includes(addForm.role)) {
-            toast.error("Please select a valid role.");
+            setApiError({ message: "Please select a valid role.", requestId: null });
             return false;
         }
         if (addForm.role === "ROBOT") {
-            toast.error("Use the Robot tab to add Robot accounts.");
+            setApiError({ message: "Use the Robot tab to add Robot accounts.", requestId: null });
             return false;
         }
         if (!addForm.retainPassword && !addForm.newPassword.trim()) {
-            toast.error("A password is required when not using the default password.");
+            setApiError({ message: "A password is required when not using the default password.", requestId: null });
             return false;
         }
 
@@ -331,11 +331,11 @@ export const useAdminManagement = () => {
      */
     const submitAddRobot = useCallback(async () => {
         if (!addRobotForm.selectedEmployee) {
-            toast.error("Please select an employee from the search results.");
+            setApiError({ message: "Please select an employee from the search results.", requestId: null });
             return false;
         }
         if (!addRobotForm.retainPassword && !addRobotForm.newPassword.trim()) {
-            toast.error("A password is required when not using the default password.");
+            setApiError({ message: "A password is required when not using the default password.", requestId: null });
             return false;
         }
 
@@ -401,15 +401,15 @@ export const useAdminManagement = () => {
      */
     const submitEditAdmin = useCallback(async () => {
         if (!VALID_ROLES.includes(editForm.role)) {
-            toast.error("Please select a valid role.");
+            setApiError({ message: "Please select a valid role.", requestId: null });
             return false;
         }
         if (editForm.role === "ROBOT") {
-            toast.error("Robot role can only be assigned from the Robot tab.");
+            setApiError({ message: "Robot role can only be assigned from the Robot tab.", requestId: null });
             return false;
         }
         if (editForm.changePassword && !editForm.newPassword.trim()) {
-            toast.error("A new password is required when changing the password.");
+            setApiError({ message: "A new password is required when changing the password.", requestId: null });
             return false;
         }
 
@@ -558,7 +558,7 @@ export const useAdminManagement = () => {
             closeDeleteModal();
             return true;
         } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to remove admin.");
+            setApiError(extractApiError(err, "Failed to remove admin."));
             return false;
         } finally {
             setActionLoading(false);
@@ -628,7 +628,7 @@ export const useAdminManagement = () => {
             return true;
         } catch (err) {
             // Zero-approver guard and other 4xx errors — show message from backend
-            toast.error(err.response?.data?.message || "Failed to update permissions.");
+            setApiError(extractApiError(err, "Failed to update permissions."));
             return false;
         } finally {
             setActionLoading(false);

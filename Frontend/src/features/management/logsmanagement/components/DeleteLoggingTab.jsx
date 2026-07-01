@@ -1,5 +1,6 @@
 import { CheckCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { ALERT_WARNING, ANIMATE_BOUNCE_IN, ANIMATE_ENTER_UP, ANIMATE_PAGE_ENTER, BASE_COLOR_BG, staggerDelay, STANDARD_BORDER } from "../../../../assets/styles/pre-set-styles";
+import ApiErrorAlert from "../../../../components/feedback/ApiErrorAlert";
 import { Checkbox } from "../../../../components/forms/Checkbox";
 import Button from "../../../../components/ui/Button";
 import Card from "../../../../components/ui/Card";
@@ -68,6 +69,9 @@ function StepSelectExport({ hook }) {
                 </div>
             </Card>
 
+            {/* Inline API error */}
+            <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
+
             {/* Continue button */}
             <div className={`flex justify-end ${ANIMATE_ENTER_UP} ${staggerDelay(3)}`}>
                 <Button variant="primary" onClick={() => setDeleteStep(2)} disabled={!canContinue}>
@@ -124,6 +128,9 @@ function StepConfirmDeletion({ hook }) {
                     </div>
                 </div>
             </div>
+
+            {/* Inline API error */}
+            <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
 
             {/* Action buttons */}
             <div className={`flex flex-wrap justify-between gap-3 ${ANIMATE_ENTER_UP} ${staggerDelay(3)}`}>

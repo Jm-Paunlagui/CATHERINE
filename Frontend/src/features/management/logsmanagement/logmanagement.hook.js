@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "../../../components/ui/toast.utils";
+import { extractApiError, toast } from "../../../components/ui/toast.utils";
 import { useRequest } from "../../../hooks/useRequest";
 import { auditLogApi } from "./logsmanagement.api";
 
@@ -64,6 +64,9 @@ const useLogsManagement = () => {
 
     const [page, setPage] = useState(1);
     const pageSize = 20;
+
+    // ── Inline API error state ──
+    const [apiError, setApiError] = useState(null);
 
     // ── Investigation modal state ──
     const [selectedRow, setSelectedRow] = useState(null);
@@ -246,7 +249,7 @@ const useLogsManagement = () => {
             setRequestLogsData(data);
         } catch (err) {
             setRequestLogsData({ status: "error", data: { lines: [] } });
-            toast.apiError(err, "Could not load log trace for this request.");
+            setApiError(extractApiError(err, "Could not load log trace for this request."));
         } finally {
             setRequestLogsLoading(false);
         }
@@ -278,7 +281,7 @@ const useLogsManagement = () => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (err) {
-            toast.apiError(err, "Failed to export trace. Please try again.");
+            setApiError(extractApiError(err, "Failed to export trace. Please try again."));
         }
     };
 
@@ -307,7 +310,7 @@ const useLogsManagement = () => {
             URL.revokeObjectURL(url);
             triggerRefresh();
         } catch (err) {
-            toast.apiError(err, "Failed to generate Excel export.");
+            setApiError(extractApiError(err, "Failed to generate Excel export."));
         }
     };
 
@@ -329,7 +332,7 @@ const useLogsManagement = () => {
             URL.revokeObjectURL(url);
             triggerRefresh();
         } catch (err) {
-            toast.apiError(err, "Failed to generate log ZIP.");
+            setApiError(extractApiError(err, "Failed to generate log ZIP."));
         }
     };
 
@@ -348,7 +351,7 @@ const useLogsManagement = () => {
             setDeleteStep(3);
             triggerRefresh();
         } catch (err) {
-            toast.apiError(err, "Deletion failed. Please try again.");
+            setApiError(extractApiError(err, "Deletion failed. Please try again."));
         } finally {
             setDeleting(false);
         }
@@ -395,6 +398,9 @@ const useLogsManagement = () => {
         handleViewRow,
         handleCloseLogsModal,
         handleExportTrace,
+        // Inline API error
+        apiError,
+        setApiError,
         // Delete Logging stepper
         deleteStep,
         setDeleteStep,

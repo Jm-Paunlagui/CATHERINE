@@ -129,7 +129,7 @@ export function useChangelog() {
             const res = await changelogApi.list();
             setEntries(res.data?.data ?? []);
         } catch (err) {
-            toast.apiError(err, "Failed to load version history.");
+            setApiError(extractApiError(err, "Failed to load version history."));
         } finally {
             setLoading(false);
         }

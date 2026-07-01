@@ -403,6 +403,9 @@ function ChangelogContent() {
                 </div>
             )}
 
+            {/* ── Fetch error ────────────────────────────────────────────────── */}
+            {!hook.loading && hook.apiError && !hook.createOpen && !hook.editTarget && !hook.deleteTarget && <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} className="mb-4" />}
+
             {/* ── Empty state ───────────────────────────────────────────────── */}
             {!hook.loading && hook.entries.length === 0 && (
                 <div className={`text-center py-20 rounded-2xl ${BASE_COLOR_BG} ${STANDARD_BORDER} ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_100}`}>
