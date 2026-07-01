@@ -106,7 +106,7 @@ export function Datepicker({ value = null, onChange, placeholder = "Select date"
             {/* Calendar dropdown — rendered via portal to escape modal overflow clipping */}
             {open &&
                 createPortal(
-                    <div ref={dropdownRef} style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left }} className={["z-[9999] w-70", "bg-(--bg-surface) dark:bg-(--bg-surface-2)", "border border-(--color-card-surface-border) dark:border-grey-700/60", "rounded-2xl shadow-2xl shadow-black/15 dark:shadow-black/40", "overflow-hidden animate-scale-in"].join(" ")}>
+                    <div ref={dropdownRef} style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left }} className={["z-9999 w-70", "bg-(--bg-surface) dark:bg-(--bg-surface-2)", "border border-(--color-card-surface-border) dark:border-grey-700/60", "rounded-2xl shadow-2xl shadow-black/15 dark:shadow-black/40", "overflow-hidden animate-scale-in"].join(" ")}>
                         {/* ── Month/Year header ── */}
                         <div className="px-4 pt-4 pb-3 bg-linear-to-br from-orange-400/8 via-orange-400/5 to-purple-400/5 dark:from-orange-400/12 dark:via-orange-400/6 dark:to-purple-400/8 border-b border-grey-200/60 dark:border-grey-700/50">
                             <div className="flex items-center justify-between">
