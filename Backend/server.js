@@ -111,25 +111,35 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
 
     if (USE_HTTPS) {
         const https = require("https");
-        const certDir = path.join(__dirname, "certs");
+        // Resolve cert directory at runtime — NOT at pkg snapshot time.
+        // For compiled (pkg) builds, certs/ sits next to the executable.
+        // For normal Node, certs/ sits next to server.js.
+        const certDir = path.resolve(
+            process.pkg ? path.dirname(process.execPath) : __dirname,
+            "certs",
+        );
 
-        let httpsOptions;
+        // PFX (PKCS#12) certificate — filename from env to avoid pkg
+        // snapshotting a hardcoded path that may not exist at compile time.
+        const pfxFile = process.env.PFX_FILENAME || "server.pfx";
+        const pfxPath = path.join(certDir, pfxFile);
 
-        // Support PFX (PKCS#12) or PEM key+cert
-        const pfxPath = path.join(certDir, "server.pfx");
-        if (fs.existsSync(pfxPath)) {
-            httpsOptions = {
-                pfx: fs.readFileSync(pfxPath),
-                passphrase: process.env.PFX_PASSPHRASE || "",
-            };
-            logger.notice("HTTPS: using PFX certificate.");
-        } else {
-            httpsOptions = {
-                key: fs.readFileSync(path.join(certDir, "key.key")),
-                cert: fs.readFileSync(path.join(certDir, "cert.crt")),
-            };
-            logger.notice("HTTPS: using PEM key + cert.");
+        if (!fs.existsSync(pfxPath)) {
+            const msg =
+                `HTTPS enabled but PFX certificate not found: ${pfxPath}\n` +
+                `  Set PFX_FILENAME in .env to match the file in certs/`;
+            // Write to stderr directly so the message is visible even if the
+            // logger transport hasn't flushed yet (common in compiled builds).
+            process.stderr.write(`\n[FATAL] ${msg}\n\n`);
+            logger.crit(msg);
+            process.exit(1);
         }
+
+        const httpsOptions = {
+            pfx: fs.readFileSync(pfxPath),
+            passphrase: process.env.PFX_PASSPHRASE || "",
+        };
+        logger.notice("HTTPS: using PFX certificate.", { path: pfxPath });
 
         server = https.createServer(httpsOptions, app);
     } else {
