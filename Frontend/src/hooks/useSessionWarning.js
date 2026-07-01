@@ -81,11 +81,20 @@ export function useSessionWarning() {
         const sessionExpiresAt = parseInt(raw, 10);
         if (!Number.isFinite(sessionExpiresAt)) return;
 
-        const delay = sessionExpiresAt - Date.now() - WARNING_SECS * 1000;
+        const now = Date.now();
+        const delay = sessionExpiresAt - now - WARNING_SECS * 1000;
 
         // Guard against NaN / negative values.
         // NaN causes setTimeout to fire immediately, popping the modal on login.
         if (!Number.isFinite(delay)) return;
+
+        // Session already expired — clean up the stale hint silently instead of
+        // popping the warning modal on a public page where the user isn't even
+        // logged in. The next login will write a fresh session_exp.
+        if (sessionExpiresAt <= now) {
+            localStorage.removeItem("session_exp");
+            return;
+        }
 
         warningTimerRef.current = setTimeout(showWarning, Math.max(0, delay));
     }, [clearTimers, showWarning]);
