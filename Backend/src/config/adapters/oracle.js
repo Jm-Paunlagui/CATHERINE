@@ -45,10 +45,21 @@ function validateOracleClient() {
         return false;
     }
 
-    const required = ["oci.dll", "oraociei23.dll"];
+    // Oracle Instant Client ships the core internationalisation DLL under
+    // different names across releases:
+    //   • v23.x early builds: oraociei.dll   (no version suffix)
+    //   • v23.x later builds: oraociei23.dll (versioned suffix)
+    // Accept either variant so the validation passes on all 23.x installs.
+    const hasCoreDll =
+        fs.existsSync(path.join(clientPath, "oraociei23.dll")) ||
+        fs.existsSync(path.join(clientPath, "oraociei.dll"));
+
+    const required = ["oci.dll"];
     const missing = required.filter(
         (f) => !fs.existsSync(path.join(clientPath, f)),
     );
+    if (!hasCoreDll) missing.push("oraociei23.dll or oraociei.dll");
+
     if (missing.length) {
         logger.warning(
             oracleMessages.ORACLE_FILES_MISSING(missing, clientPath),
@@ -78,9 +89,13 @@ const isCompiled = typeof process.pkg !== "undefined";
 
 function _loadEnvForCompiled() {
     if (!isCompiled) return;
+    // .env is read from DISK only — the working directory, then the directory
+    // containing the exe. Never reference it via path.join(__dirname, ...):
+    // pkg's static analyser resolves that pattern and silently bakes the
+    // build machine's .env (real secrets) into every distributed exe
+    // (CWE-798/CWE-540 — confirmed by byte-scanning a built binary).
     const candidates = [
         path.join(process.cwd(), ".env"),
-        path.join(__dirname, "../../../.env"),
         path.join(path.dirname(process.execPath), ".env"),
     ];
     for (const filePath of candidates) {

@@ -39,18 +39,34 @@ export default defineConfig({
             },
             output: {
                 manualChunks(id) {
-                    if (id.includes("node_modules")) {
-                        if (id.includes("react") || id.includes("react-dom")) {
-                            return "vendor-react";
-                        }
-                        if (id.includes("react-router-dom")) {
-                            return "vendor-router";
-                        }
-                        if (id.includes("react-toastify") || id.includes("@headlessui") || id.includes("@heroicons") || id.includes("@fortawesome")) {
-                            return "vendor-ui";
-                        }
-                        return "vendor";
+                    const p = id.replace(/\\/g, "/");
+                    if (!p.includes("/node_modules/")) return;
+
+                    if (p.includes("/node_modules/react-router")) {
+                        return "vendor-router";
                     }
+                    if (p.includes("/node_modules/react/") || p.includes("/node_modules/react-dom/") || p.includes("/node_modules/scheduler")) {
+                        return "vendor-react";
+                    }
+                    if (p.includes("/node_modules/react-toastify") || p.includes("/node_modules/@headlessui") || p.includes("/node_modules/@heroicons") || p.includes("/node_modules/@fortawesome")) {
+                        return "vendor-ui";
+                    }
+                    // jsPDF is only reached via a dynamic import() (src/utils/qrStubPdf.js,
+                    // the EmailFailureModal PDF-export fallback) and — together with its
+                    // jspdf-exclusive transitive deps (fflate, fast-png, canvg) — adds
+                    // ~640 kB raw / ~150 kB gzip. Giving the group its own chunk keeps it
+                    // out of the catch-all "vendor" bucket below, which IS reached eagerly
+                    // from the entry — merging jsPDF into it would force every user to
+                    // download it on first load for a feature almost nobody hits.
+                    // NOTE: deliberately NOT bucketing "@babel/runtime" here even though
+                    // jspdf/canvg depend on it — the React Compiler babel preset injects
+                    // @babel/runtime helper imports into virtually every compiled app
+                    // chunk (main, vendor-react, feature views, …), so grouping it with
+                    // jsPDF would drag this whole chunk back into the eager load path.
+                    if (p.includes("/node_modules/jspdf") || p.includes("/node_modules/fflate") || p.includes("/node_modules/fast-png") || p.includes("/node_modules/canvg")) {
+                        return "vendor-jspdf";
+                    }
+                    return "vendor";
                 },
             },
         },
