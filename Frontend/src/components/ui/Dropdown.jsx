@@ -57,7 +57,7 @@ export function Dropdown({ trigger, items = [], placement = "bottom-start", widt
                                 className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left
                   ${TRANSITION_COLORS} font-aumovio
                   ${item.disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-                  ${item.danger ? "text-danger-500 dark:text-danger-300 hover:bg-danger-100 dark:hover:bg-danger-400/10" : "text-black/80 dark:text-white/80 hover:bg-orange-50 dark:hover:bg-orange-400/5 hover:text-orange-500"}`}
+                  ${item.danger ? "text-danger-500 dark:text-danger-300 hover:bg-danger-100 dark:hover:bg-danger-400/10" : "text-black/80 dark:text-white/80 hover:bg-orange-50 dark:hover:bg-orange-400/5 hover:text-(--accent-foreground)"}`}
                             >
                                 {item.icon && <item.icon className="w-4 h-4 shrink-0" />}
                                 <span className="flex-1">{item.label}</span>

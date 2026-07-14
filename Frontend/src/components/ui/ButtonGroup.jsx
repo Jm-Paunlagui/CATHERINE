@@ -40,7 +40,7 @@ export function ButtonGroup({ items = [], active, onChange, variant = "primary",
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/50
               disabled:opacity-50 disabled:cursor-not-allowed
               ${SZ[size] ?? SZ.md}
-              ${isActive ? "bg-orange-400 text-white" : "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-grey-600 dark:text-grey-300 hover:bg-orange-50 dark:hover:bg-orange-400/10 hover:text-orange-400"}`}
+              ${isActive ? "bg-orange-400 text-(--on-accent-text)" : "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-grey-600 dark:text-grey-300 hover:bg-orange-50 dark:hover:bg-orange-400/10 hover:text-(--accent-foreground)"}`}
                     >
                         {item.icon && <item.icon className="w-4 h-4 shrink-0" />}
                         {item.label}

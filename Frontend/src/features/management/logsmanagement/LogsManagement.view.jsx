@@ -38,7 +38,7 @@ function LogsManagementView() {
 
     /**
      * Pivot from a route-scoped alert to the Audit Logs tab, pre-filtered to that
-     * route. Alert routes look like "GET /api/v1/billing"; filter on the path part.
+     * route. Alert routes look like "GET /api/v1/records"; filter on the path part.
      * @param {string} route
      */
     const navigateToLogs = (route) => {

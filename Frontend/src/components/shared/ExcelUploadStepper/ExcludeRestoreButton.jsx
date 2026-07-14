@@ -5,7 +5,7 @@
  * Renders nothing (null) when the row's status is not in `excludableStatuses` — Retain rows
  * never show this control because they are already in the DB and cannot be soft-excluded.
  *
- * Styling mirrors the Pay Period implementation exactly:
+ * Styling contract:
  *   - Exclude: danger-400 text, danger hover background
  *   - Restore: success-400 text, success hover background
  *   - `faBan` icon for Exclude, `faRedoAlt` icon for Restore

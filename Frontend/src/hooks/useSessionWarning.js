@@ -89,8 +89,7 @@ export function useSessionWarning() {
         if (!Number.isFinite(delay)) return;
 
         // Session already expired — clean up the stale hint silently instead of
-        // popping the warning modal on a public page where the user isn't even
-        // logged in. The next login will write a fresh session_exp.
+        // popping the warning modal on a public page.
         if (sessionExpiresAt <= now) {
             localStorage.removeItem("session_exp");
             return;

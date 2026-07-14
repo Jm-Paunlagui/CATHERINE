@@ -65,6 +65,10 @@ const GENERAL_ERRORS = {
     NOT_FOUND: "The requested resource was not found.",
     CONFLICT: "A resource with the same identifier already exists.",
     SERVICE_UNAVAILABLE: "Service temporarily unavailable.",
+    // Thrown when BatchGuard.httpStatusFor(report) returns null — zero rows
+    // in a guarded batch succeeded, so the request must fail loud (503)
+    // instead of masquerading as success.
+    BATCH_SAVE_ALL_FAILED: "Batch save failed — no rows were saved.",
 };
 
 // ─── Admin Management error messages ─────────────────────────────────────────

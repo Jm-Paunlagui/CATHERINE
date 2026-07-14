@@ -37,14 +37,14 @@ export function Tabs({ tabs = [], defaultTab, activeTab: controlledTab, variant 
 
     const TAB_STYLES = {
         underline: (a) => `border-b-2 ${TRANSITION_COLORS} font-aumovio-bold
-            ${a ? "border-orange-400 text-orange-400" : "border-transparent text-grey-500 hover:text-orange-400 hover:border-orange-200"}`,
+            ${a ? "border-(--accent) text-(--accent-foreground)" : "border-transparent text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground) hover:border-(--accent)/30"}`,
         pill: (a) => `rounded-lg ${TRANSITION_COLORS} font-aumovio-bold
-            ${a ? "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-orange-400 shadow-sm" : "text-grey-500 hover:text-orange-400"}`,
+            ${a ? "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-(--accent-foreground) shadow-sm" : "text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground)"}`,
         boxed: (a) => `border-r last:border-0 border-grey-200 dark:border-grey-700 font-aumovio-bold
             ${TRANSITION_COLORS}
-            ${a ? "bg-orange-400 text-white" : "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-grey-500 hover:bg-orange-50 dark:hover:bg-orange-400/10 hover:text-orange-400"}`,
+            ${a ? "bg-(--accent) text-(--on-accent-text)" : "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-grey-500 dark:text-grey-400 hover:bg-(--accent-subtle) hover:text-(--accent-foreground)"}`,
         vertical: (a) => `rounded-lg text-left ${TRANSITION_COLORS} font-aumovio-bold
-            ${a ? "bg-orange-50 dark:bg-orange-400/10 text-orange-400" : "text-grey-500 hover:bg-grey-100 dark:hover:bg-(--bg-surface-3) hover:text-orange-400"}`,
+            ${a ? "bg-(--accent-subtle) text-(--accent-foreground)" : "text-grey-500 dark:text-grey-400 hover:bg-grey-100 dark:hover:bg-(--bg-surface-3) hover:text-(--accent-foreground)"}`,
     };
 
     return (
@@ -62,7 +62,7 @@ export function Tabs({ tabs = [], defaultTab, activeTab: controlledTab, variant 
                         disabled={tab.disabled}
                         className={`flex items-center gap-1.5 whitespace-nowrap
               disabled:opacity-40 disabled:cursor-not-allowed
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/40 rounded
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/40 rounded
               ${sz} ${fullWidth ? "flex-1 justify-center" : ""}
               ${(TAB_STYLES[variant] ?? TAB_STYLES.underline)(tab.id === active)}`}
                     >
@@ -71,7 +71,7 @@ export function Tabs({ tabs = [], defaultTab, activeTab: controlledTab, variant 
                         {tab.badge !== undefined && (
                             <span
                                 className={`text-[10px] px-1.5 py-0.5 rounded-full font-aumovio-bold
-                ${tab.id === active ? "bg-white/20 text-white" : "bg-orange-400/10 dark:bg-orange-400/20 text-orange-400 dark:text-orange-300"}`}
+                ${tab.id === active && variant === "boxed" ? "bg-(--on-accent-text)/20 text-(--on-accent-text)" : "bg-(--accent-subtle) text-(--accent-foreground)"}`}
                             >
                                 {tab.badge}
                             </span>

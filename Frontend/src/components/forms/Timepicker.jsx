@@ -69,8 +69,8 @@ export function Timepicker({ value = "", onChange, label, error, disabled = fals
                                     key={hv}
                                     onClick={() => emit(hv, m, ampm)}
                                     className={`px-3 py-2 text-sm text-center hover:bg-orange-50 dark:hover:bg-orange-400/10
-                    hover:text-orange-400 transition-colors
-                    ${hv === h ? "bg-orange-400 text-white font-aumovio-bold" : "text-black/70 dark:text-white/70"}`}
+                    hover:text-(--accent-foreground) transition-colors
+                    ${hv === h ? "bg-orange-400 text-(--on-accent-text) font-aumovio-bold" : "text-black/70 dark:text-white/70"}`}
                                 >
                                     {String(hv).padStart(2, "0")}
                                 </button>
@@ -83,8 +83,8 @@ export function Timepicker({ value = "", onChange, label, error, disabled = fals
                                     key={mv}
                                     onClick={() => emit(h, mv, ampm)}
                                     className={`px-3 py-2 text-sm text-center hover:bg-orange-50 dark:hover:bg-orange-400/10
-                    hover:text-orange-400 transition-colors
-                    ${mv === m ? "bg-orange-400 text-white font-aumovio-bold" : "text-black/70 dark:text-white/70"}`}
+                    hover:text-(--accent-foreground) transition-colors
+                    ${mv === m ? "bg-orange-400 text-(--on-accent-text) font-aumovio-bold" : "text-black/70 dark:text-white/70"}`}
                                 >
                                     {mv}
                                 </button>
@@ -98,8 +98,8 @@ export function Timepicker({ value = "", onChange, label, error, disabled = fals
                                         key={ap}
                                         onClick={() => emit(h, m, ap)}
                                         className={`px-3 py-3 text-sm font-aumovio-bold text-center hover:bg-orange-50
-                      dark:hover:bg-orange-400/10 hover:text-orange-400 transition-colors
-                      ${ap === ampm ? "text-orange-400" : "text-grey-500"}`}
+                      dark:hover:bg-orange-400/10 hover:text-(--accent-foreground) transition-colors
+                      ${ap === ampm ? "text-(--accent-foreground)" : "text-grey-500"}`}
                                     >
                                         {ap}
                                     </button>

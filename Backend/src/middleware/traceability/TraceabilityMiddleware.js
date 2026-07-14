@@ -158,4 +158,13 @@ class TraceabilityMiddleware {
 }
 
 const defaultTraceability = new TraceabilityMiddleware();
-module.exports = { TraceabilityMiddleware, defaultTraceability };
+module.exports = {
+    TraceabilityMiddleware,
+    defaultTraceability,
+    // Exported so any future consumer of `res.locals.body` (see
+    // ErrorHandlerMiddleware.captureResponseBody) can redact sensitive keys
+    // in the captured response JSON with the exact same rules used for
+    // request logging, instead of re-implementing key-substring matching.
+    isSensitiveKey,
+    redactValue,
+};

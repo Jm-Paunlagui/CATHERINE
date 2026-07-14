@@ -17,7 +17,11 @@ import { useState } from "react";
 import { TRANSITION_OPACITY } from "../../assets/styles/pre-set-styles";
 
 const BANNERS = {
-    info: "bg-purple-400 text-white",
+    // "info" is a solid fill of the secondary/purple accent family (swapped by
+    // applyPaletteVars) — not the fixed semantic --status-info-* token — so its
+    // foreground uses the accent-fill contrast token, same as any other solid
+    // accent fill. success/warning/danger stay raw — true fixed semantic colours.
+    info: "bg-purple-400 text-(--on-secondary-text)",
     success: "bg-success-500 text-white",
     warning: "bg-warn-400 text-black",
     danger: "bg-danger-400 text-white",

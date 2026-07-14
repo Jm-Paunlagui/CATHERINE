@@ -20,7 +20,7 @@ export function Radio({ name, options = [], value, onChange, label: groupLabel, 
                             key={opt.value}
                             className={`px-4 py-2 text-sm font-aumovio-bold cursor-pointer ${TRANSITION_COLORS}
               ${opt.disabled || disabled ? "opacity-40 cursor-not-allowed" : ""}
-              ${value === opt.value ? "bg-orange-400 text-white" : "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-grey-600 dark:text-grey-300 hover:bg-orange-50 dark:hover:bg-orange-400/10 hover:text-orange-400"}`}
+              ${value === opt.value ? "bg-orange-400 text-(--on-accent-text)" : "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-grey-600 dark:text-grey-300 hover:bg-orange-50 dark:hover:bg-orange-400/10 hover:text-(--accent-foreground)"}`}
                         >
                             <input type="radio" name={name} value={opt.value} checked={value === opt.value} onChange={() => !opt.disabled && !disabled && onChange?.(opt.value)} disabled={opt.disabled || disabled} className="sr-only" />
                             {opt.label}
@@ -56,7 +56,7 @@ export function Radio({ name, options = [], value, onChange, label: groupLabel, 
                             </div>
                         </div>
                         <div>
-                            <p className={`text-sm font-aumovio ${value === opt.value ? "text-orange-400 font-aumovio-bold" : "text-black/80 dark:text-white/80"}`}>{opt.label}</p>
+                            <p className={`text-sm font-aumovio ${value === opt.value ? "text-(--accent-foreground) font-aumovio-bold" : "text-black/80 dark:text-white/80"}`}>{opt.label}</p>
                             {opt.description && <p className="text-xs text-grey-400 mt-0.5">{opt.description}</p>}
                         </div>
                     </label>

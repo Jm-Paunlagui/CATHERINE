@@ -42,7 +42,7 @@ export function Checkbox({ id, name, label, checked = false, onChange, disabled 
             >
                 {inputEl}
                 <div>
-                    <p className={`text-sm font-aumovio-bold ${checked ? "text-orange-400" : "text-black/85 dark:text-white/85"}`}>{label}</p>
+                    <p className={`text-sm font-aumovio-bold ${checked ? "text-(--accent-foreground)" : "text-black/85 dark:text-white/85"}`}>{label}</p>
                     {description && <p className="text-xs text-grey-400 mt-0.5">{description}</p>}
                 </div>
             </label>

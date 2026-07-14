@@ -15,7 +15,7 @@ const SZ = {
 const COL = {
     default: "text-black/75 dark:text-white/75",
     muted: "text-grey-500 dark:text-grey-400",
-    primary: "text-orange-500",
+    primary: "text-(--accent-foreground)",
     inverse: "text-white",
 };
 

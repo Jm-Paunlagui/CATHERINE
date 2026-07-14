@@ -1,7 +1,24 @@
 "use strict";
 
 /**
- * @fileoverview AuditLogModel — per-request audit trail (T_AUDIT_LOGS_DEV).
+ * @fileoverview AuditLogModel — per-request audit trail.
+ *
+ * TABLE NAME (dynamic): `AUDIT_LOG_TABLE` env var when set; otherwise
+ * `T_AUDIT_LOGS` in production and `T_AUDIT_LOGS_DEV` everywhere else.
+ *
+ * STORAGE ROUTING (`AUDIT_LOG_STORAGE` env var):
+ *   - `db`   — always Oracle (throws on failure, current classic behavior).
+ *   - `file` — always the JSON-lines text fallback (audit.log.file.model.js,
+ *              `logs/Main/YYYY/MM/DD/audit.log`).
+ *   - `auto` — (default) writes try Oracle first; on the FIRST write failure
+ *              (missing table, pool down, any DB-layer error) the model
+ *              silently and permanently switches to the file fallback for
+ *              the rest of the process lifetime, and the failed batch is
+ *              re-routed to the file so no record is lost. Restart the
+ *              process to retry Oracle.
+ *
+ * Read/query methods route the same way — in file mode they return the file
+ * model's empty stub shapes (a flat text file is not queryable).
  *
  * In DEMO_MODE every method reads/writes the in-memory demo store; no Oracle
  * connection is opened. In normal mode the model uses the `appDb` connection.
@@ -10,19 +27,85 @@
 const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
 const { isDemoMode } = require("../config/demoMode");
 const demo = require("./demo/demoStore");
+const AuditLogFileModel = require("./audit.log.file.model");
+
+/** @returns {string} Resolved audit table name (env override or NODE_ENV default). */
+function resolveTableName() {
+    if (process.env.AUDIT_LOG_TABLE) return process.env.AUDIT_LOG_TABLE;
+    return process.env.NODE_ENV === "production"
+        ? "T_AUDIT_LOGS"
+        : "T_AUDIT_LOGS_DEV";
+}
 
 let _col = null;
-/** Lazily resolves the T_AUDIT_LOGS_DEV collection (never called in DEMO_MODE). */
+/** Lazily resolves the audit-table collection (never called in DEMO_MODE / file mode). */
 function col() {
-    if (!_col)
-        _col = new OracleCollection("T_AUDIT_LOGS_DEV", createDb("appDb"));
+    if (!_col) _col = new OracleCollection(resolveTableName(), createDb("appDb"));
     return _col;
+}
+
+/**
+ * Storage-mode state machine:
+ *   "db"           — AUDIT_LOG_STORAGE=db (Oracle only, failures propagate)
+ *   "file"         — AUDIT_LOG_STORAGE=file (file only)
+ *   "auto-pending" — AUDIT_LOG_STORAGE=auto, Oracle not yet known-bad
+ *   "auto-file"    — auto mode after an Oracle write failure (permanent for
+ *                    the process lifetime; the switch is silent by design)
+ */
+let _storageMode = null;
+
+function storageMode() {
+    if (_storageMode === null) {
+        const raw = (process.env.AUDIT_LOG_STORAGE || "auto").toLowerCase();
+        if (raw === "db") _storageMode = "db";
+        else if (raw === "file") _storageMode = "file";
+        else _storageMode = "auto-pending";
+    }
+    return _storageMode;
+}
+
+/** @returns {boolean} True when reads/writes should hit the file model. */
+function useFile() {
+    const mode = storageMode();
+    return mode === "file" || mode === "auto-file";
+}
+
+/**
+ * Runs an Oracle write, downgrading auto mode to the file fallback on
+ * failure. In `db` mode the error propagates untouched.
+ *
+ * @template T
+ * @param {() => Promise<T>} dbWrite - The Oracle write to attempt.
+ * @param {() => Promise<T>} fileWrite - Re-routes the same payload to the file model.
+ * @returns {Promise<T>}
+ */
+async function writeWithFallback(dbWrite, fileWrite) {
+    if (useFile()) return fileWrite();
+    try {
+        return await dbWrite();
+    } catch (err) {
+        if (storageMode() !== "auto-pending") throw err;
+        // Silent, permanent downgrade (per template design decision): the
+        // deployment has no usable audit table — every subsequent record
+        // goes to logs/Main so nothing is lost.
+        _storageMode = "auto-file";
+        return fileWrite();
+    }
+}
+
+/** Test-only escape hatch — resets the lazily-resolved storage mode + collection. */
+function _resetStorageForTests() {
+    _storageMode = null;
+    _col = null;
 }
 
 class AuditLogModel {
     static async insert(record) {
         if (isDemoMode()) return demo.auditInsert(record);
-        return col().insertOne(record);
+        return writeWithFallback(
+            () => col().insertOne(record),
+            () => AuditLogFileModel.insert(record),
+        );
     }
 
     /**
@@ -38,7 +121,10 @@ class AuditLogModel {
             for (const r of records) demo.auditInsert(r);
             return { rowsAffected: records.length };
         }
-        return col().insertMany(records);
+        return writeWithFallback(
+            () => col().insertMany(records),
+            () => AuditLogFileModel.insertBatch(records),
+        );
     }
 
     static async findPaginated(filter, page, pageSize) {
@@ -47,6 +133,7 @@ class AuditLogModel {
             all.sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT));
             return all.slice((page - 1) * pageSize, page * pageSize);
         }
+        if (useFile()) return AuditLogFileModel.findPaginated(filter, page, pageSize);
         return col()
             .find(filter)
             .sort({ CREATED_AT: -1 })
@@ -59,6 +146,7 @@ class AuditLogModel {
         if (isDemoMode()) {
             return demo.auditLogs().filter((r) => demo.match(r, filter)).length;
         }
+        if (useFile()) return AuditLogFileModel.countTotal(filter);
         return col().find(filter).count();
         // .count() is the terminal method on QueryBuilder — NOT countDocuments()
     }
@@ -78,6 +166,7 @@ class AuditLogModel {
             logs.push(...keep);
             return { rowsAffected: before - keep.length };
         }
+        if (useFile()) return AuditLogFileModel.deleteMany(filter);
         return col().deleteMany(filter);
     }
 
@@ -99,6 +188,7 @@ class AuditLogModel {
                 ...logs.map((r) => new Date(r.CREATED_AT).getTime()),
             );
         }
+        if (useFile()) return AuditLogFileModel.getLatestCreatedAt();
         const rows = await col()
             .find({})
             .sort({ CREATED_AT: -1 })
@@ -108,6 +198,9 @@ class AuditLogModel {
     }
 
     static async aggregate(matchFilter) {
+        if (!isDemoMode() && useFile()) {
+            return AuditLogFileModel.aggregate(matchFilter);
+        }
         // Total + per-category counts are derived from ONE GROUP BY STATUS_CATEGORY
         // pass so they always reconcile (total === sum of all category buckets).
         const { $or: _ignored, ...dateOnlyFilter } = matchFilter;
@@ -203,6 +296,17 @@ class AuditLogModel {
 
         return { total, totalRespTime, buckets };
     }
+
+    /**
+     * Diagnostics — the effective storage mode ("db" | "file" |
+     * "auto-pending" | "auto-file") and resolved table name.
+     *
+     * @returns {{mode: string, table: string}}
+     */
+    static storageInfo() {
+        return { mode: storageMode(), table: resolveTableName() };
+    }
 }
 
 module.exports = AuditLogModel;
+module.exports._resetStorageForTests = _resetStorageForTests;

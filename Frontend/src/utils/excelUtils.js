@@ -6,7 +6,7 @@
  * Provides lightweight wrappers around ExcelJS that replace the removed
  * SheetJS (xlsx) dependency. All helpers return Promises and write/download
  * files via ArrayBuffer → Blob → <a> click — the same pattern used by the
- * pre-delete export in rfidmanagement.hook.js (which already used ExcelJS).
+ * pre-delete export in feature hooks that already used ExcelJS.
  *
  * HOW IT WORKS
  * ------------

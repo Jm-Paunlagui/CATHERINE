@@ -66,5 +66,5 @@ router.post(
 module.exports = router;
 // Exposed for tests: the limiter is module-level state that persists across a
 // full mocha run, so suites must be able to reset it for deterministic results
-// (same pattern as subsidy-management.route.js → correctionRateLimiter).
+// (same per-route rate-limiter pattern used by other mutating routes).
 module.exports.frontendIngestLimiter = frontendIngestLimiter;

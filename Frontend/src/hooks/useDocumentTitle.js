@@ -22,7 +22,7 @@ import { useEffect, useRef } from "react";
  * @returns {void}
  *
  * @example
- * // Basic usage — produces "Dashboard — App"
+ * // Basic usage — produces "Dashboard — MEAL"
  * useDocumentTitle("Dashboard");
  *
  * @example

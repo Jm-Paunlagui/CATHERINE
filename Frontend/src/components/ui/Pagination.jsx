@@ -41,8 +41,8 @@ const SZ = {
     lg: { btn: "w-10 h-10 text-base", sel: "h-10 text-base" },
 };
 
-const DEFAULT_CLS = "bg-(--bg-surface) dark:bg-(--bg-surface-2) border-grey-200 dark:border-grey-700 text-black/70 dark:text-white/70 hover:border-orange-400 hover:text-orange-400 dark:hover:border-orange-400";
-const ACTIVE_CLS = "bg-orange-400 text-white border-orange-400 shadow-lg shadow-orange-400/30";
+const DEFAULT_CLS = "bg-(--bg-surface) dark:bg-(--bg-surface-2) border-grey-200 dark:border-grey-700 text-black/70 dark:text-white/70 hover:border-orange-400 hover:text-(--accent-foreground) dark:hover:border-orange-400";
+const ACTIVE_CLS = "bg-orange-400 text-(--on-accent-text) border-orange-400 shadow-lg shadow-orange-400/30";
 const GHOST_CLS = "bg-transparent border-transparent text-grey-400 cursor-default pointer-events-none";
 
 // ─── Custom per-page dropdown ─────────────────────────────────────────────────
@@ -67,10 +67,10 @@ function PageSizeSelect({ value, options, onChange, selSz, radius }) {
                 onClick={() => setOpen((o) => !o)}
                 className={`flex items-center gap-1.5 pl-2.5 pr-2 cursor-pointer font-aumovio-bold shrink-0
                     border ${TRANSITION_COLORS} ${selSz} ${radius} ${DEFAULT_CLS}
-                    ${open ? "border-orange-400 text-orange-400" : ""}`}
+                    ${open ? "border-orange-400 text-(--accent-foreground)" : ""}`}
             >
                 <span>{value?.toLocaleString()}</span>
-                <ChevronDownIcon className={`w-3 h-3 shrink-0 ${TRANSITION_COLORS} ${open ? "rotate-180 text-orange-400" : ""}`} />
+                <ChevronDownIcon className={`w-3 h-3 shrink-0 ${TRANSITION_COLORS} ${open ? "rotate-180 text-(--accent-foreground)" : ""}`} />
             </button>
 
             {open && (
@@ -89,7 +89,7 @@ function PageSizeSelect({ value, options, onChange, selSz, radius }) {
                                 setOpen(false);
                             }}
                             className={`flex items-center px-3 py-1.5 cursor-pointer font-aumovio-bold ${TRANSITION_COLORS}
-                                ${n === value ? "bg-orange-400 text-white" : "text-black/70 dark:text-white/70 hover:bg-orange-400/10 dark:hover:bg-orange-400/10 hover:text-orange-400"}`}
+                                ${n === value ? "bg-orange-400 text-(--on-accent-text)" : "text-black/70 dark:text-white/70 hover:bg-orange-400/10 dark:hover:bg-orange-400/10 hover:text-(--accent-foreground)"}`}
                         >
                             {n.toLocaleString()}
                         </li>

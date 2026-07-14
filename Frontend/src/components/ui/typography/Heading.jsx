@@ -28,7 +28,7 @@ export function Heading({ as: Tag = "h2", size, gradient = false, align = "left"
     return (
         <Tag
             className={`font-aumovio-bold text-black dark:text-white ${sz} ${ALIGNS[align]} ${className}
-      ${gradient ? "bg-linear-to-r from-orange-400 to-purple-400 bg-clip-text text-transparent" : ""}`}
+      ${gradient ? "bg-linear-to-r from-(--gradient-text-from) to-(--gradient-text-to) bg-clip-text text-transparent" : ""}`}
         >
             {children}
         </Tag>

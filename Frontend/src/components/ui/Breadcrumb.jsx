@@ -29,7 +29,7 @@ import { Bars3Icon, ChevronRightIcon, HomeIcon, XMarkIcon } from "@heroicons/rea
 import { useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
-import { MAIN_OVERLAY_COLOR_TEXT, TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
+import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 import { useLayout } from "../../contexts/layout/LayoutContext";
 import { useNav } from "../layout/config/useNav";
 
@@ -40,9 +40,9 @@ const SEPARATORS = {
 };
 
 const BAR_SEPARATORS = {
-    slash: <span className="select-none text-white/60 dark:text-grey-500">/</span>,
-    chevron: <ChevronRightIcon className="w-3.5 h-3.5 text-white/60 dark:text-grey-500 shrink-0" />,
-    dot: <span className="w-1 h-1 rounded-full bg-white/60 dark:bg-grey-500 shrink-0" />,
+    slash: <span className="select-none text-(--chrome-from-text-faint)">/</span>,
+    chevron: <ChevronRightIcon className="w-3.5 h-3.5 text-(--chrome-from-text-faint) shrink-0" />,
+    dot: <span className="w-1 h-1 rounded-full bg-(--chrome-from-text-faint) shrink-0" />,
 };
 
 /**
@@ -109,7 +109,7 @@ function GroupDropdown({ group, isBar }) {
 
     return (
         <div className="relative group/crumb">
-            <button type="button" className={`flex items-center gap-1 cursor-pointer transition-colors duration-200 ${isBar ? "text-white/70 hover:text-white dark:text-grey-400 dark:hover:text-(--text-accent)" : "text-grey-500 dark:text-grey-400 hover:text-(--text-accent)"}`}>
+            <button type="button" className={`flex items-center gap-1 cursor-pointer transition-colors duration-200 ${isBar ? "text-(--chrome-from-text-muted) hover:text-(--chrome-from-text)" : "text-grey-500 dark:text-grey-400 hover:text-(--text-accent)"}`}>
                 {group.label}
             </button>
 
@@ -160,7 +160,7 @@ export function Breadcrumb({ items, auto = false, separator = "chevron", size = 
         <nav aria-label="Breadcrumb" className={`flex items-center gap-1.5 flex-wrap font-aumovio ${textSz}`}>
             {/* Sidebar toggle — only shown in sidebar layout (tablet/mobile) */}
             {isSidebar && (
-                <button onClick={toggleSidebar} aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"} className={`p-1.5 -ml-1 mr-1 rounded-lg shrink-0 ${TRANSITION_COLORS} ${isBar ? "text-white/70 hover:text-white hover:bg-white/10" : "text-grey-500 hover:text-(--text-accent) hover:bg-(--side-hover-bg)"}`}>
+                <button onClick={toggleSidebar} aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"} className={`p-1.5 -ml-1 mr-1 rounded-lg shrink-0 ${TRANSITION_COLORS} ${isBar ? "text-(--chrome-from-text-muted) hover:text-(--chrome-from-text) hover:bg-(--chrome-from-hover-bg)" : "text-grey-500 hover:text-(--text-accent) hover:bg-(--side-hover-bg)"}`}>
                     {sidebarOpen ? <XMarkIcon className="w-4 h-4" /> : <Bars3Icon className="w-4 h-4" />}
                 </button>
             )}
@@ -177,17 +177,17 @@ export function Breadcrumb({ items, auto = false, separator = "chevron", size = 
                         {item.group ? (
                             <GroupDropdown group={item.group} isBar={isBar} />
                         ) : isLast ? (
-                            <span className={`flex items-center gap-1 font-aumovio-bold ${isBar ? `${MAIN_OVERLAY_COLOR_TEXT} dark:text-(--text-accent) dark:drop-shadow-none rounded px-2 py-0.5` : "text-(--text-accent)"}`} aria-current="page">
+                            <span className={`flex items-center gap-1 font-aumovio-bold ${isBar ? "text-(--chrome-from-text) drop-shadow-md rounded px-2 py-0.5" : "text-(--text-accent)"}`} aria-current="page">
                                 {item.icon && <item.icon className="w-3.5 h-3.5" />}
                                 {item.label}
                             </span>
                         ) : item.href ? (
-                            <NavLink to={item.href} className={`flex items-center gap-1 transition-colors duration-200 ${isBar ? "text-white/70 hover:text-white dark:text-grey-400 dark:hover:text-(--text-accent)" : "text-grey-500 dark:text-grey-400 hover:text-(--text-accent)"}`}>
+                            <NavLink to={item.href} className={`flex items-center gap-1 transition-colors duration-200 ${isBar ? "text-(--chrome-from-text-muted) hover:text-(--chrome-from-text)" : "text-grey-500 dark:text-grey-400 hover:text-(--text-accent)"}`}>
                                 {i === 0 && homeIcon ? <HomeIcon className="w-3.5 h-3.5" /> : item.icon && <item.icon className="w-3.5 h-3.5" />}
                                 {item.label}
                             </NavLink>
                         ) : (
-                            <span className={`flex items-center gap-1 ${isBar ? "text-white/70 dark:text-grey-400" : "text-grey-500 dark:text-grey-400"}`}>
+                            <span className={`flex items-center gap-1 ${isBar ? "text-(--chrome-from-text-muted)" : "text-grey-500 dark:text-grey-400"}`}>
                                 {i === 0 && homeIcon ? <HomeIcon className="w-3.5 h-3.5" /> : item.icon && <item.icon className="w-3.5 h-3.5" />}
                                 {item.label}
                             </span>

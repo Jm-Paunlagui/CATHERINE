@@ -33,18 +33,18 @@ const V = {
         dot: "bg-[var(--status-info-base)]",
     },
     purple: {
-        solid: "text-purple-400 dark:text-purple-300 bg-purple-100/25 dark:bg-purple-400/15 border-purple-400/35 dark:border-purple-400/25",
-        outline: "text-purple-400 dark:text-purple-300 border-purple-400 dark:border-purple-400/60 bg-transparent",
+        solid: "text-(--secondary-foreground) bg-purple-100/25 dark:bg-purple-400/15 border-purple-400/35 dark:border-purple-400/25",
+        outline: "text-(--secondary-foreground) border-purple-400 dark:border-purple-400/60 bg-transparent",
         dot: "bg-purple-400",
     },
     cyan: {
-        solid: "text-turquoise-500 dark:text-turquoise-300 bg-turquoise-100/22 dark:bg-turquoise-400/15 border-turquoise-400/25 dark:border-turquoise-400/20",
-        outline: "text-turquoise-500 dark:text-turquoise-300 border-turquoise-400 dark:border-turquoise-400/60 bg-transparent",
+        solid: "text-(--turquoise-foreground) bg-turquoise-100/22 dark:bg-turquoise-400/15 border-turquoise-400/25 dark:border-turquoise-400/20",
+        outline: "text-(--turquoise-foreground) border-turquoise-400 dark:border-turquoise-400/60 bg-transparent",
         dot: "bg-turquoise-400",
     },
     amber: {
-        solid: "text-yellow-600 dark:text-warn-300 bg-yellow-100 dark:bg-yellow-400/15 border-yellow-400/30 dark:border-yellow-400/25",
-        outline: "text-yellow-600 dark:text-warn-300 border-yellow-400 dark:border-yellow-400/60 bg-transparent",
+        solid: "text-(--yellow-foreground) bg-yellow-100 dark:bg-yellow-400/15 border-yellow-400/30 dark:border-yellow-400/25",
+        outline: "text-(--yellow-foreground) border-yellow-400 dark:border-yellow-400/60 bg-transparent",
         dot: "bg-yellow-400",
     },
     grey: {
@@ -53,8 +53,8 @@ const V = {
         dot: "bg-grey-400 dark:bg-grey-500",
     },
     orange: {
-        solid: "text-orange-500 dark:text-orange-300 bg-orange-100/20 dark:bg-orange-400/15 border-orange-400/30 dark:border-orange-400/25",
-        outline: "text-orange-500 dark:text-orange-300 border-orange-400 dark:border-orange-400/60 bg-transparent",
+        solid: "text-(--accent-foreground) bg-orange-100/20 dark:bg-orange-400/15 border-orange-400/30 dark:border-orange-400/25",
+        outline: "text-(--accent-foreground) border-orange-400 dark:border-orange-400/60 bg-transparent",
         dot: "bg-orange-400",
     },
 };

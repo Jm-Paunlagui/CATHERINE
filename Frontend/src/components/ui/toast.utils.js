@@ -2,38 +2,37 @@ import { createElement } from "react";
 import { toast as t } from "react-toastify";
 
 /**
- * Extract a standardised `{ message, requestId }` error shape from an Axios error.
+ * Extract a standardised error shape from an Axios error for `<ApiErrorAlert>`.
  *
- * Used by hooks to set inline error state for `<ApiErrorAlert>` rendering.
- * Also used internally by `toast.apiError`.
+ * Returns the server message, requestId, and — when the backend includes them —
+ * the structured `error.type`, `error.details`, and `error.hint` fields.
+ * `error.stack` is **never** extracted (CWE-209 — stack traces must not render
+ * in the UI even when the server includes them in development mode).
  *
  * @param {Error & { response?: object, requestId?: string }} err
- *   The Axios error (enriched by HttpClient's response interceptor).
  * @param {string} [fallbackMsg="An unexpected error occurred."]
- * @returns {{ message: string, requestId: string | null }}
+ * @returns {{ message: string, requestId: string|null, type: string|null, details: Array<{field:string,issue:string}>|null, hint: string|null }}
  */
 export function extractApiError(err, fallbackMsg = "An unexpected error occurred.") {
+    const errBody = err?.response?.data?.error;
     return {
         message: err?.response?.data?.message ?? fallbackMsg,
         requestId: err?.requestId ?? err?.response?.data?.requestId ?? null,
+        type: errBody?.type ?? null,
+        details: Array.isArray(errBody?.details) ? errBody.details : null,
+        hint: errBody?.hint ?? null,
     };
 }
 
 /**
  * Render an API error toast with the server message and a copyable Request ID.
- * Clicking the Request ID copies it to the clipboard for support/debugging.
- *
- * @param {string} message   - The error message to display.
- * @param {string|null} requestId - The server-assigned Snowflake Request ID.
- * @returns {import('react').ReactElement}
+ * @param {string} message
+ * @param {string|null} requestId
  */
 function ApiErrorContent({ message, requestId }) {
     const handleCopy = () => {
-        if (requestId) {
-            navigator.clipboard?.writeText(requestId).catch(() => {});
-        }
+        if (requestId) navigator.clipboard?.writeText(requestId).catch(() => {});
     };
-
     return createElement(
         "div",
         { className: "flex flex-col gap-1" },
@@ -64,20 +63,14 @@ export const toast = {
     /**
      * Display an API error toast with the server message and Request ID.
      *
-     * Extracts the message from the Axios error's response body (or uses the
-     * fallback), and displays the server-assigned Request ID in a small
-     * copyable line below the message. Clicking the ID copies it to clipboard.
-     *
-     * Usage in hooks:
-     *   catch (err) {
-     *     toast.apiError(err, "Failed to save changes.");
-     *   }
+     * @deprecated Prefer `setApiError(extractApiError(err, msg))` + `<ApiErrorAlert>` for
+     * inline display with a copyable Request ID. All feature hooks now use the inline
+     * pattern. This method is retained only for edge cases where no inline error area
+     * exists (e.g., a fire-and-forget background job with no UI surface).
      *
      * @param {Error & { response?: object, requestId?: string }} err
-     *   The Axios error (enriched by HttpClient's response interceptor with `err.requestId`).
      * @param {string} [fallbackMsg="An unexpected error occurred."]
-     *   Message to show when the server response has no message field.
-     * @param {object} [opts] - Additional react-toastify options.
+     * @param {object} [opts]
      */
     apiError: (err, fallbackMsg = "An unexpected error occurred.", opts) => {
         const { message, requestId } = extractApiError(err, fallbackMsg);

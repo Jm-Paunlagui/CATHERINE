@@ -25,14 +25,13 @@ import { VersionBadge } from "../ui/VersionBadge";
 import { useNav } from "./config/useNav";
 
 const APP_DISPLAY_NAME = import.meta.env.VITE_APP_NAME || null;
-const CHANGELOG_HREF = "/about/changelog";
+const CHANGELOG_HREF = "/support/changelog";
 
 // ── Role helpers (shared with Navbar) ─────────────────────────────────────────
 function resolveRoleLabel(role) {
     if (role === "SUPER_ADMIN") return "Super ADMIN";
     if (role === "ADMIN") return "ADMIN";
-    if (role === "APPROVER") return "Approver";
-    if (role === "VIEWER") return "Viewer";
+    if (role === "VENDOR") return "Vendor";
     if (role === "ROBOT") return "Automation";
     return "USER";
 }
@@ -40,8 +39,7 @@ function resolveRoleLabel(role) {
 function resolveRoleBadgeVariant(role) {
     if (role === "SUPER_ADMIN") return "purple";
     if (role === "ADMIN") return "orange";
-    if (role === "APPROVER") return "blue";
-    if (role === "VIEWER") return "cyan";
+    if (role === "VENDOR") return "cyan";
     if (role === "ROBOT") return "green";
     return "grey";
 }
@@ -78,21 +76,40 @@ export default function SidebarHeader() {
                     <NavLink to="/" className="flex items-center gap-2">
                         {/* Mobile/tablet: theme-aware logo */}
                         <Logo className="h-8 md:h-10 lg:hidden w-auto" />
-                        {/* Desktop: white logo on gradient */}
-                        <Logo variant="white" className="hidden lg:block h-12 w-auto" />
-                        {APP_DISPLAY_NAME && <span className="hidden md:block tracking-widest text-base font-normal leading-relaxed text-(--text-primary) lg:text-(--color-gradient-text) lg:drop-shadow-sm">{APP_DISPLAY_NAME}</span>}
+                        {/* Desktop: zone-adaptive logo on gradient (never hardcoded white — pale palettes).
+                            Display visibility owned by this wrapper span — the Logo's two internal
+                            imgs carry ONLY sizing classes so .logo-on-chrome-dark/-light (index.css)
+                            has sole control of which mark renders (avoids a hidden/block cascade fight). */}
+                        <span className="hidden lg:block">
+                            <Logo variant="chrome" className="h-12 w-auto" />
+                        </span>
+                        {APP_DISPLAY_NAME && <span className="hidden md:block tracking-widest text-base font-normal leading-relaxed text-(--text-primary) lg:text-(--chrome-from-text) lg:drop-shadow-sm">{APP_DISPLAY_NAME}</span>}
                     </NavLink>
 
-                    {/* Version badge — normal on mobile/tablet, glass on desktop gradient */}
-                    <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} className="hidden md:inline-flex lg:hidden" />
-                    <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} glass className="hidden lg:inline-flex" />
+                    {/* Version badge — normal on mobile/tablet, glass on desktop gradient.
+                        Visibility owned by the wrapper span, not VersionBadge's className —
+                        the component's own `inline-flex` base class fights a `hidden` passed
+                        via className at equal specificity. */}
+                    <span className="hidden md:inline-flex lg:hidden">
+                        <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} />
+                    </span>
+                    <span className="hidden lg:inline-flex">
+                        <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} glass />
+                    </span>
                 </div>
 
                 {/* ── Right: Personalize + Avatar profile dropdown ── */}
                 <div className="flex items-center gap-2 shrink-0">
                     {/* Personalize button — white on desktop gradient */}
                     <Tooltip content="Personalize" placement="bottom" delay={200}>
-                        <button onClick={() => setPersonalizeOpen(true)} aria-label="Personalize" className={`p-2 border border-transparent rounded-lg text-grey-500 dark:text-grey-400 lg:text-white/80 hover:text-(--text-accent) lg:hover:text-white hover:bg-(--nav-hover-bg) lg:hover:bg-white/15 hover:border-(--accent)/20 lg:hover:border-white/20 ${TRANSITION_COLORS}`}>
+                        <button
+                            onClick={() => setPersonalizeOpen(true)}
+                            aria-label="Personalize"
+                            className={`p-2 border rounded-lg
+                                max-lg:border-transparent max-lg:text-grey-500 dark:max-lg:text-grey-400 max-lg:hover:text-(--text-accent) max-lg:hover:bg-(--nav-hover-bg) max-lg:hover:border-(--accent)/20
+                                lg:text-(--chrome-to-text) lg:bg-(--chrome-to-glass-bg) lg:border-(--chrome-to-glass-border) lg:hover:bg-(--chrome-to-hover-bg) lg:hover:text-(--chrome-to-hover-text)
+                                ${TRANSITION_COLORS}`}
+                        >
                             <PaintBrushIcon className="w-4 h-4" />
                         </button>
                     </Tooltip>
@@ -100,7 +117,7 @@ export default function SidebarHeader() {
                     {/* Profile avatar dropdown */}
                     {isAuth && (
                         <Menu as="div" className="relative">
-                            <MenuButton className={`rounded-full ${TRANSITION_SPRING} hover:ring-2 hover:ring-(--accent)/40 lg:hover:ring-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/50 lg:focus-visible:ring-white/60`}>
+                            <MenuButton className={`rounded-full ${TRANSITION_SPRING} hover:ring-2 hover:ring-(--accent)/40 lg:hover:ring-(--chrome-to-ring) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/50 lg:focus-visible:ring-(--chrome-to-ring)`}>
                                 <Avatar name={userName} size="sm" bordered />
                             </MenuButton>
 

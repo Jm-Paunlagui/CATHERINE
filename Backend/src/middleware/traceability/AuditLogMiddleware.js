@@ -59,7 +59,7 @@ class AuditLogMiddleware {
 
         // Use the same canonical route label that RED metrics use (resolveRouteLabel)
         // so the ENDPOINT column stores parameterized patterns like
-        // "/api/v1/rfid-management/:gid/:cardNumber/history" instead of concrete
+        // "/api/v1/records/:gid/:cardNumber/history" instead of concrete
         // paths with raw param values. This:
         //   1. Keeps audit log endpoints consistent with the RED Metrics table
         //   2. Prevents PII/ID leakage into the audit table (CWE-200)

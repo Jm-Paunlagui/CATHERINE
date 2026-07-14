@@ -25,12 +25,14 @@ import httpClient from "../middleware/HttpClient";
 
 const clientLogger = {
     /**
-     * Reports a client-side error to the backend.
+     * Reports a client-side error to the backend and returns the server-assigned
+     * Request ID so the caller (ErrorBoundary) can display it for support tracing.
      *
      * @param {Error|string} message - Error instance (preferred) or string message.
      * @param {{ componentStack?: string }} [info] - React ErrorInfo (componentStack).
+     * @returns {Promise<string|null>} The server-assigned Request ID, or null on failure.
      */
-    error(message, info) {
+    async error(message, info) {
         const payload = {
             message: message instanceof Error ? message.message : String(message),
             stack: message instanceof Error ? message.stack : undefined,
@@ -40,14 +42,20 @@ const clientLogger = {
             timestamp: new Date().toISOString(),
         };
 
-        httpClient.post("client/errors", payload).catch(() => {
+        let requestId = null;
+        try {
+            const res = await httpClient.post("client/errors", payload);
+            requestId = res.data?.requestId ?? null;
+        } catch {
             // Silently swallow — clientLogger must never throw
-        });
+        }
 
         if (import.meta.env.DEV) {
             // eslint-disable-next-line no-console -- dev-only echo for developer ergonomics
             console.error("[ClientLogger]", message, info);
         }
+
+        return requestId;
     },
 };
 

@@ -17,9 +17,9 @@ import { NavLink, useLocation } from "react-router-dom";
 
 import { ANIMATE_SCALE_IN, ANIMATE_SCALE_OUT, ANIMATE_SLIDE_DOWN, BASE_COLOR_TEXT, DELAY_1, MAIN_FOREGROUND_COLOR_TEXT, MAIN_OVERLAY_COLOR_BG, MAIN_PULSE_COLOR_BG, SECONDARY_COLOR_TEXT, SUBTITLE_COLOR_TEXT, TITLE_COLOR_TEXT, TRANSITION_COLORS, TRANSITION_SNAP, TRANSITION_SPRING } from "../../assets/styles/pre-set-styles";
 
-import { useVersion } from "../../contexts/version/VersionContext";
 import PersonalizeModal from "../../features/personalize/PersonalizeModal";
 import ProfileModal from "../feedback/ProfileModal";
+import { useVersion } from "../../contexts/version/VersionContext";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
 import Logo from "../ui/Logo";
@@ -32,8 +32,7 @@ const APP_DISPLAY_NAME = import.meta.env.VITE_APP_NAME || null;
 function resolveRoleLabel(role) {
     if (role === "SUPER_ADMIN") return "Super ADMIN";
     if (role === "ADMIN") return "ADMIN";
-    if (role === "APPROVER") return "Approver";
-    if (role === "VIEWER") return "Viewer";
+    if (role === "VENDOR") return "Vendor";
     if (role === "ROBOT") return "Automation";
     return "USER";
 }
@@ -41,8 +40,7 @@ function resolveRoleLabel(role) {
 function resolveRoleBadgeVariant(role) {
     if (role === "SUPER_ADMIN") return "purple";
     if (role === "ADMIN") return "orange";
-    if (role === "APPROVER") return "blue";
-    if (role === "VIEWER") return "cyan";
+    if (role === "VENDOR") return "cyan";
     if (role === "ROBOT") return "green";
     return "grey";
 }
@@ -190,8 +188,12 @@ export default function Navbar() {
                                         <Logo className="h-8 md:h-10 lg:h-12 w-auto" />
                                         {APP_DISPLAY_NAME && <span className={`hidden md:block tracking-widest text-base ${BASE_COLOR_TEXT}`}>{APP_DISPLAY_NAME}</span>}
                                     </NavLink>
-                                    {/* Version + release-stage badge → links to Version History */}
-                                    <VersionBadge version={version} stage={stage} to="/about/changelog" className="hidden md:inline-flex" />
+                                    {/* Version + release-stage badge → links to Version History.
+                                        Visibility owned by the wrapper span — VersionBadge's own
+                                        `inline-flex` base class fights a `hidden` passed via className. */}
+                                    <span className="hidden md:inline-flex">
+                                        <VersionBadge version={version} stage={stage} to="/support/changelog" />
+                                    </span>
                                 </div>
 
                                 {/* Desktop centred link bar */}
@@ -404,7 +406,7 @@ export default function Navbar() {
 
                                 {/* Mobile version + release-stage badge → Version History */}
                                 <div className="pt-3 mt-1 border-t border-grey-100 dark:border-grey-800 flex justify-center">
-                                    <VersionBadge version={version} stage={stage} to="/about/changelog" />
+                                    <VersionBadge version={version} stage={stage} to="/support/changelog" />
                                 </div>
                             </div>
                         </Transition>

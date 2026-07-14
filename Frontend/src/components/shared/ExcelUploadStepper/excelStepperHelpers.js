@@ -1,6 +1,6 @@
 /**
  * excelStepperHelpers.js — Pure helper functions shared across all Excel
- * upload stepper features (RFID, PayPeriod, Subsidy, and future features).
+ * upload stepper features.
  *
  * Plain JS module — no React, no JSX. All exports are named; no default export.
  */
@@ -10,17 +10,17 @@
 /**
  * Builds the 3-step array consumed by the Stepper component.
  * Steps 1 and 2 are identical across all Excel upload features.
- * Only the step-3 description varies by feature (e.g. "RFID records updated").
+ * Only the step-3 description varies by feature (e.g. "Records updated").
  *
  * @param {string} completeDescription - Description text for the Complete step.
  * @returns {Array<{ id: string, label: string, description: string }>}
  *
  * @example
- * const steps = makeUploadSteps('RFID records updated');
+ * const steps = makeUploadSteps('Records updated');
  * // [
  * //   { id: 'upload',   label: 'Upload File',  description: 'Select your .xlsx file' },
  * //   { id: 'verify',   label: 'Verify Data',  description: 'Review DB-classified rows' },
- * //   { id: 'complete', label: 'Complete',     description: 'RFID records updated' },
+ * //   { id: 'complete', label: 'Complete',     description: 'Records updated' },
  * // ]
  */
 export function makeUploadSteps(completeDescription) {
@@ -39,9 +39,9 @@ export function makeUploadSteps(completeDescription) {
  * Stable tie-break by original array index.
  *
  * When `useExcluded` is true (default), excluded rows always sort after
- * non-excluded rows within the same status group — matching the RFID and
- * PayPeriod behaviour. Set to false for features that have no excluded flag
- * (e.g. Subsidy).
+ * non-excluded rows within the same status group — the shared uploader
+ * behaviour. Set to false for features that have no excluded flag
+ * at all.
  *
  * @param {Array<object>} rows - Classified rows to sort.
  * @param {{ [status: string]: number }} sortOrder - Map of status → sort priority (lower = first).

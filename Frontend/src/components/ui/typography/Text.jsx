@@ -13,7 +13,7 @@ export function Text({ variant = "bold", color, className = "", children }) {
         return (
             <code
                 className={`font-mono text-[0.875em] px-1.5 py-0.5 rounded
-      bg-grey-100 dark:bg-(--bg-surface-3) text-orange-500 dark:text-orange-300
+      bg-grey-100 dark:bg-(--bg-surface-3) text-(--accent-foreground)
       border border-grey-200 dark:border-grey-700 ${col} ${className}`}
             >
                 {children}

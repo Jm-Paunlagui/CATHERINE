@@ -30,7 +30,7 @@ export default function SessionWarningModal() {
             }
         >
             <div className="flex flex-col items-center gap-4 py-2">
-                <div className="text-7xl font-aumovio-bold text-orange-400 tabular-nums leading-none">{countdown}</div>
+                <div className="text-7xl font-aumovio-bold text-(--accent-foreground) tabular-nums leading-none">{countdown}</div>
                 <p className="text-sm text-grey-600 dark:text-grey-400 text-center">
                     Your session will expire in{" "}
                     <span className="font-aumovio-bold text-black/85 dark:text-white/90">

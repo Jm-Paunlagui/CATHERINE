@@ -121,6 +121,10 @@ const RESPONSE_MESSAGES = {
     UPDATED: "Resource updated successfully.",
     DELETED: "Resource deleted successfully.",
 
+    // Guarded batch writes (BatchGuard.httpStatusFor → 207 Multi-Status)
+    BATCH_SAVE_PARTIAL:
+        "Saved with some issues — see the failed/pending rows for details.",
+
     // Admin Management
     ADMIN_CREATED: "Admin created successfully.",
     ADMIN_UPDATED: "Admin updated successfully.",
@@ -128,7 +132,6 @@ const RESPONSE_MESSAGES = {
     PASSWORD_RESET: "Password reset to default successfully.",
     SIGNATURE_RESET: "Record signature recomputed successfully.",
     ADMIN_PERMISSIONS_UPDATED: "Admin permissions updated successfully.",
-    BILLING_AUTO_SENT: "Billing report sent to opted-in admins.",
 
     // Audit Log
     AUDIT_LOG_LIST_FETCHED: "Audit log records fetched successfully.",

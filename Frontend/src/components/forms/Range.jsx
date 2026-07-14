@@ -22,7 +22,7 @@ export function Range({ value = 0, onChange, min = 0, max = 100, step = 1, label
             {(label || showValue) && (
                 <div className="flex justify-between mb-1.5">
                     {label && <span className="text-xs font-aumovio-bold text-black/70 dark:text-white/70">{label}</span>}
-                    {showValue && <span className="text-xs text-orange-400 font-aumovio-bold">{value}</span>}
+                    {showValue && <span className="text-xs text-(--accent-foreground) font-aumovio-bold">{value}</span>}
                 </div>
             )}
             <div className="relative">

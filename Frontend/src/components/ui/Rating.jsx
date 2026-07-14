@@ -14,9 +14,9 @@ import { useState } from "react";
 import { TRANSITION_COLORS, TRANSITION_SNAP } from "../../assets/styles/pre-set-styles";
 
 const COLORS = {
-    orange: "text-orange-400",
-    yellow: "text-yellow-400",
-    purple: "text-purple-400",
+    orange: "text-(--accent-icon)",
+    yellow: "text-(--yellow-foreground)",
+    purple: "text-(--secondary-foreground)",
 };
 const SZ = { sm: "w-4 h-4", md: "w-5 h-5", lg: "w-7 h-7" };
 

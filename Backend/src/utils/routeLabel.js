@@ -176,7 +176,7 @@ function reconstructBaseUrl(req, routePath) {
  * O(L) time in the path length (template fill + endsWith), O(1) extra space.
  *
  * @param {import('express').Request} req - The request.
- * @returns {string} Canonical label, e.g. "GET /api/v1/rfid-management/:gid/:cardNumber/history".
+ * @returns {string} Canonical label, e.g. "GET /api/v1/records/:gid/:cardNumber/history".
  * @example
  * buildRouteLabel(req); // → "POST /api/v1/pay-period/verify"
  */

@@ -67,7 +67,7 @@ export function maskEmail(email) {
 }
 
 /**
- * Format a date for display in the Billing cutoff selectors.
+ * Format a date for display in period/cutoff selectors.
  * Shows only Month/Day HH:mm — year is omitted because the year is
  * already communicated by the year selector that precedes this field.
  *

@@ -2,12 +2,12 @@
  * ExcelStepDropzone.jsx — Shared Step 1 component for all Excel upload steppers.
  *
  * Renders the requirements info panel, react-dropzone area, file-type/size
- * error banner, file info card (with optional duplicate warning for RFID),
+ * error banner, file info card (with optional intra-file duplicate warning),
  * and the Proceed button.
  *
  * Receives all data via props. Never imports any feature hook or API file.
- * Replaces StepUpload (RFID), StepPayPeriodUpload (PayPeriod), and
- * StepSubsidyUpload (Subsidy).
+
+ * Replaces per-feature Step 1 upload components.
  */
 
 import { faCheck, faCheckCircle, faExclamationCircle, faExclamationTriangle, faFileExcel, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -25,7 +25,7 @@ import Button from "../../ui/Button";
  * @param {object}        props
  * @param {File|null}     props.uploadFile           - Currently selected file, or null.
  * @param {Array<object>} [props.parsedRows=[]]      - SheetJS-parsed rows for row-count display.
- * @param {Array<object>|null} [props.parsedDuplicates=null] - Intra-file duplicates (RFID only). null = feature does not use.
+ * @param {Array<object>|null} [props.parsedDuplicates=null] - Intra-file duplicates. null = feature does not use duplicate detection.
  * @param {string|null}   [props.parseError=null]    - Client-side header or parse error message.
  * @param {string[]}      [props.headersMissing=[]]  - Missing required column names.
  * @param {string|null}   props.fileError            - File type or size validation error.
@@ -68,11 +68,11 @@ export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicate
         <div className={`space-y-6 ${ANIMATE_FADE_IN_UP}`}>
             {/* Requirements info panel */}
             <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-400/10 border border-blue-400/30 flex items-start gap-3">
-                <FontAwesomeIcon icon={faFileExcel} className="text-blue-500 dark:text-blue-400 text-xl mt-0.5 shrink-0" />
+                <FontAwesomeIcon icon={faFileExcel} className="text-(--blue-foreground) text-xl mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                    <p className="font-aumovio-bold text-blue-800 dark:text-blue-300 mb-1">Required Excel Columns</p>
+                    <p className="font-aumovio-bold text-(--blue-foreground) mb-1">Required Excel Columns</p>
                     {requiredHeaders.length > 0 && (
-                        <p className="text-sm text-blue-700 dark:text-blue-400">
+                        <p className="text-sm text-(--blue-foreground)">
                             Your file must contain: <span className="font-aumovio-bold font-mono">{requiredHeaders.join(", ")}</span>
                         </p>
                     )}
@@ -99,15 +99,15 @@ export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicate
                 <input {...getInputProps()} />
                 <div className="flex flex-col items-center gap-3">
                     <div className={`p-4 rounded-full ${isDragActive ? "bg-orange-100 dark:bg-orange-400/20" : "bg-grey-100 dark:bg-(--bg-surface-3)"} ${TRANSITION_COLORS}`}>
-                        <CloudArrowUpIcon className={`w-8 h-8 ${isDragActive ? "text-orange-400" : "text-grey-400"} ${TRANSITION_COLORS}`} />
+                        <CloudArrowUpIcon className={`w-8 h-8 ${isDragActive ? "text-(--accent-icon)" : "text-grey-400"} ${TRANSITION_COLORS}`} />
                     </div>
                     {isDragActive ? (
-                        <p className="text-lg font-aumovio-bold text-orange-400">Drop your Excel file here...</p>
+                        <p className="text-lg font-aumovio-bold text-(--accent-foreground)">Drop your Excel file here...</p>
                     ) : (
                         <div className="space-y-1">
                             <p className={`text-lg ${TITLE_COLOR_TEXT}`}>{dropzoneLabel}</p>
                             <p className="text-black/50 dark:text-white/50">
-                                or <span className="text-orange-400 font-aumovio-bold hover:underline">click to select</span>
+                                or <span className="text-(--accent-foreground) font-aumovio-bold hover:underline">click to select</span>
                             </p>
                             <p className="text-black/40 dark:text-white/40 text-sm">Supports .xlsx and .xls · Max {formatFileSize(maxFileSize)}</p>
                         </div>
@@ -178,7 +178,7 @@ export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicate
                 </div>
             )}
 
-            {/* Intra-file duplicate warning — RFID only (parsedDuplicates non-null) */}
+            {/* Intra-file duplicate warning — shown only when parsedDuplicates is non-null */}
             {parsedDuplicates !== null && !parseError && !headersMissing.length && hasDuplicates && (
                 <div className="p-4 rounded-lg bg-warn-100/50 dark:bg-warn-400/10 border border-warn-400/30">
                     <div className="flex items-start gap-3">

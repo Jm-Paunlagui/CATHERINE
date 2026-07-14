@@ -35,7 +35,7 @@ export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infini
                     onClick={dec}
                     disabled={disabled || value <= min}
                     className={`${SZ[size] ?? SZ.md} ${BTN[size] ?? BTN.md} flex items-center justify-center
-            text-grey-500 hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-400/10
+            text-grey-500 hover:text-(--accent-foreground) hover:bg-orange-50 dark:hover:bg-orange-400/10
             disabled:opacity-40 disabled:cursor-not-allowed transition-colors border-r
             border-grey-200 dark:border-grey-700`}
                 >
@@ -58,7 +58,7 @@ export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infini
                     onClick={inc}
                     disabled={disabled || value >= max}
                     className={`${SZ[size] ?? SZ.md} ${BTN[size] ?? BTN.md} flex items-center justify-center
-            text-grey-500 hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-400/10
+            text-grey-500 hover:text-(--accent-foreground) hover:bg-orange-50 dark:hover:bg-orange-400/10
             disabled:opacity-40 disabled:cursor-not-allowed transition-colors border-l
             border-grey-200 dark:border-grey-700`}
                 >

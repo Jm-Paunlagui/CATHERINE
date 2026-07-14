@@ -24,7 +24,7 @@ import HealthTab from "./components/HealthTab";
 // ─── View ─────────────────────────────────────────────────────────────────────
 
 function MetricsView() {
-  // Billing hook pattern: one line, no destructuring at view level
+  // Hook pattern: one line, no destructuring at view level
   const hook = useMetrics();
 
   const tabs = [

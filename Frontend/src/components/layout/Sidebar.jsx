@@ -223,7 +223,7 @@ function SidebarGroup({ group, collapsed, currentPath }) {
         <div className="mb-1 pr-2">
             {/* Group header — chevron visible on hover only (Tailwind docs style) */}
             <button onClick={toggle} className={`group/hdr w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-aumovio-bold uppercase tracking-wider ${TRANSITION_COLORS} ${isGroupActive ? col.activeText : "text-(--text-tertiary) hover:text-(--text-secondary)"}`}>
-                {/* Dot Indicator */}
+                {/* Dot indicator - */}
                 {/* <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${col.dot}`} /> */}
                 <span className="flex-1 text-left">{group.label}</span>
                 {/* Chevron fades in on group header hover */}
@@ -294,10 +294,7 @@ export default function Sidebar() {
                 <nav className="flex-1 overflow-y-auto hide-scrollbar px-2 py-3 space-y-0.5">
                     {!isAuth && publicLinks.map((item) => <FlatNavItem key={item.name} item={item} collapsed={false} />)}
                     {isAuth && authFlatLinks.map((item) => <FlatNavItem key={item.name} item={item} collapsed={false} colorKey="orange" />)}
-                    {/* navGroups = role groups when authed, PUBLIC_GROUPS (docs + version history) when not */}
-                    {navGroups.map((group) => (
-                        <SidebarGroup key={group.label} group={group} collapsed={false} currentPath={pathname} />
-                    ))}
+                    {isAuth && navGroups.map((group) => <SidebarGroup key={group.label} group={group} collapsed={false} currentPath={pathname} />)}
                 </nav>
             </aside>
         </>

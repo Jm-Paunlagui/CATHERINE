@@ -57,7 +57,7 @@ export function Clipboard({ value = "", label, showCode = false, variant = "inli
             <button
                 onClick={copy}
                 className={`transition-all duration-200 shrink-0
-          ${copied ? "text-success-400 scale-110" : "text-grey-400 hover:text-orange-400"}`}
+          ${copied ? "text-success-400 scale-110" : "text-grey-400 hover:text-(--accent-foreground)"}`}
                 aria-label="Copy to clipboard"
             >
                 {copied ? <ClipboardDocumentCheckIcon className="w-4 h-4" /> : <ClipboardIcon className="w-4 h-4" />}

@@ -13,7 +13,7 @@ export function Blockquote({ cite, variant = "default", children }) {
     return (
         <figure className={`my-6 font-aumovio ${V[variant] ?? V.default}`}>
             <blockquote className="text-lg italic leading-relaxed md:text-xl text-black/75 dark:text-white/75">"{children}"</blockquote>
-            {cite && <figcaption className="mt-3 text-sm text-orange-400 font-aumovio-bold"> {cite}</figcaption>}
+            {cite && <figcaption className="mt-3 text-sm text-(--accent-foreground) font-aumovio-bold"> {cite}</figcaption>}
         </figure>
     );
 }

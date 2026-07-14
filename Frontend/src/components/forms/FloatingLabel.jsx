@@ -30,7 +30,7 @@ export function FloatingLabel({ label, name, type = "text", value = "", onChange
                 htmlFor={inputId}
                 className={`absolute left-3.5 ${TRANSITION_SMOOTH} pointer-events-none font-aumovio
           peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-placeholder-shown:text-grey-400
-          peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-orange-400 peer-focus:font-aumovio-bold
+          peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-(--accent-foreground) peer-focus:font-aumovio-bold
           ${filled ? "top-1.5 text-xs text-grey-500 dark:text-grey-400 font-aumovio-bold" : "top-3.5 text-sm text-grey-400"}`}
             >
                 {label}

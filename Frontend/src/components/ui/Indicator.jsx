@@ -12,12 +12,12 @@
  */
 import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 const COLORS = {
-    orange: "bg-orange-400 text-white dark:bg-orange-400 dark:text-white",
+    orange: "bg-orange-400 text-(--on-accent-text) dark:bg-orange-400 dark:text-(--on-accent-text)",
     danger: "bg-danger-400 text-white dark:bg-danger-400 dark:text-white",
     success: "bg-success-400 text-white dark:bg-success-400 dark:text-white",
     warn: "bg-warn-400 text-black dark:bg-warn-400 dark:text-grey-900",
-    purple: "bg-purple-400 text-white dark:bg-purple-300 dark:text-grey-900",
-    blue: "bg-blue-400 text-white dark:bg-blue-400 dark:text-white",
+    purple: "bg-purple-400 text-(--on-secondary-text) dark:bg-purple-300 dark:text-grey-900", // dark mode already uses fixed purple-300/grey-900 pair (not palette-adaptive), left as-is
+    blue: "bg-blue-400 text-(--on-blue-text) dark:bg-blue-400 dark:text-(--on-blue-text)",
     grey: "bg-grey-400 text-white dark:bg-grey-500 dark:text-white",
 };
 

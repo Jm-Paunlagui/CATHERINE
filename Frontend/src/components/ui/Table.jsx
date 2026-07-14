@@ -58,7 +58,7 @@ export function Table({ columns = [], data = [], loading = false, selectable = f
                                 key={col.key}
                                 className={`${cellPad} text-left font-aumovio-bold text-grey-500 dark:text-grey-400
                   uppercase tracking-wider text-xs whitespace-nowrap
-                  ${col.sortable ? "cursor-pointer hover:text-orange-400 select-none" : ""}
+                  ${col.sortable ? "cursor-pointer hover:text-(--accent-foreground) select-none" : ""}
                   ${col.width ?? ""}`}
                                 onClick={() => col.sortable && onSort?.(col.key)}
                             >
@@ -66,8 +66,8 @@ export function Table({ columns = [], data = [], loading = false, selectable = f
                                     {col.label}
                                     {col.sortable && (
                                         <span className="flex flex-col -space-y-0.5">
-                                            <ChevronUpIcon className={`w-2.5 h-2.5 ${sortKey === col.key && sortDir === "asc" ? "text-orange-400" : "text-grey-300 dark:text-grey-600"}`} />
-                                            <ChevronDownIcon className={`w-2.5 h-2.5 ${sortKey === col.key && sortDir === "desc" ? "text-orange-400" : "text-grey-300 dark:text-grey-600"}`} />
+                                            <ChevronUpIcon className={`w-2.5 h-2.5 ${sortKey === col.key && sortDir === "asc" ? "text-(--accent-foreground)" : "text-grey-300 dark:text-grey-600"}`} />
+                                            <ChevronDownIcon className={`w-2.5 h-2.5 ${sortKey === col.key && sortDir === "desc" ? "text-(--accent-foreground)" : "text-grey-300 dark:text-grey-600"}`} />
                                         </span>
                                     )}
                                 </span>

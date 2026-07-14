@@ -98,12 +98,68 @@ function relativeLuminance(hex) {
 }
 
 /**
- * Return dark or white text depending on the average luminance of the gradient.
- * Used to auto-contrast gradient button labels against light-primary palettes.
+ * Zone-adaptive foreground bundle for any solid colour zone.
+ * Flip decision is WCAG-correct: compare contrast of white vs near-black
+ * candidates and pick the winner, with a 15% bias toward white because
+ * light-on-dark reads perceptually stronger at equal ratios.
+ * (Correct flip point is zone luminance ≈ 0.18, NOT 0.5.)
+ *
+ * @param {string} zoneHex
+ * @returns {{ tone:'light'|'dark', text:string, textMuted:string, textFaint:string,
+ *             hoverBg:string, hoverText:string, border:string,
+ *             glassBg:string, glassBorder:string, ring:string }}
+ *   tone is the tone of the ZONE itself ('dark' zone → white foregrounds).
  */
-function getButtonTextColor(gradientFrom, gradientTo) {
-    const avg = (relativeLuminance(gradientFrom) + relativeLuminance(gradientTo)) / 2;
-    return avg > 0.5 ? "#1a1a1a" : "#ffffff";
+export function pickOnColor(zoneHex) {
+    const cWhite = getContrastRatio("#ffffff", zoneHex);
+    const cBlack = getContrastRatio("#1a1a1a", zoneHex);
+    const zoneIsDark = cWhite >= cBlack * 0.85;
+    if (zoneIsDark) {
+        return {
+            tone: "dark",
+            text: "#ffffff",
+            textMuted: "rgba(255,255,255,0.85)",
+            textFaint: "rgba(255,255,255,0.65)",
+            hoverBg: "rgba(255,255,255,0.12)",
+            hoverText: "#ffffff",
+            border: "rgba(255,255,255,0.25)",
+            glassBg: "rgba(255,255,255,0.15)",
+            glassBorder: "rgba(255,255,255,0.25)",
+            ring: "rgba(255,255,255,0.55)",
+        };
+    }
+    return {
+        tone: "light",
+        text: "#1a1a1a",
+        textMuted: "rgba(0,0,0,0.78)",
+        textFaint: "rgba(0,0,0,0.58)",
+        hoverBg: "rgba(0,0,0,0.07)",
+        hoverText: "#1a1a1a",
+        border: "rgba(0,0,0,0.16)",
+        glassBg: "rgba(0,0,0,0.06)",
+        glassBorder: "rgba(0,0,0,0.16)",
+        ring: "rgba(0,0,0,0.45)",
+    };
+}
+
+/**
+ * Foreground bundles for the two ends of the chrome gradient
+ * (from = primary occupies the left 60% via `via-60%`; to = secondary right end).
+ * In dark mode the chrome is rendered with `brightness-85`, so the zone colour
+ * is dimmed by ×0.85 BEFORE the contrast math.
+ * @param {string} primaryHex
+ * @param {string} secondaryHex
+ * @param {boolean} isDark
+ * @returns {{ from: ReturnType<typeof pickOnColor>, to: ReturnType<typeof pickOnColor> }}
+ */
+export function computeChromeTokens(primaryHex, secondaryHex, isDark) {
+    const dim = (hex) => {
+        const { r, g, b } = hexToRgb(hex);
+        return rgbToHex(r * 0.85, g * 0.85, b * 0.85);
+    };
+    const fromZone = isDark ? dim(primaryHex) : primaryHex;
+    const toZone = isDark ? dim(secondaryHex) : secondaryHex;
+    return { from: pickOnColor(fromZone), to: pickOnColor(toZone) };
 }
 
 /**
@@ -164,7 +220,7 @@ function lightenToLuminance(hex, targetLuminance = 0.3) {
 // ── WCAG contrast + lightness helpers ─────────────────────────────────────────
 
 /** WCAG contrast ratio between two hex colours (returns 1–21). */
-function getContrastRatio(hex1, hex2) {
+export function getContrastRatio(hex1, hex2) {
     const l1 = relativeLuminance(hex1);
     const l2 = relativeLuminance(hex2);
     const lighter = Math.max(l1, l2);
@@ -185,7 +241,7 @@ function lighten(hex, percent) {
 }
 
 /** Iteratively darkens hex until contrast ratio against surfaceHex reaches targetRatio. Clamps at L=5. */
-function darkenToContrast(hex, surfaceHex, targetRatio) {
+export function darkenToContrast(hex, surfaceHex, targetRatio) {
     const { h, s, l } = hexToHsl(hex);
     for (let lv = l; lv >= 5; lv -= 2) {
         if (getContrastRatio(hslToHex(h, s, lv), surfaceHex) >= targetRatio) {
@@ -196,7 +252,7 @@ function darkenToContrast(hex, surfaceHex, targetRatio) {
 }
 
 /** Iteratively lightens hex until contrast ratio against surfaceHex reaches targetRatio. Clamps at L=95. */
-function lightenToContrast(hex, surfaceHex, targetRatio) {
+export function lightenToContrast(hex, surfaceHex, targetRatio) {
     const { h, s, l } = hexToHsl(hex);
     for (let lv = l; lv <= 95; lv += 2) {
         if (getContrastRatio(hslToHex(h, s, lv), surfaceHex) >= targetRatio) {
@@ -382,15 +438,6 @@ function computeElevationBorder(isDark, tintSourceHex) {
     return `hsla(${Math.round(h)}, ${borderSat.toFixed(1)}%, 50%, 0.10)`;
 }
 
-/**
- * Return dark or white text for text placed ON a coloured background.
- * Threshold 0.36 (human eye perceives light-on-dark as slightly more readable).
- */
-function getTextOnGradient(fromHex, toHex) {
-    const avgLum = (relativeLuminance(fromHex) + relativeLuminance(toHex)) / 2;
-    return avgLum > 0.36 ? "#1a1a1a" : "#ffffff";
-}
-
 // ── Tint source overrides ─────────────────────────────────────────────────────
 
 /**
@@ -427,6 +474,38 @@ function getTintSource(paletteId, colors) {
         if (key && colors[key]) return colors[key];
     }
     return colors.primary;
+}
+
+/**
+ * Pure re-derivation of the WCAG-contrast reference surface used inside
+ * applyPaletteVars() to compute --accent-foreground, --accent-icon,
+ * --secondary-foreground, and the three auxiliary family foregrounds
+ * (--blue-foreground, --turquoise-foreground, --yellow-foreground). Mirrors
+ * that surface-elevation branch (isBrand / surfaceLevels / levels) exactly so
+ * a DOM-free consumer (the contrast regression suite) can independently
+ * reproduce the same reference surface without calling applyPaletteVars()
+ * itself.
+ *
+ * @param {{ primary, secondary, blue, turquoise, yellow, darkSurface?, darkText?, darkMuted? }} colors
+ * @param {boolean} isDark
+ * @param {string|null} [paletteId=null]
+ * @returns {string} hex surface colour ("#ffffff" in light mode, an elevation-2 dark hex in dark mode)
+ */
+export function computeSurfaceForContrast(colors, isDark, paletteId = null) {
+    const { darkSurface } = colors;
+    const isBrand = ["aumovio-orange", "aumovio-purple"].includes(paletteId);
+    const BRAND_DARK = ["#0d0d14", "#141520", "#1a1d2c", "#222538", "#2a2d44"];
+    const BRAND_LIGHT = ["#ffffff", "#fafafa", "#f5f5f5", "#f0f0f0", "#ffffff"];
+    let surfaceLevels = null;
+
+    if (isDark) {
+        if (darkSurface) surfaceLevels = generateDarkElevation(darkSurface);
+    } else if (!isBrand) {
+        surfaceLevels = generateLightElevation(getTintSource(paletteId, colors));
+    }
+
+    const levels = surfaceLevels ?? (isDark ? BRAND_DARK : BRAND_LIGHT);
+    return isDark ? levels[2] : "#ffffff";
 }
 
 // ── Scale generation ──────────────────────────────────────────────────────────
@@ -540,7 +619,30 @@ export function applyPaletteVars(colors, isDark = false, paletteId = null) {
     // ── Gradient button tokens ────────────────────────────────────────────────
     root.style.setProperty("--color-gradient-from", primary);
     root.style.setProperty("--color-gradient-to", secondary);
-    root.style.setProperty("--color-gradient-text", getButtonTextColor(primary, secondary));
+    // Gradient buttons are small — the midpoint colour dominates perceived contrast.
+    root.style.setProperty("--color-gradient-text", pickOnColor(mix(primary, secondary, 0.5)).text);
+
+    // ── Zone-adaptive chrome foreground tokens ────────────────────────────────
+    // The chrome gradient has two zones: left 60% = primary (from), right = secondary (to).
+    // White must never be hardcoded on chrome — pale palettes make it invisible.
+    const chrome = computeChromeTokens(primary, secondary, isDark);
+    for (const [end, bundle] of Object.entries(chrome)) {
+        root.style.setProperty(`--chrome-${end}-text`, bundle.text);
+        root.style.setProperty(`--chrome-${end}-text-muted`, bundle.textMuted);
+        root.style.setProperty(`--chrome-${end}-text-faint`, bundle.textFaint);
+        root.style.setProperty(`--chrome-${end}-hover-bg`, bundle.hoverBg);
+        root.style.setProperty(`--chrome-${end}-hover-text`, bundle.hoverText);
+        root.style.setProperty(`--chrome-${end}-border`, bundle.border);
+        root.style.setProperty(`--chrome-${end}-glass-bg`, bundle.glassBg);
+        root.style.setProperty(`--chrome-${end}-glass-border`, bundle.glassBorder);
+        root.style.setProperty(`--chrome-${end}-ring`, bundle.ring);
+    }
+    root.dataset.chromeFrom = chrome.from.tone;
+    root.dataset.chromeTo = chrome.to.tone;
+
+    // ── On-fill text tokens (solid accent fills) ──────────────────────────────
+    root.style.setProperty("--on-accent-text", pickOnColor(primary).text);
+    root.style.setProperty("--on-secondary-text", pickOnColor(secondary).text);
 
     // ── Derived interaction tokens ────────────────────────────────────────────
     // These are computed here so all consumers can reference CSS variables
@@ -550,7 +652,8 @@ export function applyPaletteVars(colors, isDark = false, paletteId = null) {
     root.style.setProperty("--accent-muted", `rgba(${pRgb.r},${pRgb.g},${pRgb.b},0.40)`);
     root.style.setProperty("--accent-on-dark", lightenToLuminance(primary));
     root.style.setProperty("--shadow-tint", `rgba(${pRgb.r},${pRgb.g},${pRgb.b},0.04)`);
-    root.style.setProperty("--text-on-accent", getTextOnGradient(primary, secondary));
+    // Consumed for text on solid primary fills (not the gradient) — see --color-gradient-text for that.
+    root.style.setProperty("--text-on-accent", pickOnColor(primary).text);
     if (isDark && darkMuted) {
         const { r: mr, g: mg, b: mb } = hexToRgb(darkMuted);
         root.style.setProperty("--border-subtle", `rgba(${mr},${mg},${mb},0.25)`);
@@ -644,6 +747,40 @@ export function applyPaletteVars(colors, isDark = false, paletteId = null) {
     root.style.setProperty("--side-hover-border", hoverBorder);
     root.style.setProperty("--accent-foreground", accentForeground);
     root.style.setProperty("--accent-icon", accentIcon);
+    // Binary white/black foreground for a solid --accent-icon fill (e.g. Access
+    // Control permission chips). Computed against accentIcon itself, NOT primary —
+    // --on-accent-text is wrong here because accentIcon is a lightness-adjusted
+    // (≥3:1) derivative of primary and can cross the white/black pick threshold
+    // independently of the raw primary anchor.
+    root.style.setProperty("--on-accent-icon-text", pickOnColor(accentIcon).text);
+
+    // ── Gradient clip-text stops (display headings) ───────────────────────────
+    // Both stops guaranteed ≥ 3:1 (WCAG large/bold text) against the content surface,
+    // otherwise pastel palettes render invisible gradient headings on white.
+    const headingSurface = isDark ? levels[0] : "#ffffff";
+    const gradTextFrom = isDark ? lightenToContrast(primary, headingSurface, 3.0) : darkenToContrast(primary, headingSurface, 3.0);
+    const gradTextTo = isDark ? lightenToContrast(secondary, headingSurface, 3.0) : darkenToContrast(secondary, headingSurface, 3.0);
+    root.style.setProperty("--gradient-text-from", gradTextFrom);
+    root.style.setProperty("--gradient-text-to", gradTextTo);
+
+    // ── Secondary-family accessible foreground (Button accent variant etc.) ──
+    const secondaryForeground = isDark ? lightenToContrast(secondary, surfaceForContrast, 4.5) : darkenToContrast(secondary, surfaceForContrast, 4.5);
+    root.style.setProperty("--secondary-foreground", secondaryForeground);
+
+    // ── Family foregrounds — ≥4.5:1 readable text for the three auxiliary palette
+    // families (blue/turquoise/yellow). Mirrors --accent-foreground/--secondary-foreground
+    // so text-blue-400 / text-turquoise-400 / text-yellow-400 style usages that need to
+    // sit as readable TEXT on a surface have a contrast-safe token, since applyFamily()
+    // above overrides these three families' full 11-shade scales just like orange/purple.
+    // --on-<fam>-text is the binary white/black foreground for a SOLID fill of that
+    // family (mirrors --on-accent-icon-text) — computed from the raw anchor via
+    // pickOnColor, so it is mode-independent (same value in light and dark).
+    const famAnchors = { blue, turquoise, yellow };
+    for (const [fam, anchor] of Object.entries(famAnchors)) {
+        const famFg = isDark ? lightenToContrast(anchor, surfaceForContrast, 4.5) : darkenToContrast(anchor, surfaceForContrast, 4.5);
+        root.style.setProperty(`--${fam}-foreground`, famFg);
+        root.style.setProperty(`--on-${fam}-text`, pickOnColor(anchor).text);
+    }
 
     // Fix (QA — dark-mode nav legibility): per-group palette families.
     // The sidebar gives each nav group its own hue (Finance=yellow, Records=blue,
@@ -771,6 +908,23 @@ export function clearPaletteVars() {
     root.style.removeProperty("--color-gradient-from");
     root.style.removeProperty("--color-gradient-to");
     root.style.removeProperty("--color-gradient-text");
+    // ── Zone-adaptive chrome foreground tokens ────────────────────────────────
+    for (const end of ["from", "to"]) {
+        ["text", "text-muted", "text-faint", "hover-bg", "hover-text", "border", "glass-bg", "glass-border", "ring"].forEach((suffix) => root.style.removeProperty(`--chrome-${end}-${suffix}`));
+    }
+    delete root.dataset.chromeFrom;
+    delete root.dataset.chromeTo;
+    root.style.removeProperty("--on-accent-text");
+    root.style.removeProperty("--on-secondary-text");
+    root.style.removeProperty("--on-accent-icon-text");
+    root.style.removeProperty("--gradient-text-from");
+    root.style.removeProperty("--gradient-text-to");
+    root.style.removeProperty("--secondary-foreground");
+    // ── Family foregrounds (blue/turquoise/yellow) ────────────────────────────
+    for (const fam of ["blue", "turquoise", "yellow"]) {
+        root.style.removeProperty(`--${fam}-foreground`);
+        root.style.removeProperty(`--on-${fam}-text`);
+    }
     root.style.removeProperty("--palette-surface-dark");
     root.style.removeProperty("--palette-surface-2-dark");
     root.style.removeProperty("--palette-surface-3-dark");

@@ -22,7 +22,7 @@ export function ThemeToggle({ size = "md", variant = "cycle" }) {
     if (variant === "cycle") {
         const Icon = ICONS[mode];
         return (
-            <button onClick={toggle} aria-label={LABELS[mode]} title={LABELS[mode]} className={`p-2 border border-transparent rounded-lg text-grey-500 dark:text-grey-400 hover:text-orange-400 hover:bg-orange-400/10 hover:border-orange-400/20 ${TRANSITION_COLORS}`}>
+            <button onClick={toggle} aria-label={LABELS[mode]} title={LABELS[mode]} className={`p-2 border border-transparent rounded-lg text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground) hover:bg-orange-400/10 hover:border-orange-400/20 ${TRANSITION_COLORS}`}>
                 <Icon className={sz} />
             </button>
         );
@@ -35,7 +35,7 @@ export function ThemeToggle({ size = "md", variant = "cycle" }) {
                 const Icon = ICONS[m];
                 const active = mode === m;
                 return (
-                    <button key={m} onClick={() => setMode(m)} aria-label={LABELS[m]} title={LABELS[m]} className={`p-1.5 rounded-lg ${TRANSITION_COLORS} ${active ? "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-orange-400 shadow-sm" : "text-grey-500 dark:text-grey-400 hover:text-orange-400"}`}>
+                    <button key={m} onClick={() => setMode(m)} aria-label={LABELS[m]} title={LABELS[m]} className={`p-1.5 rounded-lg ${TRANSITION_COLORS} ${active ? "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-(--accent-foreground) shadow-sm" : "text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground)"}`}>
                         <Icon className={sz} />
                     </button>
                 );

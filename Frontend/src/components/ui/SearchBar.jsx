@@ -51,7 +51,7 @@ export function SearchBar({ value = "", onChange, placeholder = "Search…", dis
                             border-t-transparent rounded-full animate-spin"
                     />
                 ) : value ? (
-                    <button type="button" onClick={() => (onClear ? onClear() : onChange?.(""))} aria-label="Clear search" className="text-grey-400 hover:text-orange-400 transition-colors">
+                    <button type="button" onClick={() => (onClear ? onClear() : onChange?.(""))} aria-label="Clear search" className="text-grey-400 hover:text-(--accent-foreground) transition-colors">
                         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                             <path d="M13 1L1 13M1 1l12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                         </svg>

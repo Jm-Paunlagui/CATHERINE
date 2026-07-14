@@ -169,6 +169,31 @@
     --color-gradient-to: #4827af;
     --color-gradient-text: #ffffff;
 
+    /* Zone-adaptive chrome foregrounds — brand defaults (both gradient ends are dark) */
+    --chrome-from-text: #ffffff;
+    --chrome-from-text-muted: rgba(255, 255, 255, 0.85);
+    --chrome-from-text-faint: rgba(255, 255, 255, 0.65);
+    --chrome-from-hover-bg: rgba(255, 255, 255, 0.12);
+    --chrome-from-hover-text: #ffffff;
+    --chrome-from-border: rgba(255, 255, 255, 0.25);
+    --chrome-from-glass-bg: rgba(255, 255, 255, 0.15);
+    --chrome-from-glass-border: rgba(255, 255, 255, 0.25);
+    --chrome-from-ring: rgba(255, 255, 255, 0.55);
+    --chrome-to-text: #ffffff;
+    --chrome-to-text-muted: rgba(255, 255, 255, 0.85);
+    --chrome-to-text-faint: rgba(255, 255, 255, 0.65);
+    --chrome-to-hover-bg: rgba(255, 255, 255, 0.12);
+    --chrome-to-hover-text: #ffffff;
+    --chrome-to-border: rgba(255, 255, 255, 0.25);
+    --chrome-to-glass-bg: rgba(255, 255, 255, 0.15);
+    --chrome-to-glass-border: rgba(255, 255, 255, 0.25);
+    --chrome-to-ring: rgba(255, 255, 255, 0.55);
+    --on-accent-text: #ffffff;
+    --on-secondary-text: #ffffff;
+    --gradient-text-from: #da3806; /* orange-500 — ≥3:1 on white */
+    --gradient-text-to: #4827af; /* purple-400 — ≥3:1 on white */
+    --secondary-foreground: #4827af; /* purple-400 — ≥4.5:1 on white */
+
     /* Derived interaction tokens — brand defaults; overridden by JS for named palettes */
     --accent: #ff4208;
     --accent-subtle: rgba(255, 66, 8, 0.08);
@@ -206,7 +231,16 @@
     --side-hover-border:  transparent;
     --accent-foreground:  #b82e05;        /* orange-600 — ≥ 4.5:1 on white */
     --accent-icon:        #da3806;        /* orange-500 — ≥ 3:1 on white */
+    --on-accent-icon-text: #ffffff;       /* white foreground on #da3806 (~4.6:1) */
     --color-card-surface-border: rgba(255, 66, 8, 0.04);
+
+    /* ── Family foregrounds (blue/turquoise/yellow) — ≥ 4.5:1 on white ────── */
+    --blue-foreground:      #117aa6;      /* blue-on-white — ≥ 4.5:1 on white */
+    --turquoise-foreground: #0b7f6d;      /* turquoise-on-white — ≥ 4.5:1 on white */
+    --yellow-foreground:    #7a731e;      /* yellow-on-white — ≥ 4.5:1 on white */
+    --on-blue-text:      #1a1a1a;         /* black foreground on #18a9e7 */
+    --on-turquoise-text: #1a1a1a;         /* black foreground on #12caae */
+    --on-yellow-text:    #1a1a1a;         /* black foreground on #cec43a */
 
     /* ── Per-group nav family colours (brand default — distinct hues) ──────── */
     /* Each sidebar group has its own hue (Finance=yellow, Records=blue,
@@ -330,7 +364,21 @@
     --side-hover-border:  rgba(255, 112, 64, 0.50);
     --accent-foreground:  #ff7040;        /* orange-on-dark — ≥ 4.5:1 on dark surface */
     --accent-icon:        #ff7040;        /* same for icons at 3:1 minimum */
+    --on-accent-icon-text: #1a1a1a;       /* black foreground on #ff7040 (~7.4:1) */
     --color-card-surface-border: rgba(255, 255, 255, 0.08);
+
+    /* ── Family foregrounds (blue/turquoise/yellow) — ≥ 4.5:1 on dark surface ─ */
+    --blue-foreground:      #18a9e7;      /* blue-on-dark — ≥ 4.5:1 on dark surface */
+    --turquoise-foreground: #12caae;      /* turquoise-on-dark — ≥ 4.5:1 on dark surface */
+    --yellow-foreground:    #cec43a;      /* yellow-on-dark — ≥ 4.5:1 on dark surface */
+    --on-blue-text:      #1a1a1a;         /* black foreground on #18a9e7 (mode-independent) */
+    --on-turquoise-text: #1a1a1a;         /* black foreground on #12caae (mode-independent) */
+    --on-yellow-text:    #1a1a1a;         /* black foreground on #cec43a (mode-independent) */
+
+    /* Gradient clip-text stops + secondary-family foreground (dark mode) */
+    --gradient-text-from: #ff7040;
+    --gradient-text-to: #9a7ce8;
+    --secondary-foreground: #9a7ce8;
 
     /* ── Per-group nav family colours (brand dark default) ────────────────── */
     /* Brand family -400 anchors are bright enough on the dark sidebar; named
@@ -424,6 +472,27 @@
     font-family: var(--font-sans) !important;
     font-weight: 700;
     font-style: italic;
+}
+
+/* ─── Logo variant="chrome" ─────────────────────────────────────────────── */
+/* Swaps mark based on the computed chrome-left-zone tone (data-chrome-from,
+   set by applyPaletteVars()) instead of a hardcoded white mark — pale
+   palettes make the white mark invisible on a pale chrome gradient.
+   Defaults to the dark-zone (white) mark, matching brand chrome (orange→purple,
+   both dark zones) — brand palettes never set data-chrome-from because
+   clearPaletteVars() removes it. Named/custom palettes with a light-left-zone
+   (e.g. pastel sage primary) flip to the dark mark via the attribute. */
+.logo-on-chrome-dark {
+    display: block;
+}
+.logo-on-chrome-light {
+    display: none;
+}
+html[data-chrome-from="light"] .logo-on-chrome-dark {
+    display: none;
+}
+html[data-chrome-from="light"] .logo-on-chrome-light {
+    display: block;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

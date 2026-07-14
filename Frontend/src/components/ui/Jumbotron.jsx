@@ -48,21 +48,21 @@ export function Jumbotron({ title, subtitle, description, primaryAction, seconda
                     <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-aumovio-bold
             uppercase tracking-widest
-            ${backgroundImage || gradient ? "bg-white/20 text-white border border-white/30" : "bg-orange-400/10 text-orange-400 border border-orange-400/20"}`}
+            ${backgroundImage ? "bg-white/20 text-white border border-white/30" : gradient ? "bg-(--color-gradient-text)/20 text-(--color-gradient-text) border border-(--color-gradient-text)/30" : "bg-orange-400/10 text-(--accent-foreground) border border-orange-400/20"}`}
                     >
                         {subtitle}
                     </span>
                 )}
                 <h1
                     className={`text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight
-          ${backgroundImage || gradient ? "text-white drop-shadow-2xl" : "text-black dark:text-white"}`}
+          ${backgroundImage ? "text-white drop-shadow-2xl" : gradient ? "text-(--color-gradient-text) drop-shadow-2xl" : "text-black dark:text-white"}`}
                 >
                     {title}
                 </h1>
                 {description && (
                     <p
                         className={`max-w-2xl text-lg leading-relaxed
-            ${backgroundImage || gradient ? "text-white/80" : "text-black/60 dark:text-white/60"}`}
+            ${backgroundImage ? "text-white/80" : gradient ? "text-(--color-gradient-text)/80" : "text-black/60 dark:text-white/60"}`}
                     >
                         {description}
                     </p>
@@ -74,7 +74,7 @@ export function Jumbotron({ title, subtitle, description, primaryAction, seconda
                                 href={primaryAction.href ?? "#"}
                                 onClick={primaryAction.onClick}
                                 className={`px-6 py-3 rounded-lg font-aumovio-bold text-sm
-                  bg-white text-orange-400 hover:bg-orange-50
+                  bg-white text-(--accent-foreground) hover:bg-orange-50
                   shadow-lg hover:shadow-xl ${TRANSITION_SMOOTH} ${HOVER_LIFT}`}
                             >
                                 {primaryAction.label}
@@ -85,7 +85,7 @@ export function Jumbotron({ title, subtitle, description, primaryAction, seconda
                                 href={secondaryAction.href ?? "#"}
                                 onClick={secondaryAction.onClick}
                                 className={`px-6 py-3 rounded-lg font-aumovio-bold text-sm
-                  border-2 border-white/60 text-white hover:bg-white/10
+                  ${backgroundImage ? "border-2 border-white/60 text-white hover:bg-white/10" : gradient ? "border-2 border-(--color-gradient-text)/60 text-(--color-gradient-text) hover:bg-(--color-gradient-text)/10" : "border-2 border-black/30 dark:border-white/30 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10"}
                   ${TRANSITION_SMOOTH} ${HOVER_LIFT}`}
                             >
                                 {secondaryAction.label}

@@ -41,7 +41,7 @@ export function FileInput({ label, name, accept, multiple = false, disabled = fa
                     multiple={multiple}
                     disabled={disabled}
                     onChange={(e) => handle(e.target.files)}
-                    className={`block w-full text-sm text-grey-500 dark:text-grey-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-aumovio-bold file:text-xs file:bg-orange-400/10 file:text-orange-400 hover:file:bg-orange-400 hover:file:text-white file:cursor-pointer ${TRANSITION_COLORS}`}
+                    className={`block w-full text-sm text-grey-500 dark:text-grey-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-aumovio-bold file:text-xs file:bg-orange-400/10 file:text-(--accent-foreground) hover:file:bg-orange-400 hover:file:text-(--on-accent-text) file:cursor-pointer ${TRANSITION_COLORS}`}
                 />
             </div>
         );
@@ -70,7 +70,7 @@ export function FileInput({ label, name, accept, multiple = false, disabled = fa
                 <input ref={ref} type="file" name={name} accept={accept} multiple={multiple} className="sr-only" onChange={(e) => handle(e.target.files)} />
                 <CloudArrowUpIcon className="w-10 h-10 mx-auto mb-3 text-grey-300 dark:text-grey-600" />
                 <p className="text-sm font-aumovio-bold text-black/60 dark:text-white/60">
-                    Drop files here or <span className="text-orange-400">browse</span>
+                    Drop files here or <span className="text-(--accent-foreground)">browse</span>
                 </p>
                 {accept && <p className="mt-1 text-xs text-grey-400">Accepted: {accept}</p>}
                 {maxSize && <p className="text-xs text-grey-400">Max size: {(maxSize / 1024 / 1024).toFixed(1)} MB</p>}

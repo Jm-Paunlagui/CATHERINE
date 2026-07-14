@@ -67,7 +67,7 @@ export function SearchInput({ value = "", onChange, onSubmit, placeholder = "Sea
                                 onChange?.("");
                             }}
                         >
-                            <XMarkIcon className={`w-4 h-4 ${TRANSITION_COLORS} text-grey-400 hover:text-orange-400`} />
+                            <XMarkIcon className={`w-4 h-4 ${TRANSITION_COLORS} text-grey-400 hover:text-(--accent-foreground)`} />
                         </button>
                     )
                 )}
@@ -86,7 +86,7 @@ export function SearchInput({ value = "", onChange, onSubmit, placeholder = "Sea
                                 setShowSug(false);
                             }}
                             className="px-4 py-2.5 text-sm cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-400/5
-                hover:text-orange-400 flex items-center gap-2"
+                hover:text-(--accent-foreground) flex items-center gap-2"
                         >
                             <MagnifyingGlassIcon className="w-3.5 h-3.5 text-grey-400 shrink-0" />
                             {s}

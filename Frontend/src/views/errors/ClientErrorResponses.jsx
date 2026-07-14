@@ -1780,7 +1780,7 @@ function TimeLeftDecor() {
             {["1", "2", "3", "4", "5", "6"].map((n, i) => (
                 <div
                     key={i}
-                    className="absolute select-none font-aumovio-bold text-orange-400/20"
+                    className="absolute select-none font-aumovio-bold text-(--accent)/20"
                     style={{
                         fontSize: [28, 18, 32, 20, 24, 16][i],
                         left: [8, 60, 15, 90, 40, 100][i],
@@ -1920,7 +1920,7 @@ function TimeRightDecor() {
             {["12", "3", "6", "9"].map((n, i) => (
                 <div
                     key={i}
-                    className="absolute text-2xl select-none font-aumovio-bold text-orange-400/25"
+                    className="absolute text-2xl select-none font-aumovio-bold text-(--accent)/25"
                     style={{
                         right: [40, 10, 40, 70][i],
                         top: ["88%", "88%", "93%", "88%"][i],
@@ -2867,7 +2867,7 @@ function PageNotFoundIllustration() {
                     animation: "err-orbit 6s linear infinite",
                 }}
             >
-                <div className="w-5 h-5 rounded-full bg-orange-400 shadow-lg shadow-orange-400/40 -mt-2.5" />
+                <div className="w-5 h-5 rounded-full bg-(--accent) shadow-lg shadow-(--accent)/40 -mt-2.5" />
             </div>
             <div
                 className="relative border-2 rounded-full bg-linear-to-br from-blue-300 to-blue-500 dark:from-blue-700 dark:to-blue-900 border-blue-400/40"
@@ -2913,16 +2913,16 @@ export function LoginTimeOut({ title: titleProp, subtitle: subtitleProp } = {}) 
         CsrfMiddleware.clearToken();
     }, []);
 
-    return <ErrorLayout code="440" title={title} subtitle={subtitle} linkTo="/auth" linkLabel="Sign in again" accentClass="text-orange-400" bgClass="bg-gradient-to-br from-white via-orange-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#180a00] dark:to-[var(--bg-surface)]" illustration={<LoginTimeOutIllustration />} leftDecor={<TimeLeftDecor />} rightDecor={<TimeRightDecor />} />;
+    return <ErrorLayout code="440" title={title} subtitle={subtitle} linkTo="/auth" linkLabel="Sign in again" accentClass="text-(--accent-foreground)" bgClass="bg-gradient-to-br from-white via-orange-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#180a00] dark:to-[var(--bg-surface)]" illustration={<LoginTimeOutIllustration />} leftDecor={<TimeLeftDecor />} rightDecor={<TimeRightDecor />} />;
 }
 
 function LoginTimeOutIllustration() {
     return (
         <div className="relative flex items-center justify-center" style={{ width: 200, height: 220 }}>
             <div className="relative flex flex-col items-center" style={{ animation: "err-float 3s ease-in-out infinite" }}>
-                <div className="w-24 h-3 bg-orange-400 rounded-t-lg" />
+                <div className="w-24 h-3 bg-(--accent) rounded-t-lg" />
                 <div
-                    className="relative overflow-hidden border-l-2 border-r-2 bg-orange-50 dark:bg-orange-950/40 border-orange-400/50"
+                    className="relative overflow-hidden border-l-2 border-r-2 bg-orange-50 dark:bg-orange-950/40 border-(--accent)/50"
                     style={{
                         width: 96,
                         height: 72,
@@ -2930,7 +2930,7 @@ function LoginTimeOutIllustration() {
                     }}
                 >
                     <div
-                        className="absolute bottom-0 left-0 right-0 bg-orange-400"
+                        className="absolute bottom-0 left-0 right-0 bg-(--accent)"
                         style={{
                             height: "30%",
                             animation: "err-sand 2s ease-in-out infinite alternate",
@@ -2938,28 +2938,28 @@ function LoginTimeOutIllustration() {
                     />
                 </div>
                 <div className="flex flex-col items-center">
-                    <div className="w-1 h-4 bg-orange-400/60" />
+                    <div className="w-1 h-4 bg-(--accent)/60" />
                     <div
-                        className="w-2 h-2 bg-orange-400 rounded-full"
+                        className="w-2 h-2 bg-(--accent) rounded-full"
                         style={{
                             animation: "err-drop .8s ease-in-out infinite",
                         }}
                     />
                 </div>
                 <div
-                    className="relative overflow-hidden border-l-2 border-r-2 bg-orange-50 dark:bg-orange-950/40 border-orange-400/50"
+                    className="relative overflow-hidden border-l-2 border-r-2 bg-orange-50 dark:bg-orange-950/40 border-(--accent)/50"
                     style={{
                         width: 96,
                         height: 72,
                         clipPath: "polygon(50% 0, 50% 0, 100% 100%, 0 100%)",
                     }}
                 >
-                    <div className="absolute bottom-0 left-0 right-0 bg-orange-400 rounded-b" style={{ height: "65%" }} />
+                    <div className="absolute bottom-0 left-0 right-0 bg-(--accent) rounded-b" style={{ height: "65%" }} />
                 </div>
-                <div className="w-24 h-3 bg-orange-400 rounded-b-lg" />
+                <div className="w-24 h-3 bg-(--accent) rounded-b-lg" />
             </div>
             <div
-                className="absolute border border-dashed rounded-full border-orange-400/25"
+                className="absolute border border-dashed rounded-full border-(--accent)/25"
                 style={{
                     width: 190,
                     height: 190,
@@ -2969,7 +2969,7 @@ function LoginTimeOutIllustration() {
             {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => (
                 <div
                     key={deg}
-                    className="absolute text-xs font-aumovio-bold text-orange-400/40"
+                    className="absolute text-xs font-aumovio-bold text-(--accent)/40"
                     style={{
                         width: 190,
                         height: 190,
@@ -2987,7 +2987,7 @@ function LoginTimeOutIllustration() {
                     {i % 3 === 0 ? "—" : "·"}
                 </div>
             ))}
-            <div className="absolute px-3 py-1 text-xs text-white bg-orange-400 rounded-full -bottom-2 font-aumovio-bold" style={{ animation: "err-pulse-op 1.5s ease-in-out infinite" }}>
+            <div className="absolute px-3 py-1 text-xs text-(--on-accent-text) bg-(--accent) rounded-full -bottom-2 font-aumovio-bold" style={{ animation: "err-pulse-op 1.5s ease-in-out infinite" }}>
                 SESSION EXPIRED
             </div>
         </div>
@@ -3276,7 +3276,7 @@ function SealLeftDecor() {
             {dotPositions.map(([left, top], i) => (
                 <div
                     key={i}
-                    className="absolute rounded-full bg-orange-400"
+                    className="absolute rounded-full bg-(--accent)"
                     style={{
                         left,
                         top,
@@ -3423,13 +3423,13 @@ export function SignatureMismatch() {
             subtitle="Your request arrived intact — but the signature doesn't match. The payload may have been altered in transit, or the wrong signing key was used."
             linkTo="/"
             linkLabel="Start over"
-            accentClass="text-orange-400"
+            accentClass="text-(--accent-foreground)"
             bgClass="bg-gradient-to-br from-white via-orange-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#180a00] dark:to-[var(--bg-surface)]"
             illustration={<SignatureMismatchIllustration />}
             leftDecor={<SealLeftDecor />}
             rightDecor={<SealRightDecor />}
         >
-            <div className="p-4 mt-2 text-sm text-left border bg-white/60 dark:bg-white/5 border-orange-400/20 rounded-xl text-grey-600 dark:text-grey-400 font-aumovio space-y-1">
+            <div className="p-4 mt-2 text-sm text-left border bg-white/60 dark:bg-white/5 border-(--accent)/20 rounded-xl text-grey-600 dark:text-grey-400 font-aumovio space-y-1">
                 <p className="font-aumovio-bold text-black/70 dark:text-white/70 mb-2">Common causes:</p>
                 <ul className="space-y-1 list-disc list-inside">
                     <li>Payload was modified after signing</li>
@@ -3446,7 +3446,7 @@ function SignatureMismatchIllustration() {
     return (
         <div className="relative flex items-center justify-center" style={{ width: 240, height: 210 }}>
             {/* Outer spinning dashed ring */}
-            <div className="absolute border-2 border-dashed rounded-full border-orange-400/25" style={{ width: 200, height: 200, animation: "err-spin-slow 18s linear infinite" }} />
+            <div className="absolute border-2 border-dashed rounded-full border-(--accent)/25" style={{ width: 200, height: 200, animation: "err-spin-slow 18s linear infinite" }} />
             {/* Inner counter-ring */}
             <div className="absolute border rounded-full border-danger-400/20" style={{ width: 160, height: 160, animation: "err-spin-rev 12s linear infinite" }}>
                 {[0, 72, 144, 216, 288].map((deg) => (
@@ -3463,10 +3463,10 @@ function SignatureMismatchIllustration() {
             </div>
 
             {/* Core shield */}
-            <div className="relative flex items-center justify-center border-4 border-orange-400 rounded-full bg-grey-100 dark:bg-(--bg-surface-3)" style={{ width: 110, height: 110, animation: "err-float 3.5s ease-in-out infinite" }}>
+            <div className="relative flex items-center justify-center border-4 border-(--accent) rounded-full bg-grey-100 dark:bg-(--bg-surface-3)" style={{ width: 110, height: 110, animation: "err-float 3.5s ease-in-out infinite" }}>
                 {/* Hash-grid lines behind icon */}
                 {[0, 45, 90, 135].map((deg) => (
-                    <div key={deg} className="absolute bg-orange-400/30" style={{ width: 2, height: 48, borderRadius: 2, transform: `rotate(${deg}deg)`, transformOrigin: "50% 50%" }} />
+                    <div key={deg} className="absolute bg-(--accent)/30" style={{ width: 2, height: 48, borderRadius: 2, transform: `rotate(${deg}deg)`, transformOrigin: "50% 50%" }} />
                 ))}
                 {/* Shield + X icon */}
                 <div className="absolute z-10 flex items-center justify-center w-12 h-12 bg-danger-400 rounded-full shadow-lg shadow-danger-400/30">

@@ -11,6 +11,7 @@
 
 const { logger } = require("../../utils/logger");
 const ORA_MAP = require("./OraCode");
+const { NJS_MAP, TRANSIENT_STRING_PATTERNS } = require("./NjsCode");
 const { getStatusTitle } = require("../../constants/responses");
 
 class ErrorHandlerMiddleware {
@@ -72,6 +73,8 @@ class ErrorHandlerMiddleware {
      * Priority order:
      *   1. AppError (already operational + classified)
      *   2. Oracle DB errors (ORA-XXXXX anywhere in message)
+     *   2a. node-oracledb driver errors (NJS-XXX — pool/connection failures)
+     *   2b. Adapter-level transient failures (no ORA-/NJS- code, string match)
      *   3. JWT errors
      *   4. HTTP-level framework errors (body-parser, multer)
      *   5. Fallback generic 500
@@ -91,6 +94,32 @@ class ErrorHandlerMiddleware {
         // 2. Oracle DB errors
         if (err.message && /ORA-\d+/.test(err.message)) {
             return this._classifyOracle(err);
+        }
+
+        // 2a. node-oracledb driver errors — pool exhaustion / connection lost
+        // at the client side, before ever reaching the database engine, so
+        // they never carry an ORA-XXXXX code.
+        if (err.message && /NJS-\d+/.test(err.message)) {
+            return this._classifyNjs(err);
+        }
+
+        // 2b. Adapter-level transient failures with no ORA-/NJS- code at all
+        // (e.g. the connection acquire-timeout Error race in withConnection()).
+        // The adapter's DB_OP_FAILED(...) wrapper embeds the original message,
+        // so the pattern matches without unwrapping err.originalError.
+        if (err.message) {
+            const stringMatch = TRANSIENT_STRING_PATTERNS.find(({ pattern }) =>
+                pattern.test(err.message),
+            );
+            if (stringMatch) {
+                return {
+                    statusCode: stringMatch.status,
+                    message: stringMatch.msg,
+                    type: stringMatch.type,
+                    hint: "Transient database failure — the operation may be retried.",
+                    rawMessage: err.message,
+                };
+            }
         }
 
         // 3. JWT errors
@@ -190,6 +219,25 @@ class ErrorHandlerMiddleware {
             message: known?.msg ?? "A database error occurred.",
             type: "DatabaseError",
             hint: `ORA-${String(code).padStart(5, "0")}`,
+            rawMessage: err.message,
+        };
+    }
+
+    /**
+     * Extracts the NJS code from the error message and returns a clean, safe
+     * client message. The raw driver message is stored in rawMessage for the
+     * logger — it is never sent to the client.
+     */
+    _classifyNjs(err) {
+        const match = err.message.match(/NJS-(\d+)/);
+        const code = match ? parseInt(match[1], 10) : 0;
+        const known = NJS_MAP[code];
+
+        return {
+            statusCode: known?.status ?? 503,
+            message: known?.msg ?? "A database connection error occurred.",
+            type: "DatabaseUnavailableError",
+            hint: "Transient database failure — the operation may be retried.",
             rawMessage: err.message,
         };
     }

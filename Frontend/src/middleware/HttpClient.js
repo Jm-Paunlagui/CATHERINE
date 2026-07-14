@@ -93,11 +93,10 @@ class HttpClient {
             async (error) => {
                 // Attach the server-assigned Request ID to the error object so
                 // every catch block can display it without parsing headers.
-                // Prefer the JSON body field (always present on our API errors),
-                // fall back to the X-Request-ID header for non-JSON responses.
                 if (error.response) {
                     error.requestId = error.response.data?.requestId ?? error.response.headers?.["x-request-id"] ?? null;
                 }
+
                 // 440 — Session timed out (JWT expired, normal lifecycle).
                 // The SessionWarningModal handles the proactive case; this
                 // is the fallback when a request is made after expiry.

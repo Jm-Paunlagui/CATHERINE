@@ -27,17 +27,17 @@ import { APP_STAGE, APP_VERSION, STAGE_META } from "../../config/appVersion";
 import { Badge } from "./Badge";
 
 function VersionPill({ version, glass = false }) {
-    return <span className={`inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[11px] font-semibold ${glass ? "text-white/90 bg-white/15 border border-white/25 backdrop-blur-sm" : "text-(--text-secondary) bg-grey-100 dark:bg-(--bg-surface-3) border border-grey-200/70 dark:border-(--color-dark-muted)/30"}`}>v{version}</span>;
+    return <span className={`inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[11px] font-semibold ${glass ? "text-(--chrome-from-text) bg-(--chrome-from-glass-bg) border border-(--chrome-from-glass-border) backdrop-blur-sm" : "text-(--text-secondary) bg-grey-100 dark:bg-(--bg-surface-3) border border-grey-200/70 dark:border-(--color-dark-muted)/30"}`}>v{version}</span>;
 }
 
 function GlassStageBadge({ meta, size, stageLabel }) {
     const sz = size === "xs" ? "text-[10px] px-1.5 py-0.5" : size === "sm" ? "text-xs px-2 py-0.5" : "text-sm px-2.5 py-1";
     return (
-        <span className={`inline-flex items-center gap-1 rounded-full font-aumovio-bold ${sz} text-white/90 bg-white/15 border border-white/25 backdrop-blur-sm`}>
+        <span className={`inline-flex items-center gap-1 rounded-full font-aumovio-bold ${sz} text-(--chrome-from-text) bg-(--chrome-from-glass-bg) border border-(--chrome-from-glass-border) backdrop-blur-sm`}>
             {meta.dot && (
                 <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-white/60 animate-ping" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-(--chrome-from-text-muted) animate-ping" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-(--chrome-from-text)" />
                 </span>
             )}
             {stageLabel}
@@ -72,7 +72,7 @@ export function VersionBadge({ version = APP_VERSION, stage = APP_STAGE, size = 
 
     if (to) {
         return (
-            <Link to={to} className={`${cls} rounded-lg transition-opacity duration-150 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/50 ${glass ? "focus-visible:ring-white/50!" : ""}`} title={`Version ${version} · ${meta.label} — view history`} aria-label={`Version ${version}, ${meta.label}. View version history`}>
+            <Link to={to} className={`${cls} rounded-lg transition-opacity duration-150 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/50 ${glass ? "focus-visible:ring-(--chrome-from-ring)!" : ""}`} title={`Version ${version} · ${meta.label} — view history`} aria-label={`Version ${version}, ${meta.label}. View version history`}>
                 {content}
             </Link>
         );

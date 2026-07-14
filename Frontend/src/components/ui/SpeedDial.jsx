@@ -55,7 +55,7 @@ export function SpeedDial({ icon: Icon = PlusIcon, actions = [], direction = "up
         <div className={`${POSITIONS[position]} flex flex-col items-center`}>
             {isReverse && actionList}
             <button
-                className={`w-14 h-14 rounded-full bg-orange-400 text-white shadow-2xl shadow-orange-400/40
+                className={`w-14 h-14 rounded-full bg-orange-400 text-(--on-accent-text) shadow-2xl shadow-orange-400/40
           flex items-center justify-center ${TRANSITION_SPRING} ${HOVER_PRESS} ${ANIMATE_SCALE_SPRING}
           hover:bg-orange-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-400/40
           ${open ? "rotate-45" : ""}`}

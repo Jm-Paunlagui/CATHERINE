@@ -10,7 +10,7 @@
  */
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 
-export function List({ items = [], variant = "ul", icons, iconColor = "text-orange-400", size = "md" }) {
+export function List({ items = [], variant = "ul", icons, iconColor = "text-(--accent-icon)", size = "md" }) {
     const SZ = { sm: "text-xs", md: "text-sm", lg: "text-base" };
     const base = `font-aumovio leading-relaxed ${SZ[size] ?? SZ.md} space-y-2`;
 

@@ -146,6 +146,17 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         server = http.createServer(app);
     }
 
+    // Long-running guarded write paths (RetryPolicy/BatchGuard DB retries +
+    // awaited EmailProtectionService dispatch) can legitimately exceed Node's
+    // default 300s request timeout. Env-driven so consuming apps tune it
+    // centrally; if this backend sits behind a reverse proxy (nginx, IIS ARR,
+    // etc.), its read/proxy timeout must independently be at least as large.
+    const requestTimeoutMs = parseInt(process.env.SERVER_REQUEST_TIMEOUT_MS, 10);
+    server.requestTimeout =
+        Number.isInteger(requestTimeoutMs) && requestTimeoutMs > 0
+            ? requestTimeoutMs
+            : 330_000;
+
     // ─── Start ────────────────────────────────────────────────────────────
 
     server.listen(PORT, HOST, () => {

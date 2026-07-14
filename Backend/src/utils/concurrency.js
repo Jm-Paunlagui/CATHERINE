@@ -6,8 +6,8 @@
  * WHAT THIS FILE DOES
  * -------------------
  * Runs an async function over a list with at most `limit` operations in flight
- * at once, preserving input order in the returned results array. Used by the
- * Excel bulk-upload save paths (subsidy / RFID) to drain thousands of
+ * at once, preserving input order in the returned results array. Used by
+ * bulk save paths (e.g. Excel uploads, guarded batches) to drain thousands of
  * independent per-row writes against the Oracle pool concurrently instead of
  * one strictly-serial round-trip at a time — without unbounded fan-out that
  * would exhaust the connection pool.

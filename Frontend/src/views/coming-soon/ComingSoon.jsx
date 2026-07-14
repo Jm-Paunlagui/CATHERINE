@@ -76,9 +76,9 @@ function ScaffoldIllustration({ feature = "" }) {
                 <ellipse cx="160" cy="252" rx="120" ry="8" fill="currentColor" className="text-black/5 dark:text-white/5" />
 
                 {/* Scaffold frame */}
-                <rect x="40" y="20" width="8" height="230" rx="4" fill="#FF4208" opacity="0.7" style={{ animation: "cs-scaffold 3s ease-in-out infinite" }} />
-                <rect x="272" y="20" width="8" height="230" rx="4" fill="#FF4208" opacity="0.7" style={{ animation: "cs-scaffold 3s 0.4s ease-in-out infinite" }} />
-                <rect x="140" y="20" width="8" height="230" rx="4" fill="#FF4208" opacity="0.5" style={{ animation: "cs-scaffold 3s 0.8s ease-in-out infinite" }} />
+                <rect x="40" y="20" width="8" height="230" rx="4" fill="var(--accent)" opacity="0.7" style={{ animation: "cs-scaffold 3s ease-in-out infinite" }} />
+                <rect x="272" y="20" width="8" height="230" rx="4" fill="var(--accent)" opacity="0.7" style={{ animation: "cs-scaffold 3s 0.4s ease-in-out infinite" }} />
+                <rect x="140" y="20" width="8" height="230" rx="4" fill="var(--accent)" opacity="0.5" style={{ animation: "cs-scaffold 3s 0.8s ease-in-out infinite" }} />
 
                 {/* Horizontal planks */}
                 <rect x="36" y="70" width="248" height="10" rx="3" fill="#c2440a" opacity="0.5" />
@@ -86,10 +86,10 @@ function ScaffoldIllustration({ feature = "" }) {
                 <rect x="36" y="190" width="248" height="10" rx="3" fill="#c2440a" opacity="0.5" />
 
                 {/* Diagonal braces */}
-                <path d="M44 70 L144 130" stroke="#FF4208" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
-                <path d="M144 70 L44 130" stroke="#FF4208" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
-                <path d="M148 130 L276 190" stroke="#FF4208" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
-                <path d="M276 130 L148 190" stroke="#FF4208" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
+                <path d="M44 70 L144 130" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
+                <path d="M144 70 L44 130" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
+                <path d="M148 130 L276 190" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
+                <path d="M276 130 L148 190" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
 
                 {/* Warning stripe tape across base */}
                 <rect
@@ -100,7 +100,7 @@ function ScaffoldIllustration({ feature = "" }) {
                     rx="3"
                     style={{
                         fill: "transparent",
-                        backgroundImage: "repeating-linear-gradient(90deg,#FF4208 0,#FF4208 20px,#1a1a1a 20px,#1a1a1a 40px)",
+                        backgroundImage: "repeating-linear-gradient(90deg,var(--accent) 0,var(--accent) 20px,#1a1a1a 20px,#1a1a1a 40px)",
                         backgroundSize: "40px 100%",
                         animation: "cs-tape 1.2s linear infinite",
                     }}
@@ -108,7 +108,7 @@ function ScaffoldIllustration({ feature = "" }) {
                 {/* SVG can't do bg-image, so overlay the tape via foreignObject pattern instead:
                     just draw alternating rects manually */}
                 {Array.from({ length: 7 }, (_, i) => (
-                    <rect key={i} x={36 + i * 36} y="236" width="18" height="12" rx={i === 0 ? "3 0 0 3" : i === 6 ? "0 3 3 0" : "0"} fill="#FF4208" opacity="0.85" />
+                    <rect key={i} x={36 + i * 36} y="236" width="18" height="12" rx={i === 0 ? "3 0 0 3" : i === 6 ? "0 3 3 0" : "0"} fill="var(--accent)" opacity="0.85" />
                 ))}
 
                 {/* Bricks being laid (animated stacking) */}
@@ -153,9 +153,9 @@ function ScaffoldIllustration({ feature = "" }) {
                 <div className="relative">
                     <svg width="90" height="70" viewBox="0 0 90 70" fill="none">
                         {/* Hat brim */}
-                        <ellipse cx="45" cy="52" rx="44" ry="12" fill="#FF4208" opacity="0.9" />
+                        <ellipse cx="45" cy="52" rx="44" ry="12" fill="var(--accent)" opacity="0.9" />
                         {/* Hat dome */}
-                        <path d="M8 52 C8 28 20 8 45 6 C70 8 82 28 82 52Z" fill="#FF4208" />
+                        <path d="M8 52 C8 28 20 8 45 6 C70 8 82 28 82 52Z" fill="var(--accent)" />
                         {/* Hat shine stripe */}
                         <path d="M20 28 L70 28" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.4" />
                         {/* Vent holes */}
@@ -201,10 +201,10 @@ function ScaffoldIllustration({ feature = "" }) {
                 }}
             >
                 <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                    <circle cx="18" cy="18" r="8" fill="#FF4208" opacity="0.5" />
-                    <circle cx="18" cy="18" r="5" fill="#FF4208" opacity="0.8" />
+                    <circle cx="18" cy="18" r="8" fill="var(--accent)" opacity="0.5" />
+                    <circle cx="18" cy="18" r="5" fill="var(--accent)" opacity="0.8" />
                     {[0, 60, 120, 180, 240, 300].map((deg) => (
-                        <rect key={deg} x="16" y="1" width="4" height="7" rx="2" fill="#FF4208" opacity="0.7" transform={`rotate(${deg} 18 18)`} />
+                        <rect key={deg} x="16" y="1" width="4" height="7" rx="2" fill="var(--accent)" opacity="0.7" transform={`rotate(${deg} 18 18)`} />
                     ))}
                 </svg>
             </div>
@@ -237,7 +237,7 @@ function LoadingDots() {
     return (
         <div className="flex items-center gap-1.5">
             {[{ anim: "cs-dot-1" }, { anim: "cs-dot-2" }, { anim: "cs-dot-3" }].map(({ anim }, i) => (
-                <span key={i} className="w-2 h-2 rounded-full bg-orange-400" style={{ display: "inline-block", animation: `${anim} 1.2s ease-in-out infinite` }} />
+                <span key={i} className="w-2 h-2 rounded-full bg-(--accent)" style={{ display: "inline-block", animation: `${anim} 1.2s ease-in-out infinite` }} />
             ))}
         </div>
     );
@@ -249,21 +249,21 @@ function ConstructionBar({ progress = 0 }) {
         <div className="w-full max-w-sm">
             <div className="flex justify-between mb-1.5 text-xs font-aumovio-bold text-black/50 dark:text-white/50">
                 <span>Construction progress</span>
-                <span className="text-orange-400">{progress}%</span>
+                <span className="text-(--accent-foreground)">{progress}%</span>
             </div>
             <div className="relative h-3 rounded-full overflow-hidden bg-grey-200 dark:bg-(--bg-surface-3)">
                 {/* Stripe layer */}
                 <div
                     className="absolute inset-0 opacity-20"
                     style={{
-                        backgroundImage: "repeating-linear-gradient(-45deg, #FF4208 0, #FF4208 10px, transparent 10px, transparent 20px)",
+                        backgroundImage: "repeating-linear-gradient(-45deg, var(--accent) 0, var(--accent) 10px, transparent 10px, transparent 20px)",
                         backgroundSize: "28.28px 28.28px",
                         animation: "cs-stripe 0.8s linear infinite",
                     }}
                 />
                 {/* Fill */}
                 <div
-                    className="relative h-full rounded-full bg-orange-400 shadow-sm"
+                    className="relative h-full rounded-full bg-(--accent) shadow-sm"
                     style={{
                         width: `${progress}%`,
                         animation: "cs-progress 1.2s ease-out both",
@@ -297,9 +297,9 @@ function TerminalLine({ text = "Building something great..." }) {
 
     return (
         <div className="flex items-center gap-2 font-mono text-sm text-black/50 dark:text-white/40">
-            <span className="text-orange-400 select-none">$</span>
+            <span className="text-(--accent-foreground) select-none">$</span>
             <span>{displayed}</span>
-            <span className="inline-block w-2 h-4 bg-orange-400 align-middle" style={{ animation: "cs-cursor 1s step-end infinite" }} />
+            <span className="inline-block w-2 h-4 bg-(--accent) align-middle" style={{ animation: "cs-cursor 1s step-end infinite" }} />
         </div>
     );
 }
@@ -330,7 +330,7 @@ export function ComingSoon({ title = "Coming Soon", subtitle = "We're laying the
                 <div
                     className="absolute top-0 left-0 w-full h-2"
                     style={{
-                        backgroundImage: "repeating-linear-gradient(90deg,#FF4208 0,#FF4208 20px,#1a1a1a 20px,#1a1a1a 40px)",
+                        backgroundImage: "repeating-linear-gradient(90deg,var(--accent) 0,var(--accent) 20px,#1a1a1a 20px,#1a1a1a 40px)",
                         backgroundSize: "40px 100%",
                         animation: "cs-tape 1s linear infinite",
                         opacity: 0.7,
@@ -339,7 +339,7 @@ export function ComingSoon({ title = "Coming Soon", subtitle = "We're laying the
                 <div
                     className="absolute bottom-0 left-0 w-full h-2"
                     style={{
-                        backgroundImage: "repeating-linear-gradient(90deg,#FF4208 0,#FF4208 20px,#1a1a1a 20px,#1a1a1a 40px)",
+                        backgroundImage: "repeating-linear-gradient(90deg,var(--accent) 0,var(--accent) 20px,#1a1a1a 20px,#1a1a1a 40px)",
                         backgroundSize: "40px 100%",
                         animation: "cs-tape 1s linear infinite reverse",
                         opacity: 0.7,
@@ -349,7 +349,7 @@ export function ComingSoon({ title = "Coming Soon", subtitle = "We're laying the
                 <div
                     className="absolute inset-0 opacity-30 dark:opacity-15"
                     style={{
-                        backgroundImage: "radial-gradient(circle, #FF4208 1px, transparent 1px)",
+                        backgroundImage: "radial-gradient(circle, var(--accent) 1px, transparent 1px)",
                         backgroundSize: "40px 40px",
                     }}
                 />
@@ -370,9 +370,9 @@ export function ComingSoon({ title = "Coming Soon", subtitle = "We're laying the
                 {/* Floating left gear ambient */}
                 <div className="absolute top-1/4 left-8 opacity-5 dark:opacity-10" style={{ animation: "cs-gear-a 20s linear infinite" }}>
                     <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
-                        <circle cx="60" cy="60" r="28" fill="#FF4208" />
+                        <circle cx="60" cy="60" r="28" fill="var(--accent)" />
                         {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
-                            <rect key={deg} x="56" y="4" width="8" height="18" rx="4" fill="#FF4208" transform={`rotate(${deg} 60 60)`} />
+                            <rect key={deg} x="56" y="4" width="8" height="18" rx="4" fill="var(--accent)" transform={`rotate(${deg} 60 60)`} />
                         ))}
                     </svg>
                 </div>
@@ -397,13 +397,13 @@ export function ComingSoon({ title = "Coming Soon", subtitle = "We're laying the
                 {/* Badge */}
                 <div
                     className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border font-aumovio-bold text-xs tracking-widest uppercase
-                        bg-orange-400/10 dark:bg-orange-400/20 border-orange-400/25 text-orange-500 dark:text-orange-400
+                        bg-orange-400/10 dark:bg-orange-400/20 border-orange-400/25 text-(--accent-foreground)
                         ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_200}`}
                 >
                     {/* Animated dot */}
                     <span className="relative flex h-2 w-2">
-                        <span className={`absolute inline-flex h-full w-full rounded-full bg-orange-400 ${ANIMATE_PING}`} />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-400" />
+                        <span className={`absolute inline-flex h-full w-full rounded-full bg-(--accent) ${ANIMATE_PING}`} />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-(--accent)" />
                     </span>
                     Under Construction
                 </div>

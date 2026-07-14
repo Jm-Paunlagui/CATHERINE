@@ -30,8 +30,10 @@ const STATUS_DOT = {
 
 // Deterministic colour from name — all entries use palette-responsive CSS variable
 // families (orange, purple, blue, turquoise, yellow) so they shift when the user
-// picks a different accent palette in Personalize.
-const PALETTE = ["bg-orange-400 text-white", "bg-purple-400 text-white", "bg-blue-400 text-white", "bg-turquoise-500 text-white", "bg-yellow-600 text-white", "bg-orange-600 text-white", "bg-purple-600 text-white"];
+// picks a different accent palette in Personalize. Each entry pairs a solid family
+// fill with that family's binary white/black `--on-<fam>-text` foreground token
+// (Personalize round 4) so initials stay readable on every palette's fill colour.
+const PALETTE = ["bg-orange-400 text-(--on-accent-text)", "bg-purple-400 text-(--on-secondary-text)", "bg-blue-400 text-(--on-blue-text)", "bg-turquoise-500 text-(--on-turquoise-text)", "bg-yellow-600 text-(--on-yellow-text)", "bg-orange-600 text-(--on-accent-text)", "bg-purple-600 text-(--on-secondary-text)"];
 
 function getInitials(name = "") {
     const parts = name.trim().split(" ").filter(Boolean);

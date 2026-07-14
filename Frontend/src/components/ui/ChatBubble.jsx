@@ -17,7 +17,7 @@ import Avatar from "./Avatar";
 const STATUS_ICONS = {
     sent: "✓",
     delivered: "✓✓",
-    read: <span className="text-blue-400">✓✓</span>,
+    read: <span className="text-(--blue-foreground)">✓✓</span>,
 };
 
 export function ChatBubble({ message, sender, timestamp, position = "left", status, type = "text", imageUrl, fileName, reactions = [] }) {
@@ -30,7 +30,7 @@ export function ChatBubble({ message, sender, timestamp, position = "left", stat
                 {!isRight && sender?.name && <span className="px-1 text-xs text-grey-500 font-aumovio-bold">{sender.name}</span>}
                 <div
                     className={`relative rounded-2xl px-4 py-2.5 text-sm leading-relaxed
-          ${isRight ? "bg-orange-400 text-white rounded-br-sm" : "bg-grey-100 dark:bg-(--bg-surface-3) text-black/85 dark:text-white/85 rounded-bl-sm"}`}
+          ${isRight ? "bg-orange-400 text-(--on-accent-text) rounded-br-sm" : "bg-grey-100 dark:bg-(--bg-surface-3) text-black/85 dark:text-white/85 rounded-bl-sm"}`}
                 >
                     {type === "image" && imageUrl && <img src={imageUrl} alt="Shared" className="max-w-full mb-1 rounded-lg" />}
                     {type === "file" && (

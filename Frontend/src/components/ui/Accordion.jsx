@@ -63,12 +63,12 @@ export function Accordion({ items = [], defaultOpen = null, multiple = false, va
                 ${TRANSITION_COLORS} ${sz.header}`}
                         >
                             <span className="flex items-center gap-2">
-                                {item.icon && <item.icon className="w-4 h-4 text-orange-400 shrink-0" />}
+                                {item.icon && <item.icon className="w-4 h-4 text-(--accent-icon) shrink-0" />}
                                 {item.title}
                             </span>
                             <ChevronDownIcon
                                 className={`w-4 h-4 text-grey-400 shrink-0 ${TRANSITION_TRANSFORM_SPRING}
-                  ${isOpen ? "rotate-180 text-orange-400" : ""}`}
+                  ${isOpen ? "rotate-180 text-(--accent-icon)" : ""}`}
                             />
                         </button>
                         <div

@@ -8,9 +8,9 @@
  * ---------------
  * Every CacheStore wraps an in-process NodeCache instance. With
  * ENABLE_CLUSTERING=true each worker holds its OWN copy of every store, so an
- * invalidation triggered by a write handled on worker 1 (e.g. a subsidy save
- * wiping the `subsidy` namespace) would leave workers 2..N serving STALE data
- * until the TTL expired — up to 30 minutes for the billing store. For a
+ * invalidation triggered by a write handled on worker 1 (e.g. a feature save
+ * wiping its cache namespace) would leave workers 2..N serving STALE data
+ * until the TTL expired — up to 30 minutes for long-TTL stores. For a
  * financial system that is a correctness bug, not a performance trade-off.
  *
  * HOW IT WORKS

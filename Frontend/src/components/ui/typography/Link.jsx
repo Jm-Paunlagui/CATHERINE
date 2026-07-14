@@ -12,8 +12,8 @@ import { NavLink } from "react-router-dom";
 import { TRANSITION_COLORS } from "../../../assets/styles/pre-set-styles";
 
 const V = {
-    default: "text-orange-400 hover:text-orange-500",
-    primary: "text-orange-500 font-aumovio-bold hover:text-orange-600",
+    default: "text-(--text-accent) hover:text-(--text-accent-hover)",
+    primary: "text-(--text-accent) font-aumovio-bold hover:text-(--text-accent-hover)",
     muted: "text-grey-500 hover:text-grey-700 dark:text-grey-400 dark:hover:text-grey-200",
     danger: "text-danger-400 dark:text-danger-300 hover:text-danger-500 dark:hover:text-danger-200",
 };

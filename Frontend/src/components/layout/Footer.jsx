@@ -28,7 +28,7 @@ export function Footer() {
                         { label: "Privacy", href: "/privacy" },
                         { label: "Terms", href: "/terms" },
                     ].map((l) => (
-                        <a key={l.label} href={l.href} className="text-xs text-grey-500 dark:text-grey-400 hover:text-orange-400 transition-colors duration-200">
+                        <a key={l.label} href={l.href} className="text-xs text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground) transition-colors duration-200">
                             {l.label}
                         </a>
                     ))}

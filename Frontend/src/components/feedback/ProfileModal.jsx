@@ -51,8 +51,7 @@ function getInitials(name = "") {
 function resolveRoleLabel(role) {
     if (role === "SUPER_ADMIN") return "Super ADMIN";
     if (role === "ADMIN") return "ADMIN";
-    if (role === "APPROVER") return "Approver";
-    if (role === "VIEWER") return "Viewer";
+    if (role === "VENDOR") return "Vendor";
     if (role === "ROBOT") return "Automation";
     return "USER";
 }
@@ -60,8 +59,7 @@ function resolveRoleLabel(role) {
 function resolveRoleBadgeVariant(role) {
     if (role === "SUPER_ADMIN") return "purple";
     if (role === "ADMIN") return "orange";
-    if (role === "APPROVER") return "blue";
-    if (role === "VIEWER") return "cyan";
+    if (role === "VENDOR") return "cyan";
     if (role === "ROBOT") return "green";
     return "grey";
 }
