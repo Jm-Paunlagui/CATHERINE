@@ -29,7 +29,7 @@ export default function HeroSection({ announcement }) {
                 {/* Announcement badge */}
                 <span
                     className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-aumovio-bold
-                        uppercase tracking-widest bg-white/15 text-white border border-white/25
+                        uppercase tracking-widest bg-(--color-gradient-text)/15 text-(--color-gradient-text) border border-(--color-gradient-text)/25
                         backdrop-blur-sm ${ANIMATE_FADE_IN_UP}`}
                 >
                     <FontAwesomeIcon icon={faShieldHalved} className="w-3 h-3" />
@@ -39,23 +39,23 @@ export default function HeroSection({ announcement }) {
                 {/* Title */}
                 <h1
                     className={`text-4xl md:text-5xl lg:text-7xl font-extrabold leading-tight tracking-tight
-                        text-white drop-shadow-2xl ${ANIMATE_FADE_IN_UP} ${staggerDelay(1)}`}
+                        text-(--color-gradient-text) drop-shadow-2xl ${ANIMATE_FADE_IN_UP} ${staggerDelay(1)}`}
                 >
                     Project Catherine
                 </h1>
 
                 {/* Subtitle */}
-                <p className={`max-w-2xl text-lg md:text-xl leading-relaxed text-white/80 ${ANIMATE_FADE_IN_UP} ${staggerDelay(2)}`}>Securing Critical Web Applications for the AI Era</p>
+                <p className={`max-w-2xl text-lg md:text-xl leading-relaxed text-(--color-gradient-text)/80 ${ANIMATE_FADE_IN_UP} ${staggerDelay(2)}`}>Securing Critical Web Applications for the AI Era</p>
 
                 {/* Author line */}
-                <p className={`text-sm text-white/50 font-aumovio-bold tracking-wide ${ANIMATE_FADE_IN_UP} ${staggerDelay(3)}`}>By John Moises Paunlagui</p>
+                <p className={`text-sm text-(--color-gradient-text)/60 font-aumovio-bold tracking-wide ${ANIMATE_FADE_IN_UP} ${staggerDelay(3)}`}>By John Moises Paunlagui</p>
 
                 {/* CTA buttons */}
                 <div className={`flex gap-4 flex-wrap justify-center mt-4 ${ANIMATE_FADE_IN_UP} ${staggerDelay(4)}`}>
                     <a
                         href="#introduction"
                         className={`px-6 py-3 rounded-lg font-aumovio-bold text-sm
-                            bg-white text-orange-400 hover:bg-orange-50
+                            bg-white text-(--accent-foreground) hover:bg-orange-50
                             shadow-lg hover:shadow-xl ${TRANSITION_SMOOTH} ${HOVER_LIFT}`}
                     >
                         Read the Announcement
@@ -63,7 +63,7 @@ export default function HeroSection({ announcement }) {
                     <a
                         href="#security-demo"
                         className={`px-6 py-3 rounded-lg font-aumovio-bold text-sm
-                            border-2 border-white/60 text-white hover:bg-white/10
+                            border-2 border-(--color-gradient-text)/60 text-(--color-gradient-text) hover:bg-(--color-gradient-text)/10
                             ${TRANSITION_SMOOTH} ${HOVER_LIFT}`}
                     >
                         View Security Demo

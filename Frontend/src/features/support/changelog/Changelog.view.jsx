@@ -60,7 +60,7 @@ function formatDisplayDate(iso) {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function VersionBadge({ version }) {
-    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-semibold text-orange-500 dark:text-orange-300 bg-orange-100/25 dark:bg-orange-400/15 border border-orange-400/30 dark:border-orange-400/25">v{version}</span>;
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-semibold text-(--accent-foreground) bg-orange-100/25 dark:bg-orange-400/15 border border-orange-400/30 dark:border-orange-400/25">v{version}</span>;
 }
 
 /**
@@ -198,7 +198,7 @@ function EntryActions({ entry, isSuperAdmin, onEdit, onDelete }) {
     if (!isSuperAdmin) return null;
     return (
         <div className="flex items-center gap-0.5 shrink-0">
-            <button onClick={() => onEdit(entry)} aria-label="Edit entry" className="p-1.5 rounded-lg text-grey-400 hover:text-blue-400 hover:bg-blue-400/10 transition-colors duration-150">
+            <button onClick={() => onEdit(entry)} aria-label="Edit entry" className="p-1.5 rounded-lg text-grey-400 hover:text-(--blue-foreground) hover:bg-blue-400/10 transition-colors duration-150">
                 <FontAwesomeIcon icon={faPen} className="w-3 h-3" />
             </button>
             <button onClick={() => onDelete(entry)} aria-label="Delete entry" className="p-1.5 rounded-lg text-grey-400 hover:text-danger-400 hover:bg-danger-400/10 transition-colors duration-150">
@@ -333,7 +333,7 @@ function ChangelogForm({ form, onChange }) {
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select label="Type" options={TYPE_OPTIONS} value={form.type} onChange={(v) => onChange("type", v)} />
+                <Select label="Type" options={TYPE_OPTIONS} value={form.type} onChange={(v) => onChange("type", v)} fixed />
                 <Datepicker label="Display Date" value={parseDateString(form.displayDate)} onChange={(date) => onChange("displayDate", date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}` : "")} placeholder="Pick a date" />
             </div>
             <Input label="Version" name="version" value={form.version} onChange={(e) => onChange("version", e.target.value)} required />
@@ -367,7 +367,7 @@ function ChangelogContent() {
                     <h1 className={`text-3xl font-extrabold ${TITLE_COLOR_TEXT}`}>
                         Version <span className={GRADIENT_COLOR_TEXT}>History</span>
                     </h1>
-                    <p className={`mt-1 text-sm ${BASE_COLOR_TEXT} opacity-70`}>Track all changes, improvements, and fixes</p>
+                    <p className={`mt-1 text-sm ${BASE_COLOR_TEXT} opacity-70`}>What&apos;s changed in the eMeal Monitoring System</p>
                 </div>
                 {hook.isSuperAdmin && (
                     <Button variant="primary" size="sm" onClick={hook.openCreate} disabled={!hook.releaseState?.drafts?.content}>
@@ -376,6 +376,9 @@ function ChangelogContent() {
                     </Button>
                 )}
             </div>
+
+            {/* View-level API error — suppressed while any modal is open (modal renders its own) */}
+            {!hook.createOpen && !hook.editTarget && !hook.deleteTarget && <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />}
 
             {/* ── Release control (SUPER_ADMIN) ────────────────────────────── */}
             <ReleaseControl hook={hook} />
@@ -402,9 +405,6 @@ function ChangelogContent() {
                     ))}
                 </div>
             )}
-
-            {/* ── Fetch error ────────────────────────────────────────────────── */}
-            {!hook.loading && hook.apiError && !hook.createOpen && !hook.editTarget && !hook.deleteTarget && <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} className="mb-4" />}
 
             {/* ── Empty state ───────────────────────────────────────────────── */}
             {!hook.loading && hook.entries.length === 0 && (
@@ -444,19 +444,17 @@ function ChangelogContent() {
                 onClose={hook.closeCreate}
                 title="New Changelog Entry"
                 footer={
-                    <div className="flex flex-col gap-3 w-full">
-                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
-                        <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={hook.closeCreate} disabled={hook.saving}>
-                                Cancel
-                            </Button>
-                            <Button variant="primary" loading={hook.saving} onClick={hook.handleCreate}>
-                                Create Entry
-                            </Button>
-                        </div>
-                    </div>
+                    <>
+                        <Button variant="ghost" onClick={hook.closeCreate} disabled={hook.saving}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" loading={hook.saving} onClick={hook.handleCreate}>
+                            Create Entry
+                        </Button>
+                    </>
                 }
             >
+                <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} className="mb-4" />
                 <ChangelogForm form={hook.form} onChange={hook.handleFormChange} />
             </Modal>
 
@@ -466,19 +464,17 @@ function ChangelogContent() {
                 onClose={hook.closeEdit}
                 title="Edit Changelog Entry"
                 footer={
-                    <div className="flex flex-col gap-3 w-full">
-                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
-                        <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={hook.closeEdit} disabled={hook.saving}>
-                                Cancel
-                            </Button>
-                            <Button variant="primary" loading={hook.saving} onClick={hook.handleUpdate}>
-                                Save Changes
-                            </Button>
-                        </div>
-                    </div>
+                    <>
+                        <Button variant="ghost" onClick={hook.closeEdit} disabled={hook.saving}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" loading={hook.saving} onClick={hook.handleUpdate}>
+                            Save Changes
+                        </Button>
+                    </>
                 }
             >
+                <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} className="mb-4" />
                 <ChangelogForm form={hook.form} onChange={hook.handleFormChange} />
             </Modal>
 
@@ -489,19 +485,17 @@ function ChangelogContent() {
                 title="Delete Entry"
                 variant="danger"
                 footer={
-                    <div className="flex flex-col gap-3 w-full">
-                        <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
-                        <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={hook.closeDelete} disabled={hook.deleting}>
-                                Cancel
-                            </Button>
-                            <Button variant="danger" loading={hook.deleting} onClick={hook.handleDelete}>
-                                Delete
-                            </Button>
-                        </div>
-                    </div>
+                    <>
+                        <Button variant="ghost" onClick={hook.closeDelete} disabled={hook.deleting}>
+                            Cancel
+                        </Button>
+                        <Button variant="danger" loading={hook.deleting} onClick={hook.handleDelete}>
+                            Delete
+                        </Button>
+                    </>
                 }
             >
+                <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} className="mb-4" />
                 <p className={`text-sm ${BASE_COLOR_TEXT}`}>
                     Are you sure you want to permanently delete <span className="font-semibold">&ldquo;{hook.deleteTarget?.title}&rdquo;</span>? This action cannot be undone.
                 </p>

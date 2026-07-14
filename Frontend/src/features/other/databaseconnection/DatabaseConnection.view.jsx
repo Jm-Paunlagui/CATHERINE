@@ -41,7 +41,7 @@ function PieceCard({ icon, file, desc, color }) {
             <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center mb-3`}>
                 <FontAwesomeIcon icon={icon} className="text-(--accent-icon)" />
             </div>
-            <code className="text-xs font-mono text-orange-400 dark:text-orange-300">{file}</code>
+            <code className="text-xs font-mono text-(--accent-foreground)">{file}</code>
             <p className={`text-xs mt-1.5 ${BASE_COLOR_TEXT} opacity-70 leading-relaxed`}>{desc}</p>
         </div>
     );
@@ -53,7 +53,7 @@ function DatabaseConnectionContent() {
         <DocShell sections={SECTIONS}>
             {/* ── Hero ──────────────────────────────────────────────────────────── */}
             <header id="overview" className={`mb-12 scroll-mt-24 ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_0}`}>
-                <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-2">Database Connection</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-(--accent-foreground) mb-2">Database Connection</p>
                 <h1 className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${TITLE_COLOR_TEXT}`}>
                     Connect <span className={GRADIENT_COLOR_TEXT}>CATHERINE</span> to your database
                 </h1>
@@ -97,7 +97,7 @@ function DatabaseConnectionContent() {
             <section id="env-setup" className="mb-14 scroll-mt-24">
                 <h2 className={`text-2xl font-extrabold mb-2 ${TITLE_COLOR_TEXT}`}>Setting Up .env</h2>
                 <p className={`mb-6 ${BASE_COLOR_TEXT} opacity-75`}>
-                    The example file ships a <strong>single</strong> connection called <code className="font-mono text-xs">appDb</code> (the standalone template schema). Each connection needs its own credentials in <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Backend/.env</code> — then one entry in <code className="font-mono text-xs">database.js</code>. Add as many as you like.
+                    The example file ships a <strong>single</strong> connection called <code className="font-mono text-xs">appDb</code> (the standalone template schema). Each connection needs its own credentials in <code className="text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Backend/.env</code> — then one entry in <code className="font-mono text-xs">database.js</code>. Add as many as you like.
                 </p>
 
                 <CodeBlock title="Backend/.env">{`# Engine — "oracle" is the only adapter wired today

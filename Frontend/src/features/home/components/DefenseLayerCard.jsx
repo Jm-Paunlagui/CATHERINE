@@ -23,7 +23,7 @@ const COLORS = {
 };
 
 const ICON_COLORS = {
-    orange: "text-orange-400",
+    orange: "text-(--accent-icon)",
     purple: "text-purple-400",
     blue: "text-blue-400",
     success: "text-success-400",

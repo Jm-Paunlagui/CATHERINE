@@ -42,9 +42,9 @@ function ScenarioPill({ scenario, isActive, onClick }) {
                 border ${TRANSITION_SMOOTH}
                 ${
                     isActive
-                        ? "bg-orange-400 text-white border-orange-400 shadow-md shadow-orange-400/25"
+                        ? "bg-orange-400 text-(--on-accent-text) border-orange-400 shadow-md shadow-orange-400/25"
                         : `${BASE_COLOR_BG} ${STANDARD_BORDER} text-grey-500 dark:text-grey-400
-                           hover:border-orange-400/30 hover:text-orange-400`
+                           hover:border-orange-400/30 hover:text-(--accent-foreground)`
                 }`}
         >
             {scenario.label}

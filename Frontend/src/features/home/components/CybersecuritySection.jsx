@@ -26,7 +26,7 @@ export default function CybersecuritySection({ threatStats }) {
             <Paragraph>
                 The software that all of us rely on every day — responsible for running banking systems, storing medical records, linking up logistics networks, keeping power grids functioning, and much more — has always contained bugs. Many are minor, but some are serious security flaws that, if discovered, could allow cyberattackers to hijack systems, disrupt operations, or steal data. According
                 to the{" "}
-                <a href="https://nvd.nist.gov/general/nvd-dashboard" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline underline-offset-2">
+                <a href="https://nvd.nist.gov/general/nvd-dashboard" target="_blank" rel="noopener noreferrer" className="text-(--accent-foreground) hover:underline underline-offset-2">
                     NIST National Vulnerability Database
                 </a>
                 , over 362,000 CVEs have been catalogued to date, with over 40,000 new vulnerabilities published in 2024 alone.
@@ -34,7 +34,7 @@ export default function CybersecuritySection({ threatStats }) {
 
             <Paragraph className="mt-4">
                 With the latest frontier AI models, the cost, effort, and level of expertise required to find and exploit software vulnerabilities have all dropped dramatically. The{" "}
-                <a href="https://www.verizon.com/business/resources/reports/dbir/" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline underline-offset-2">
+                <a href="https://www.verizon.com/business/resources/reports/dbir/" target="_blank" rel="noopener noreferrer" className="text-(--accent-foreground) hover:underline underline-offset-2">
                     Verizon 2026 Data Breach Investigations Report
                 </a>{" "}
                 found that 31% of all breaches now start with software vulnerabilities — surpassing stolen credentials as the top initial attack vector — and that 15 different attack techniques are now being bolstered by generative AI.
@@ -57,7 +57,7 @@ export default function CybersecuritySection({ threatStats }) {
 
             <Paragraph className="mt-6">
                 Although the risks from AI-augmented cyberattacks are serious, there is reason for optimism: the same capabilities that make AI models dangerous in the wrong hands make them invaluable for finding and fixing flaws in important software — and for producing new software with far fewer security bugs. Project Catherine demonstrates this defensive advantage. As the{" "}
-                <a href="https://www.verizon.com/business/resources/reports/dbir/" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline underline-offset-2">
+                <a href="https://www.verizon.com/business/resources/reports/dbir/" target="_blank" rel="noopener noreferrer" className="text-(--accent-foreground) hover:underline underline-offset-2">
                     Verizon DBIR
                 </a>{" "}
                 notes, defenders who leverage AI-powered tools can identify and remediate vulnerabilities before attackers exploit them.

@@ -16,7 +16,7 @@ import { ANIMATE_FADE_IN_UP, TRANSITION_SMOOTH, staggerDelay } from "../../../as
 import { Card } from "../../../components/ui/Card";
 
 const ICON_COLORS = {
-    orange: "text-orange-400 bg-orange-400/10 dark:bg-orange-400/15 border-orange-400/20",
+    orange: "text-(--accent-icon) bg-orange-400/10 dark:bg-orange-400/15 border-orange-400/20",
     purple: "text-purple-400 bg-purple-400/10 dark:bg-purple-400/15 border-purple-400/20",
     danger: "text-danger-400 bg-danger-400/10 dark:bg-danger-400/15 border-danger-400/20",
     blue: "text-blue-400 bg-blue-400/10 dark:bg-blue-400/15 border-blue-400/20",
@@ -39,7 +39,7 @@ export default function StatCard({ icon, value, label, source, sourceUrl, color 
                             href={sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`inline-block text-[10px] text-orange-400 dark:text-orange-300 mt-1.5
+                            className={`inline-block text-[10px] text-(--accent-foreground) mt-1.5
                                 hover:underline underline-offset-2 font-aumovio ${TRANSITION_SMOOTH}`}
                         >
                             Source: {source} ↗

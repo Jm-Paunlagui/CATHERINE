@@ -37,7 +37,7 @@ function StepCard({ number, title, children, className = "" }) {
     return (
         <div className={`flex gap-4 ${className}`}>
             <div className="shrink-0 flex flex-col items-center">
-                <div className="w-8 h-8 rounded-full bg-orange-400 text-white flex items-center justify-center text-sm font-bold shadow-md shadow-orange-400/25">{number}</div>
+                <div className="w-8 h-8 rounded-full bg-orange-400 text-(--on-accent-text) flex items-center justify-center text-sm font-bold shadow-md shadow-orange-400/25">{number}</div>
                 <div className="flex-1 w-px bg-grey-300/30 dark:bg-grey-600/30 mt-2" />
             </div>
             <div className="pb-8 min-w-0 flex-1">
@@ -78,7 +78,7 @@ function EnvRow({ name, purpose }) {
     return (
         <tr className="border-b border-grey-200/30 dark:border-grey-700/30">
             <td className="py-2.5 pr-4">
-                <code className="text-xs font-mono px-1.5 py-0.5 rounded bg-orange-400/10 text-orange-400 dark:text-orange-300">{name}</code>
+                <code className="text-xs font-mono px-1.5 py-0.5 rounded bg-orange-400/10 text-(--accent-foreground)">{name}</code>
             </td>
             <td className={`py-2.5 text-sm ${BASE_COLOR_TEXT} opacity-80`}>{purpose}</td>
         </tr>
@@ -101,7 +101,7 @@ function GettingStartedContent() {
         <DocShell sections={SECTIONS}>
                     {/* ── Hero ──────────────────────────────────────────────────── */}
                     <header id="overview" className={`mb-12 scroll-mt-24 ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_0}`}>
-                        <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-2">Getting Started</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-(--accent-foreground) mb-2">Getting Started</p>
                         <h1 className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${TITLE_COLOR_TEXT}`}>
                             Set up the <span className={GRADIENT_COLOR_TEXT}>CATHERINE</span> Template
                         </h1>
@@ -166,7 +166,7 @@ cp .env.example .env`}</CodeBlock>
                             <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>Generate each secret (run this command once per secret):</p>
                             <CodeBlock title="Terminal">{`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`}</CodeBlock>
                             <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                                Set these in <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Backend/.env</code>:
+                                Set these in <code className="text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Backend/.env</code>:
                             </p>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
@@ -190,7 +190,7 @@ cp .env.example .env`}</CodeBlock>
 
                         <StepCard number={3} title="Enable Demo Mode">
                             <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                                Add this line to <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Backend/.env</code>:
+                                Add this line to <code className="text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Backend/.env</code>:
                             </p>
                             <CodeBlock title="Backend/.env">{`DEMO_MODE=true`}</CodeBlock>
                         </StepCard>
@@ -228,7 +228,7 @@ concurrently "cd Backend && npm start" "cd Frontend && npm run dev"`}</CodeBlock
 
                         <StepCard number={5} title="Open the app">
                             <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                                Open <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">http://192.168.0.193:5173</code> — your machine's LAN IP. CATHERINE binds to <code className="font-mono text-xs">0.0.0.0</code>, so use the IP, not localhost (see the <strong>CORS Setup</strong> guide). Log in with the demo credentials below to see the full observability dashboard, admin management, and changelog — all running without a database.
+                                Open <code className="text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">http://192.168.0.193:5173</code> — your machine's LAN IP. CATHERINE binds to <code className="font-mono text-xs">0.0.0.0</code>, so use the IP, not localhost (see the <strong>CORS Setup</strong> guide). Log in with the demo credentials below to see the full observability dashboard, admin management, and changelog — all running without a database.
                             </p>
                         </StepCard>
                     </section>
@@ -251,7 +251,7 @@ npm install`}</CodeBlock>
 
                         <StepCard number={3} title="Configure the database connection">
                             <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                                Set these in <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Backend/.env</code>:
+                                Set these in <code className="text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Backend/.env</code>:
                             </p>
                             <CodeBlock title="Backend/.env">{`DB_TYPE=oracle
 DB_HOST=localhost
@@ -358,7 +358,7 @@ cp .env.example .env`}</CodeBlock>
 
                         <StepCard number={2} title="Set environment variables">
                             <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                                Key variables in <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Frontend/.env</code>:
+                                Key variables in <code className="text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">Frontend/.env</code>:
                             </p>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
@@ -395,7 +395,7 @@ cp .env.example .env`}</CodeBlock>
 # Vite prints the Network URL → http://192.168.0.193:5173`}</CodeBlock>
 
                         <p className={`mt-6 text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                            Both servers bind to <code className="font-mono text-xs">0.0.0.0</code>, so use your machine's <strong>LAN IP</strong> (shown in Vite's <em>Network</em> line), not localhost. Health check: open <code className="text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">http://192.168.0.193:2108/api/v1/health</code> — it should return <code className="font-mono text-xs">{`{ "status": "success" }`}</code>. See the <strong>CORS Setup</strong> guide for details.
+                            Both servers bind to <code className="font-mono text-xs">0.0.0.0</code>, so use your machine's <strong>LAN IP</strong> (shown in Vite's <em>Network</em> line), not localhost. Health check: open <code className="text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded text-xs font-mono">http://192.168.0.193:2108/api/v1/health</code> — it should return <code className="font-mono text-xs">{`{ "status": "success" }`}</code>. See the <strong>CORS Setup</strong> guide for details.
                         </p>
                     </section>
 
@@ -419,7 +419,7 @@ cp .env.example .env`}</CodeBlock>
                                 <tbody>
                                     <tr className="border-b border-grey-200/20 dark:border-grey-700/20">
                                         <td className="px-4 py-3">
-                                            <code className="font-mono text-sm text-orange-400">admin</code>
+                                            <code className="font-mono text-sm text-(--accent-foreground)">admin</code>
                                         </td>
                                         <td className="px-4 py-3">
                                             <code className="font-mono text-sm text-grey-300">Demo@123</code>
@@ -433,7 +433,7 @@ cp .env.example .env`}</CodeBlock>
                                     </tr>
                                     <tr className="border-b border-grey-200/20 dark:border-grey-700/20">
                                         <td className="px-4 py-3">
-                                            <code className="font-mono text-sm text-orange-400">manager</code>
+                                            <code className="font-mono text-sm text-(--accent-foreground)">manager</code>
                                         </td>
                                         <td className="px-4 py-3">
                                             <code className="font-mono text-sm text-grey-300">Demo@123</code>
@@ -447,7 +447,7 @@ cp .env.example .env`}</CodeBlock>
                                     </tr>
                                     <tr>
                                         <td className="px-4 py-3">
-                                            <code className="font-mono text-sm text-orange-400">user</code>
+                                            <code className="font-mono text-sm text-(--accent-foreground)">user</code>
                                         </td>
                                         <td className="px-4 py-3">
                                             <code className="font-mono text-sm text-grey-300">Demo@123</code>

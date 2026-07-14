@@ -50,12 +50,12 @@ function CORSSetupContent() {
         <DocShell sections={SECTIONS}>
             {/* ── Hero ──────────────────────────────────────────────────────────── */}
             <header id="overview" className={`mb-12 scroll-mt-24 ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_0}`}>
-                <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-2">Getting Started</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-(--accent-foreground) mb-2">Getting Started</p>
                 <h1 className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${TITLE_COLOR_TEXT}`}>
                     <span className={GRADIENT_COLOR_TEXT}>CORS</span> Setup
                 </h1>
                 <p className={`mt-4 text-lg leading-relaxed ${BASE_COLOR_TEXT} opacity-80 max-w-2xl`}>
-                    CATHERINE binds to <strong>all network interfaces</strong> by default — so you reach it at your machine's <strong>LAN IP</strong>, not <code className="font-mono text-base text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded">localhost</code>. This page shows how to wire the frontend, the API base URL, and the backend's <code className="font-mono text-base">CORS_ORIGINS</code> so the browser is allowed to talk to the API.
+                    CATHERINE binds to <strong>all network interfaces</strong> by default — so you reach it at your machine's <strong>LAN IP</strong>, not <code className="font-mono text-base text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded">localhost</code>. This page shows how to wire the frontend, the API base URL, and the backend's <code className="font-mono text-base">CORS_ORIGINS</code> so the browser is allowed to talk to the API.
                 </p>
                 <div className="flex flex-wrap gap-2 mt-5">
                     <Badge variant="cyan" size="sm">
@@ -77,7 +77,7 @@ function CORSSetupContent() {
             <section id="lan-ip" className="mb-14 scroll-mt-24">
                 <h2 className={`text-2xl font-extrabold mb-2 ${TITLE_COLOR_TEXT}`}>Use Your LAN IP, Not localhost</h2>
                 <p className={`mb-6 ${BASE_COLOR_TEXT} opacity-75`}>
-                    Both servers bind to <code className="font-mono text-xs">0.0.0.0</code> (every interface), so the app is reachable from other devices on your network at your machine's IP — e.g. frontend <code className="font-mono text-xs text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded">http://192.168.0.193:5173</code>, API <code className="font-mono text-xs text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded">http://192.168.0.193:2108</code>. <code className="font-mono text-xs">localhost</code> only works on the host machine itself.
+                    Both servers bind to <code className="font-mono text-xs">0.0.0.0</code> (every interface), so the app is reachable from other devices on your network at your machine's IP — e.g. frontend <code className="font-mono text-xs text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded">http://192.168.0.193:5173</code>, API <code className="font-mono text-xs text-(--accent-foreground) bg-orange-400/10 px-1.5 py-0.5 rounded">http://192.168.0.193:2108</code>. <code className="font-mono text-xs">localhost</code> only works on the host machine itself.
                 </p>
 
                 <div className="grid gap-4 sm:grid-cols-2 mb-6">

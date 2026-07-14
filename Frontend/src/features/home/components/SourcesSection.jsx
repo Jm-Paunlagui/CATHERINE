@@ -53,7 +53,7 @@ export default function SourcesSection() {
                     <a key={ref.url} href={ref.url} target="_blank" rel="noopener noreferrer" className={`block p-4 rounded-xl ${BASE_COLOR_BG} ${STANDARD_BORDER} ${TRANSITION_SMOOTH} hover:border-orange-400/30 group`}>
                         <div className="flex items-center justify-between gap-2">
                             <span className={`text-sm font-aumovio-bold ${TITLE_COLOR_TEXT}`}>{ref.title}</span>
-                            <span className={`text-xs text-orange-400 ${TRANSITION_SMOOTH} group-hover:translate-x-0.5`}>↗</span>
+                            <span className={`text-xs text-(--accent-icon) ${TRANSITION_SMOOTH} group-hover:translate-x-0.5`}>↗</span>
                         </div>
                         <p className={`text-xs mt-1 ${BASE_COLOR_TEXT} opacity-70`}>{ref.desc}</p>
                     </a>

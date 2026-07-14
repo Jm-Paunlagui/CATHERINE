@@ -75,7 +75,7 @@ function MiraOrmContent() {
         <DocShell sections={SECTIONS}>
             {/* ── Hero ──────────────────────────────────────────────────────────── */}
             <header id="overview" className={`mb-12 scroll-mt-24 ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_0}`}>
-                <p className="text-xs font-bold uppercase tracking-widest text-orange-400 mb-2">Getting Started</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-(--accent-foreground) mb-2">Getting Started</p>
                 <h1 className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${TITLE_COLOR_TEXT}`}>
                     <span className={GRADIENT_COLOR_TEXT}>Mira</span> ORM
                 </h1>

@@ -22,10 +22,10 @@ const STACKS = [
     },
     {
         icon: faServer,
-        iconColor: "text-orange-400",
+        iconColor: "text-(--accent-icon)",
         iconBg: "bg-orange-400/10 dark:bg-orange-400/15 border-orange-400/20",
         title: "Backend",
-        checkColor: "text-orange-400",
+        checkColor: "text-(--accent-icon)",
         items: ["Node.js + Express v5", "Class-based OOP architecture", "14-step middleware chain", "catchAsync on every controller", "AppError standardized errors", "Structured logger (no console.log)"],
     },
     {

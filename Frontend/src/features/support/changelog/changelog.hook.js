@@ -88,6 +88,8 @@ export function useChangelog() {
     const [entries, setEntries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
+    /** Inline API error `{ message, requestId }` — displayed via ApiErrorAlert. */
+    const [apiError, setApiError] = useState(null);
 
     // Survives React Strict Mode's artificial unmount/remount — prevents
     // fetchEntries from firing a second network request on the remount.
@@ -159,12 +161,14 @@ export function useChangelog() {
 
     // ── Create (single write path for content + release markers) ────────────────
     const closeCreate = useCallback(() => {
+        setApiError(null);
         setCreateOpen(false);
         setForm(EMPTY_FORM);
     }, []);
 
     /** Opens the form for a plain in-cycle content build (the next iteration). */
     const openCreate = useCallback(() => {
+        setApiError(null);
         const d = releaseState?.drafts?.content;
         setForm({
             ...EMPTY_FORM,
@@ -172,7 +176,6 @@ export function useChangelog() {
             version: d?.version ?? "",
             type: d?.type ?? "feat",
         });
-        setApiError(null);
         setCreateOpen(true);
     }, [releaseState]);
 
@@ -194,12 +197,8 @@ export function useChangelog() {
         setCreateOpen(true);
     }, []);
 
-    // ── Inline API error state (replaces toast for form/modal actions) ─────────
-    const [apiError, setApiError] = useState(null);
-
     const handleCreate = useCallback(async () => {
         setSaving(true);
-        setApiError(null);
         try {
             const payload = buildPayload(form);
             const res = await changelogApi.create(payload);
@@ -217,8 +216,8 @@ export function useChangelog() {
 
     // ── Edit ──────────────────────────────────────────────────────────────────
     const openEdit = useCallback((entry) => {
-        setEditTarget(entry);
         setApiError(null);
+        setEditTarget(entry);
         setForm({
             displayDate: entry.displayDate ?? "",
             version: entry.version ?? "",
@@ -232,6 +231,7 @@ export function useChangelog() {
     }, []);
 
     const closeEdit = useCallback(() => {
+        setApiError(null);
         setEditTarget(null);
         setForm(EMPTY_FORM);
     }, []);
@@ -255,8 +255,14 @@ export function useChangelog() {
     }, [editTarget, form, fetchEntries, fetchReleaseState, refreshVersionBadge, closeEdit]);
 
     // ── Delete ────────────────────────────────────────────────────────────────
-    const openDelete = useCallback((entry) => setDeleteTarget(entry), []);
-    const closeDelete = useCallback(() => setDeleteTarget(null), []);
+    const openDelete = useCallback((entry) => {
+        setApiError(null);
+        setDeleteTarget(entry);
+    }, []);
+    const closeDelete = useCallback(() => {
+        setApiError(null);
+        setDeleteTarget(null);
+    }, []);
 
     const handleDelete = useCallback(async () => {
         if (!deleteTarget) return;
