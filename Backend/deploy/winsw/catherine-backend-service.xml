@@ -1,0 +1,42 @@
+<!--
+  WinSW service definition for the CATHERINE backend exe.
+
+  This file is a TEMPLATE tracked in the repo. install-service.ps1 copies it
+  into the dist folder next to the backend exe and the (renamed) WinSW
+  wrapper, where %BASE% resolves to that dist folder — so every relative
+  runtime path (.env, certs\, data\, logs\) lands beside the exe.
+
+  Docs: https://github.com/winsw/winsw/blob/v2.12.0/doc/xmlConfigFile.md
+-->
+<service>
+  <id>catherine-backend</id>
+  <name>CATHERINE Backend</name>
+  <description>CATHERINE template backend (Express 5 + OracleDB, compiled exe). Auto-starts after server reboot; restarts on crash.</description>
+
+  <!-- %BASE% = folder containing the wrapper exe = the dist folder -->
+  <executable>%BASE%\catherine-backend.exe</executable>
+  <workingdirectory>%BASE%</workingdirectory>
+
+  <!-- Start automatically at boot; delayed so network + Oracle are up first -->
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+
+  <!-- Crash supervision: restart 10s after any non-zero/unexpected exit -->
+  <onfailure action="restart" delay="10 sec"/>
+
+  <!-- Window for the backend's graceful shutdown (pool close, audit flush) -->
+  <stoptimeout>20 sec</stoptimeout>
+
+  <!-- Wrapper captures the exe's stdout/stderr (banner, [FATAL] lines) here.
+       The app's own structured logs still go to %BASE%\logs\ as usual. -->
+  <log mode="roll">
+    <logpath>%BASE%\service-logs</logpath>
+  </log>
+
+  <!-- Run under a named account. Credentials are PROMPTED at install time —
+       never stored in this file. WinSW grants "Log on as a service". -->
+  <serviceaccount>
+    <prompt>console</prompt>
+    <allowservicelogon>true</allowservicelogon>
+  </serviceaccount>
+</service>

@@ -24,3 +24,5 @@ Thumbs.db
 
 .env
 certs/
+# WinSW service wrapper binary — drop into deploy/winsw/, never commit
+deploy/winsw/WinSW-x64.exe

@@ -21,8 +21,8 @@
         "simulate:excess": "node scripts/simulate-excess-deduction.js",
         "simulate:excess:verify": "node scripts/verify-simulate-excess-deduction.js",
         "simulate:excess:teardown": "node scripts/simulate-excess-deduction.js --teardown",
-        "build": "pkg . --out-path dist --targets node18-win-x64",
-        "build:debug": "pkg . --out-path dist --targets node18-win-x64 --debug",
+        "build": "pkg . --out-path dist --targets node18-win-x64 --no-bytecode --public --public-packages=*",
+        "build:debug": "pkg . --out-path dist --targets node18-win-x64 --no-bytecode --public --public-packages=* --debug",
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
@@ -76,7 +76,6 @@
             "src/**/*.json",
             "src/**/*.png",
             "src/**/*.ttf",
-            ".env",
             "node_modules/axios/dist/node/axios.cjs",
             "node_modules/axios/package.json",
             "node_modules/axios/lib/**/*",
@@ -93,11 +92,7 @@
         "targets": [
             "node18-win-x64"
         ],
-        "outputPath": "dist",
-        "options": [
-            "--no-bytecode",
-            "--public-packages=*"
-        ]
+        "outputPath": "dist"
     },
     "devDependencies": {
         "@vitest/coverage-v8": "^4.1.9",

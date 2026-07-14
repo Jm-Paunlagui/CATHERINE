@@ -36,8 +36,14 @@ const path = require("path");
 const { logger } = require("../utils/logger");
 
 const CONFIG = Object.freeze({
-    /** Root of the fallback store: `<cwd>/logs/Main`. */
-    BASE_DIR: path.join(process.cwd(), "logs", "Main"),
+    /**
+     * Root of the fallback store: `logs/Main` under the log base — next to
+     * the exe in compiled (pkg) builds (services may start the exe with cwd
+     * anywhere), the working directory otherwise. Mirrors logger.js.
+     */
+    BASE_DIR: process.pkg
+        ? path.join(path.dirname(process.execPath), "logs", "Main")
+        : path.join(process.cwd(), "logs", "Main"),
     /** Base filename — rotates to `audit_1.log`, `audit_2.log`, … */
     BASE_NAME: "audit",
     /** Rotation threshold — same 50 MB cap logger.js uses. */

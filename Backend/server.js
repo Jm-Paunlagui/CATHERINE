@@ -18,8 +18,16 @@ if (!process.env.UV_THREADPOOL_SIZE) {
 // NOTE: "use strict" cannot precede the polyfill require above, so each module
 // declares its own strict mode via the "use strict" directive at the top.
 
+// In compiled (pkg) builds resolve .env NEXT TO THE EXE, not the working
+// directory — a service/scheduled-task can start the exe with cwd anywhere
+// (e.g. System32), and bootGuard reads process.env immediately below.
+const path = require("path");
 const dotenv = require("dotenv");
-dotenv.config({ path: ".env" });
+dotenv.config({
+    path: process.pkg
+        ? path.join(path.dirname(process.execPath), ".env")
+        : ".env",
+});
 
 // ─── Boot guard — fail-fast on placeholder secrets / unsafe config ────────────
 // Must run after dotenv.config() but before any app/db requires so the process
@@ -31,7 +39,6 @@ const cluster = require("cluster");
 const os = require("os");
 const http = require("http");
 const fs = require("fs");
-const path = require("path");
 
 const { logger } = require("./src/utils/logger");
 const { consoleManager } = require("./src/utils/consoleManager");
@@ -279,12 +286,22 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
     process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
+    // Fatal-path rule: write to stderr SYNCHRONOUSLY before the logger — the
+    // logger's write queue is async and a shutdown that follows immediately
+    // loses every queued line, turning a fatal boot error into a silent exit
+    // (exactly how compiled exes died with no output).
     process.on("unhandledRejection", (reason) => {
+        const detail =
+            reason instanceof Error ? (reason.stack ?? reason.message) : String(reason);
+        process.stderr.write(`\n[FATAL] Unhandled rejection: ${detail}\n`);
         logger.error("Unhandled rejection", { error: reason });
         gracefulShutdown("unhandledRejection");
     });
 
     process.on("uncaughtException", (err) => {
+        process.stderr.write(
+            `\n[FATAL] Uncaught exception: ${err.stack ?? err.message}\n`,
+        );
         logger.error("Uncaught exception", {
             error: err.message,
             stack: err.stack,

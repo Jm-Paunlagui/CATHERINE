@@ -64,7 +64,11 @@ class Logger {
             SEPARATOR: "\x1b[37m",
         },
 
-        LOG_BASE_DIR: path.join(process.cwd(), "logs"),
+        // In compiled (pkg) builds logs live NEXT TO THE EXE — a service can
+        // start the exe with cwd anywhere (e.g. System32).
+        LOG_BASE_DIR: process.pkg
+            ? path.join(path.dirname(process.execPath), "logs")
+            : path.join(process.cwd(), "logs"),
 
         /**
          * Accepts all 8 RFC 5424 level names case-insensitively.
