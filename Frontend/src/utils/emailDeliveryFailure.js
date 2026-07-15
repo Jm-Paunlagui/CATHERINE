@@ -34,19 +34,23 @@
  * @param {string} flow - Flow discriminator forwarded verbatim to `<EmailFailureModal>`
  *   (an app-chosen label, e.g. `'record-submit'` — the modal passes it on to
  *   the caller's `renderItem` so one modal can serve several flows).
- * @returns {{ flow: string, smtpCause: string|null, items: Array<object> } | null}
+ * @param {string|null} [requestId] - The response envelope's root-level `requestId`
+ *   (`res.data?.requestId`), injected by the backend's `TraceabilityMiddleware` into
+ *   every JSON response. Forwarded to `<EmailFailureModal>` so the operator can quote
+ *   it to support when tracing the failed-delivery incident in the Audit Logs.
+ * @returns {{ flow: string, smtpCause: string|null, items: Array<object>, requestId: string|null } | null}
  *
  * @example
  * const res = await recordApi.submit(payload);
- * const failure = extractEmailFailure(res.data?.data, "record-submit");
+ * const failure = extractEmailFailure(res.data?.data, "record-submit", res.data?.requestId ?? null);
  * if (failure) setEmailFailure(failure);
  */
-export function extractEmailFailure(data, flow) {
+export function extractEmailFailure(data, flow, requestId = null) {
     const emailDelivery = data?.emailDelivery;
     if (!emailDelivery) return null;
 
     if (Array.isArray(emailDelivery.failedItems) && emailDelivery.failedItems.length > 0) {
-        return { flow, smtpCause: emailDelivery.smtpCause ?? null, items: emailDelivery.failedItems };
+        return { flow, smtpCause: emailDelivery.smtpCause ?? null, items: emailDelivery.failedItems, requestId };
     }
 
     if (emailDelivery.status === "FAILED") {
@@ -66,6 +70,7 @@ export function extractEmailFailure(data, flow) {
                     cause: emailDelivery.cause ?? emailDelivery.smtpCause ?? null,
                 },
             ],
+            requestId,
         };
     }
 

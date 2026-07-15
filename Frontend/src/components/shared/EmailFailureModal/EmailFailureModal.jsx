@@ -26,6 +26,7 @@
 
 import { faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import RequestIdTag from "../../feedback/RequestIdTag";
 import Alert from "../../ui/Alert";
 import Button from "../../ui/Button";
 import Card from "../../ui/Card";
@@ -71,10 +72,11 @@ function DefaultItemPreview({ item, index }) {
  * @param {string} [props.flow] - Optional flow discriminator supplied by the calling feature (forwarded to `renderItem` so one modal instance can serve several flows).
  * @param {string|null} [props.smtpCause] - The SMTP failure cause surfaced by the backend (`emailDelivery.smtpCause` / `emailDelivery.cause`).
  * @param {Array<object>} [props.items] - Undelivered items — `[{ emailPayload, recipient, cause }]` (see `utils/emailDeliveryFailure.js`).
+ * @param {string|null} [props.requestId] - Server-assigned Request ID (`res.data?.requestId`) for support/audit-log tracing of this incident, rendered as a click-to-copy tag.
  * @param {() => void} props.onDismiss - Called when the operator confirms they have captured the content.
  * @param {(item: object, index: number, flow: string|undefined) => import("react").ReactNode} [props.renderItem] - App-specific preview renderer for each item; defaults to a labelled-rows card.
  */
-export function EmailFailureModal({ open, flow, smtpCause, items = [], onDismiss, renderItem }) {
+export function EmailFailureModal({ open, flow, smtpCause, items = [], requestId = null, onDismiss, renderItem }) {
     const count = Array.isArray(items) ? items.length : 0;
 
     return (
@@ -99,6 +101,7 @@ export function EmailFailureModal({ open, flow, smtpCause, items = [], onDismiss
                         <p className="text-xs text-black/50 dark:text-white/45 mt-0.5">
                             {count} recipient{count !== 1 ? "s" : ""} did not receive this notification.
                         </p>
+                        <RequestIdTag requestId={requestId} className="mt-1 text-[11px] text-black/45 dark:text-white/40 hover:text-(--accent-foreground)" />
                     </div>
                 </div>
 

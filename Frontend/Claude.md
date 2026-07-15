@@ -82,6 +82,7 @@
 | **Layout / routing**     |                         |                                       |
 | Auth guard               | `ProtectedRoute`        | `components/routing/ProtectedRoute`   |
 | Error catch              | `ErrorBoundary`         | `components/feedback/ErrorBoundary`   |
+| Copyable Request ID      | `RequestIdTag`          | `components/feedback/RequestIdTag`    |
 | Loading indicator        | `LoadingSpinner`        | `components/feedback/LoadingSpinner`  |
 | Toast utilities          | `toast`                 | `components/ui/toast.utils`           |
 

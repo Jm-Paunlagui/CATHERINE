@@ -3,8 +3,8 @@
  *
  * Renders a danger Alert with the error message and, when present, the
  * structured error type, field-level details, and hint returned by the
- * backend's `sendError` shape. A small copyable Request ID line is shown
- * last for support reference.
+ * backend's `sendError` shape. The shared `RequestIdTag` (click-to-copy,
+ * with a react-icons/lu copy icon) is shown last for support reference.
  *
  * Backward compatible: old `{ message, requestId }` objects render fine —
  * all new fields are optional.
@@ -16,15 +16,10 @@
  */
 
 import Alert from "../ui/Alert";
+import RequestIdTag from "./RequestIdTag";
 
 export default function ApiErrorAlert({ error, onDismiss, className = "" }) {
     if (!error) return null;
-
-    const handleCopy = () => {
-        if (error.requestId) {
-            navigator.clipboard?.writeText(error.requestId).catch(() => {});
-        }
-    };
 
     return (
         <Alert variant="danger" size="sm" dismissible onDismiss={onDismiss} className={className}>
@@ -53,12 +48,8 @@ export default function ApiErrorAlert({ error, onDismiss, className = "" }) {
             {/* Hint */}
             {error.hint && <p className="mt-1.5 text-xs italic opacity-70 dark:opacity-60">{error.hint}</p>}
 
-            {/* Request ID copy button */}
-            {error.requestId && (
-                <button type="button" onClick={handleCopy} className="mt-1 text-[10px] font-mono opacity-60 hover:opacity-100 cursor-copy transition-opacity" title="Click to copy Request ID">
-                    Request ID: {error.requestId}
-                </button>
-            )}
+            {/* Request ID copy tag */}
+            <RequestIdTag requestId={error.requestId} className="mt-1 text-[10px] opacity-60 hover:opacity-100" />
         </Alert>
     );
 }

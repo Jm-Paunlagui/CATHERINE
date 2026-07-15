@@ -21,13 +21,13 @@
 
 import { Component } from "react";
 import clientLogger from "../../utils/clientLogger";
+import RequestIdTag from "./RequestIdTag";
 
 export class ErrorBoundary extends Component {
     constructor(props) {
         super(props);
         this.state = { hasError: false, error: null, requestId: null };
         this.handleReset = this.handleReset.bind(this);
-        this.handleCopyRequestId = this.handleCopyRequestId.bind(this);
     }
 
     static getDerivedStateFromError(error) {
@@ -49,11 +49,6 @@ export class ErrorBoundary extends Component {
         this.setState({ hasError: false, error: null, requestId: null });
     }
 
-    handleCopyRequestId() {
-        const rid = this.state.requestId;
-        if (rid) navigator.clipboard?.writeText(rid).catch(() => {});
-    }
-
     render() {
         if (!this.state.hasError) return this.props.children;
         if (this.props.fallback) return this.props.fallback;
@@ -70,17 +65,8 @@ export class ErrorBoundary extends Component {
                 </div>
                 <h2 className="text-base font-aumovio-bold text-black/85 dark:text-white/85 mb-1">Something went wrong</h2>
                 <p className="text-sm font-aumovio text-grey-500 dark:text-grey-400 mb-4 max-w-xs">An unexpected error occurred. Refresh the page or contact support if it persists.</p>
-                {requestId && (
-                    <button
-                        type="button"
-                        onClick={this.handleCopyRequestId}
-                        className="text-[11px] font-mono text-grey-400 dark:text-grey-500 mb-3
-                            hover:text-(--accent-foreground) cursor-copy transition-colors"
-                        title="Click to copy — share this ID with support"
-                    >
-                        Request ID: {requestId}
-                    </button>
-                )}
+                <RequestIdTag requestId={requestId} className="mb-3 text-[11px] text-grey-400 dark:text-grey-500 hover:text-(--accent-foreground)" title="Click to copy — share this ID with support" />
+
                 <button
                     onClick={this.handleReset}
                     className="px-4 py-2 text-sm font-aumovio-bold text-(--accent-foreground)
