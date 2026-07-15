@@ -294,7 +294,7 @@ export default function Sidebar() {
                 <nav className="flex-1 overflow-y-auto hide-scrollbar px-2 py-3 space-y-0.5">
                     {!isAuth && publicLinks.map((item) => <FlatNavItem key={item.name} item={item} collapsed={false} />)}
                     {isAuth && authFlatLinks.map((item) => <FlatNavItem key={item.name} item={item} collapsed={false} colorKey="orange" />)}
-                    {isAuth && navGroups.map((group) => <SidebarGroup key={group.label} group={group} collapsed={false} currentPath={pathname} />)}
+                    {navGroups.map((group) => <SidebarGroup key={group.label} group={group} collapsed={false} currentPath={pathname} />)}
                 </nav>
             </aside>
         </>

@@ -8,7 +8,7 @@
  * - Supports "top" (navbar) and "sidebar" layout modes via LayoutContext
  */
 
-import { Suspense, lazy, useEffect } from "react";
+import { Component, Suspense, lazy, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -21,6 +21,7 @@ import Sidebar from "./components/layout/Sidebar";
 import SidebarHeader from "./components/layout/SidebarHeader";
 import ProtectedRoute from "./components/routing/ProtectedRoute";
 import Breadcrumb from "./components/ui/Breadcrumb";
+import Button from "./components/ui/Button";
 import { useLayout } from "./contexts/layout/LayoutContext";
 import { BadRequest, InvalidToken, LoginTimeOut, PageNotFound, ServiceUnavailable, SignatureMismatch, Unauthorized } from "./views/errors/ClientErrorResponses";
 
@@ -125,6 +126,65 @@ function PageLoader() {
     );
 }
 
+// A stale-chunk failure happens when a lazy `import()` resolves to a JS/CSS
+// filename that no longer exists on the server (a new IIS deploy rotated the
+// hashed filenames after this tab already loaded index.html). The browser's
+// module loader throws one of these messages — never a React-specific error.
+const CHUNK_ERROR_PATTERN = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
+
+// sessionStorage guard so a genuinely broken deploy (chunk missing even after
+// reload) can't trap the tab in a reload loop — we only ever auto-reload once
+// per tab session, then fall back to a manual "Reload" prompt.
+const CHUNK_RELOAD_KEY = "chunk-reload";
+
+// Catches errors thrown while committing a lazy route (both the
+// removeChildFromContainer NotFoundError seen during a route transition and
+// stale dynamic-import failures) so AppRoutes never unmounts to a blank page.
+// Sits inside the Suspense boundary — only the route content is replaced by
+// the fallback, the surrounding shell (Navbar/Sidebar/Footer) stays mounted.
+class RouteErrorBoundary extends Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, isChunkError: false };
+        this.handleReload = this.handleReload.bind(this);
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, isChunkError: CHUNK_ERROR_PATTERN.test(error?.message || "") };
+    }
+
+    componentDidMount() {
+        // Reaching a clean mount means the current route committed without
+        // throwing — clear the one-shot guard so the next stale-chunk deploy
+        // can trigger an auto-reload again instead of staying suppressed forever.
+        sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+    }
+
+    componentDidCatch(error) {
+        if (!CHUNK_ERROR_PATTERN.test(error?.message || "")) return;
+        if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return; // already tried once this session — avoid a reload loop
+        sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+        window.location.reload();
+    }
+
+    handleReload() {
+        window.location.reload();
+    }
+
+    render() {
+        if (!this.state.hasError) return this.props.children;
+
+        return (
+            <div className="flex flex-col items-center justify-center min-h-55 p-6 text-center gap-3">
+                <p className="text-sm font-aumovio text-grey-500 dark:text-grey-400 max-w-xs">{this.state.isChunkError ? "A new version of this app is available. Reloading…" : "Something went wrong loading this page."}</p>
+                <Button variant="primary" size="sm" onClick={this.handleReload}>
+                    Reload
+                </Button>
+            </div>
+        );
+    }
+}
+
 function AppContent() {
     const { pathname } = useLocation();
     const { layout } = useLayout();
@@ -149,7 +209,9 @@ function AppContent() {
                 <div id="app-main-scroll" className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${isSidebar ? "overflow-y-auto" : ""}`}>
                     <main className="grow">
                         <Suspense fallback={<PageLoader />}>
-                            <AppRoutes />
+                            <RouteErrorBoundary>
+                                <AppRoutes />
+                            </RouteErrorBoundary>
                         </Suspense>
                     </main>
                     <ConditionalFooter />

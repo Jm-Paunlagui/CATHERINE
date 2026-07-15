@@ -13,6 +13,7 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { ErrorBoundary } from "./components/feedback/ErrorBoundary";
 import LoadingScreen from "./components/layout/LoadingScreen";
 import { LayoutProvider } from "./contexts/layout/LayoutContext";
 import { CsrfProvider, useCsrf } from "./contexts/security/CsrfContext";
@@ -64,7 +65,9 @@ createRoot(document.getElementById("root")).render(
                     <CsrfGate>
                         <LayoutProvider>
                             <VersionProvider>
-                                <App />
+                                <ErrorBoundary>
+                                    <App />
+                                </ErrorBoundary>
                             </VersionProvider>
                         </LayoutProvider>
                     </CsrfGate>

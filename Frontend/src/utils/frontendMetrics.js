@@ -12,7 +12,9 @@
  *
  * BUFFER POLICY:
  *   - Flushes automatically every 30 s via setInterval.
- *   - Flushes immediately when the buffer reaches 20 items.
+ *   - Vitals flush immediately when the buffer reaches 20 items.
+ *   - Errors flush immediately on every recordError() call — crash telemetry
+ *     must not wait in the buffer, since the tab may be blank/abandoned right after.
  *   - On flush failure: retries once after 5 s.
  *   - If buffer exceeds 100 items before a successful flush, oldest items are dropped.
  *
@@ -186,7 +188,9 @@ export const frontendMetrics = {
   /**
    * Record a JavaScript error.
    * Message and stack are truncated to prevent large payloads and info leakage.
-   * Auto-flushes when buffer reaches AUTO_FLUSH_THRESHOLD items.
+   * Always flushes immediately (unlike recordVital, which waits for the
+   * threshold/timer) — crash telemetry must not sit in the buffer if the tab
+   * is abandoned or unmounted right after the error.
    *
    * @param {Error|string} error   - Error object or message string
    * @param {object} [context={}]  - Additional context (page, component, etc.)
@@ -219,9 +223,11 @@ export const frontendMetrics = {
       ts: new Date().toISOString(),
     });
 
-    if (_buffer.length >= AUTO_FLUSH_THRESHOLD) {
-      frontendMetrics.flush();
-    }
+    // Errors flush immediately rather than waiting for the 20-item threshold or
+    // the 30 s timer — a crash that leads to a blank/abandoned tab (e.g. the
+    // removeChildFromContainer unmount case) never gets another chance to flush.
+    // _send() already uses fetch keepalive: true, so this is safe on unload.
+    frontendMetrics.flush();
   },
 
   /**
