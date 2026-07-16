@@ -96,15 +96,46 @@ describe("AuditLogModel — storage routing", function () {
             expect(insertManyMock).not.toHaveBeenCalled();
         });
 
-        it("read methods return the file model's empty stub shapes", async function () {
-            expect(await AuditLogModel.findPaginated({}, 1, 20)).toEqual([]);
-            expect(await AuditLogModel.countTotal({})).toBe(0);
-            expect(await AuditLogModel.getLatestCreatedAt()).toBe(0);
-            expect(await AuditLogModel.aggregate({})).toMatchObject({
-                total: 0,
-                uniqueUsers: 0,
-                avgResponseTime: 0,
+        it("read methods delegate to the file model", async function () {
+            const findSpy = vi
+                .spyOn(AuditLogFileModel, "findPaginated")
+                .mockResolvedValue([{ id: 1 }]);
+            const countSpy = vi
+                .spyOn(AuditLogFileModel, "countTotal")
+                .mockResolvedValue(5);
+            const latestSpy = vi
+                .spyOn(AuditLogFileModel, "getLatestCreatedAt")
+                .mockResolvedValue(1234567890);
+            const aggSpy = vi
+                .spyOn(AuditLogFileModel, "aggregate")
+                .mockResolvedValue({
+                    total: 10,
+                    success: 8,
+                    redirect: 1,
+                    clientError: 1,
+                    serverError: 0,
+                    uniqueUsers: 3,
+                    avgResponseTime: 42,
+                });
+
+            expect(await AuditLogModel.findPaginated({}, 1, 20)).toEqual([
+                { id: 1 },
+            ]);
+            expect(findSpy).toHaveBeenCalledWith({}, 1, 20);
+
+            expect(await AuditLogModel.countTotal({})).toBe(5);
+            expect(countSpy).toHaveBeenCalledWith({});
+
+            expect(await AuditLogModel.getLatestCreatedAt()).toBe(1234567890);
+            expect(latestSpy).toHaveBeenCalled();
+
+            const agg = await AuditLogModel.aggregate({});
+            expect(agg).toMatchObject({
+                total: 10,
+                uniqueUsers: 3,
+                avgResponseTime: 42,
             });
+            expect(aggSpy).toHaveBeenCalled();
         });
     });
 
@@ -176,9 +207,7 @@ describe("AuditLogModel — storage routing", function () {
 
         it("AUDIT_LOG_TABLE overrides both defaults", function () {
             process.env.AUDIT_LOG_TABLE = "T_MY_CUSTOM_AUDIT";
-            expect(AuditLogModel.storageInfo().table).toBe(
-                "T_MY_CUSTOM_AUDIT",
-            );
+            expect(AuditLogModel.storageInfo().table).toBe("T_MY_CUSTOM_AUDIT");
         });
     });
 });
