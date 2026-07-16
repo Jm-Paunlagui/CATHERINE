@@ -7,11 +7,12 @@ import Pagination from "../../../../components/ui/Pagination";
 import Skeleton from "../../../../components/ui/Skeleton";
 import { Table } from "../../../../components/ui/Table";
 import Tooltip from "../../../../components/ui/Tooltip";
+import { copyToClipboard } from "../../../../utils/clipboard";
 
 // ─── Colour maps ───────────────────────────────────────────────────────────────
 
 const METHOD_COLORS = {
-    GET: "bg-blue-400/15 text-blue-400",
+    GET: "bg-blue-400/15 text-(--blue-foreground)",
     POST: "bg-success-400/15 text-success-400",
     PUT: "bg-warn-400/15 text-warn-400",
     PATCH: "bg-warn-400/20 text-warn-400",
@@ -23,7 +24,7 @@ const METHOD_COLORS = {
 function getStatusCodeStyle(code) {
     const n = Number(code) || 0;
 
-    if (n >= 100 && n < 200) return "bg-blue-400/15 text-blue-400";
+    if (n >= 100 && n < 200) return "bg-blue-400/15 text-(--blue-foreground)";
 
     if (n >= 200 && n < 300) {
         if (n <= 201) return "bg-success-300/15 text-success-300";
@@ -33,10 +34,10 @@ function getStatusCodeStyle(code) {
     }
 
     if (n >= 300 && n < 400) {
-        if (n === 304) return "bg-turquoise-300/15 text-turquoise-300";
-        if (n === 301 || n === 302) return "bg-turquoise-400/15 text-turquoise-400";
-        if (n <= 308) return "bg-turquoise-500/15 text-turquoise-500";
-        return "bg-turquoise-600/15 text-turquoise-600";
+        if (n === 304) return "bg-turquoise-300/15 text-(--turquoise-foreground)";
+        if (n === 301 || n === 302) return "bg-turquoise-400/15 text-(--turquoise-foreground)";
+        if (n <= 308) return "bg-turquoise-500/15 text-(--turquoise-foreground)";
+        return "bg-turquoise-600/15 text-(--turquoise-foreground)";
     }
 
     if (n >= 400 && n < 500) {
@@ -99,8 +100,20 @@ function renderCell(row, col) {
         case "CREATED_AT":
             return new Date(row.CREATED_AT).toLocaleString();
 
-        case "REQUEST_ID":
-            return <span className="font-mono text-xs text-grey-600 dark:text-white/60">{row.REQUEST_ID ?? "—"}</span>;
+        case "REQUEST_ID": {
+            const rid = row.REQUEST_ID ?? "";
+            if (!rid) return <span className="text-grey-300 dark:text-white/20">—</span>;
+            // Show last 8 chars with full ID on hover + click-to-copy
+            const short = rid.length > 12 ? `…${rid.slice(-8)}` : rid;
+            const handleCopy = () => copyToClipboard(rid);
+            return (
+                <Tooltip content={`Click to copy: ${rid}`}>
+                    <button type="button" onClick={handleCopy} className="font-mono text-[11px] text-(--blue-foreground)/80 hover:text-(--blue-foreground) cursor-copy transition-colors" title={rid}>
+                        {short}
+                    </button>
+                </Tooltip>
+            );
+        }
 
         case "USERNAME":
             return row.USERNAME || "—";

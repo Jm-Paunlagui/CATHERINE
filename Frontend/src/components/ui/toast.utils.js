@@ -1,23 +1,28 @@
 import { createElement } from "react";
 import { toast as t } from "react-toastify";
+import { copyToClipboard } from "../../utils/clipboard";
 
 /**
  * Extract a standardised error shape from an Axios error for `<ApiErrorAlert>`.
  *
- * Returns the server message, requestId, and — when the backend includes them —
- * the structured `error.type`, `error.details`, and `error.hint` fields.
- * `error.stack` is **never** extracted (CWE-209 — stack traces must not render
- * in the UI even when the server includes them in development mode).
+ * Returns the server title, HTTP code, message, requestId, and — when the
+ * backend includes them — the structured `error.type`, `error.details`, and
+ * `error.hint` fields. `error.stack` is **never** extracted (CWE-209 — stack
+ * traces must not render in the UI even when the server includes them in
+ * development mode).
  *
  * @param {Error & { response?: object, requestId?: string }} err
  * @param {string} [fallbackMsg="An unexpected error occurred."]
- * @returns {{ message: string, requestId: string|null, type: string|null, details: Array<{field:string,issue:string}>|null, hint: string|null }}
+ * @returns {{ title: string|null, code: number|null, message: string, requestId: string|null, type: string|null, details: Array<{field:string,issue:string}>|null, hint: string|null }}
  */
 export function extractApiError(err, fallbackMsg = "An unexpected error occurred.") {
-    const errBody = err?.response?.data?.error;
+    const data = err?.response?.data;
+    const errBody = data?.error;
     return {
-        message: err?.response?.data?.message ?? fallbackMsg,
-        requestId: err?.requestId ?? err?.response?.data?.requestId ?? null,
+        title: data?.title ?? null,
+        code: data?.code ?? err?.response?.status ?? null,
+        message: data?.message ?? fallbackMsg,
+        requestId: err?.requestId ?? data?.requestId ?? null,
         type: errBody?.type ?? null,
         details: Array.isArray(errBody?.details) ? errBody.details : null,
         hint: errBody?.hint ?? null,
@@ -31,7 +36,7 @@ export function extractApiError(err, fallbackMsg = "An unexpected error occurred
  */
 function ApiErrorContent({ message, requestId }) {
     const handleCopy = () => {
-        if (requestId) navigator.clipboard?.writeText(requestId).catch(() => {});
+        if (requestId) copyToClipboard(requestId);
     };
     return createElement(
         "div",

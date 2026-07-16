@@ -9,18 +9,18 @@
  */
 import { ClipboardDocumentCheckIcon, ClipboardIcon } from "@heroicons/react/24/outline";
 import { useCallback, useState } from "react";
+import { copyToClipboard } from "../../utils/clipboard";
 
 export function Clipboard({ value = "", label, showCode = false, variant = "inline" }) {
     const [copied, setCopied] = useState(false);
 
     const copy = useCallback(async () => {
-        try {
-            await navigator.clipboard.writeText(value);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch {
-            /* fallback: execCommand */
-        }
+        // copyToClipboard falls back to execCommand when navigator.clipboard is
+        // unavailable (HTTP / non-secure context) or rejects.
+        const ok = await copyToClipboard(value);
+        if (!ok) return;
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     }, [value]);
 
     if (variant === "block") {

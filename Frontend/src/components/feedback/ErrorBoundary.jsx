@@ -57,16 +57,26 @@ export class ErrorBoundary extends Component {
 
         return (
             <div className="flex flex-col items-center justify-center min-h-55 p-6 text-center">
+                {/* ── Icon ── */}
                 <div
-                    className="w-12 h-12 mb-4 rounded-full bg-danger-100 flex items-center
-                        justify-center text-danger-400 text-xl font-aumovio-bold"
+                    className="w-12 h-12 mb-4 rounded-full bg-danger-100 dark:bg-danger-400/10
+                        flex items-center justify-center text-danger-400 text-xl font-aumovio-bold"
                 >
                     !
                 </div>
-                <h2 className="text-base font-aumovio-bold text-black/85 dark:text-white/85 mb-1">Something went wrong</h2>
-                <p className="text-sm font-aumovio text-grey-500 dark:text-grey-400 mb-4 max-w-xs">An unexpected error occurred. Refresh the page or contact support if it persists.</p>
-                <RequestIdTag requestId={requestId} className="mb-3 text-[11px] text-grey-400 dark:text-grey-500 hover:text-(--accent-foreground)" title="Click to copy — share this ID with support" />
 
+                {/* ── Primary message ── */}
+                <h2 className="text-base font-aumovio-bold text-black/85 dark:text-white/85 mb-1">Something went wrong</h2>
+                <p className="text-sm font-aumovio text-grey-500 dark:text-grey-400 max-w-xs leading-relaxed">An unexpected error occurred. Refresh the page or contact support if it persists.</p>
+
+                {/* ── Metadata footer ── */}
+                {requestId && (
+                    <div className="mt-4 mb-4 px-4 py-2.5 rounded-lg bg-grey-100/60 dark:bg-white/5 border border-grey-200/50 dark:border-white/5">
+                        <RequestIdTag requestId={requestId} className="text-[11px] text-grey-400 dark:text-grey-500 hover:text-(--accent-foreground)" title="Click to copy — share this ID with support" />
+                    </div>
+                )}
+
+                {/* ── Action ── */}
                 <button
                     onClick={this.handleReset}
                     className="px-4 py-2 text-sm font-aumovio-bold text-(--accent-foreground)
@@ -75,10 +85,12 @@ export class ErrorBoundary extends Component {
                 >
                     Try again
                 </button>
+
+                {/* ── Dev-only stack trace ── */}
                 {import.meta.env.DEV && this.state.error && (
                     <pre
                         className="mt-4 text-left text-xs text-danger-400 bg-danger-100 dark:bg-danger-400/10
-                        p-3 rounded-lg max-w-full overflow-auto"
+                            p-3 rounded-lg max-w-full overflow-auto"
                     >
                         {this.state.error.message}
                     </pre>

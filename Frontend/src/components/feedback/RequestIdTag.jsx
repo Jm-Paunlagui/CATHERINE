@@ -8,7 +8,8 @@
  * catch block. This component is the single rendering + copy-to-clipboard
  * implementation for that value, consumed by `ApiErrorAlert`,
  * `ErrorBoundary`, and `EmailFailureModal` so the three call sites do not
- * each re-implement the same button + clipboard + reset-timer logic.
+ * each re-implement the same button + clipboard + reset-timer logic (see
+ * `Clipboard.jsx` for the sibling copy-to-clipboard component this mirrors).
  *
  * Renders `null` when `requestId` is falsy — callers never need to wrap it
  * in a conditional.
@@ -30,26 +31,30 @@
 
 import { useCallback, useState } from "react";
 import { LuCopy, LuCopyCheck } from "react-icons/lu";
+import { copyToClipboard } from "../../utils/clipboard";
 
 export function RequestIdTag({ requestId, className = "", title = "Click to copy Request ID" }) {
     const [copied, setCopied] = useState(false);
 
-    const handleCopy = useCallback(() => {
-        navigator.clipboard
-            ?.writeText(requestId)
-            .then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            })
-            .catch(() => {});
-    }, [requestId]);
+    const handleCopy = useCallback(
+        async (e) => {
+            e.stopPropagation();
+            // copyToClipboard falls back to execCommand when navigator.clipboard
+            // is unavailable (HTTP / non-secure context), so this works off HTTPS.
+            const ok = await copyToClipboard(requestId);
+            if (!ok) return;
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        },
+        [requestId],
+    );
 
     if (!requestId) return null;
 
     return (
         <button type="button" onClick={handleCopy} className={`inline-flex items-center gap-1.5 font-mono cursor-copy transition-colors ${className}`} title={title}>
             Request ID: {requestId}
-            {copied ? <LuCopyCheck className="w-3.5 h-3.5 text-success-400 shrink-0" aria-hidden /> : <LuCopy className="w-3.5 h-3.5 shrink-0" aria-hidden />}
+            {copied ? <LuCopyCheck className="size-[1.1em] text-success-400 shrink-0" aria-hidden /> : <LuCopy className="size-[1.1em] shrink-0" aria-hidden />}
         </button>
     );
 }
