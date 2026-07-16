@@ -43,21 +43,27 @@
  *
  * CONFIGURATION SOURCE
  * ---------------------
- * | Env var     | Default                | Notes                                    |
- * |-------------|------------------------|-------------------------------------------|
- * | SMTP_HOST   | "localhost"            |                                            |
- * | SMTP_PORT   | 587                    |                                            |
- * | SMTP_SECURE | false                  | Only the literal string "true" enables TLS|
- * | SMTP_USER   | (none)                 | Omitting both USER/PASS disables auth     |
- * | SMTP_PASS   | (none)                 |                                            |
- * | SMTP_FROM   | noreply@app.internal   | Default `From:` address (getDefaultFrom())|
+ * | Env var      | Default                | Notes                                          |
+ * |--------------|------------------------|-------------------------------------------------|
+ * | SMTP_HOST    | "localhost"            |                                                  |
+ * | SMTP_PORT    | 587                    |                                                  |
+ * | SMTP_SECURE  | false                  | Only the literal string "true" enables TLS      |
+ * | SMTP_USER    | (none)                 | Omitting both USER/PASS disables auth           |
+ * | SMTP_PASS    | (none)                 |                                                  |
+ * | SMTP_FROM    | noreply@app.internal   | Default `From:` address (getDefaultFrom())      |
+ * | SMTP_CA_FILE | (none)                 | CA .pem filename inside certs/ (e.g.             |
+ * |              |                        | automotive-root.pem). Resolves "unable to get    |
+ * |              |                        | local issuer certificate" for internal CAs       |
  *
  * `connectionTimeout=10_000ms`, `greetingTimeout=5_000ms`,
  * `socketTimeout=30_000ms` — CWE-400 (Uncontrolled Resource Consumption):
  * explicit SMTP timeouts so a hung server cannot tie up a send indefinitely.
  */
 
+const fs = require("fs");
+const path = require("path");
 const nodemailer = require("nodemailer");
+const { logger } = require("../../utils/logger");
 
 class SharedTransporter {
     constructor() {
@@ -78,14 +84,65 @@ class SharedTransporter {
                 port: Number(process.env.SMTP_PORT) || 587,
                 secure: process.env.SMTP_SECURE === "true",
                 auth: process.env.SMTP_USER
-                    ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+                    ? {
+                          user: process.env.SMTP_USER,
+                          pass: process.env.SMTP_PASS,
+                      }
                     : undefined,
+                tls: this._buildTlsOptions(),
                 connectionTimeout: 10_000,
                 greetingTimeout: 5_000,
                 socketTimeout: 30_000,
             });
         }
         return this._transporter;
+    }
+
+    /**
+     * Builds the `tls` options object for nodemailer.
+     *
+     * When `SMTP_CA_FILE` is set, reads the PEM-encoded CA certificate(s)
+     * from `certs/<SMTP_CA_FILE>` and passes them as `tls.ca` so Node's
+     * TLS stack trusts the SMTP server's certificate chain (fixes "unable
+     * to get local issuer certificate" for internal CAs like the
+     * automotive-root CA).
+     *
+     * Resolution mirrors the PFX_FILENAME pattern in server.js:
+     *   - pkg build → certs/ sits next to the compiled executable
+     *   - normal Node → certs/ sits next to server.js (project root)
+     *
+     * When `SMTP_CA_FILE` is unset, returns `undefined` so nodemailer
+     * falls back to the system default CA bundle.
+     *
+     * @returns {{ ca: Buffer }|undefined}
+     */
+    _buildTlsOptions() {
+        const caFilename = process.env.SMTP_CA_FILE;
+        if (!caFilename) return undefined;
+
+        // Resolve certs/ the same way server.js resolves PFX_FILENAME:
+        // compiled (pkg) → next to the exe; normal Node → project root.
+        const certDir = path.resolve(
+            process.pkg
+                ? path.dirname(process.execPath)
+                : path.join(__dirname, "..", "..", ".."),
+            "certs",
+        );
+        const caPath = path.join(certDir, caFilename);
+
+        if (!fs.existsSync(caPath)) {
+            logger.warning(
+                `SharedTransporter: SMTP_CA_FILE set to "${caFilename}" but ` +
+                    `file not found at "${caPath}" — falling back to system ` +
+                    `CA bundle`,
+            );
+            return undefined;
+        }
+
+        logger.info(
+            `SharedTransporter: loading custom CA certificate from "${caPath}"`,
+        );
+        return { ca: fs.readFileSync(caPath) };
     }
 
     /**
