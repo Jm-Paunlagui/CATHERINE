@@ -85,7 +85,7 @@ function StepSelectExport({ hook }) {
 // ─── Step 2 — Confirm Deletion ─────────────────────────────────────────────────
 
 function StepConfirmDeletion({ hook }) {
-    const { deleteFromDate, deleteToDate, deleteConfirmed, setDeleteConfirmed, deleting, handleConfirmDelete, setDeleteStep, setDeleteFromDate, setDeleteToDate } = hook;
+    const { deleteFromDate, deleteToDate, deleteConfirmed, setDeleteConfirmed, deleting, handleConfirmDelete, setDeleteStep } = hook;
 
     const handleGoBack = () => {
         setDeleteConfirmed(false);

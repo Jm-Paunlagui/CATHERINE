@@ -212,6 +212,24 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
             cronLeaderEnv: process.env.CRON_LEADER,
         });
 
+        // ── Server email notifications (AlertNotifierService) ──────────────
+        // Started BEFORE db.initializePools() — deliberately, not after — so
+        // the critical-log tap is already subscribed when a pool-init failure
+        // (crit-logged in the .catch() below) fires. Pool init failure is one
+        // of the critical-channel triggers; starting the notifier only after a
+        // successful init would race that exact event and silently miss it.
+        // No-ops (one notice) when ENABLE_SERVER_NOTIFICATIONS is not 'true'.
+        // The cron-leader gate keeps exactly one worker notifying in a
+        // clustered deployment.
+        if (IS_CRON_LEADER) {
+            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            AlertNotifierService.start();
+        } else {
+            logger.notice(
+                "[AlertNotifierService] Not the cron leader — server email notifications run on the leader worker only.",
+            );
+        }
+
         if (typeof db.initializePools === "function") {
             db.initializePools()
                 .then(() => {
@@ -250,6 +268,18 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         isShuttingDown = true;
 
         logger.notice(`${signal} received — shutting down gracefully…`);
+
+        // Stop the alert poller + unsubscribe the critical logger tap.
+        // Synchronous — nothing to await here (in-flight sends carry their own
+        // SharedTransporter timeout, independent of this shutdown path).
+        try {
+            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            AlertNotifierService.stop();
+        } catch (err) {
+            logger.warning("AlertNotifierService stop failed during shutdown", {
+                error: err.message,
+            });
+        }
 
         // Stop accepting new connections
         server.close(async () => {
@@ -290,15 +320,29 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // logger's write queue is async and a shutdown that follows immediately
     // loses every queued line, turning a fatal boot error into a silent exit
     // (exactly how compiled exes died with no output).
-    process.on("unhandledRejection", (reason) => {
+    process.on("unhandledRejection", async (reason) => {
         const detail =
             reason instanceof Error ? (reason.stack ?? reason.message) : String(reason);
         process.stderr.write(`\n[FATAL] Unhandled rejection: ${detail}\n`);
         logger.error("Unhandled rejection", { error: reason });
+
+        // Best-effort critical notification, awaited with its own internal
+        // timeout (see AlertNotifierService.notifyCriticalNow) so a hung SMTP
+        // send can never delay process exit beyond that ceiling.
+        try {
+            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            await AlertNotifierService.notifyCriticalNow({
+                level: "EMERGENCY",
+                message: `Unhandled rejection: ${detail}`,
+            });
+        } catch {
+            // Never let a notification failure block the real fatal path.
+        }
+
         gracefulShutdown("unhandledRejection");
     });
 
-    process.on("uncaughtException", (err) => {
+    process.on("uncaughtException", async (err) => {
         process.stderr.write(
             `\n[FATAL] Uncaught exception: ${err.stack ?? err.message}\n`,
         );
@@ -306,6 +350,17 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
             error: err.message,
             stack: err.stack,
         });
+
+        try {
+            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            await AlertNotifierService.notifyCriticalNow({
+                level: "EMERGENCY",
+                message: `Uncaught exception: ${err.stack ?? err.message}`,
+            });
+        } catch {
+            // Never let a notification failure block the real fatal path.
+        }
+
         gracefulShutdown("uncaughtException");
     });
 }

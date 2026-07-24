@@ -40,12 +40,32 @@ const PROJECTION = {
     ID: 1,
     USERNAME: 1,
     PASSWORD: 1,
+    EMAIL: 1,
     ROLE: 1,
     IS_ACTIVE: 1,
+    CAN_RECEIVE_SRV_CRIT: 1,
+    CAN_RECEIVE_SRV_DEPS: 1,
+    CAN_RECEIVE_SRV_RED: 1,
+    CAN_RECEIVE_SRV_SYS: 1,
     SYSSIGNATURE: 1,
     CREATED_AT: 1,
     UPDATED_AT: 1,
 };
+
+/**
+ * Server-notification channel key → the `CAN_RECEIVE_SRV_*` column that gates
+ * it. Doubles as the allow-list for {@link AdminModel.findServerNotifyRecipients}
+ * — a channel absent from this map resolves to zero recipients rather than
+ * falling back to "everyone", so a typo can never fan an alert out to all admins.
+ *
+ * Keys MUST match the template names under `utils/email-templates/server-notification/`.
+ */
+const SERVER_NOTIFY_FLAG_COLUMNS = Object.freeze({
+    "server-critical-notification": "CAN_RECEIVE_SRV_CRIT",
+    "server-dependencies-notification": "CAN_RECEIVE_SRV_DEPS",
+    "server-red-metrics-notification": "CAN_RECEIVE_SRV_RED",
+    "server-system-notification": "CAN_RECEIVE_SRV_SYS",
+});
 
 let _col = null;
 /** Lazily resolves the T_ADMINS_DEV collection (never called in DEMO_MODE). */
@@ -128,11 +148,94 @@ class AdminModel {
             .count();
     }
 
+    // ─── Server-notification recipients ───────────────────────────────────────
+
+    /**
+     * Returns the email addresses of every ACTIVE admin opted in to `channel`
+     * (`IS_ACTIVE='Y'` AND the channel's `CAN_RECEIVE_SRV_*` flag = 'Y').
+     *
+     * This is the DB half of `recipients(channel) = env floor ∪ DB opt-ins`
+     * (see RecipientResolver). Admins with a NULL/blank EMAIL are dropped —
+     * an opted-in account with nowhere to deliver is not a recipient.
+     *
+     * Unlike the source system this was ported from, the template resolves
+     * addresses HERE rather than returning ids for a second HR-directory
+     * lookup: T_ADMINS_DEV owns EMAIL, so there is no second directory.
+     *
+     * @param {string} channel - A key of {@link SERVER_NOTIFY_FLAG_COLUMNS}
+     * @returns {Promise<string[]>} De-duplicated emails ([] for an unknown channel)
+     */
+    static async findServerNotifyRecipients(channel) {
+        const flagColumn = SERVER_NOTIFY_FLAG_COLUMNS[channel];
+        if (!flagColumn) return [];
+
+        let rows;
+        if (isDemoMode()) {
+            const { admins } = await demo.accounts();
+            rows = admins.filter(
+                (a) => a.IS_ACTIVE === "Y" && a[flagColumn] === "Y",
+            );
+        } else {
+            rows = await col()
+                .find({ IS_ACTIVE: "Y", [flagColumn]: "Y" })
+                .project({ EMAIL: 1 })
+                .toArray();
+        }
+
+        return [
+            ...new Set(
+                rows
+                    .map((r) => String(r.EMAIL ?? "").trim())
+                    .filter((email) => email.length > 0),
+            ),
+        ];
+    }
+
+    /**
+     * Resolves ID → USERNAME for a batch of admin ids in a single `$in` query.
+     *
+     * Best-effort by contract: a lookup failure resolves an EMPTY Map rather
+     * than throwing, so callers degrade to a null display name instead of
+     * failing the request. Used to render "acknowledged by …" on alerts
+     * without an N+1 fan-out.
+     *
+     * @param {Array<string|number>} ids
+     * @returns {Promise<Map<number, string>>} ID → USERNAME
+     */
+    static async getNamesByIds(ids) {
+        const numericIds = [...new Set((ids ?? []).map(Number))].filter(
+            Number.isFinite,
+        );
+        if (numericIds.length === 0) return new Map();
+
+        try {
+            let rows;
+            if (isDemoMode()) {
+                const { admins } = await demo.accounts();
+                rows = admins.filter((a) => numericIds.includes(Number(a.ID)));
+            } else {
+                rows = await col()
+                    .find({ ID: { $in: numericIds } })
+                    .project({ ID: 1, USERNAME: 1 })
+                    .toArray();
+            }
+            return new Map(
+                (rows ?? []).map((r) => [Number(r.ID), r.USERNAME ?? null]),
+            );
+        } catch {
+            return new Map();
+        }
+    }
+
     // ─── Writes ───────────────────────────────────────────────────────────────
 
     /**
      * Inserts a new admin. Caller hashes PASSWORD and computes sysSignature.
-     * @param {{username:string, password:string, role:string, sysSignature:string, isActive?:string}} data
+     *
+     * All four `CAN_RECEIVE_SRV_*` flags default to 'N' — server notifications
+     * are opt-in only, and a newly created admin is never silently subscribed.
+     *
+     * @param {{username:string, password:string, role:string, sysSignature:string, isActive?:string, email?:string}} data
      * @returns {Promise<void>}
      */
     static async insertAdmin(data) {
@@ -142,8 +245,13 @@ class AdminModel {
                 ID: admins.length + 1,
                 USERNAME: data.username,
                 PASSWORD: data.password,
+                EMAIL: data.email ?? null,
                 ROLE: data.role,
                 IS_ACTIVE: data.isActive ?? "Y",
+                CAN_RECEIVE_SRV_CRIT: "N",
+                CAN_RECEIVE_SRV_DEPS: "N",
+                CAN_RECEIVE_SRV_RED: "N",
+                CAN_RECEIVE_SRV_SYS: "N",
                 SYSSIGNATURE: data.sysSignature,
                 CREATED_AT: new Date(),
                 UPDATED_AT: new Date(),
@@ -153,10 +261,41 @@ class AdminModel {
         await col().insertOne({
             USERNAME: data.username,
             PASSWORD: data.password,
+            EMAIL: data.email ?? null,
             ROLE: data.role,
             IS_ACTIVE: data.isActive ?? "Y",
+            CAN_RECEIVE_SRV_CRIT: "N",
+            CAN_RECEIVE_SRV_DEPS: "N",
+            CAN_RECEIVE_SRV_RED: "N",
+            CAN_RECEIVE_SRV_SYS: "N",
             SYSSIGNATURE: data.sysSignature,
         });
+    }
+
+    /**
+     * Updates one or more `CAN_RECEIVE_SRV_*` opt-in flags for an admin.
+     *
+     * Keys are channel names (of {@link SERVER_NOTIFY_FLAG_COLUMNS}), NOT raw
+     * column names — the mapping is the allow-list, so an unrecognised key is
+     * dropped instead of reaching the update. SYSSIGNATURE is deliberately not
+     * recomputed: these flags are outside the signed field set (see the note in
+     * `sql/01_schema.sql`).
+     *
+     * Callers must invalidate `RecipientResolver` after a successful write so
+     * the change takes effect on the next notification instead of after the TTL.
+     *
+     * @param {string} username
+     * @param {Record<string, 'Y'|'N'>} channelFlags - e.g. { "server-system-notification": "Y" }
+     * @returns {Promise<void>}
+     */
+    static async setNotifyFlags(username, channelFlags) {
+        const fields = {};
+        for (const [channel, value] of Object.entries(channelFlags ?? {})) {
+            const column = SERVER_NOTIFY_FLAG_COLUMNS[channel];
+            if (column) fields[column] = value === "Y" ? "Y" : "N";
+        }
+        if (Object.keys(fields).length === 0) return;
+        return AdminModel._set(username, fields);
     }
 
     /**
@@ -236,5 +375,6 @@ class AdminModel {
 
 AdminModel.SIGN_CONTEXT = SIGN_CONTEXT;
 AdminModel.buildSignedFields = buildSignedFields;
+AdminModel.SERVER_NOTIFY_FLAG_COLUMNS = SERVER_NOTIFY_FLAG_COLUMNS;
 
 module.exports = AdminModel;

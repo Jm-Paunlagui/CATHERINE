@@ -231,6 +231,16 @@ class MetricsStore {
     this._oraclePoolStats = new Map();
 
     /**
+     * Server email notification delivery stats, per channel (R7 — SMTP is a
+     * monitored dependency, not just a notification pipe).
+     * Key: channel name (e.g. "server-system-notification")
+     * Value: { sent, failed, consecutiveFailures, lastSuccessAt, lastFailureAt,
+     *          lastFailureCause, suppressedCount }
+     * @type {Map<string, { sent: number, failed: number, consecutiveFailures: number, lastSuccessAt: string|null, lastFailureAt: string|null, lastFailureCause: string|null, suppressedCount: number }>}
+     */
+    this._notifications = new Map();
+
+    /**
      * Frontend vitals FIFO (max FRONTEND_VITALS_MAX entries).
      * @type {Array<{ name: string, value: number, rating: string, context: object, ts: string }>}
      */
@@ -600,6 +610,70 @@ class MetricsStore {
   }
 
   /**
+   * Record the outcome of one server email notification send attempt
+   * (server-email-notifications feature). Called by `ServerNotificationService`
+   * on EVERY attempt — success and failure — so the SMTP dependency and the
+   * alert tab always reflect delivery health, even when zero emails get
+   * through (R7: email delivery is itself a monitored dependency).
+   *
+   * @param {string}      channel - Channel key (e.g. "server-system-notification")
+   * @param {boolean}     ok      - Whether the send succeeded
+   * @param {string|null} [cause] - Failure reason when ok is false
+   */
+  recordNotificationDelivery(channel, ok, cause = null) {
+    let entry = this._notifications.get(channel);
+    if (!entry) {
+      entry = {
+        sent: 0,
+        failed: 0,
+        consecutiveFailures: 0,
+        lastSuccessAt: null,
+        lastFailureAt: null,
+        lastFailureCause: null,
+        suppressedCount: 0,
+      };
+      this._notifications.set(channel, entry);
+    }
+
+    if (ok) {
+      entry.sent++;
+      entry.consecutiveFailures = 0;
+      entry.lastSuccessAt = new Date().toISOString();
+    } else {
+      entry.failed++;
+      entry.consecutiveFailures++;
+      entry.lastFailureAt = new Date().toISOString();
+      entry.lastFailureCause = cause ?? null;
+    }
+  }
+
+  /**
+   * Records that N buffered critical-channel events were dropped by the
+   * hourly email storm ceiling (R3) instead of being sent. Visible in the
+   * alert tab / status endpoint even while the ceiling suppresses the email
+   * itself.
+   *
+   * @param {string} channel - Channel key (normally "server-critical-notification")
+   * @param {number} count   - Number of events suppressed in this window
+   */
+  recordNotificationSuppressed(channel, count = 1) {
+    let entry = this._notifications.get(channel);
+    if (!entry) {
+      entry = {
+        sent: 0,
+        failed: 0,
+        consecutiveFailures: 0,
+        lastSuccessAt: null,
+        lastFailureAt: null,
+        lastFailureCause: null,
+        suppressedCount: 0,
+      };
+      this._notifications.set(channel, entry);
+    }
+    entry.suppressedCount += Math.max(0, Number(count) || 0);
+  }
+
+  /**
    * Store a frontend web vital event.
    * Evicts oldest when buffer exceeds FRONTEND_VITALS_MAX.
    *
@@ -628,6 +702,36 @@ class MetricsStore {
       this._frontendErrors.shift();
     }
     this._frontendErrors.push({ message, stack, context, ts: new Date().toISOString() });
+  }
+
+  /**
+   * Aggregates the per-channel notification delivery stats into one SMTP
+   * dependency health block (R7). SMTP is ONE physical dependency shared by
+   * all four channels, so `consecutiveFailures` is the MAX across channels
+   * (any channel failing means the SMTP relay is unreachable) and the
+   * timestamps are the most recent across channels.
+   *
+   * @returns {{ status: "up"|"degraded"|"down", consecutiveFailures: number, lastSuccessAt: string|null, lastFailureAt: string|null }}
+   */
+  #buildSmtpDependencySnapshot() {
+    let consecutiveFailures = 0;
+    let lastSuccessAt = null;
+    let lastFailureAt = null;
+
+    for (const entry of this._notifications.values()) {
+      consecutiveFailures = Math.max(consecutiveFailures, entry.consecutiveFailures);
+      if (entry.lastSuccessAt && (!lastSuccessAt || entry.lastSuccessAt > lastSuccessAt)) {
+        lastSuccessAt = entry.lastSuccessAt;
+      }
+      if (entry.lastFailureAt && (!lastFailureAt || entry.lastFailureAt > lastFailureAt)) {
+        lastFailureAt = entry.lastFailureAt;
+      }
+    }
+
+    const status =
+      consecutiveFailures >= 3 ? "down" : consecutiveFailures >= 1 ? "degraded" : "up";
+
+    return { status, consecutiveFailures, lastSuccessAt, lastFailureAt };
   }
 
   // ========================================
@@ -771,6 +875,7 @@ class MetricsStore {
       },
       dependencies: {
         oracle: oracleDeps,
+        smtp: this.#buildSmtpDependencySnapshot(),
       },
       totals: (() => {
         const rates = computeRates(
@@ -805,6 +910,9 @@ class MetricsStore {
       })(),
       frontendVitals: [...this._frontendVitals],
       frontendErrors: [...this._frontendErrors],
+      notifications: Object.fromEntries(
+        [...this._notifications].map(([channel, entry]) => [channel, { ...entry }]),
+      ),
     };
   }
 }

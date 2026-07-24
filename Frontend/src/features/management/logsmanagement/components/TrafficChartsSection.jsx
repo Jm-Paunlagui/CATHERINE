@@ -130,13 +130,13 @@ export function TrafficChartsSection({ trafficSnapshot, trafficSeries = [] }) {
 
     // ── Volume tiles (request counts + live rate — NO system/health metrics) ────
     const tiles = [
-        { label: "Total Requests", value: fmtNum(totals.requestsTotal), accent: "text-blue-400" },
+        { label: "Total Requests", value: fmtNum(totals.requestsTotal), accent: "text-(--blue-foreground)" },
         { label: "Req Rate", value: `${(rates.reqPerSec ?? 0).toFixed(2)}/s`, accent: "text-black dark:text-white" },
         { label: "Success (2xx)", value: fmtNum(totals.successTotal), accent: "text-success-400" },
-        { label: "Not Modified (304)", value: fmtNum(totals.notModifiedTotal), accent: "text-blue-400" },
-        { label: "Redirect (3xx)", value: fmtNum(totals.redirectsTotal), accent: "text-purple-400" },
-        { label: "Client Error (4xx)", value: fmtNum(totals.clientErrorsTotal), accent: "text-turquoise-400" },
-        { label: "Server Error (5xx)", value: fmtNum(totals.serverErrorsTotal), accent: "text-orange-400" },
+        { label: "Not Modified (304)", value: fmtNum(totals.notModifiedTotal), accent: "text-(--blue-foreground)" },
+        { label: "Redirect (3xx)", value: fmtNum(totals.redirectsTotal), accent: "text-(--secondary-foreground)" },
+        { label: "Client Error (4xx)", value: fmtNum(totals.clientErrorsTotal), accent: "text-(--turquoise-foreground)" },
+        { label: "Server Error (5xx)", value: fmtNum(totals.serverErrorsTotal), accent: "text-(--accent-foreground)" },
     ];
 
     // ── Endpoint bars (knows our endpoints) ─────────────────────────────────────

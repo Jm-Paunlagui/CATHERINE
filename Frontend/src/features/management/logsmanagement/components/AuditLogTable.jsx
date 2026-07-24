@@ -1,5 +1,6 @@
 import { SearchInput } from "../../../../components/forms/SearchInput";
 import { Select } from "../../../../components/forms/Select";
+import Alert from "../../../../components/ui/Alert";
 import Button from "../../../../components/ui/Button";
 import Card from "../../../../components/ui/Card";
 import { Datepicker } from "../../../../components/ui/Datepicker";
@@ -165,7 +166,7 @@ function renderCell(row, col) {
  * @param {{ hook: object }} props
  */
 export default function AuditLogTable({ hook }) {
-    const { listData, listLoading, filters, page, handleFilterChange, handlePageChange } = hook;
+    const { listData, listLoading, listError, listErrorMessage, filters, page, handleFilterChange, handlePageChange } = hook;
 
     const rows = listData?.data?.rows ?? [];
     const totalPages = listData?.data?.totalPages ?? 1;
@@ -204,6 +205,15 @@ export default function AuditLogTable({ hook }) {
                         <Skeleton key={i} className="h-10 w-full" />
                     ))}
                 </div>
+            ) : listError ? (
+                // A fetch failure must never render as the
+                // same "no records match the filters" empty state as a
+                // genuinely empty (but successful) result.
+                <div className="p-6">
+                    <Alert variant="danger" title="Failed to load audit log">
+                        {listErrorMessage}
+                    </Alert>
+                </div>
             ) : rows.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-4">
                     <p className="text-grey-400 dark:text-white/40 text-sm">No audit log records match the current filters.</p>
@@ -219,38 +229,13 @@ export default function AuditLogTable({ hook }) {
                             label: col.label,
                             render:
                                 col.key === "__view"
-                                    ? (row) => {
-                                          const params = row.PARAMS;
-                                          let paramsSnippet = null;
-                                          if (params) {
-                                              try {
-                                                  const parsed = JSON.parse(params);
-                                                  const entries = Object.entries(parsed);
-                                                  if (entries.length > 0) {
-                                                      const raw = entries.map(([k, v]) => `${k}=${v}`).join(" · ");
-                                                      paramsSnippet = raw.length > 60 ? raw.slice(0, 57) + "…" : raw;
-                                                  }
-                                              } catch {
-                                                  const raw = String(params);
-                                                  paramsSnippet = raw.length > 60 ? raw.slice(0, 57) + "…" : raw;
-                                              }
-                                          }
-                                          return (
-                                              <div className="flex flex-col items-start gap-1">
-                                                  {/* {paramsSnippet && (
-                          <span
-                            className="text-xs font-mono text-grey-400 dark:text-white/40 leading-tight max-w-[200px] truncate"
-                            title={params}
-                          >
-                            {paramsSnippet}
-                          </span>
-                        )} */}
-                                                  <Button variant="ghost" size="sm" onClick={() => hook.handleViewRow(row)} className="text-xs px-2 py-1">
-                                                      Trace
-                                                  </Button>
-                                              </div>
-                                          );
-                                      }
+                                    ? (row) => (
+                                          <div className="flex flex-col items-start gap-1">
+                                              <Button variant="ghost" size="sm" onClick={() => hook.handleViewRow(row)} className="text-xs px-2 py-1">
+                                                  Trace
+                                              </Button>
+                                          </div>
+                                      )
                                     : (row) => renderCell(row, col),
                         }))}
                         data={rows}

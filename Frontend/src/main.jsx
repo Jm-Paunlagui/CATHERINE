@@ -19,6 +19,7 @@ import { LayoutProvider } from "./contexts/layout/LayoutContext";
 import { CsrfProvider, useCsrf } from "./contexts/security/CsrfContext";
 import { ThemeProvider } from "./contexts/theme/ThemeContext";
 import { VersionProvider } from "./contexts/version/VersionContext";
+import { API_BASE_URL } from "./config/apiBase";
 import { frontendMetrics } from "./utils/frontendMetrics";
 import { initWebVitals } from "./utils/webVitals";
 
@@ -27,8 +28,7 @@ import { initWebVitals } from "./utils/webVitals";
 // Web Vitals + uncaught errors flow to POST /api/v1/metrics/frontend (no auth) and
 // surface in the Observability dashboard's Frontend Vitals panel. frontendMetrics
 // uses keepalive fetch, so events survive page unloads.
-const _apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api/v1/";
-frontendMetrics.init(_apiBase);
+frontendMetrics.init(API_BASE_URL);
 initWebVitals(({ name, value, rating }) => frontendMetrics.recordVital(name, value, rating));
 window.addEventListener("error", (e) => frontendMetrics.recordError(e.error || e.message, { page: window.location.pathname, source: "window.error" }));
 window.addEventListener("unhandledrejection", (e) => frontendMetrics.recordError(e.reason || "Unhandled promise rejection", { page: window.location.pathname, source: "unhandledrejection" }));

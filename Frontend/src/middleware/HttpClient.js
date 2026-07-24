@@ -17,10 +17,11 @@
  */
 
 import axios from "axios";
+import { API_BASE_URL } from "../config/apiBase";
 import AuthMiddleware from "./authentication/AuthMiddleware";
 import CsrfMiddleware from "./security/CsrfMiddleware";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api/v1/";
+const BASE_URL = API_BASE_URL;
 
 // CSRF is not required for these endpoints (they ARE the CSRF endpoints)
 const CSRF_EXEMPT = ["csrf/token", "csrf/refresh", "csrf/status"];

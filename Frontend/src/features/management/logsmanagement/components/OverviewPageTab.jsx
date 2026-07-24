@@ -78,9 +78,9 @@ export default function OverviewPageTab({ metricsHook, logsHook }) {
             label: "Traffic",
             value: reqPerSec != null ? `${Number(reqPerSec).toFixed(1)}/s` : "—",
             sub: `${totalReqs.toLocaleString()} total requests`,
-            valueCls: "text-blue-400 dark:text-blue-300",
+            valueCls: "text-(--blue-foreground)",
             badgeCls: BADGE_BLUE,
-            iconCls: "text-blue-400 dark:text-blue-300",
+            iconCls: "text-(--blue-foreground)",
         },
         {
             icon: ExclamationTriangleIcon,

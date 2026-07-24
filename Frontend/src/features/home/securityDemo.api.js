@@ -14,12 +14,11 @@
  */
 
 import axios from "axios";
-
-const BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api/v1/";
+import { API_BASE_URL } from "../../config/apiBase";
 
 // Strip trailing "api/v1/" to get the server root — the SecurityFilterMiddleware
 // runs on ALL paths, not just /api/v1/ routes.
-const SERVER_ROOT = BASE.replace(/api\/v1\/?$/, "");
+const SERVER_ROOT = API_BASE_URL.replace(/api\/v1\/?$/, "");
 
 /**
  * Standalone axios instance for demo probes.

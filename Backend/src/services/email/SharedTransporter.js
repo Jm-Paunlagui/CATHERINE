@@ -139,10 +139,23 @@ class SharedTransporter {
             return undefined;
         }
 
-        logger.info(
-            `SharedTransporter: loading custom CA certificate from "${caPath}"`,
-        );
-        return { ca: fs.readFileSync(caPath) };
+        try {
+            const ca = fs.readFileSync(caPath);
+            logger.info(
+                `SharedTransporter: loading custom CA certificate from "${caPath}"`,
+            );
+            return { ca };
+        } catch (err) {
+            // EACCES under a locked-down service account, unreadable share,
+            // etc. — mirror the missing-file path (warn + system-CA fallback)
+            // instead of throwing inside the lazy transporter getter at the
+            // first email send. TLS verification itself stays ON either way.
+            logger.warning(
+                `SharedTransporter: failed to read SMTP_CA_FILE at "${caPath}" ` +
+                    `(${err.message}) — falling back to system CA bundle`,
+            );
+            return undefined;
+        }
     }
 
     /**

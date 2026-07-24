@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { extractApiError, toast } from "../../../components/ui/toast.utils";
 import { useRequest } from "../../../hooks/useRequest";
-import { auditLogApi } from "./logsmanagement.api";
+import { auditLogApi, systemLogApi } from "./logsmanagement.api";
 
 /**
  * Format a Date object as a local YYYY-MM-DD string without UTC conversion.
@@ -29,6 +29,49 @@ const _today = () => _localDateStr(new Date());
 /** Max number of live traffic buckets retained in the rolling stacked-bar chart. */
 const MAX_TRAFFIC_POINTS = 30;
 
+// ─── System Logs sub-tab — level filter options + parsing ─────────────────────
+
+/**
+ * Single-Select options for the System sub-tab's Level filter. Values are
+ * either a bare RFC 5424 maxPriority ceiling ("0".."7", "X and above") or an
+ * exact single level prefixed "lvl:" (overrides the ceiling server-side).
+ * Default is "5" — NOTICE and above (user decision, 2026-07-20).
+ */
+export const SYSTEM_LOG_LEVEL_OPTIONS = [
+    { value: "5", label: "Notice & above" },
+    { value: "3", label: "Error & above" },
+    { value: "7", label: "All levels" },
+    { value: "lvl:emergency", label: "Emergency" },
+    { value: "lvl:alert", label: "Alert" },
+    { value: "lvl:critical", label: "Critical" },
+    { value: "lvl:error", label: "Error" },
+    { value: "lvl:warning", label: "Warning" },
+    { value: "lvl:notice", label: "Notice" },
+    { value: "lvl:info", label: "Info" },
+    { value: "lvl:debug", label: "Debug" },
+];
+
+/** RFC 5424 numeric priority per level name — mirrors AuditLogService's SYSTEM_LOG_PRIORITY. */
+const SYSTEM_LOG_PRIORITY = { emergency: 0, alert: 1, critical: 2, error: 3, warning: 4, notice: 5, info: 6, debug: 7 };
+
+/**
+ * Parses one `SYSTEM_LOG_LEVEL_OPTIONS` value into `{ level, maxPriority }`
+ * request params — exactly one of the two is defined.
+ *
+ * @param {string} raw
+ * @returns {{ level: string|undefined, maxPriority: number|undefined }}
+ */
+function _parseSystemLevelFilter(raw) {
+    if (typeof raw === "string" && raw.startsWith("lvl:")) {
+        return { level: raw.slice(4), maxPriority: undefined };
+    }
+    const n = Number(raw);
+    return { level: undefined, maxPriority: Number.isFinite(n) ? n : 5 };
+}
+
+/** Max live-tail rows retained client-side (oldest dropped once exceeded). */
+const MAX_LIVE_SYSTEM_ROWS = 500;
+
 /**
  * Format an ISO timestamp as a short HH:MM:SS axis label for the traffic chart.
  * Falls back to the current local time if the timestamp is missing/invalid.
@@ -53,6 +96,7 @@ const useLogsManagement = () => {
         fromDate: _thirtyDaysAgo(),
         toDate: _today(),
     });
+    const [apiError, setApiError] = useState(null);
 
     const [filters, setFilters] = useState({
         fromDate: "",
@@ -65,14 +109,31 @@ const useLogsManagement = () => {
     const [page, setPage] = useState(1);
     const pageSize = 20;
 
-    // ── Inline API error state ──
-    const [apiError, setApiError] = useState(null);
-
     // ── Investigation modal state ──
     const [selectedRow, setSelectedRow] = useState(null);
     const [logsModalOpen, setLogsModalOpen] = useState(false);
     const [requestLogsData, setRequestLogsData] = useState(null);
     const [requestLogsLoading, setRequestLogsLoading] = useState(false);
+
+    // ── Audit Logs top-level tab — nested sub-tab state (User Traffic | System) ──
+    // Controlled so the System sub-tab's browse fetch (real file I/O — tail-window
+    // reads across up to 8 level files) can be gated behind actual visibility
+    // instead of firing on every mount of the page regardless of which sub-tab
+    // is showing.
+    const [activeAuditSubTab, setActiveAuditSubTab] = useState("user-traffic");
+
+    // ── System Logs sub-tab — browse state ──
+    const [sysDate, setSysDate] = useState(_today());
+    const [sysLevelFilter, setSysLevelFilter] = useState("5"); // NOTICE and above
+    const [sysSearch, setSysSearch] = useState("");
+    const [sysPage, setSysPage] = useState(1);
+    const sysPageSize = 50;
+
+    // ── System Logs sub-tab — live tail state ──
+    const [sysLive, setSysLive] = useState(false);
+    const [sysLiveRows, setSysLiveRows] = useState([]);
+    const [sysDropped, setSysDropped] = useState(0);
+    const sysEsRef = useRef(null);
 
     // Keys must be stable primitive strings — arrays compare by reference in
     // useCallback deps and Map lookups, causing a cache miss and new API call
@@ -80,9 +141,170 @@ const useLogsManagement = () => {
     const statsKey = `audit-logs/stats?from=${statsDateRange.fromDate}&to=${statsDateRange.toDate}`;
     const listKey = `audit-logs/list?page=${page}&from=${filters.fromDate}&to=${filters.toDate}&method=${filters.method}&status=${filters.statusCategory}&search=${filters.search}`;
 
-    const { data: statsData, loading: statsLoading, refetch: refetchStats } = useRequest(statsKey, () => auditLogApi.stats(statsDateRange), { staleTime: 60_000 });
+    const {
+        data: statsData,
+        loading: statsLoading,
+        error: statsError,
+        refetch: refetchStats,
+    } = useRequest(statsKey, () => auditLogApi.stats(statsDateRange), { staleTime: 60_000 });
 
-    const { data: listData, loading: listLoading, refetch: refetchList } = useRequest(listKey, () => auditLogApi.list({ ...filters, page, pageSize }), { staleTime: 30_000 });
+    const {
+        data: listData,
+        loading: listLoading,
+        error: listError,
+        refetch: refetchList,
+    } = useRequest(listKey, () => auditLogApi.list({ ...filters, page, pageSize }), { staleTime: 30_000 });
+
+    // Both useRequest() calls above destructure `error` on purpose: without it
+    // a fetch failure falls through to the audit-log table's generic "No audit
+    // log records match the current filters." empty text, and the stats row's
+    // cards silently show their zero defaults. Both are friendly-shaped here via
+    // extractApiError for the components to render.
+    const statsErrorMessage = statsError ? extractApiError(statsError, "Failed to load audit statistics.").message : null;
+    const listErrorMessage = listError ? extractApiError(listError, "Failed to load audit log.").message : null;
+
+    // ── System Logs sub-tab — browse fetch ──
+    const { level: sysLevel, maxPriority: sysMaxPriority } = _parseSystemLevelFilter(sysLevelFilter);
+    const systemLogsKey = `audit-logs/system-logs?date=${sysDate}&level=${sysLevel ?? ""}&maxPriority=${sysMaxPriority ?? ""}&page=${sysPage}&search=${sysSearch}`;
+    const {
+        data: systemLogsData,
+        loading: systemLogsLoading,
+        error: systemLogsError,
+        refetch: refetchSystemLogs,
+    } = useRequest(
+        systemLogsKey,
+        () =>
+            systemLogApi.list({
+                date: sysDate,
+                level: sysLevel,
+                maxPriority: sysMaxPriority,
+                page: sysPage,
+                pageSize: sysPageSize,
+                search: sysSearch || undefined,
+            }),
+        { staleTime: 15_000, enabled: activeAuditSubTab === "system" },
+    );
+    const systemLogsErrorMessage = systemLogsError ? extractApiError(systemLogsError, "Failed to load system logs.").message : null;
+
+    /**
+     * Change the System sub-tab's date filter. Resets pagination; turning
+     * away from today automatically stops the live tail (server only tails
+     * TODAY's directory).
+     *
+     * @param {string} d - 'YYYY-MM-DD'
+     */
+    const handleSystemDateChange = useCallback((d) => {
+        setSysDate(d);
+        setSysPage(1);
+        if (d !== _today()) setSysLive(false);
+    }, []);
+
+    /**
+     * Change the System sub-tab's Level filter (one Select drives both an
+     * exact level and a maxPriority ceiling — see SYSTEM_LOG_LEVEL_OPTIONS).
+     * Resets pagination.
+     *
+     * @param {string} value - One of SYSTEM_LOG_LEVEL_OPTIONS' values.
+     */
+    const handleSystemLevelChange = useCallback((value) => {
+        setSysLevelFilter(value);
+        setSysPage(1);
+    }, []);
+
+    /**
+     * Change the System sub-tab's search text. Resets pagination.
+     * @param {string} value
+     */
+    const handleSystemSearchChange = useCallback((value) => {
+        setSysSearch(value);
+        setSysPage(1);
+    }, []);
+
+    /** Change the System sub-tab's page. @param {number} newPage */
+    const handleSystemPageChange = useCallback((newPage) => {
+        setSysPage(newPage);
+    }, []);
+
+    // ── System Logs sub-tab — live tail (SSE) ──
+    // Opens a dedicated EventSource whenever sysLive is toggled on; closes it
+    // on toggle-off, level/date change (deps below), or unmount. Separate
+    // connection from the audit-traffic stream above (server tracks the two
+    // independently — see SystemLogTailService).
+    useEffect(() => {
+        if (!sysLive) {
+            sysEsRef.current?.close();
+            sysEsRef.current = null;
+            return undefined;
+        }
+
+        setSysLiveRows([]);
+        setSysDropped(0);
+
+        const es = systemLogApi.createStream({
+            maxPriority: sysMaxPriority ?? (sysLevel ? SYSTEM_LOG_PRIORITY[sysLevel] : 5),
+            // Same level/maxPriority translation the browse fetch above uses
+            // (_parseSystemLevelFilter) — the server is now the primary
+            // filter for an exact-level connection. The client-side refine
+            // below stays as cheap defense-in-depth; it becomes a no-op in
+            // the common case once the server is compliant.
+            level: sysLevel,
+            onLines: (data) => {
+                const incoming = sysLevel ? (data.lines ?? []).filter((l) => String(l.level).toLowerCase() === sysLevel) : (data.lines ?? []);
+                if (incoming.length === 0 && !data.dropped) return;
+                setSysLiveRows((prev) => {
+                    const next = [...incoming, ...prev];
+                    return next.length > MAX_LIVE_SYSTEM_ROWS ? next.slice(0, MAX_LIVE_SYSTEM_ROWS) : next;
+                });
+                if (data.dropped) setSysDropped((d) => d + data.dropped);
+            },
+            onError: () => setSysLive(false),
+        });
+        sysEsRef.current = es;
+
+        return () => {
+            es.close();
+            sysEsRef.current = null;
+        };
+        // Deliberately narrow deps: only a live-toggle or a level-filter change
+        // should tear the stream down and reopen it. Including the setters or
+        // sysDate would reconnect on every unrelated state change.
+    }, [sysLive, sysLevel, sysMaxPriority]);
+
+    /**
+     * Toggle the System sub-tab's live-tail mode on/off.
+     * @param {boolean} next
+     */
+    const handleToggleSystemLive = useCallback((next) => {
+        setSysLive(next);
+    }, []);
+
+    /**
+     * Opens the shared Trace modal for a System-log row. System log rows have
+     * no DB audit record — a synthetic row carrying just REQUEST_ID/CREATED_AT
+     * (and best-effort METHOD/ENDPOINT) is built so RequestLogsModal's
+     * existing (requestId, date) lookup works unmodified.
+     *
+     * @param {object} row - A parsed system-log row (ts/level/requestId/method/location/…).
+     */
+    const handleViewSystemRow = useCallback(
+        (row) => {
+            const createdAt = row.ts ? row.ts.replace(" ", "T") : `${sysDate}T00:00:00`;
+            handleViewRow({
+                REQUEST_ID: row.requestId,
+                CREATED_AT: createdAt,
+                METHOD: row.method,
+                STATUS_CODE: null,
+                RESPONSE_TIME_MS: null,
+                USERNAME: null,
+                ENDPOINT: row.location,
+                PARAMS: null,
+            });
+        },
+        // handleViewRow is defined below with `const`, not memoised — safe to
+        // omit from deps (module-stable function identity per render is not
+        // required here since this handler is only invoked from a click).
+        [sysDate],
+    );
 
     // ── Live updates via SSE (replaces the old 30 s countdown polling) ───────────
     // The server pushes `update` events when new audit rows arrive and `heartbeat`
@@ -239,6 +461,7 @@ const useLogsManagement = () => {
      * @param {object} row - Audit log row from the table.
      */
     const handleViewRow = async (row) => {
+        setApiError(null);
         setSelectedRow(row);
         setLogsModalOpen(true);
         setRequestLogsData(null);
@@ -257,6 +480,7 @@ const useLogsManagement = () => {
 
     /** Close the investigation modal and reset its state. */
     const handleCloseLogsModal = () => {
+        setApiError(null);
         setLogsModalOpen(false);
         setSelectedRow(null);
         setRequestLogsData(null);
@@ -346,8 +570,15 @@ const useLogsManagement = () => {
         if (!deleteConfirmed || !deleteFromDate || !deleteToDate) return;
         setDeleting(true);
         try {
-            await auditLogApi.deleteRange({ fromDate: deleteFromDate, toDate: deleteToDate });
-            toast.success("Audit records and log files permanently deleted.");
+            const res = await auditLogApi.deleteRange({ fromDate: deleteFromDate, toDate: deleteToDate });
+            const failedDays = res?.data?.failedDays;
+            if (failedDays?.length) {
+                toast.error(
+                    `${failedDays.length} day folder(s) could not be deleted — files may be locked: ${failedDays.join(", ")}`,
+                );
+            } else {
+                toast.success("Audit records and log files permanently deleted.");
+            }
             setDeleteStep(3);
             triggerRefresh();
         } catch (err) {
@@ -371,11 +602,15 @@ const useLogsManagement = () => {
         // Stats
         statsData,
         statsLoading,
+        statsError,
+        statsErrorMessage,
         statsDateRange,
         setStatsDateRange,
         // List
         listData,
         listLoading,
+        listError,
+        listErrorMessage,
         filters,
         page,
         pageSize,
@@ -398,9 +633,6 @@ const useLogsManagement = () => {
         handleViewRow,
         handleCloseLogsModal,
         handleExportTrace,
-        // Inline API error
-        apiError,
-        setApiError,
         // Delete Logging stepper
         deleteStep,
         setDeleteStep,
@@ -415,6 +647,36 @@ const useLogsManagement = () => {
         handleExportDeleteLogs,
         handleConfirmDelete,
         handleResetDeleteStepper,
+
+        // Audit Logs top-level tab — nested sub-tab (User Traffic | System)
+        activeAuditSubTab,
+        setActiveAuditSubTab,
+
+        // System Logs sub-tab — browse
+        sysDate,
+        sysLevelFilter,
+        sysSearch,
+        sysPage,
+        sysPageSize,
+        systemLogsData,
+        systemLogsLoading,
+        systemLogsError,
+        systemLogsErrorMessage,
+        refetchSystemLogs,
+        handleSystemDateChange,
+        handleSystemLevelChange,
+        handleSystemSearchChange,
+        handleSystemPageChange,
+        // System Logs sub-tab — live tail
+        sysLive,
+        sysLiveRows,
+        sysDropped,
+        handleToggleSystemLive,
+        handleViewSystemRow,
+
+        // API error
+        apiError,
+        setApiError,
     };
 };
 

@@ -118,7 +118,7 @@ function _scheduleRetry(events) {
  * import { frontendMetrics } from './frontendMetrics';
  * import { initWebVitals } from './webVitals';
  *
- * frontendMetrics.init(import.meta.env.VITE_API_BASE_URL);
+ * frontendMetrics.init(API_BASE_URL); // from src/config/apiBase
  * initWebVitals(({ name, value, rating }) => {
  *   frontendMetrics.recordVital(name, value, rating);
  * });

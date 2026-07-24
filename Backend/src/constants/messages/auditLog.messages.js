@@ -23,6 +23,8 @@ const auditLogMessages = {
     `Audit log delete range started — ${from} to ${to}.`,
   DELETE_RANGE_DONE: (rows, days) =>
     `Audit log delete complete — ${rows} DB rows, ${days} log day(s) removed.`,
+  DELETE_DAY_FAILED: (day, err) =>
+    `Audit log day folder delete failed — ${day}: ${err}.`,
   EXPORT_TRACE_STARTED: (requestId) =>
     `Audit log trace Excel export started — requestId: ${requestId}.`,
 
@@ -47,6 +49,32 @@ const auditLogMessages = {
     `Audit log SSE shared poller hit ${max} consecutive errors with ${size} client(s) — stopping and notifying all.`,
   SSE_CONNECTED_EVENT_SENT: (userId) =>
     `Audit log SSE connected event sent — userId: ${userId}.`,
+  
+  // ── System log file view (RFC 5424 level files, System sub-tab) ─────────────
+  SYSTEM_LOGS_FETCHED: (date, count, page) =>
+    `System log entries fetched — date: ${date}, ${count} row(s), page ${page}.`,
+  SYSTEM_LOG_DIR_MISSING: (date) =>
+    `System log directory not found for date ${date} — returning empty result.`,
+
+  // ── System log SSE live tail (SystemLogTailService) ─────────────────────────
+  SYSTEM_TAIL_STARTED: () =>
+    `System log tail poller started.`,
+  SYSTEM_TAIL_STOPPED: () =>
+    `System log tail poller stopped — no active connections.`,
+  SYSTEM_TAIL_CONNECTED: (connId) =>
+    `System log tail SSE connected — connId: ${connId}.`,
+  SYSTEM_TAIL_DISCONNECTED: (connId) =>
+    `System log tail SSE disconnected — connId: ${connId}.`,
+  SYSTEM_TAIL_DUPLICATE_CONNECTION: (connId) =>
+    `System log tail SSE duplicate connection rejected — connId: ${connId}.`,
+  SYSTEM_TAIL_ROTATION_DETECTED: (file) =>
+    `System log tail detected rotation/truncation on ${file} — offset reset to 0.`,
+  SYSTEM_TAIL_DIR_ROLLOVER: (dir) =>
+    `System log tail day directory changed — now tailing ${dir}.`,
+  SYSTEM_TAIL_TICK_ERROR: (err) =>
+    `System log tail poll tick error: ${err}.`,
+  SYSTEM_TAIL_MAX_ERRORS: (size, max) =>
+    `System log tail poller hit ${max} consecutive errors with ${size} client(s) — stopping and notifying all.`,
 };
 
 module.exports = { auditLogMessages };

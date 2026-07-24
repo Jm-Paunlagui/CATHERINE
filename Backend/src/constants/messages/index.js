@@ -14,6 +14,7 @@ module.exports = {
   ...require("./admin.messages"),
   ...require("./auditLog.messages"),
   ...require("./metrics.messages"),
+  ...require("./notification.messages"),
   ...require("./client.messages"),
   ...require("./cache.messages"),
   ...require("./changelog.messages"),

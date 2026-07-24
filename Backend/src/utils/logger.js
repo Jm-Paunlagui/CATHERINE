@@ -103,7 +103,11 @@ class Logger {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
-            hour12: false,
+            // h23, NOT hour12:false — some ICU builds map hour12:false to the
+            // h24 cycle and render the midnight hour as "24" (observed in the
+            // PKG-compiled prod exe: "[2026-07-02 24:56:00]"), which breaks
+            // timestamp parsing and sorts the first hour of the day last.
+            hourCycle: "h23",
         },
     };
 
@@ -124,6 +128,95 @@ class Logger {
         this.isWriting = false;
         this.machineIdentifier = this.#computeMachineIdentifier();
         this.#initializeBaseDirectory();
+
+        /**
+         * Level-tap subscriber list — see onLevel(). Plain array, no
+         * EventEmitter inheritance needed for a handful of listeners.
+         * @type {Array<{ maxPriority: number, fn: Function }>}
+         */
+        this._levelSubscribers = [];
+    }
+
+    // ========================================
+    // LEVEL TAP — server-email-notifications feature
+    // ========================================
+
+    /**
+     * Subscribes to log records at or above a given severity (numerically
+     * `<= maxPriority`, since lower RFC 5424 priority numbers are MORE
+     * severe). Used by `AlertNotifierService` to buffer crit/alert/emerg
+     * events for the critical-channel digest email without coupling the
+     * logger to any notification code.
+     *
+     * Records whose meta carries `_noNotify: true` are skipped — this is the
+     * loop-guard (R1b in server-email-notifications-plan.md): logging that
+     * happens INSIDE the notification path itself must never re-trigger a
+     * notification, or a failing SMTP send could log a warning that logs a
+     * warning forever. `_noNotify` only ever suppresses the TAP; the log
+     * line is still written to disk/console normally.
+     *
+     * Subscriber callbacks run synchronously, wrapped in try/catch — a
+     * throwing subscriber can never break the log write path.
+     *
+     * @param {number}   maxPriority - RFC 5424 numeric priority ceiling (e.g. 2 = emerg/alert/crit)
+     * @param {(record: { level: string, message: string, meta: object, requestId: string|null, timestamp: string }) => void} fn
+     * @returns {() => void} Unsubscribe function
+     *
+     * @example
+     * const unsubscribe = logger.onLevel(2, (record) => {
+     *     criticalBuffer.push(record);
+     * });
+     * // later: unsubscribe();
+     */
+    onLevel(maxPriority, fn) {
+        if (typeof fn !== "function") return () => {};
+        const entry = { maxPriority, fn };
+        this._levelSubscribers.push(entry);
+        return () => {
+            const idx = this._levelSubscribers.indexOf(entry);
+            if (idx !== -1) this._levelSubscribers.splice(idx, 1);
+        };
+    }
+
+    /**
+     * Fires every subscriber whose `maxPriority` covers this record's level.
+     * Never throws — a subscriber error is swallowed (logged to stderr only,
+     * mirroring this file's existing internal-failure fallback) so the log
+     * write path is never affected.
+     *
+     * @param {string} level     - RFC 5424 level name (e.g. "CRITICAL")
+     * @param {*}      message   - Raw log message (resolved to string for subscribers)
+     * @param {object} meta      - Log metadata; `_noNotify: true` skips the tap
+     * @param {string|null} requestId
+     */
+    #notifySubscribers(level, message, meta, requestId) {
+        if (!this._levelSubscribers.length) return;
+        if (meta && meta._noNotify) return;
+        const priority = Logger.CONFIG.LEVELS[level];
+        if (priority === undefined) return;
+
+        const record = {
+            level,
+            message: this.#resolveMessage(message),
+            meta,
+            requestId: requestId ?? null,
+            timestamp: new Date().toISOString(),
+        };
+
+        for (const { maxPriority, fn } of this._levelSubscribers) {
+            if (priority > maxPriority) continue;
+            try {
+                fn(record);
+            } catch (err) {
+                // Never let a subscriber crash the log write path — same
+                // console.error fallback this file already uses for its own
+                // internal (non-recursable) failures.
+                console.error(
+                    "Logger onLevel subscriber threw:",
+                    err?.message ?? err,
+                );
+            }
+        }
     }
 
     // ========================================
@@ -173,11 +266,16 @@ class Logger {
                 .map(({ type, value }) => [type, value]),
         );
 
+        // Milliseconds come from Date directly (not Intl) — no ICU dependency,
+        // safe in the PKG-compiled exe. Millisecond precision keeps the Request
+        // Log Trace in true chronological order when many lines share a second.
+        const ms = String(now.getMilliseconds()).padStart(3, "0");
+
         return {
             year: partsMap.year,
             month: partsMap.month,
             day: partsMap.day,
-            timestamp: `${partsMap.year}-${partsMap.month}-${partsMap.day} ${partsMap.hour}:${partsMap.minute}:${partsMap.second}`,
+            timestamp: `${partsMap.year}-${partsMap.month}-${partsMap.day} ${partsMap.hour}:${partsMap.minute}:${partsMap.second}.${ms}`,
         };
     }
 
@@ -620,7 +718,7 @@ class Logger {
      * A log at RFC 5424 level N is written if N <= this.currentLevel
      * (lower number = higher priority = always shown).
      *
-     * @param {string} level - One of EMERGENCY, ALERT, critical, ERROR, WARNING, NOTICE, INFO, DEBUG
+     * @param {string} level - One of EMERGENCY, ALERT, CRITICAL, ERROR, WARNING, NOTICE, INFO, DEBUG
      * @param {string|*} message - Log message or value
      * @param {object} [meta={}] - Optional metadata object
      */
@@ -633,6 +731,7 @@ class Logger {
         // Capture now — the ALS context is correct here. By the time #processWriteQueue
         // dequeues this item it may be running under a different request's context.
         const requestId = requestContext.getStore()?.requestId ?? null;
+        this.#notifySubscribers(level, message, meta, requestId);
         this.writeQueue.push({ level, message, meta, requestId });
         this.#processWriteQueue();
     }
@@ -671,12 +770,15 @@ class Logger {
     }
 
     /**
-     * critical (priority 2) — critical conditions.
+     * CRITICAL (priority 2) — critical conditions.
      * Examples: health check hard failure, certificate expiry.
      * @param {...*} args
      */
     critical(...args) {
         const { message, meta } = this.#normalizeLogArguments(args);
+        // Level key MUST be uppercase: lowercase "critical" missed both
+        // LEVELS (level filter bypassed) and COLORS (rendered white) lookups
+        // and wrote the literal "critical" into log lines.
         return this.log("CRITICAL", message, meta);
     }
 

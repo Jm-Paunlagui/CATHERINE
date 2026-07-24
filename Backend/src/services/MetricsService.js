@@ -63,6 +63,14 @@ const POOL_SATURATION_WARNING_THRESHOLD = 0.8;
  */
 const POOL_SATURATION_CRITICAL_THRESHOLD = 0.95;
 
+/**
+ * @constant {number} Consecutive server-notification send failures (any
+ * channel) that escalate the EMAIL_DELIVERY_FAILING rule from warning to
+ * critical. SMTP is a monitored dependency (R7, server-email-notifications-plan.md) —
+ * 1 consecutive failure warns, 3 in a row means the relay is down.
+ */
+const EMAIL_CONSECUTIVE_FAILURE_CRITICAL = 3;
+
 class MetricsService {
     // ========================================
     // SNAPSHOT & ALERTS
@@ -132,6 +140,13 @@ class MetricsService {
      *   5. GC overhead > 5% (warning) / > 10% (critical) of wall-clock time
      *   6. Memory leak suspected — sustained post-major-GC live-set growth
      *   7. Oracle pool saturation > 80% (warning) / > 95% (critical) utilization, per pool
+     *   8. Email notification delivery failing — 1+ consecutive send failure (warning) /
+     *      EMAIL_CONSECUTIVE_FAILURE_CRITICAL+ consecutive failures (critical), any channel
+     *
+     * LOOP GUARD (R2, server-email-notifications-plan.md): every ALERT_TRIGGERED log
+     * above carries meta `_noNotify: true` — each alert is already delivered by
+     * AlertNotifierService via its mapped channel, so the critical logger tap
+     * must never double-email it.
      *
      * Note: the global error rate is computed from 5xx responses only — client
      * errors (4xx) are excluded so auth failures, validation rejections, and
@@ -163,6 +178,10 @@ class MetricsService {
                 {
                     errorRate,
                     serverErrorsTotal: snap.totals.serverErrorsTotal,
+                    // R2 (server-email-notifications-plan.md): this alert is already
+                    // delivered via its mapped channel by AlertNotifierService's metrics
+                    // poll — the critical logger tap must not double-notify it.
+                    _noNotify: true,
                 },
             );
         }
@@ -182,6 +201,7 @@ class MetricsService {
                     {
                         route,
                         p99: m.p99,
+                        _noNotify: true, // R2 — already delivered via its mapped channel
                     },
                 );
             }
@@ -212,6 +232,7 @@ class MetricsService {
                         snap.system.memory.heapUsed / 1024 / 1024,
                     ),
                     heapLimitMb: Math.round(heapLimit / 1024 / 1024),
+                    _noNotify: true, // R2 — already delivered via its mapped channel
                 },
             );
         }
@@ -228,6 +249,7 @@ class MetricsService {
                 metricsMessages.ALERT_TRIGGERED("EVENT_LOOP_LAG", "warning"),
                 {
                     lagMs: snap.system.eventLoopLag,
+                    _noNotify: true, // R2 — already delivered via its mapped channel
                 },
             );
         }
@@ -251,6 +273,7 @@ class MetricsService {
                 {
                     overheadPct: gcOverhead,
                     majorCollections: snap.system.gc?.major?.count,
+                    _noNotify: true, // R2 — already delivered via its mapped channel
                 },
             );
         }
@@ -258,7 +281,9 @@ class MetricsService {
         // Rule 6 — suspected memory leak (sustained post-major-GC live-set growth)
         const trend = snap.system.memoryTrend;
         if (trend?.suspected) {
-            const mbPerMin = (trend.growthBytesPerMin / (1024 * 1024)).toFixed(2);
+            const mbPerMin = (trend.growthBytesPerMin / (1024 * 1024)).toFixed(
+                2,
+            );
             const windowMin = Math.round(trend.windowMs / 60_000);
             alerts.push({
                 rule: "MEMORY_LEAK_SUSPECTED",
@@ -267,12 +292,20 @@ class MetricsService {
                 description: `Post-GC heap is climbing ~${mbPerMin} MB/min over ${windowMin} min across ${trend.sampleCount} major-GC baselines — investigate for a leak`,
             });
             logger.warning(
-                metricsMessages.ALERT_TRIGGERED("MEMORY_LEAK_SUSPECTED", "warning"),
+                metricsMessages.ALERT_TRIGGERED(
+                    "MEMORY_LEAK_SUSPECTED",
+                    "warning",
+                ),
                 {
                     growthBytesPerMin: trend.growthBytesPerMin,
                     windowMs: trend.windowMs,
-                    firstHeapUsedMb: Math.round(trend.firstHeapUsed / 1024 / 1024),
-                    lastHeapUsedMb: Math.round(trend.lastHeapUsed / 1024 / 1024),
+                    firstHeapUsedMb: Math.round(
+                        trend.firstHeapUsed / 1024 / 1024,
+                    ),
+                    lastHeapUsedMb: Math.round(
+                        trend.lastHeapUsed / 1024 / 1024,
+                    ),
+                    _noNotify: true, // R2 — already delivered via its mapped channel
                 },
             );
         }
@@ -282,7 +315,10 @@ class MetricsService {
         const oracleDeps = snap.dependencies?.oracle ?? {};
         for (const [poolName, dep] of Object.entries(oracleDeps)) {
             const util = dep.poolUtilization;
-            if (typeof util !== "number" || util <= POOL_SATURATION_WARNING_THRESHOLD) {
+            if (
+                typeof util !== "number" ||
+                util <= POOL_SATURATION_WARNING_THRESHOLD
+            ) {
                 continue;
             }
             const isCritical = util > POOL_SATURATION_CRITICAL_THRESHOLD;
@@ -298,13 +334,44 @@ class MetricsService {
                 description: `Oracle pool "${poolName}" is ${(util * 100).toFixed(1)}% utilized (${dep.connectionsInUse}/${dep.connectionsOpen} connections in use, threshold: ${(threshold * 100).toFixed(0)}%)`,
             });
             logger[isCritical ? "crit" : "warning"](
-                metricsMessages.ALERT_TRIGGERED("ORACLE_POOL_SATURATION", severity),
+                metricsMessages.ALERT_TRIGGERED(
+                    "ORACLE_POOL_SATURATION",
+                    severity,
+                ),
                 {
                     poolName,
                     utilization: util,
                     connectionsInUse: dep.connectionsInUse,
                     connectionsOpen: dep.connectionsOpen,
                     queueLength: dep.queueLength,
+                    _noNotify: true, // R2 — already delivered via its mapped channel
+                },
+            );
+        }
+
+        // Rule 8 — server email notification delivery failing (SMTP dependency, R7).
+        // Warns at 1 consecutive failure across any channel, escalates to critical
+        // at EMAIL_CONSECUTIVE_FAILURE_CRITICAL. Maps to the dependencies channel.
+        const smtp = snap.dependencies?.smtp;
+        if (smtp && smtp.consecutiveFailures >= 1) {
+            const isCritical =
+                smtp.consecutiveFailures >= EMAIL_CONSECUTIVE_FAILURE_CRITICAL;
+            const severity = isCritical ? "critical" : "warning";
+            alerts.push({
+                rule: "EMAIL_DELIVERY_FAILING",
+                severity,
+                value: smtp.consecutiveFailures,
+                description: `Server email notification delivery has failed ${smtp.consecutiveFailures} time(s) in a row (threshold: ${isCritical ? EMAIL_CONSECUTIVE_FAILURE_CRITICAL : 1}) — last failure: ${smtp.lastFailureAt ?? "unknown"}`,
+            });
+            logger[isCritical ? "crit" : "warning"](
+                metricsMessages.ALERT_TRIGGERED(
+                    "EMAIL_DELIVERY_FAILING",
+                    severity,
+                ),
+                {
+                    consecutiveFailures: smtp.consecutiveFailures,
+                    lastFailureAt: smtp.lastFailureAt,
+                    _noNotify: true, // R2 — already delivered via its mapped channel
                 },
             );
         }

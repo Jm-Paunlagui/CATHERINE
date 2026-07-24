@@ -24,7 +24,7 @@ function extractMessage(line) {
 
 // Extract timestamp [YYYY-MM-DD HH:MM:SS]
 function extractTimestamp(line) {
-    const m = line.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/);
+    const m = line.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)\]/);
     return m ? m[1].split(" ")[1] : "";
 }
 
@@ -41,13 +41,13 @@ const PHASE_CONFIG = {
         label: "Incoming",
         badge: "blue",
         bar: "bg-blue-400",
-        textColor: "text-blue-400 dark:text-blue-300",
+        textColor: "text-(--blue-foreground)",
     },
     handling: {
         label: "Handling",
         badge: "cyan",
         bar: "bg-turquoise-400",
-        textColor: "text-turquoise-400 dark:text-turquoise-300",
+        textColor: "text-(--turquoise-foreground)",
     },
     func: {
         label: "Function",
@@ -134,7 +134,7 @@ function _traceDate(row) {
  * @param {{ hook: object }} props
  */
 export default function RequestLogsModal({ hook }) {
-    const { logsModalOpen, handleCloseLogsModal, selectedRow, requestLogsData, requestLogsLoading, handleExportTrace } = hook;
+    const { logsModalOpen, handleCloseLogsModal, selectedRow, requestLogsData, requestLogsLoading, handleExportTrace, apiError, setApiError } = hook;
 
     const lines = requestLogsData?.data?.lines ?? [];
     const date = _traceDate(selectedRow);
@@ -148,17 +148,16 @@ export default function RequestLogsModal({ hook }) {
             title={selectedRow ? `Trace — ${selectedRow.REQUEST_ID ?? "—"}` : "Trace"}
             size="xl"
             footer={
-                <div className="flex flex-col gap-3 w-full">
-                    <ApiErrorAlert error={hook.apiError} onDismiss={() => hook.setApiError(null)} />
-                    <div className="flex justify-end">
-                        <Button variant="ghost" size="sm" disabled={!canExport} onClick={() => handleExportTrace(selectedRow, date)}>
-                            <FontAwesomeIcon icon={faDownload} className="w-4 h-4 mr-1.5" />
-                            Export Trace
-                        </Button>
-                    </div>
+                <div className="flex justify-end">
+                    <Button variant="ghost" size="sm" disabled={!canExport} onClick={() => handleExportTrace(selectedRow, date)}>
+                        <FontAwesomeIcon icon={faDownload} className="w-4 h-4 mr-1.5" />
+                        Export Trace
+                    </Button>
                 </div>
             }
         >
+            {/* Inline error — a view-level alert would sit behind the modal overlay */}
+            <ApiErrorAlert error={apiError} onDismiss={() => setApiError(null)} className="mb-4" />
             {selectedRow && (
                 <>
                     {/* Request summary */}

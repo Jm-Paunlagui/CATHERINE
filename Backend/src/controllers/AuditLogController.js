@@ -2,8 +2,10 @@
 
 const { catchAsync } = require('../utils/catchAsync');
 const { sendSuccess, RESPONSE_MESSAGES } = require('../constants/responses');
+const { AUDIT_LOG_ERRORS } = require('../constants/errors');
 const AuditLogService = require('../services/AuditLogService');
 const MetricsService = require('../services/MetricsService');
+const systemLogTail = require('../services/SystemLogTailService');
 const { logger } = require('../utils/logger');
 const { auditLogMessages } = require('../constants/messages');
 
@@ -21,6 +23,22 @@ const { auditLogMessages } = require('../constants/messages');
 // NOT wrapped in catchAsync — the stream method upgrades the connection to an
 // event stream, after which an HTTP error response would crash with write-after-end.
 // Errors are handled internally and surfaced as SSE `error` events instead.
+
+/**
+ * Resolves the per-account key an SSE connection is registered under.
+ *
+ * Both stream endpoints allow ONE connection per account, so this key must be
+ * stable AND distinct per user. Falling back to a literal "undefined" would
+ * collapse every admin onto one key and 409 the second one out — hence the
+ * explicit chain (`id` is the template's JWT claim; `userId` covers deployments
+ * that renamed it) with `username` as the last resort.
+ *
+ * @param {object} user - Decoded JWT claims (req.user)
+ * @returns {string}
+ */
+function _streamKeyFor(user) {
+    return String(user?.id ?? user?.userId ?? user?.username ?? 'anonymous');
+}
 
 /** SSE poll interval in milliseconds. */
 const SSE_POLL_INTERVAL_MS = 5_000;
@@ -327,7 +345,7 @@ class AuditLogController {
       return;
     }
 
-    const userId = String(req.user.userId);
+    const userId = _streamKeyFor(req.user);
 
     if (_auditConnections.has(userId)) {
       logger.warning(auditLogMessages.SSE_DUPLICATE_CONNECTION(userId));
@@ -367,6 +385,106 @@ class AuditLogController {
       _auditConnections.delete(userId);
       logger.info(auditLogMessages.SSE_DISCONNECTED(userId));
       _stopAuditPoller(); // no-op unless _auditConnections is now empty
+    });
+  };
+
+  /**
+   * GET /api/v1/audit-logs/system-logs
+   *
+   * Browse RFC 5424 server log entries by level for one calendar day — the
+   * "System" sub-tab of the Audit Logs tab. Query: date (YYYY-MM-DD, defaults
+   * to today), maxPriority (0-7, default 5 = NOTICE and above), level (exact
+   * single level, overrides maxPriority), page, pageSize, search.
+   *
+   * MUST be declared before `/:requestId/...` in audit-log.route.js so the
+   * literal "system-logs" segment is never captured as a requestId.
+   */
+  static getSystemLogs = catchAsync(async (req, res) => {
+    const { date, maxPriority, level, page = 1, pageSize = 50, search } = req.query;
+    const data = await AuditLogService.getSystemLogs({
+      date,
+      maxPriority: maxPriority !== undefined ? parseInt(maxPriority, 10) : undefined,
+      level,
+      page: parseInt(page, 10) || 1,
+      pageSize: parseInt(pageSize, 10) || 50,
+      search,
+    });
+    res.json(sendSuccess(RESPONSE_MESSAGES.SYSTEM_LOGS_FETCHED, data));
+  });
+
+  /**
+   * GET /api/v1/audit-logs/system-logs/stream
+   *
+   * SSE live tail of today's RFC 5424 level files, filtered to `maxPriority`
+   * (query, default 5) or, when `level` (query) is given, to that single exact
+   * level instead — mirroring how `AuditLogService.getSystemLogs`' `level` param
+   * overrides `maxPriority` on the browse endpoint, so a user who picks one
+   * exact level while Live is on is not sent every level over the wire just to
+   * discard them client-side. Delegates all poll/offset/dispatch logic to
+   * `SystemLogTailService` — this method only owns the HTTP/SSE lifecycle
+   * (headers, connection registration, and disconnect cleanup), mirroring
+   * `stream()` above.
+   *
+   * NOT wrapped in catchAsync — manages its own SSE lifecycle; an HTTP error
+   * response after the connection is upgraded to an event stream would crash
+   * with write-after-end. An invalid `level` is therefore rejected with a plain
+   * JSON 400 BEFORE the SSE headers are sent, mirroring this method's existing
+   * 401/409 raw-JSON error responses above.
+   *
+   * Separate connection registry from the audit-log stream (a user may hold
+   * both open at once — e.g. User Traffic live view in one tab, System live
+   * tail in another).
+   *
+   * @param {import('express').Request}  req
+   * @param {import('express').Response} res
+   */
+  static streamSystemLogs = (req, res) => {
+    if (!req.user) {
+      res.status(401).json({ status: 'error', code: 401, message: 'Authentication required.', error: { type: 'AuthenticationError' } });
+      return;
+    }
+
+    const userId = _streamKeyFor(req.user);
+
+    if (systemLogTail.hasConnection(userId)) {
+      logger.warning(auditLogMessages.SYSTEM_TAIL_DUPLICATE_CONNECTION(userId));
+      res.status(409).json({ status: 'error', code: 409, message: 'System log stream already open for this account.', error: { type: 'ConflictError' } });
+      return;
+    }
+
+    const rawMaxPriority = parseInt(req.query.maxPriority, 10);
+    const maxPriority = Number.isInteger(rawMaxPriority) && rawMaxPriority >= 0 && rawMaxPriority <= 7
+      ? rawMaxPriority
+      : 5;
+
+    // Exact level filter — overrides maxPriority for this connection when
+    // provided. Validated against the same known-level-name set the browse
+    // endpoint uses (AuditLogService.SYSTEM_LOG_LEVEL_NAMES) so the two paths
+    // never disagree on what a valid level is.
+    let level = null;
+    if (req.query.level != null && req.query.level !== '') {
+      const normalizedLevel = AuditLogService.SYSTEM_LOG_LEVEL_NAMES[String(req.query.level).toLowerCase()];
+      if (!normalizedLevel) {
+        res.status(400).json({ status: 'error', code: 400, message: AUDIT_LOG_ERRORS.SYSTEM_LOG_INVALID_LEVEL, error: { type: 'ValidationError' } });
+        return;
+      }
+      level = normalizedLevel;
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    systemLogTail.addConnection(userId, res, maxPriority, level);
+
+    res.write('event: connected\n');
+    res.write(`data: ${JSON.stringify({ timestamp: new Date().toISOString(), maxPriority, ...(level ? { level } : {}) })}\n\n`);
+    if (typeof res.flush === 'function') res.flush();
+
+    req.on('close', () => {
+      systemLogTail.removeConnection(userId);
     });
   };
 }

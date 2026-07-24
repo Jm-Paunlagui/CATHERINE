@@ -39,6 +39,13 @@ class AuditLogMiddleware {
         if (this._excludedPaths.some((p) => req.path.startsWith(p)))
             return next();
 
+        // OPTIONS (CORS preflight) requests are browser plumbing, not business
+        // traffic. They are answered before routing, so req.route is never set
+        // and the endpoint resolves to "UNMATCHED" — polluting the audit log
+        // with imprecise rows. RED metrics already exclude them via
+        // shouldRecordRouteMetrics(); audit logs must do the same.
+        if (req.method === "OPTIONS") return next();
+
         const startTime = Date.now();
         const originalEnd = res.end.bind(res);
 
@@ -71,9 +78,21 @@ class AuditLogMiddleware {
         const endpoint =
             spaceIdx !== -1 ? routeLabel.slice(spaceIdx + 1) : req.path;
 
+        // USER_ID is a NUMBER column, but JWT claims are not guaranteed numeric
+        // (a `userId` claim is commonly a string). insertMany batches type each
+        // column from the FIRST non-null sample — mixed number/string values in
+        // one flush batch trip NJS-011 and lose the whole batch. Normalize to a
+        // numeric value or null before the record ever reaches the buffer.
+        const rawUserId =
+            req.user?.id ?? req.user?.GID ?? req.user?.userId ?? null;
+        const userId =
+            rawUserId != null && /^\d+$/.test(String(rawUserId).trim())
+                ? Number(String(rawUserId).trim())
+                : null;
+
         return {
             REQUEST_ID: req.id ?? null,
-            USER_ID: req.user?.id ?? req.user?.GID ?? req.user?.userId ?? null,
+            USER_ID: userId,
             USERNAME: req.user?.username ?? req.user?.firstName ?? null,
             METHOD: req.method,
             ENDPOINT: endpoint,

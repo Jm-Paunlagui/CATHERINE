@@ -20,7 +20,7 @@ const BADGE = {
  * @param {{ hook: import('../metrics.hook').MetricsHook }} props
  */
 export default function OverviewTab({ hook }) {
-    const { summary, summaryLoading, alerts, formatPct, formatMs } = hook;
+    const { summary, summaryLoading, summaryError, alerts, formatPct, formatMs } = hook;
 
     if (summaryLoading) {
         return (
@@ -37,6 +37,15 @@ export default function OverviewTab({ hook }) {
                 ))}
             </div>
         );
+    }
+
+    // FE-BUG-021 (2/6): metrics.hook.js already computes+returns `summaryError`,
+    // but nothing here ever read it — a summary fetch failure fell through to
+    // the same rendering as a genuinely healthy/idle system (alerts.length===0
+    // → "Healthy" / "All systems nominal"). Mirrors the sibling RED
+    // Metrics/System tabs' own snapshotError idiom in this same feature.
+    if (summaryError) {
+        return <div className="mt-6 p-4 rounded-xl bg-danger-400/10 border border-danger-400/30 text-danger-400 text-sm">Failed to load overview metrics. You may not have sufficient access level, or the server is temporarily unavailable.</div>;
     }
 
     const totalReqs = summary?.totals?.requestsTotal ?? 0;
@@ -64,8 +73,8 @@ export default function OverviewTab({ hook }) {
             sub: "since process start",
             icon: faServer,
             badgeCls: BADGE.blue,
-            iconCls: "text-blue-400",
-            accent: "text-blue-400",
+            iconCls: "text-(--blue-foreground)",
+            accent: "text-(--blue-foreground)",
             subCls: "text-grey-400 dark:text-white/40",
         },
         {
@@ -94,8 +103,8 @@ export default function OverviewTab({ hook }) {
             sub: "process running since start",
             icon: faClockRotateLeft,
             badgeCls: BADGE.purple,
-            iconCls: "text-purple-400",
-            accent: "text-purple-400",
+            iconCls: "text-(--secondary-foreground)",
+            accent: "text-(--secondary-foreground)",
             subCls: "text-grey-400 dark:text-white/40",
         },
     ];

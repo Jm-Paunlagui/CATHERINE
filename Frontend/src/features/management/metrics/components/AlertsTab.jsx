@@ -5,14 +5,20 @@
 import { ANIMATE_ENTER_UP, ANIM_DELAY_0 } from "../../../../assets/styles/pre-set-styles";
 import Button from "../../../../components/ui/Button";
 import Table from "../../../../components/ui/Table";
+import { Tabs } from "../../../../components/ui/Tabs";
 import { PILL_BASE, getAlertSeverityStyle } from "../metricsStyles";
+import AckAlertModal from "./AckAlertModal";
+import AlertHistoryTab from "./AlertHistoryTab";
+import NotificationStatusPanel from "./NotificationStatusPanel";
 
 /**
+ * Active alerts — the original (pre-History-split) AlertsTab content, moved
+ * verbatim into its own sub-component so it can sit alongside AlertHistoryTab
+ * inside the nested Active | History Tabs below.
+ *
  * @param {{ hook: import('../metrics.hook').MetricsHook, onViewLogs?: (route: string) => void }} props
- * @param {function} [props.onViewLogs] - Pivot callback: jump to the Audit Logs tab
- *   pre-filtered to a route. Rendered as a "View Logs" action on route-scoped alerts.
  */
-export default function AlertsTab({ hook, onViewLogs }) {
+function ActiveAlertsTab({ hook, onViewLogs }) {
     const { alerts, alertsLoading, alertsError, refetchAlerts, formatPct, formatMs } = hook;
 
     if (alertsLoading) {
@@ -72,12 +78,37 @@ export default function AlertsTab({ hook, onViewLogs }) {
         {
             key: "actions",
             label: "",
-            render: (row) =>
-                row.route && onViewLogs ? (
-                    <Button variant="ghost" size="sm" onClick={() => onViewLogs(row.route)}>
-                        View Logs
-                    </Button>
-                ) : null,
+            render: (row) => (
+                <div className="flex items-center justify-end gap-2 flex-wrap">
+                    {row.acknowledged && (
+                        <span
+                            className="text-xs text-grey-500 dark:text-white/50 whitespace-nowrap"
+                            title={row.ackNote || ""}
+                        >
+                            Acked by {row.ackedByName || `Admin #${row.ackedBy}`} · {hook.formatExpiresIn(row.ackExpiresAt)}
+                        </span>
+                    )}
+                    {row.acknowledged ? (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            loading={hook.unackLoadingKey === row.alertKey}
+                            onClick={() => hook.unacknowledgeAlert(row.alertKey)}
+                        >
+                            Unack
+                        </Button>
+                    ) : (
+                        <Button variant="outline" size="sm" onClick={() => hook.openAckModal(row.alertKey)}>
+                            Ack
+                        </Button>
+                    )}
+                    {row.route && onViewLogs && (
+                        <Button variant="ghost" size="sm" onClick={() => onViewLogs(row.route)}>
+                            View Logs
+                        </Button>
+                    )}
+                </div>
+            ),
         },
     ];
 
@@ -100,6 +131,34 @@ export default function AlertsTab({ hook, onViewLogs }) {
             ) : (
                 <Table columns={columns} data={alerts.map((a, i) => ({ ...a, _id: i }))} stickyHeader striped compact />
             )}
+        </div>
+    );
+}
+
+/**
+ * Alerts area — the notification status panel, followed by an Active |
+ * History nested Tabs pair (Active = the original rule-evaluation table
+ * above, unchanged; History = the persisted alert-log audit view).
+ *
+ * Controlled by `hook.alertsView` (not local/uncontrolled state) so the
+ * History sub-tab's fetch can be gated behind actually opening it instead of
+ * firing unconditionally the instant this feature's hook mounts.
+ *
+ * @param {{ hook: import('../metrics.hook').MetricsHook, onViewLogs?: (route: string) => void }} props
+ * @param {function} [props.onViewLogs] - Pivot callback: jump to the Audit Logs tab
+ *   pre-filtered to a route. Rendered as a "View Logs" action on route-scoped alerts.
+ */
+export default function AlertsTab({ hook, onViewLogs }) {
+    const tabs = [
+        { id: "active", label: "Active", content: <ActiveAlertsTab hook={hook} onViewLogs={onViewLogs} /> },
+        { id: "history", label: "History", content: <AlertHistoryTab hook={hook} /> },
+    ];
+
+    return (
+        <div className="space-y-4">
+            <NotificationStatusPanel hook={hook} />
+            <Tabs tabs={tabs} variant="pill" size="sm" activeTab={hook.alertsView} onChange={hook.setAlertsView} />
+            <AckAlertModal hook={hook} />
         </div>
     );
 }

@@ -59,6 +59,10 @@ class AdminManagementService {
                     lastName: null,
                     isActive: String(admin.IS_ACTIVE ?? "Y"),
                     signatureValid: sigValid,
+                    canReceiveSrvCrit: String(admin.CAN_RECEIVE_SRV_CRIT  ?? "N"),
+                    canReceiveSrvDeps: String(admin.CAN_RECEIVE_SRV_DEPS  ?? "N"),
+                    canReceiveSrvRed:  String(admin.CAN_RECEIVE_SRV_RED   ?? "N"),
+                    canReceiveSrvSys:  String(admin.CAN_RECEIVE_SRV_SYS   ?? "N"),
                     createdAt: admin.CREATED_AT ?? null,
                     updatedAt: admin.UPDATED_AT ?? null,
                 };
@@ -390,6 +394,10 @@ class AdminManagementService {
             "canRejectBilling",
             "canReceiveBilling",
             "canExportBilling",
+            "canReceiveSrvCrit",
+            "canReceiveSrvDeps",
+            "canReceiveSrvRed",
+            "canReceiveSrvSys",
             "isActive",
         ];
         const invalidKeys = Object.keys(flags).filter(

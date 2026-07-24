@@ -1,6 +1,7 @@
 import { faArrowRightArrowLeft, faBug, faCircleCheck, faCircleXmark, faServer, faShield, faStopwatch, faTriangleExclamation, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ANIMATE_ENTER_UP, HOVER_LIFT, staggerDelay, TRANSITION_SPRING } from "../../../../assets/styles/pre-set-styles";
+import Alert from "../../../../components/ui/Alert";
 import { Skeleton } from "../../../../components/ui/Skeleton";
 
 // ─── Design token colour map (mirrors MetricCards.jsx) ───────────────────────
@@ -12,9 +13,9 @@ const COLOR = {
         value: "text-(--accent-foreground)",
     },
     purple: {
-        icon: "text-purple-400",
+        icon: "text-(--secondary-foreground)",
         badge: "bg-purple-400/10 border-purple-400/20 dark:bg-purple-400/5 dark:border-purple-400/15",
-        value: "text-purple-400",
+        value: "text-(--secondary-foreground)",
     },
     green: {
         icon: "text-success-400",
@@ -22,9 +23,9 @@ const COLOR = {
         value: "text-success-400",
     },
     blue: {
-        icon: "text-blue-400",
+        icon: "text-(--blue-foreground)",
         badge: "bg-blue-400/10 border-blue-400/20 dark:bg-blue-400/5 dark:border-blue-400/15",
-        value: "text-blue-400",
+        value: "text-(--blue-foreground)",
     },
     amber: {
         icon: "text-warn-400",
@@ -98,11 +99,20 @@ function AuditMetricCard({ icon, label, value, colorKey, staggerIdx, loading }) 
  * @param {{ hook: object }} props
  */
 export default function AuditStatsRow({ hook }) {
-    const { statsData, statsLoading } = hook;
+    const { statsData, statsLoading, statsError, statsErrorMessage } = hook;
     const stats = statsData?.data ?? {};
 
     return (
         <div className="space-y-2.5">
+            {/* A stats fetch failure must not fall through
+                to every card's zero/default fallback — that is
+                indistinguishable from a genuinely quiet audit window. */}
+            {statsError && !statsLoading && (
+                <Alert variant="danger" title="Failed to load audit statistics">
+                    {statsErrorMessage}
+                </Alert>
+            )}
+
             {/* Primary stat cards — 5 across */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
                 {PRIMARY_STATS.map((stat, i) => (

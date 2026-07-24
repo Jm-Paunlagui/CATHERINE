@@ -28,8 +28,11 @@
  *     conservative but safe for a security audit trail.
  *
  * NOT cached:
- *   GET /export/excel  — triggers file download; must never be cached.
- *   GET /export/logs   — triggers ZIP download; must never be cached.
+ *   GET /export/excel        — triggers file download; must never be cached.
+ *   GET /export/logs         — triggers ZIP download; must never be cached.
+ *   GET /system-logs         — reads live log files from disk; a stale cache
+ *                               could hide the exact line an operator is chasing.
+ *   GET /system-logs/stream  — SSE; an event stream must never be cached.
  *
  * Invalidation:
  *   DELETE /  (deleteRange) → delByPattern('auditLog') — entire namespace wipe.
@@ -41,9 +44,11 @@
  * AFTER authenticate + requireAccess and BEFORE the controller — CWE-639
  * compliance: we never serve cached data to an unauthenticated/unauthorised caller.
  *
- * Route ordering note: /stats, /export/excel, and /export/logs are declared
- * BEFORE /:requestId/logs so that Express does not treat the literal segments
- * "stats", "export" as requestId param values.
+ * Route ordering note: /stats, /export/excel, /export/logs, /stream,
+ * /system-logs, and /system-logs/stream are ALL declared BEFORE
+ * /:requestId/logs and /:requestId/export/trace so that Express does not
+ * treat literal segments ("stats", "export", "stream", "system-logs") as
+ * requestId param values.
  */
 
 const express = require("express");
@@ -134,6 +139,43 @@ router.get(
   AuthMiddleware.authenticate,
   AuthMiddleware.requireAccess(isAdminOrSuperAdmin),
   AuditLogController.stream,
+);
+
+/**
+ * GET /api/v1/audit-logs/system-logs
+ * Browse RFC 5424 server log entries by level for one calendar day (the
+ * "System" sub-tab). NOT cached — reads live log files from disk, and a
+ * stale cache could hide the exact NOTICE/CRITICAL line an operator is
+ * chasing right now.
+ *
+ * Static-segment route — MUST be declared before /:requestId/logs and
+ * /:requestId/export/trace so Express never treats the literal "system-logs"
+ * segment as a requestId param value.
+ */
+router.get(
+  "/system-logs",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.requireAccess(isAdminOrSuperAdmin),
+  AuditLogController.getSystemLogs,
+);
+
+/**
+ * GET /api/v1/audit-logs/system-logs/stream
+ * SSE live tail of today's RFC 5424 level files. Same access tier and SSE
+ * lifecycle model as /stream, on an entirely separate connection registry
+ * (SystemLogTailService) so a user may hold both streams open at once.
+ *
+ * NOT wrapped in catchAsync — manages its own SSE lifecycle. NOT cached —
+ * an event stream must never be served from the cache layer.
+ *
+ * Static-segment route — MUST be declared before /:requestId/logs so Express
+ * does not treat "system-logs" as a requestId param value.
+ */
+router.get(
+  "/system-logs/stream",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.requireAccess(isAdminOrSuperAdmin),
+  AuditLogController.streamSystemLogs,
 );
 
 /**

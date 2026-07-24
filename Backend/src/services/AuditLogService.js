@@ -8,6 +8,65 @@ const { AppError, AUDIT_LOG_ERRORS } = require("../constants/errors");
 const { auditLogMessages } = require("../constants/messages");
 const AuditLogModel = require("../models/audit.log.model");
 
+/**
+ * Log directory base — MUST match logger.js's LOG_BASE_DIR resolution: in
+ * compiled (pkg) builds logs live NEXT TO THE EXE (a Windows service may
+ * start with cwd = System32); in normal Node they live under the cwd.
+ * Reading from process.cwd() here while the logger writes next to the exe
+ * would make audit-log reads/exports silently target an empty directory.
+ */
+const LOG_BASE_DIR = process.pkg
+    ? path.join(path.dirname(process.execPath), "logs")
+    : path.join(process.cwd(), "logs");
+
+/**
+ * RFC 5424 level-file names → canonical level name. Legacy `warn.log`
+ * (pre-v5 logger) normalizes to WARNING, same as the current `warning.log`.
+ * Shared with `SystemLogTailService` (the live-tail poller) so both the
+ * browse endpoint and the SSE stream agree on level naming.
+ */
+const SYSTEM_LOG_LEVEL_NAMES = Object.freeze({
+    emergency: "EMERGENCY",
+    alert: "ALERT",
+    critical: "CRITICAL",
+    error: "ERROR",
+    warning: "WARNING",
+    warn: "WARNING",
+    notice: "NOTICE",
+    info: "INFO",
+    debug: "DEBUG",
+});
+
+/** RFC 5424 numeric priority per canonical level name (0 = highest). */
+const SYSTEM_LOG_PRIORITY = Object.freeze({
+    EMERGENCY: 0,
+    ALERT: 1,
+    CRITICAL: 2,
+    ERROR: 3,
+    WARNING: 4,
+    NOTICE: 5,
+    INFO: 6,
+    DEBUG: 7,
+});
+
+/** Matches every RFC 5424 level filename, including legacy `warn.log` and `_N` rotation suffixes. */
+const SYSTEM_LOG_FILENAME_RE =
+    /^(emergency|alert|critical|error|warning|warn|notice|info|debug)(_\d+)?\.log$/;
+
+/** Default tail-window read size per file (bytes) — overridable via SYSTEM_LOG_MAX_READ_BYTES. */
+const DEFAULT_SYSTEM_LOG_MAX_READ_BYTES = 5 * 1024 * 1024;
+
+/** 'YYYY-MM-DD' for the current date in Asia/Manila, independent of server process TZ. */
+function _todayManilaDateStr() {
+    const fmt = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Manila",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    });
+    return fmt.format(new Date());
+}
+
 // Lazy-loaded to avoid hard dependency at startup
 let _ExcelJS = null;
 let _archiverMod = null;
@@ -22,6 +81,24 @@ const _getArchiver = () => {
 };
 
 class AuditLogService {
+    // Read-only accessor for the module-level LOG_BASE_DIR constant — exposed
+    // so SystemLogTailService (the SSE live-tail poller) can default its own
+    // `logBaseDir` override to the exact same directory the browse endpoint
+    // reads from, without any code being able to accidentally repoint every
+    // log read in the process by assigning to it. Deliberately a GETTER with
+    // no setter: under "use strict" (top of this file) an assignment attempt
+    // now throws instead of silently no-op'ing. `getSystemLogs` — previously
+    // the one method that re-read this on every call — now takes its own
+    // `logBaseDir` parameter instead (see below); tests point that ONE method
+    // at a fixture directory by passing `{ logBaseDir }`, never by mutating a
+    // process-wide global.
+    static get LOG_BASE_DIR() {
+        return LOG_BASE_DIR;
+    }
+    static SYSTEM_LOG_LEVEL_NAMES = SYSTEM_LOG_LEVEL_NAMES;
+    static SYSTEM_LOG_PRIORITY = SYSTEM_LOG_PRIORITY;
+    static SYSTEM_LOG_FILENAME_RE = SYSTEM_LOG_FILENAME_RE;
+
     // ─── Batched fire-and-forget persistence ────────────────────────────────────
     // One INSERT per HTTP request meant a burst of N concurrent requests issued
     // N additional Oracle round-trips, competing with the actual read queries for
@@ -266,19 +343,19 @@ class AuditLogService {
 
     /**
      * Read log files for a given date and return all lines that reference requestId.
-     * Searches info*.log, warn*.log, and error*.log (including rotation files) in the
-     * daily log directory. Lines are merged across all three level files and sorted
-     * chronologically by their embedded [YYYY-MM-DD HH:MM:SS] timestamp.
+     * Searches ALL RFC 5424 level files (emergency/alert/critical/error/warning/
+     * notice/info/debug, legacy warn, including _N rotation files) in the daily log
+     * directory. Lines are merged across every level file and sorted
+     * chronologically by their embedded [YYYY-MM-DD HH:MM:SS(.mmm)] timestamp,
+     * with a phase-aware tiebreak ([Incoming Request] first, [Request Complete]
+     * last) so legacy second-precision lines still order Incoming → FUNC → Complete.
      *
      * @param {string} requestId  - Request ID (e.g. "0078812966528-0448-0000").
      * @param {string} dateStr    - ISO date string YYYY-MM-DD (the day to search).
      * @returns {Promise<{ requestId: string, lines: string[] }>}
      */
     static async getRequestLogs(requestId, dateStr) {
-        // Accepts three formats for backward compatibility:
-        //   1. Segmented Snowflake: "0078812966528-0448-0000" (current)
-        //   2. Legacy Snowflake:    "req_330283683508125696"
-        //   3. Legacy nanoid:       "req_UvNZUayhzL"
+        // Accepts both Snowflake format (0078812966528-0448-0000) and legacy (req_UvNZUayhzL)
         if (
             !requestId ||
             !(
@@ -299,15 +376,22 @@ class AuditLogService {
         }
 
         const [year, month, day] = dateStr.split("-");
-        const logDir = path.join(process.cwd(), "logs", year, month, day);
+        const logDir = path.join(LOG_BASE_DIR, year, month, day);
         const token = `[${requestId}]`;
         const matched = [];
 
         let files;
         try {
             const all = await fs.readdir(logDir);
+            // Every RFC 5424 level writes its own daily file — the trace must
+            // sweep all of them or WARNING/NOTICE/CRITICAL/DEBUG lines vanish
+            // from the Request Log Trace.
             files = all
-                .filter((f) => /^(info|warn|error)(_\d+)?\.log$/.test(f))
+                .filter((f) =>
+                    /^(emergency|alert|critical|error|warning|warn|notice|info|debug)(_\d+)?\.log$/.test(
+                        f,
+                    ),
+                )
                 .sort();
         } catch {
             return { requestId, lines: [] };
@@ -330,19 +414,318 @@ class AuditLogService {
             }
         }
 
-        // Sort all lines from all level files chronologically by embedded timestamp
+        // Sort all lines from all level files chronologically by embedded
+        // timestamp (millisecond precision when present). Phase rank breaks
+        // timestamp ties so legacy second-precision lines never render as
+        // Incoming → Complete → FUNC.
+        const TS_RE = /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)\]/;
+        const _phaseRank = (line) => {
+            if (line.includes("[Incoming Request]")) return 0;
+            if (line.includes("[Request Complete]")) return 2;
+            return 1; // [Handling Request] and [FUNC] lines
+        };
         matched.sort((a, b) => {
-            const ta =
-                a.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/)?.[1] ?? "";
-            const tb =
-                b.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/)?.[1] ?? "";
-            return ta.localeCompare(tb);
+            // Pad second-precision timestamps so "…:05" sorts with "…:05.000"
+            const ta = (a.match(TS_RE)?.[1] ?? "").padEnd(23, ".000");
+            const tb = (b.match(TS_RE)?.[1] ?? "").padEnd(23, ".000");
+            const cmp = ta.localeCompare(tb);
+            return cmp !== 0 ? cmp : _phaseRank(a) - _phaseRank(b);
         });
 
         logger.info(
             auditLogMessages.LOG_TRACE_FETCHED(requestId, matched.length),
         );
         return { requestId, lines: matched };
+    }
+
+    // ─── System log file view (RFC 5424 level files, "System" sub-tab) ─────────
+
+    /**
+     * Parses one raw log line into a structured row. Extends the trace-export
+     * parsers (`_detectPhase` / `_extractTimestamp` / `_extractMessage` /
+     * `_extractLocation` in {@link exportTraceExcel}) with `level` (from the
+     * source filename — the request-trace sweep discards it, this one keeps
+     * it), `machine`, `pid`, `requestId`, and the raw `meta` string.
+     *
+     * Never throws. A line that does not match the expected
+     * `[MACHINE] [TS] [LEVEL] [PID:n] [fn @ file:line] ... - MESSAGE` shape
+     * degrades gracefully: every structured field is `null` except `level`
+     * (falls back to the file's level) and `message` (the raw trimmed line).
+     *
+     * @param {string} line  - One raw log line (already trimmed of trailing `\n`).
+     * @param {string} level - Canonical level name for the file this line came
+     *   from (one of {@link SYSTEM_LOG_LEVEL_NAMES} values) — used as the
+     *   fallback when the line itself carries no `[LEVEL]` bracket.
+     * @returns {{ ts: string|null, level: string|null, machine: string|null,
+     *   pid: number|null, location: string|null, phase: string|null,
+     *   method: string|null, requestId: string|null, message: string,
+     *   meta: string|null }|null} `null` only for an empty/non-string line.
+     */
+    static _parseSystemLine(line, level) {
+        if (typeof line !== "string") return null;
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+
+        const fallbackLevel = level ? String(level).toUpperCase() : null;
+
+        const machineMatch = trimmed.match(/^\[([^\]]+)\]/);
+        const machine = machineMatch ? machineMatch[1] : null;
+
+        const tsMatch = trimmed.match(
+            /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)\]/,
+        );
+        const ts = tsMatch ? tsMatch[1] : null;
+
+        const levelMatch = trimmed.match(
+            /\[(EMERGENCY|ALERT|CRITICAL|ERROR|WARNING|NOTICE|INFO|DEBUG)\]/,
+        );
+        const parsedLevel = levelMatch ? levelMatch[1] : fallbackLevel;
+
+        const pidMatch = trimmed.match(/\[PID:(\d+)\]/);
+        const pid = pidMatch ? Number(pidMatch[1]) : null;
+
+        const locationMatch = trimmed.match(/\[([^\]]+\s@\s[^\]]+:\d+)\]/);
+        const location = locationMatch ? locationMatch[1] : null;
+
+        const headerEnd = trimmed.lastIndexOf("] - ");
+        let phase = null;
+        let method = null;
+        let requestId = null;
+        let rawAfter;
+
+        if (headerEnd === -1) {
+            // Malformed / unexpected line shape — degrade gracefully, keep
+            // the raw text as the message rather than dropping the line.
+            rawAfter = trimmed;
+        } else {
+            rawAfter = trimmed.slice(headerEnd + 4); // past "] - "
+
+            if (locationMatch) {
+                const afterLocationIdx =
+                    trimmed.indexOf(locationMatch[0]) + locationMatch[0].length;
+                const trailingSegment = trimmed.slice(
+                    afterLocationIdx,
+                    headerEnd + 1,
+                );
+                for (const m of trailingSegment.matchAll(/\[([^\]]*)\]/g)) {
+                    const g = m[1];
+                    if (!g) continue;
+                    if (g === "Incoming Request") phase = "Incoming";
+                    else if (g === "Request Complete") phase = "Complete";
+                    else if (g === "Handling Request") phase = "Handling";
+                    else if (
+                        /^\d{13}-\d{4}-\d{4}$/.test(g) ||
+                        /^req_[A-Za-z0-9_-]{1,30}$/.test(g)
+                    )
+                        requestId = g;
+                    else method = g;
+                }
+            }
+        }
+
+        const metaMarker = " | META: ";
+        const metaIdx = rawAfter.indexOf(metaMarker);
+        let message = rawAfter;
+        let meta = null;
+        if (metaIdx !== -1) {
+            message = rawAfter.slice(0, metaIdx);
+            meta = rawAfter.slice(metaIdx + metaMarker.length);
+        }
+
+        return {
+            ts,
+            level: parsedLevel,
+            machine,
+            pid,
+            location,
+            phase,
+            method,
+            requestId,
+            message: message.trim(),
+            meta,
+        };
+    }
+
+    /**
+     * Reads the tail window of every RFC 5424 level file for one calendar day,
+     * merges + parses them, and returns an offset-paginated, priority-filtered
+     * page — the data source for the Logging & Observability "System" sub-tab.
+     *
+     * Deliberately reads a **tail window** (last `SYSTEM_LOG_MAX_READ_BYTES`
+     * bytes, default 5 MB) per file rather than skipping oversized files
+     * outright (the `getRequestLogs` 10 MB skip) — a busy production day's
+     * `info.log` can exceed 10 MB, and skipping it would blank exactly the
+     * day an operator most needs to see. The first (possibly partial) line of
+     * a truncated read is dropped so no line is half-shown.
+     *
+     * @param {object} params
+     * @param {string} [params.date]        - 'YYYY-MM-DD'. Defaults to today (Asia/Manila).
+     * @param {number} [params.maxPriority=5] - RFC 5424 priority ceiling (0=emergency..7=debug).
+     *   Ignored when `level` is given.
+     * @param {string} [params.level]       - Exact single level name (case-insensitive;
+     *   `warn` is accepted as an alias for `warning`). Overrides `maxPriority`.
+     * @param {number} [params.page=1]
+     * @param {number} [params.pageSize=50] - Capped at 200.
+     * @param {string} [params.search]      - Case-insensitive substring match on
+     *   the parsed message (and raw line as a fallback). Capped at 100 chars.
+     * @param {object} [options]
+     * @param {string} [options.logBaseDir=LOG_BASE_DIR] - Override for the log
+     *   directory root. Defaults to the module's pkg-aware `LOG_BASE_DIR`
+     *   constant. Tests point this at a temp fixture directory instead of
+     *   mutating a shared global.
+     * @returns {Promise<{ rows: object[], total: number, page: number,
+     *   pageSize: number, totalPages: number, truncatedFiles: string[] }>}
+     * @throws {AppError} 400 on an invalid date, level, or priority.
+     */
+    static async getSystemLogs(
+        { date, maxPriority = 5, level, page = 1, pageSize = 50, search } = {},
+        { logBaseDir = LOG_BASE_DIR } = {},
+    ) {
+        const dateStr = date || _todayManilaDateStr();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            throw new AppError(AUDIT_LOG_ERRORS.AUDIT_LOG_INVALID_DATE_FORMAT, 400);
+        }
+
+        let normalizedLevel = null;
+        if (level != null && level !== "") {
+            normalizedLevel = SYSTEM_LOG_LEVEL_NAMES[String(level).toLowerCase()];
+            if (!normalizedLevel) {
+                throw new AppError(AUDIT_LOG_ERRORS.SYSTEM_LOG_INVALID_LEVEL, 400);
+            }
+        }
+
+        let ceiling = Number(maxPriority);
+        if (!Number.isInteger(ceiling) || ceiling < 0 || ceiling > 7) {
+            throw new AppError(AUDIT_LOG_ERRORS.SYSTEM_LOG_INVALID_PRIORITY, 400);
+        }
+
+        const cappedPageSize = Math.min(Math.max(1, Number(pageSize) || 50), 200);
+        const cappedPage = Math.max(1, Number(page) || 1);
+
+        // CWE-22: date is regex-validated above (digits and dashes only) so the
+        // joined path can never escape logBaseDir — the explicit prefix check
+        // below is defense-in-depth, mirroring exportToZip's guard pattern.
+        // Reads the `logBaseDir` parameter (defaults to the module-scope
+        // LOG_BASE_DIR const) so tests can point this ONE method at a fixture
+        // directory without touching every other file-reading method or any
+        // process-wide mutable global.
+        const [year, month, day] = dateStr.split("-");
+        const logDir = path.join(logBaseDir, year, month, day);
+        const resolvedDir = path.resolve(logDir);
+        const resolvedBase = path.resolve(logBaseDir);
+        if (
+            resolvedDir !== resolvedBase &&
+            !resolvedDir.startsWith(resolvedBase + path.sep)
+        ) {
+            throw new AppError(AUDIT_LOG_ERRORS.AUDIT_LOG_INVALID_DATE_FORMAT, 400);
+        }
+
+        let filenames;
+        try {
+            filenames = (await fs.readdir(logDir))
+                .filter((f) => SYSTEM_LOG_FILENAME_RE.test(f))
+                .sort();
+        } catch {
+            logger.info(auditLogMessages.SYSTEM_LOG_DIR_MISSING(dateStr));
+            return {
+                rows: [],
+                total: 0,
+                page: cappedPage,
+                pageSize: cappedPageSize,
+                totalPages: 0,
+                truncatedFiles: [],
+            };
+        }
+
+        const maxReadBytes =
+            Number(process.env.SYSTEM_LOG_MAX_READ_BYTES) ||
+            DEFAULT_SYSTEM_LOG_MAX_READ_BYTES;
+
+        const allRows = [];
+        const truncatedFiles = [];
+
+        for (const filename of filenames) {
+            const fileLevelKey = filename.match(SYSTEM_LOG_FILENAME_RE)[1];
+            const fileLevel = SYSTEM_LOG_LEVEL_NAMES[fileLevelKey];
+            const filePriority = SYSTEM_LOG_PRIORITY[fileLevel];
+
+            if (normalizedLevel) {
+                if (fileLevel !== normalizedLevel) continue;
+            } else if (filePriority > ceiling) {
+                continue;
+            }
+
+            const filePath = path.join(logDir, filename);
+            let handle;
+            try {
+                handle = await fs.open(filePath, "r");
+                const stat = await handle.stat();
+                if (stat.size === 0) continue;
+
+                const start = Math.max(0, stat.size - maxReadBytes);
+                const truncated = start > 0;
+                const length = stat.size - start;
+                const buffer = Buffer.alloc(length);
+                await handle.read(buffer, 0, length, start);
+                let content = buffer.toString("utf8");
+
+                if (truncated) {
+                    // Drop the first (possibly partial) line of a tail-window read.
+                    const nlIdx = content.indexOf("\n");
+                    content = nlIdx !== -1 ? content.slice(nlIdx + 1) : "";
+                    truncatedFiles.push(filename);
+                }
+
+                for (const line of content.split("\n")) {
+                    if (!line.trim()) continue;
+                    const parsed = AuditLogService._parseSystemLine(line, fileLevel);
+                    if (parsed) allRows.push(parsed);
+                }
+            } catch {
+                // Unreadable file — skip it, never fail the whole page for one bad file.
+            } finally {
+                if (handle) await handle.close().catch(() => {});
+            }
+        }
+
+        let filtered = allRows;
+        if (search) {
+            const MAX_SEARCH_LENGTH = 100;
+            const needle = search.trim().slice(0, MAX_SEARCH_LENGTH).toLowerCase();
+            if (needle) {
+                filtered = allRows.filter((r) =>
+                    (r.message || "").toLowerCase().includes(needle),
+                );
+            }
+        }
+
+        // Sort newest-first; rows with no parseable timestamp sort last.
+        filtered.sort((a, b) => {
+            const ta = (a.ts || "").padEnd(23, ".000");
+            const tb = (b.ts || "").padEnd(23, ".000");
+            if (!a.ts && !b.ts) return 0;
+            if (!a.ts) return 1;
+            if (!b.ts) return -1;
+            return tb.localeCompare(ta);
+        });
+
+        const total = filtered.length;
+        const totalPages = Math.ceil(total / cappedPageSize) || 0;
+        const offset = (cappedPage - 1) * cappedPageSize;
+        const rows = filtered.slice(offset, offset + cappedPageSize);
+
+        logger.info(
+            auditLogMessages.SYSTEM_LOGS_FETCHED(dateStr, rows.length, cappedPage),
+        );
+
+        return {
+            rows,
+            total,
+            page: cappedPage,
+            pageSize: cappedPageSize,
+            totalPages,
+            truncatedFiles,
+        };
     }
 
     /**
@@ -384,14 +767,14 @@ class AuditLogService {
 
         const ExcelJS = _getExcelJS();
         const workbook = new ExcelJS.Workbook();
-        workbook.creator = "System";
+        workbook.creator = `${process.env.APP_NAME || "CATHERINE"} System`;
         workbook.created = new Date();
 
         // ── Sheet 1: Audit Records ──
         const sheet1 = workbook.addWorksheet("Audit Records");
         sheet1.columns = [
             { header: "Date", key: "CREATED_AT", width: 22 },
-            { header: "Request ID", key: "REQUEST_ID", width: 20 },
+            { header: "Request ID", key: "REQUEST_ID", width: 26 },
             { header: "Username", key: "USERNAME", width: 20 },
             { header: "Method", key: "METHOD", width: 10 },
             { header: "Endpoint", key: "ENDPOINT", width: 50 },
@@ -470,10 +853,7 @@ class AuditLogService {
      * @throws {AppError} 404 when no audit record is found for the requestId.
      */
     static async exportTraceExcel(requestId, dateStr) {
-        // Accepts three formats for backward compatibility:
-        //   1. Segmented Snowflake: "0078812966528-0448-0000" (current)
-        //   2. Legacy Snowflake:    "req_330283683508125696"
-        //   3. Legacy nanoid:       "req_UvNZUayhzL"
+        // Accepts both Snowflake format (0078812966528-0448-0000) and legacy (req_UvNZUayhzL)
         if (
             !requestId ||
             !(
@@ -516,7 +896,9 @@ class AuditLogService {
             return "Function";
         };
         const _extractTimestamp = (line) => {
-            const m = line.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/);
+            const m = line.match(
+                /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)\]/,
+            );
             return m ? m[1] : "";
         };
         const _extractMessage = (line) => {
@@ -530,7 +912,7 @@ class AuditLogService {
 
         const ExcelJS = _getExcelJS();
         const workbook = new ExcelJS.Workbook();
-        workbook.creator = "System";
+        workbook.creator = `${process.env.APP_NAME || "CATHERINE"} System`;
         workbook.created = new Date();
 
         // ── Sheet 1: Request Summary ──
@@ -636,7 +1018,7 @@ class AuditLogService {
                 const yyyy = String(iter.getFullYear());
                 const mm = String(iter.getMonth() + 1).padStart(2, "0");
                 const dd = String(iter.getDate()).padStart(2, "0");
-                const logDir = path.join(process.cwd(), "logs", yyyy, mm, dd);
+                const logDir = path.join(LOG_BASE_DIR, yyyy, mm, dd);
 
                 try {
                     const files = await fs.readdir(logDir);
@@ -689,9 +1071,16 @@ class AuditLogService {
      * Permanently delete all audit DB records and server log files in [fromDate, toDate].
      * DB rows are removed first; then each calendar day's log directory is removed.
      *
+     * Each day directory removal is verified: missing directories are skipped
+     * (not counted), a failed removal is retried once (~250ms) and, if it still
+     * fails or the directory survives the rm (e.g. Windows EPERM/EBUSY from an
+     * AV scanner or open handle), the day is reported in `failedDays`.
+     *
      * @param {string} fromDate - ISO date string (YYYY-MM-DD).
      * @param {string} toDate   - ISO date string (YYYY-MM-DD).
-     * @returns {Promise<{ deletedRows: number, deletedDays: number }>}
+     * @returns {Promise<{ deletedRows: number, deletedDays: number, failedDays: string[] }>}
+     *          `failedDays` contains `YYYY-MM-DD` strings for day folders that
+     *          could not be removed.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
     static async deleteRange({ fromDate, toDate }) {
@@ -723,18 +1112,69 @@ class AuditLogService {
         const iterDate = new Date(fromDate + "T00:00:00");
         const endDate = new Date(toDate + "T00:00:00");
         let deletedDays = 0;
+        const failedDays = [];
 
         while (iterDate <= endDate) {
             const yyyy = String(iterDate.getFullYear());
             const mm = String(iterDate.getMonth() + 1).padStart(2, "0");
             const dd = String(iterDate.getDate()).padStart(2, "0");
-            const logDir = path.join(process.cwd(), "logs", yyyy, mm, dd);
+            const logDir = path.join(LOG_BASE_DIR, yyyy, mm, dd);
+            const dayLabel = `${yyyy}-${mm}-${dd}`;
 
+            // Skip days with no log directory — nothing to delete, nothing to count.
+            let dirExists = true;
             try {
-                await fs.rm(logDir, { recursive: true, force: true });
-                deletedDays++;
+                await fs.stat(logDir);
             } catch {
-                // Directory may not exist — skip silently
+                dirExists = false;
+            }
+
+            if (dirExists) {
+                // rm with force:true never throws for a missing dir, but CAN throw
+                // (or silently leave the dir) on Windows EPERM/EBUSY when an AV
+                // scanner, indexer, or open handle holds a file. Retry once, then
+                // verify the directory is actually gone before counting.
+                let rmError = null;
+                try {
+                    await fs.rm(logDir, { recursive: true, force: true });
+                } catch (firstErr) {
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                    try {
+                        await fs.rm(logDir, { recursive: true, force: true });
+                    } catch (retryErr) {
+                        rmError = retryErr;
+                    }
+                }
+
+                if (rmError) {
+                    logger.warning(
+                        auditLogMessages.DELETE_DAY_FAILED(
+                            dayLabel,
+                            rmError.message,
+                        ),
+                    );
+                    failedDays.push(dayLabel);
+                } else {
+                    // Verify the directory is truly gone — stat must now throw.
+                    let stillThere = false;
+                    try {
+                        await fs.stat(logDir);
+                        stillThere = true;
+                    } catch {
+                        // Expected — directory removed.
+                    }
+                    if (stillThere) {
+                        logger.warning(
+                            auditLogMessages.DELETE_DAY_FAILED(
+                                dayLabel,
+                                "directory still present after rm",
+                            ),
+                        );
+                        failedDays.push(dayLabel);
+                    } else {
+                        deletedDays++;
+                    }
+                }
             }
 
             iterDate.setDate(iterDate.getDate() + 1);
@@ -744,7 +1184,7 @@ class AuditLogService {
             auditLogMessages.DELETE_RANGE_DONE(deletedRows, deletedDays),
         );
 
-        return { deletedRows, deletedDays };
+        return { deletedRows, deletedDays, failedDays };
     }
 
     /**

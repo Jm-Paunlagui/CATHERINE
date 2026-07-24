@@ -106,8 +106,10 @@ const ADMIN_ERRORS = {
 
 const METRICS_ERRORS = {
     METRICS_UNAVAILABLE: "Metrics data is temporarily unavailable.",
-    INVALID_PAYLOAD: "Invalid metrics payload. Expected a non-empty array of events.",
-    PAYLOAD_TOO_LARGE: "Metrics payload exceeds the maximum of 50 events per request.",
+    INVALID_PAYLOAD:
+        "Invalid metrics payload. Expected a non-empty array of events.",
+    PAYLOAD_TOO_LARGE:
+        "Metrics payload exceeds the maximum of 50 events per request.",
 };
 
 // ─── Audit Log error messages ─────────────────────────────────────────────────
@@ -117,18 +119,42 @@ const AUDIT_LOG_ERRORS = {
         "Invalid date range. fromDate must be before toDate and both must be valid ISO dates.",
     AUDIT_LOG_TRACE_NOT_FOUND: (requestId) =>
         `No audit log record found for request ID: ${requestId}`,
-    AUDIT_LOG_INVALID_REQUEST_ID:
-        "Invalid request ID format.",
-    AUDIT_LOG_INVALID_DATE_FORMAT:
-        "Invalid date — expected YYYY-MM-DD",
+    AUDIT_LOG_INVALID_REQUEST_ID: "Invalid request ID format.",
+    AUDIT_LOG_INVALID_DATE_FORMAT: "Invalid date — expected YYYY-MM-DD",
+    SYSTEM_LOG_INVALID_LEVEL:
+        "Invalid level. Accepted values: emergency, alert, critical, error, warning, notice, info, debug.",
+    SYSTEM_LOG_INVALID_PRIORITY:
+        "Invalid maxPriority. Provide an integer between 0 (emergency) and 7 (debug).",
 };
 
 // ─── Changelog error messages ─────────────────────────────────────────────────
 
 const CHANGELOG_ERRORS = {
-    ENTRY_NOT_FOUND:   "Changelog entry not found.",
+    ENTRY_NOT_FOUND: "Changelog entry not found.",
     STORE_UNAVAILABLE: "Changelog data store is temporarily unavailable.",
-    INVALID_ENTRY:     "Invalid changelog entry data.",
+    INVALID_ENTRY: "Invalid changelog entry data.",
+};
+
+// ─── Server Email Notifications error messages ───────────────────────────────
+
+const NOTIFICATION_ERRORS = {
+    TEST_SEND_FAILED:
+        "We couldn't send the test notification email. Check the SMTP configuration and recipient list, then try again.",
+    CHANNEL_UNKNOWN:
+        "Unknown notification channel. Provide one of the four server notification channel keys.",
+    INVALID_DATE_RANGE:
+        "Invalid date range. 'from' must be on or before 'to' and both must be valid ISO dates.",
+    INVALID_SEVERITY:
+        "Invalid severity. Accepted values: WARNING, CRITICAL, RESOLVED.",
+
+    // ── Phase 4: Alert Acknowledgement ────────────────────────────────────────
+    ALERT_KEY_REQUIRED: "alertKey is required.",
+    ALERT_NOT_FOUND:
+        "Unknown alert key. It may have already recovered or never fired.",
+    ALERT_NOT_ACTIVE:
+        "This alert is not currently active. Only active (non-OK) alerts can be acknowledged.",
+    ACK_NOT_FOUND: "No active acknowledgement found for this alert.",
+    ACK_WRITE_FAILED: "We couldn't save the acknowledgement. Please try again.",
 };
 
 module.exports = {
@@ -140,4 +166,5 @@ module.exports = {
     METRICS_ERRORS,
     AUDIT_LOG_ERRORS,
     CHANGELOG_ERRORS,
+    NOTIFICATION_ERRORS,
 };

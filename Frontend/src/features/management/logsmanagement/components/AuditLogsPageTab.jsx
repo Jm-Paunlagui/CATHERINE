@@ -11,8 +11,10 @@ import { ChartBarIcon, QueueListIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
 import { TRANSITION_COLORS } from "../../../../assets/styles/pre-set-styles";
 import Button from "../../../../components/ui/Button";
+import { Tabs } from "../../../../components/ui/Tabs";
 import AuditLogTable from "./AuditLogTable";
 import AuditStatsRow from "./AuditStatsRow";
+import SystemLogsTab from "./SystemLogsTab";
 
 // ─── Time-range preset helpers ──────────────────────────────────────────────────
 
@@ -48,9 +50,13 @@ const _fmtRange = (iso) =>
     });
 
 /**
+ * User Traffic sub-tab — historical audit statistics plus the filterable,
+ * paginated audit-log table. Both are DB-backed (the audit-log table), in
+ * contrast to the file-backed System sub-tab alongside it.
+ *
  * @param {{ hook: object }} props - the useLogsManagement hook
  */
-export default function AuditLogsPageTab({ hook }) {
+function UserTrafficTab({ hook }) {
     const [activePreset, setActivePreset] = useState("1M");
 
     const handlePreset = (preset) => {
@@ -113,4 +119,26 @@ export default function AuditLogsPageTab({ hook }) {
             </section>
         </div>
     );
+}
+
+/**
+ * Audit Logs tab — splits historical, DB-backed User Traffic from the
+ * file-backed System log view via a nested pill-tab pair, mirroring the
+ * canonical nested-tabs pattern established by MetricsPageTab.jsx.
+ *
+ * Controlled by `hook.activeAuditSubTab` (not local/uncontrolled state) so
+ * the System sub-tab's browse fetch can be gated behind actual visibility —
+ * it does real file I/O on the backend (tail-window reads across up to 8
+ * level files) and must not fire on every mount of this page regardless of
+ * which sub-tab is showing.
+ *
+ * @param {{ hook: object }} props - the useLogsManagement hook
+ */
+export default function AuditLogsPageTab({ hook }) {
+    const tabs = [
+        { id: "user-traffic", label: "User Traffic", content: <UserTrafficTab hook={hook} /> },
+        { id: "system", label: "System", content: <SystemLogsTab hook={hook} /> },
+    ];
+
+    return <Tabs tabs={tabs} variant="pill" size="sm" activeTab={hook.activeAuditSubTab} onChange={hook.setActiveAuditSubTab} />;
 }

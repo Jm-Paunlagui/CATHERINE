@@ -139,12 +139,21 @@ const RESPONSE_MESSAGES = {
     AUDIT_LOG_DELETED:
         "Audit log records and server log files permanently deleted.",
     AUDIT_LOG_TRACE_FETCHED: "Request log trace fetched successfully.",
+    SYSTEM_LOGS_FETCHED: "System log entries fetched successfully.",
 
     // Metrics
     METRICS_FETCHED: "Metrics snapshot retrieved successfully.",
     METRICS_SUMMARY_FETCHED: "Metrics summary retrieved successfully.",
     METRICS_ALERTS_FETCHED: "Alert evaluations retrieved successfully.",
     METRICS_FRONTEND_INGESTED: "Frontend metrics received.",
+
+    // Server email notifications
+    NOTIFICATION_STATUS_FETCHED: "Notification status fetched successfully.",
+    NOTIFICATION_TEST_SENT: "Test notification email sent successfully.",
+    NOTIFICATION_HISTORY_FETCHED:
+        "Alert notification history fetched successfully.",
+    ALERT_ACKNOWLEDGED: "Alert acknowledged.",
+    ALERT_UNACKNOWLEDGED: "Acknowledgement cleared.",
 
     // Client-side error ingestion (ErrorBoundary → POST /client/errors)
     CLIENT_ERROR_LOGGED: "Error logged successfully.",

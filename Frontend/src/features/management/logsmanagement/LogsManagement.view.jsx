@@ -5,7 +5,9 @@
  * Signals, RED, USE, three pillars). Five top-level tabs:
  *   1. Overview       — Golden Signals + Apdex + health-at-a-glance + live traffic
  *   2. Metrics        — RED · System · Dependencies · Frontend Vitals · Alerts
- *   3. Audit Logs     — historical stats + filterable log table (+ trace modal)
+ *   3. Audit Logs     — User Traffic (DB-backed stats + filterable log table,
+ *                       plus the trace modal) · System (file-backed RFC 5424
+ *                       server log entries, browse or live SSE tail)
  *   4. Health         — liveness / readiness probes
  *   5. Log Retention  — export + delete stepper
  *

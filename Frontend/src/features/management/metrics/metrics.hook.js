@@ -4,8 +4,10 @@
  * Auto-refreshes every 30 s via useRequest staleTime.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { extractApiError, toast } from "../../../components/ui/toast.utils";
 import { useRequest } from "../../../hooks/useRequest";
+import AuthMiddleware from "../../../middleware/authentication/AuthMiddleware";
 import { metricsApi } from "./metrics.api";
 
 // ─── Formatting helpers (exported for testability) ────────────────────────────
@@ -98,6 +100,26 @@ export function alertSeverityVariant(severity) {
 }
 
 /**
+ * Formats a future ISO timestamp as a short "Xh left" / "Xm left" string for
+ * the acknowledgement badge ("Acked by {name} · expires in Xh").
+ * Returns "expired" for a timestamp already in the past — a stale ack the
+ * backend guard hasn't cleared yet on this exact render tick (it clears
+ * live on the next poll tick regardless).
+ *
+ * @param {string|null|undefined} iso
+ * @returns {string}
+ */
+export function formatExpiresIn(iso) {
+    if (!iso) return "—";
+    const ms = new Date(iso).getTime() - Date.now();
+    if (!Number.isFinite(ms)) return "—";
+    if (ms <= 0) return "expired";
+    const hours = ms / 3_600_000;
+    if (hours < 1) return `${Math.max(1, Math.round(ms / 60_000))}m left`;
+    return `${Math.round(hours)}h left`;
+}
+
+/**
  * Canonical display order for the Core Web Vitals.
  * @constant {Object.<string, number>}
  */
@@ -166,6 +188,18 @@ export function buildVitalsSummary(vitals = []) {
  * @property {Function}     availabilityVariant - Badge variant helper for availability
  * @property {Function}     lagVariant       - Badge variant helper for EL lag
  * @property {Function}     alertSeverityVariant - Badge variant for alert severity
+ * @property {Function}     formatExpiresIn  - "Xh left" formatter for the ack-expiry badge
+ * @property {number}       ackTtlHours      - Configured ALERT_ACK_TTL_HOURS
+ * @property {boolean}      ackModalOpen     - Whether the Acknowledge confirm modal is open
+ * @property {string|null}  ackTargetKey     - alertKey the Acknowledge modal targets
+ * @property {string}       ackNote          - Optional note text bound to the Acknowledge modal
+ * @property {Function}     setAckNote       - Updates ackNote
+ * @property {boolean}      ackLoading       - Whether an acknowledge request is in flight
+ * @property {string|null}  unackLoadingKey  - alertKey currently being unacknowledged, if any
+ * @property {Function}     openAckModal     - (alertKey) => void — opens the Acknowledge modal
+ * @property {Function}     closeAckModal    - Closes the Acknowledge modal
+ * @property {Function}     confirmAcknowledge - Confirms the acknowledge action for ackTargetKey
+ * @property {Function}     unacknowledgeAlert - (alertKey) => Promise<boolean> — clears an ack
  */
 
 /**
@@ -216,8 +250,171 @@ export function useMetrics() {
         [snapshot],
     );
 
+    // ── Current user (SUPER_ADMIN gate on the notification test-send control) ──
+    const [currentUser, setCurrentUser] = useState(null);
+    useEffect(() => {
+        let cancelled = false;
+        AuthMiddleware.isAuth().then((u) => {
+            if (!cancelled) setCurrentUser(u ?? null);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+    const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+
+    // ── Server Email Notifications — status panel ──
+    const {
+        data: notificationStatusData,
+        loading: notificationStatusLoading,
+        error: notificationStatusError,
+        refetch: refetchNotificationStatus,
+    } = useRequest("metrics/notifications/status", metricsApi.notificationStatus, { staleTime: 30_000 });
+    const notificationStatus = notificationStatusData?.data ?? null;
+    const notificationStatusErrorMessage = notificationStatusError ? extractApiError(notificationStatusError, "Failed to load notification status.").message : null;
+
+    // ── Server Email Notifications — test send (SUPER_ADMIN only) ──
+    const [testSendChannel, setTestSendChannel] = useState("");
+    const [testSendLoading, setTestSendLoading] = useState(false);
+
     /**
-     * RED metrics flattened into rows for the Table component.
+     * Sends a one-off test digest email on `testSendChannel`. Toasts success
+     * or a friendly error and refreshes the status panel either way (a
+     * failed attempt still updates SMTP delivery-health counters).
+     *
+     * @returns {Promise<boolean>}
+     */
+    const sendTestNotification = async () => {
+        if (!testSendChannel) {
+            toast.error("Choose a channel first.");
+            return false;
+        }
+        setTestSendLoading(true);
+        try {
+            const res = await metricsApi.testSendNotification(testSendChannel);
+            toast.success(res.data?.message || res.message || "Test notification sent.");
+            return true;
+        } catch (err) {
+            toast.error(extractApiError(err, "Failed to send the test notification.").message);
+            return false;
+        } finally {
+            setTestSendLoading(false);
+            refetchNotificationStatus();
+        }
+    };
+
+    // ── Alert History sub-tab ──
+    // Active | History nested-Tabs state inside the Alerts area — controlled
+    // here (not locally in AlertsTab.jsx) so the History fetch below can be
+    // gated behind actually opening the History toggle rather than firing
+    // unconditionally the instant useMetrics() mounts.
+    const [alertsView, setAlertsView] = useState("active");
+    const [historyFilters, setHistoryFilters] = useState({ severity: "", rule: "", from: "", to: "" });
+    const [historyPage, setHistoryPage] = useState(1);
+    const historyLimit = 25;
+
+    const historyKey = `metrics/alerts/history?severity=${historyFilters.severity}&rule=${historyFilters.rule}&from=${historyFilters.from}&to=${historyFilters.to}&page=${historyPage}`;
+    const {
+        data: alertHistoryData,
+        loading: alertHistoryLoading,
+        error: alertHistoryError,
+        refetch: refetchAlertHistory,
+    } = useRequest(
+        historyKey,
+        () =>
+            metricsApi.alertHistory({
+                severity: historyFilters.severity || undefined,
+                rule: historyFilters.rule || undefined,
+                from: historyFilters.from || undefined,
+                to: historyFilters.to || undefined,
+                page: historyPage,
+                limit: historyLimit,
+            }),
+        { staleTime: 30_000, enabled: alertsView === "history" },
+    );
+    const alertHistoryErrorMessage = alertHistoryError ? extractApiError(alertHistoryError, "Failed to load alert history.").message : null;
+
+    /**
+     * Update one Alert History filter field and reset pagination to page 1.
+     * @param {string} field - "severity" | "rule" | "from" | "to"
+     * @param {string} value
+     */
+    const handleHistoryFilterChange = (field, value) => {
+        setHistoryFilters((prev) => (prev[field] === value ? prev : { ...prev, [field]: value }));
+        setHistoryPage(1);
+    };
+
+    // ── Alert Acknowledgement ──
+    const [ackModalOpen, setAckModalOpen] = useState(false);
+    const [ackTargetKey, setAckTargetKey] = useState(null);
+    const [ackNote, setAckNote] = useState("");
+    const [ackLoading, setAckLoading] = useState(false);
+    const [unackLoadingKey, setUnackLoadingKey] = useState(null);
+
+    /**
+     * Opens the Acknowledge confirm modal for `alertKey`, resetting the note field.
+     * @param {string} alertKey
+     */
+    const openAckModal = (alertKey) => {
+        setAckTargetKey(alertKey);
+        setAckNote("");
+        setAckModalOpen(true);
+    };
+
+    /** Closes the Acknowledge confirm modal and resets its local state. */
+    const closeAckModal = () => {
+        setAckModalOpen(false);
+        setAckTargetKey(null);
+        setAckNote("");
+    };
+
+    /**
+     * Confirms acknowledgement of `ackTargetKey` with the current `ackNote`.
+     * Toasts success/failure and refetches the active alerts either way so
+     * the row's acked badge / button state stays in sync with the server.
+     *
+     * @returns {Promise<boolean>}
+     */
+    const confirmAcknowledge = async () => {
+        if (!ackTargetKey) return false;
+        setAckLoading(true);
+        try {
+            const res = await metricsApi.acknowledgeAlert(ackTargetKey, ackNote || undefined);
+            toast.success(res.data?.message || res.message || "Alert acknowledged.");
+            closeAckModal();
+            return true;
+        } catch (err) {
+            toast.error(extractApiError(err, "Failed to acknowledge the alert.").message);
+            return false;
+        } finally {
+            setAckLoading(false);
+            refetchAlerts();
+        }
+    };
+
+    /**
+     * Clears the acknowledgement for `alertKey` (explicit admin "never mind").
+     * Toasts success/failure and refetches the active alerts either way.
+     *
+     * @param {string} alertKey
+     * @returns {Promise<boolean>}
+     */
+    const unacknowledgeAlert = async (alertKey) => {
+        setUnackLoadingKey(alertKey);
+        try {
+            const res = await metricsApi.unacknowledgeAlert(alertKey);
+            toast.success(res.data?.message || res.message || "Acknowledgement cleared.");
+            return true;
+        } catch (err) {
+            toast.error(extractApiError(err, "Failed to clear the acknowledgement.").message);
+            return false;
+        } finally {
+            setUnackLoadingKey(null);
+            refetchAlerts();
+        }
+    };
+
+    /** RED metrics flattened into rows for the Table component.
      * Sorted by p95 descending so the slowest routes appear first.
      */
     const redRows = useMemo(() => {
@@ -290,6 +487,50 @@ export function useMetrics() {
         availabilityVariant,
         lagVariant,
         alertSeverityVariant,
+        formatExpiresIn,
+
+        // Current user (SUPER_ADMIN gate)
+        currentUser,
+        isSuperAdmin,
+
+        // Server Email Notifications — status panel
+        notificationStatus,
+        notificationStatusLoading,
+        notificationStatusError,
+        notificationStatusErrorMessage,
+        refetchNotificationStatus,
+
+        // Server Email Notifications — test send
+        testSendChannel,
+        setTestSendChannel,
+        testSendLoading,
+        sendTestNotification,
+
+        // Alert History sub-tab
+        alertsView,
+        setAlertsView,
+        historyFilters,
+        historyPage,
+        alertHistoryData,
+        alertHistoryLoading,
+        alertHistoryError,
+        alertHistoryErrorMessage,
+        refetchAlertHistory,
+        handleHistoryFilterChange,
+        setHistoryPage,
+
+        // Alert Acknowledgement
+        ackTtlHours: notificationStatus?.ackTtlHours ?? 24,
+        ackModalOpen,
+        ackTargetKey,
+        ackNote,
+        setAckNote,
+        ackLoading,
+        unackLoadingKey,
+        openAckModal,
+        closeAckModal,
+        confirmAcknowledge,
+        unacknowledgeAlert,
     };
 }
 
