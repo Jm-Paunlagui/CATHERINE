@@ -52,6 +52,10 @@ const oracleMessages = {
   DB_OP_FAILED: (name, err) => `DB op failed [${name}]: ${err}`,
   CLOSE_FAILED: (name, err) => `Close failed for "${name}": ${err}`,
   SLOW_OP: (name, ms) => `Slow op on "${name}": ${ms}ms`,
+  ACQUIRE_RETRY: (name, attempt, max, err) =>
+    `Connection acquire failed on "${name}" (attempt ${attempt}/${max}), retrying: ${err}`,
+  ACQUIRE_ORPHAN_CLOSED: (name) =>
+    `Discarded a connection from "${name}" that arrived after its acquire had already failed.`,
   POOL_UNHEALTHY_ATTEMPT: (name) =>
     `Pool "${name}" is unhealthy — attempting anyway.`,
   ROLLBACK_FAILED: (name, err) => `Rollback failed on "${name}": ${err}`,

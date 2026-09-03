@@ -33,6 +33,34 @@ export function formatNumber(value) {
     return isNaN(n) ? "0" : new Intl.NumberFormat("en-US").format(n);
 }
 
+/**
+ * Abbreviate a count so it stays on one line inside a badge, pill, or
+ * fixed-width table cell: 942 → "942", 2 966 → "3K", 9 462 → "9.5K",
+ * 1 284 301 → "1.3M".
+ *
+ * Values under 1 000 are returned exactly — abbreviating them saves no width
+ * and only loses information.
+ *
+ * ⚠ This is a LOSSY display format. Never use it where the exact figure is
+ * what the user is acting on — a deletion count on a confirmation screen, a
+ * money value, or anything typed back to the server. Pair it with the exact
+ * `formatNumber(value)` in a Tooltip or `title` so the precise number is
+ * always one hover away.
+ *
+ * @param {number|string} value
+ * @returns {string}
+ */
+export function formatCompactNumber(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "0";
+    if (Math.abs(n) < 1000) return new Intl.NumberFormat("en-US").format(n);
+    return new Intl.NumberFormat("en-US", {
+        notation: "compact",
+        compactDisplay: "short",
+        maximumFractionDigits: 1,
+    }).format(n);
+}
+
 /** Format as currency (default: PHP) */
 export function formatCurrency(value, currency = "PHP", locale = "en-PH") {
     const n = Number(value);

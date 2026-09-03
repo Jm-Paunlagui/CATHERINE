@@ -22,7 +22,9 @@ function loadLayout() {
     try {
         const stored = localStorage.getItem(LAYOUT_KEY);
         if (stored === "top" || stored === "sidebar") return stored;
-    } catch {}
+    } catch {
+        /* localStorage unavailable (private mode / SSR) — fall through to default */
+    }
     return ENV_DEFAULT;
 }
 
@@ -35,7 +37,9 @@ export function LayoutProvider({ children }) {
     useEffect(() => {
         try {
             localStorage.setItem(LAYOUT_KEY, layout);
-        } catch {}
+        } catch {
+            /* localStorage unavailable (private mode / SSR) — preference not persisted */
+        }
     }, [layout]);
 
     const setLayout = useCallback((mode) => {

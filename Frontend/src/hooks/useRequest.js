@@ -84,11 +84,55 @@ function _cacheSet(key, value) {
     CACHE.set(key, value);
 }
 
+/**
+ * @type {Map<string, Set<() => void>>}
+ * Mounted `useRequest` instances, keyed by cache key.
+ *
+ * WHY THIS EXISTS: clearing CACHE and IN_FLIGHT only affects what the NEXT
+ * `execute()` reads. A hook that has already resolved holds its answer in React
+ * state, so busting the module maps left every mounted consumer showing the old
+ * value until it happened to remount — i.e. until a full page refresh. A cache
+ * API whose invalidation does not reach the UI is a footgun: the caller has no
+ * way to know they also need to force a refetch, and nothing fails loudly when
+ * they don't.
+ */
+const SUBSCRIBERS = new Map();
+
+/**
+ * Tell mounted consumers of `key` to refetch.
+ * @param {string} [key] omit to notify all subscribers
+ */
+function _notifySubscribers(key) {
+    // KEYED INVALIDATION ONLY — a bare invalidateCache() deliberately does NOT
+    // notify. "Forget everything" and "refetch everything" are different
+    // intents, and only the first has callers. As a test-harness reset
+    // (`afterEach(() => invalidateCache())`) a clean slate is the whole point;
+    // notifying there fires a real request while the previous test's tree is
+    // still mounted, and its response lands in CACHE *after* the harness has
+    // swapped mock handlers — poisoning the NEXT test. In MEAL, notifying on the
+    // bare form turned 1203 passing tests into 40 failures from cross-test
+    // cache bleed. Keep this distinction.
+    if (key === undefined) return;
+
+    const handlers = SUBSCRIBERS.get(key);
+    if (handlers) for (const handler of handlers) handler();
+}
+
 // ─── Public cache utilities ───────────────────────────────────────────────────
 
 /**
- * Bust the cache for one key, or the entire cache when called with no args.
- * Safe to call from event handlers, other hooks, or API response interceptors.
+ * Bust the cache.
+ *
+ * `invalidateCache(key)` — drops that key AND makes every mounted consumer of
+ * it refetch. The refetch is the point: without it, invalidation reached the
+ * module maps but never the screen. The keyed form is NOT a request storm — a
+ * notified consumer calls `execute(force = true)`, which skips the CACHE check
+ * but still shares the IN_FLIGHT promise for its key, so N consumers of one key
+ * make ONE request.
+ *
+ * `invalidateCache()` — drops everything and notifies NOBODY. See
+ * `_notifySubscribers` for why the two forms differ.
+ *
  * @param {string} [key]
  */
 export function invalidateCache(key) {
@@ -99,16 +143,21 @@ export function invalidateCache(key) {
         CACHE.delete(key);
         IN_FLIGHT.delete(key);
     }
+    _notifySubscribers(key);
 }
 
 /**
  * Seed the cache externally (e.g., from a form's POST response that returns
- * the updated resource — no need to refetch).
+ * the updated resource — no need to refetch). Mounted consumers of `key` are
+ * notified for the same reason keyed invalidation notifies them: seeding a
+ * value nothing on screen picks up is indistinguishable from not seeding it.
+ * They read the freshly-seeded entry from CACHE, so this costs no request.
  * @param {string} key
  * @param {any}    data
  */
 export function seedCache(key, data) {
     _cacheSet(key, { data, timestamp: Date.now() });
+    _notifySubscribers(key);
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -162,15 +211,29 @@ export function useRequest(key, fetcher, options = {}) {
         };
     }, []);
 
+    // Key-currency guard: a live ref holding the token of the MOST RECENTLY
+    // STARTED execute() call for this hook instance. A plain closed-over `key`
+    // comparison would NOT work — `key` is captured by the same useCallback
+    // closure as the call itself, so it can never observe a LATER call's
+    // (different) key. Only a mutable ref, read live at resolution time, can
+    // detect that a newer call has superseded this one (e.g. the hook's `key`
+    // changed and the key-change effect re-ran execute() before this call's
+    // promise settled).
+    const latestCallRef = useRef(null);
+
     const execute = useCallback(
         async (force = false) => {
             if (!key || !enabled) return;
+
+            const token = {};
+            latestCallRef.current = token;
+            const isCurrent = () => isMounted.current && latestCallRef.current === token;
 
             // Check cache (unless forced)
             if (!force && CACHE.has(key)) {
                 const cached = CACHE.get(key);
                 if (Date.now() - cached.timestamp <= staleTime) {
-                    if (isMounted.current) {
+                    if (isCurrent()) {
                         setState({ data: cached.data, loading: false, error: null, isStale: false });
                     }
                     return;
@@ -194,18 +257,18 @@ export function useRequest(key, fetcher, options = {}) {
                     });
             }
 
-            if (isMounted.current) {
+            if (isCurrent()) {
                 setState((s) => ({ ...s, loading: true, error: null }));
             }
 
             try {
                 const data = await promise;
-                if (isMounted.current) {
+                if (isCurrent()) {
                     setState({ data, loading: false, error: null, isStale: false });
                     onSuccessRef.current?.(data);
                 }
             } catch (err) {
-                if (isMounted.current) {
+                if (isCurrent()) {
                     const error = err instanceof Error ? err : new Error(String(err));
                     setState((s) => ({ ...s, loading: false, error }));
                     onErrorRef.current?.(error);
@@ -215,10 +278,61 @@ export function useRequest(key, fetcher, options = {}) {
         [key, enabled, staleTime],
     );
 
-    // Run on mount and whenever key / enabled changes
+    // Run on mount and whenever key / enabled changes.
+    //
+    // The disable is reasoned, not assumed. execute()'s synchronous (pre-await)
+    // setState calls — the warm-CACHE short-circuit and the pre-fetch
+    // loading:true flag — are the only mechanism that hydrates a newly-changed
+    // `key` from cache and flips loading the instant a fetch starts. Deriving
+    // during render is impossible (the effect starts an HTTP fetch and mutates
+    // the module-scope IN_FLIGHT/CACHE maps — impure side effects); a lazy
+    // initializer runs once and cannot re-hydrate on a key change; and the
+    // key-reset pattern has no element to attach a React key to inside a hook.
+    // refetch() and the focus handler reach the same setState calls without
+    // tripping the rule because they run from event handlers.
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- see justification above
         execute(false);
     }, [execute]);
+
+    // Subscribe to external cache invalidation for this key.
+    //
+    // Without this, invalidateCache(key) reached the module maps but never the
+    // screen: an already-resolved hook holds its answer in React state, so the
+    // UI kept the pre-invalidation value until the component happened to remount.
+    //
+    // The handler is read through a ref so the subscription is keyed ONLY on
+    // `key`/`enabled`. Depending on `execute` directly would tear down and
+    // re-add the subscription every time `staleTime` changed identity — churn
+    // with no benefit, and a window where a notification could be missed.
+    const executeRef = useRef(execute);
+    useEffect(() => {
+        executeRef.current = execute;
+    });
+
+    useEffect(() => {
+        if (!key || !enabled) return undefined;
+
+        // force = true: the whole point of a notification is that the cached
+        // value is no longer trustworthy, so the CACHE short-circuit must be
+        // skipped. IN_FLIGHT dedup still applies, so N consumers of one key
+        // still produce ONE request.
+        const handler = () => executeRef.current?.(true);
+
+        let handlers = SUBSCRIBERS.get(key);
+        if (!handlers) {
+            handlers = new Set();
+            SUBSCRIBERS.set(key, handlers);
+        }
+        handlers.add(handler);
+
+        return () => {
+            handlers.delete(handler);
+            // Drop the empty Set so SUBSCRIBERS cannot grow unbounded across a
+            // long session of mounting and unmounting many distinct keys.
+            if (handlers.size === 0) SUBSCRIBERS.delete(key);
+        };
+    }, [key, enabled]);
 
     // Refetch on window focus
     useEffect(() => {
