@@ -46,21 +46,31 @@ function quoteIdentifier(name) {
 
 // ─── convertTypes ───────────────────────────────────────────────
 /**
- * Oracle sometimes returns numbers as strings (e.g. "42" instead of 42).
- * This function scans every value in a row and converts numeric-looking
- * strings back into actual JavaScript numbers.
+ * ⚠ FENCED — DO NOT APPLY TO MONEY OR RATE VALUES (plan §3.0 rule 3b, §3.4).
  *
- * WHY: If you get { age: "25" } from Oracle, you'd want { age: 25 }
- *      so that `row.age + 1` gives 26, not "251".
+ * This helper coerces numeric-looking strings back into JavaScript numbers so
+ * that `{ age: "25" }` becomes `{ age: 25 }`. It is EXPORTED FOR API
+ * COMPATIBILITY but called nowhere in the codebase — the live read path returns
+ * `conn.execute(...).rows` untouched.
  *
- * Non-numeric strings are left unchanged. Null/undefined values pass through.
+ * THE TRAP IT USED TO SET: `Number("50000.50")` is `50000.5`, an IEEE-754
+ * double — which silently RE-ROUNDS a value the money-safe `fetchTypeHandler`
+ * in `config/adapters/oracle.js` deliberately handed back as an exact string.
+ * A `NUMBER(19,4)` money amount or `NUMBER(19,8)` rate arrives here as a string
+ * PRECISELY so `utils/money.js` can parse it without loss; coercing it to a
+ * double would undo the whole money layer.
+ *
+ * THE FENCE: any string containing a decimal point is left AS A STRING. Only
+ * pure-integer strings (IDs, counts) are converted. A money/rate value is
+ * therefore never rounded here even if a copier does adopt this helper.
+ * Preferred long term: delete this and `rowToDoc` (git remembers — lava-flow).
  *
  * @param {Object} row - A single row object from an Oracle query result
- * @returns {Object} A new object with numeric strings converted to numbers
+ * @returns {Object} A new object with pure-integer strings converted to numbers
  *
  * @example
- *   convertTypes({ NAME: "Juan", AGE: "25", SALARY: "50000.50" })
- *   // → { NAME: "Juan", AGE: 25, SALARY: 50000.5 }
+ *   convertTypes({ NAME: "Juan", AGE: "25", SALARY: "50000.5000" })
+ *   // → { NAME: "Juan", AGE: 25, SALARY: "50000.5000" }  (money left as string)
  */
 function convertTypes(row) {
   if (!row || typeof row !== "object") return row;
@@ -69,11 +79,14 @@ function convertTypes(row) {
     if (
       typeof val === "string" &&
       val !== "" &&
-      !isNaN(val) &&
-      val.trim() !== ""
+      val.trim() !== "" &&
+      // FENCE: only whole-integer strings are safe to coerce. A decimal point,
+      // exponent, or sign+fraction is money/rate territory — leave it a string
+      // so the money-safe fetch (§3.0 rule 3b) is never undone here.
+      /^[+-]?\d+$/.test(val.trim()) &&
+      Number.isSafeInteger(Number(val))
     ) {
-      const n = Number(val);
-      out[key] = isFinite(n) ? n : val;
+      out[key] = Number(val);
     } else {
       out[key] = val;
     }
