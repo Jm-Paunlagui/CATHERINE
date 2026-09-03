@@ -66,7 +66,7 @@ export function Alert({ variant = "info", title, children, icon: CustomIcon, dis
       ${className}
     `}
         >
-            <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${cfg.text}`} />
+            <Icon className={`w-5 h-5 shrink-0 mt-1 ${cfg.text}`} />
             <div className="flex-1 min-w-0">
                 {title && <p className={`font-aumovio-bold mb-0.5 ${cfg.text}`}>{title}</p>}
                 <div className={`text-black/75 dark:text-white/70 leading-relaxed`}>{children}</div>

@@ -39,7 +39,7 @@ export function Banner({ variant = "promo", sticky = false, dismissible = true, 
 
     return (
         <div className={`w-full z-50 font-aumovio ${BANNERS[variant]} ${sticky ? "sticky top-0" : ""}`}>
-            <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-2 text-sm font-aumovio-bold">
                     {icon ? <icon className="w-4 h-4 shrink-0" /> : <FontAwesomeIcon icon={faBullhorn} className="w-4 h-4 shrink-0" />}
                     <span>{children}</span>

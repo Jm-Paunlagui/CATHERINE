@@ -25,7 +25,7 @@ export function PhoneInput({ value = "", onChange, label, error, disabled = fals
     const emit = (country, number) => onChange?.(`${country} ${number}`.trim());
 
     const SZ = {
-        sm: "py-1.5 text-xs",
+        sm: "py-2 text-xs",
         md: "py-2 text-sm",
         lg: "py-3 text-base",
     };
@@ -64,7 +64,7 @@ export function PhoneInput({ value = "", onChange, label, error, disabled = fals
             placeholder-grey-400 focus:outline-none ${SZ[size] ?? SZ.md}`}
                 />
             </div>
-            {error && <p className="mt-1.5 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
+            {error && <p className="mt-2 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
         </div>
     );
 }

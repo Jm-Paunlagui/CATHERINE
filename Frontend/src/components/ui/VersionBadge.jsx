@@ -27,11 +27,11 @@ import { APP_STAGE, APP_VERSION, STAGE_META } from "../../config/appVersion";
 import { Badge } from "./Badge";
 
 function VersionPill({ version, glass = false }) {
-    return <span className={`inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[11px] font-semibold ${glass ? "text-(--chrome-from-text) bg-(--chrome-from-glass-bg) border border-(--chrome-from-glass-border) backdrop-blur-sm" : "text-(--text-secondary) bg-grey-100 dark:bg-(--bg-surface-3) border border-grey-200/70 dark:border-(--color-dark-muted)/30"}`}>v{version}</span>;
+    return <span className={`inline-flex items-center px-1.5 py-1 rounded font-mono text-[11px] font-semibold ${glass ? "text-(--chrome-from-text) bg-(--chrome-from-glass-bg) border border-(--chrome-from-glass-border) backdrop-blur-sm" : "text-(--text-secondary) bg-grey-100 dark:bg-(--bg-surface-3) border border-grey-200/70 dark:border-(--color-dark-muted)/30"}`}>v{version}</span>;
 }
 
 function GlassStageBadge({ meta, size, stageLabel }) {
-    const sz = size === "xs" ? "text-[10px] px-1.5 py-0.5" : size === "sm" ? "text-xs px-2 py-0.5" : "text-sm px-2.5 py-1";
+    const sz = size === "xs" ? "text-[10px] px-1.5 py-1" : size === "sm" ? "text-xs px-2 py-1" : "text-sm px-3 py-1";
     return (
         <span className={`inline-flex items-center gap-1 rounded-full font-aumovio-bold ${sz} text-(--chrome-from-text) bg-(--chrome-from-glass-bg) border border-(--chrome-from-glass-border) backdrop-blur-sm`}>
             {meta.dot && (
@@ -68,7 +68,7 @@ export function VersionBadge({ version = APP_VERSION, stage = APP_STAGE, size = 
         </>
     );
 
-    const cls = `inline-flex items-center gap-1.5 ${className}`;
+    const cls = `inline-flex items-center gap-2 ${className}`;
 
     if (to) {
         return (

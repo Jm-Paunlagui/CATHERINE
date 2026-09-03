@@ -22,33 +22,59 @@ const COLORS = {
 };
 
 export function Timeline({ items = [], variant = "left", connect = true }) {
+    const isAlternating = variant === "alternating";
+
     return (
         <ol className="relative font-aumovio">
-            {connect && <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-grey-200 dark:bg-(--bg-surface-3)" />}
+            {connect &&
+                (isAlternating ? (
+                    <div className="absolute left-1/2 top-4 bottom-4 w-0.5 -translate-x-1/2 bg-grey-200 dark:bg-(--bg-surface-3)" />
+                ) : (
+                    <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-grey-200 dark:bg-(--bg-surface-3)" />
+                ))}
             <div className="space-y-8">
                 {items.map((item, i) => {
                     const colCfg = COLORS[item.color ?? "orange"] ?? COLORS.orange;
+                    const dot = (
+                        <div
+                            className={`relative z-10 w-8 h-8 rounded-full shrink-0
+              flex items-center justify-center ring-4 ${colCfg.text} shadow
+              ${TRANSITION_COLORS} ${colCfg.fill}`}
+                        >
+                            {item.icon ? <item.icon className="w-4 h-4" /> : <span className={`w-2 h-2 rounded-full ${colCfg.dot}`} />}
+                        </div>
+                    );
+                    const content = (
+                        <div className={`flex-1 pb-2 ${TRANSITION_COLORS}`}>
+                            <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
+                                <h3 className="text-sm font-aumovio-bold text-black/85 dark:text-white/90">{item.title}</h3>
+                                <div className="flex items-center gap-2">
+                                    {item.badge && item.badge}
+                                    <time className="text-xs text-grey-400">{item.date}</time>
+                                </div>
+                            </div>
+                            {item.description && <p className="text-sm leading-relaxed text-grey-500 dark:text-grey-400">{item.description}</p>}
+                        </div>
+                    );
+
+                    if (isAlternating) {
+                        // Items alternate left/right of the centred connecting line —
+                        // a 3-column grid keeps the dot centred regardless of which
+                        // side the content occupies.
+                        const isLeft = i % 2 === 0;
+                        return (
+                            <li key={item.id ?? i} className="relative grid grid-cols-[1fr_auto_1fr] items-start gap-5">
+                                <div>{isLeft && content}</div>
+                                {dot}
+                                <div>{!isLeft && content}</div>
+                            </li>
+                        );
+                    }
+
                     return (
                         <li key={item.id ?? i} className="relative flex gap-5 pl-2">
-                            {/* Dot */}
-                            <div
-                                className={`relative z-10 w-8 h-8 rounded-full shrink-0
-                flex items-center justify-center ring-4 ${colCfg.text} shadow
-                ${TRANSITION_COLORS} ${colCfg.fill}`}
-                            >
-                                {item.icon ? <item.icon className="w-4 h-4" /> : <span className={`w-2 h-2 rounded-full ${colCfg.dot}`} />}
-                            </div>
-                            {/* Content */}
-                            <div className={`flex-1 pb-2 ${TRANSITION_COLORS}`}>
-                                <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
-                                    <h3 className="text-sm font-aumovio-bold text-black/85 dark:text-white/90">{item.title}</h3>
-                                    <div className="flex items-center gap-2">
-                                        {item.badge && item.badge}
-                                        <time className="text-xs text-grey-400">{item.date}</time>
-                                    </div>
-                                </div>
-                                {item.description && <p className="text-sm leading-relaxed text-grey-500 dark:text-grey-400">{item.description}</p>}
-                            </div>
+                            {dot}
+                            {content}
                         </li>
                     );
                 })}

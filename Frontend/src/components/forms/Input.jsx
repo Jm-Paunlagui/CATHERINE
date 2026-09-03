@@ -15,8 +15,8 @@
 import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 
 const SZ = {
-    sm: "px-3 py-1.5 text-xs rounded-lg",
-    md: "px-3.5 py-2 text-sm rounded-lg",
+    sm: "px-3 py-2 text-xs rounded-lg",
+    md: "px-4 py-2 text-sm rounded-lg",
     lg: "px-4 py-3 text-base rounded-xl",
 };
 
@@ -59,8 +59,8 @@ export function Input({ label, name, type = "text", value, onChange, placeholder
                 />
                 {rightElement && <span className="absolute -translate-y-1/2 right-3 top-1/2">{rightElement}</span>}
             </div>
-            {error && <p className="mt-1.5 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
-            {!error && helper && <p className="mt-1.5 text-xs text-grey-400">{helper}</p>}
+            {error && <p className="mt-2 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
+            {!error && helper && <p className="mt-2 text-xs text-grey-400">{helper}</p>}
         </div>
     );
 }

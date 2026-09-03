@@ -24,14 +24,24 @@ import { Modal } from "../ui/Modal";
 /* ── Colour palette — must stay in sync with Avatar.jsx ────────────────── */
 // All entries use palette-responsive CSS variable families so they shift
 // when the user picks a different accent in Personalize.
+// The FOREGROUND is a per-fill binary white/black token, never a hardcoded
+// `text-white`. Every `bg-` here is a palette-adaptive family (orange, purple,
+// blue, turquoise and yellow are all overridden by `applyPaletteVars`), so on a
+// pale palette — pastel sage `#ccdcc4`, baby pink `#ffc2cc`, pale cyan
+// `#ade4eb` — white initials render invisible on their own chip. Each
+// `--on-*-text` token is computed against that family's own anchor, which is
+// why blue/turquoise/yellow cannot share `--on-accent-text`.
+//
+// Kept in step with `Avatar.jsx`'s identical PALETTE (same order, same hash),
+// which was converted in Personalize round 4; this copy was missed then.
 const PALETTE = [
-    { bg: "bg-orange-400", text: "text-white" },
-    { bg: "bg-purple-400", text: "text-white" },
-    { bg: "bg-blue-400", text: "text-white" },
-    { bg: "bg-turquoise-500", text: "text-white" },
-    { bg: "bg-yellow-600", text: "text-white" },
-    { bg: "bg-orange-600", text: "text-white" },
-    { bg: "bg-purple-600", text: "text-white" },
+    { bg: "bg-orange-400", text: "text-(--on-accent-text)" },
+    { bg: "bg-purple-400", text: "text-(--on-secondary-text)" },
+    { bg: "bg-blue-400", text: "text-(--on-blue-text)" },
+    { bg: "bg-turquoise-500", text: "text-(--on-turquoise-text)" },
+    { bg: "bg-yellow-600", text: "text-(--on-yellow-text)" },
+    { bg: "bg-orange-600", text: "text-(--on-accent-text)" },
+    { bg: "bg-purple-600", text: "text-(--on-secondary-text)" },
 ];
 
 /** Deterministic colour from a name string (same hash as Avatar.jsx). */
@@ -113,7 +123,7 @@ export default function ProfileModal({ open, onClose, user }) {
                 <h2 className="text-lg font-aumovio-bold text-black/85 dark:text-white/90 truncate text-left">{fullName || "—"}</h2>
 
                 {/* Role badge */}
-                <div className="mt-1.5 flex text-left">
+                <div className="mt-2 flex text-left">
                     <Badge variant={roleBadge} size="sm" pill>
                         {roleLabel}
                     </Badge>
@@ -140,7 +150,7 @@ export default function ProfileModal({ open, onClose, user }) {
 function DetailRow({ icon: Icon, label, value }) {
     return (
         <div className="flex items-start gap-3">
-            <Icon className="w-4.5 h-4.5 mt-0.5 shrink-0 text-grey-400 dark:text-grey-500" />
+            <Icon className="w-4.5 h-4.5 mt-1 shrink-0 text-grey-400 dark:text-grey-500" />
             <div className="min-w-0">
                 <p className="text-[11px] uppercase tracking-wider text-grey-400 dark:text-grey-500 font-aumovio-bold leading-none mb-0.5">{label}</p>
                 <p className="truncate">{value}</p>

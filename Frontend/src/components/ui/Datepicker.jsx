@@ -43,10 +43,20 @@ export function Datepicker({ value = null, onChange, placeholder = "Select date"
         setDropdownPos({ top: rect.bottom + 8, left: rect.left });
     }, [open, viewDate]);
 
-    // Keep view in sync when value changes externally
-    useEffect(() => {
+    // Keep view in sync when value changes externally. Adjusted during render
+    // (React's documented "adjusting state when a prop changes" pattern)
+    // instead of a useEffect, so a new externally-supplied `value` hydrates
+    // `viewDate` in the same commit rather than flashing the old month before
+    // a post-render effect corrects it. `prevValue` tracks what `value` was
+    // on the last render purely for that comparison; only a truthy `value`
+    // resets `viewDate` — matches the original effect's guard, so clearing
+    // the field (value -> null) intentionally leaves the calendar on whatever
+    // month the user was already viewing.
+    const [prevValue, setPrevValue] = useState(value);
+    if (value !== prevValue) {
+        setPrevValue(value);
         if (value) setViewDate(value);
-    }, [value]);
+    }
 
     const days = eachDayOfInterval({
         start: startOfWeek(startOfMonth(viewDate)),
@@ -72,7 +82,7 @@ export function Datepicker({ value = null, onChange, placeholder = "Select date"
                 onClick={() => !disabled && setOpen((o) => !o)}
                 disabled={disabled}
                 className={[
-                    "group w-full flex items-center gap-2.5 px-3.5 py-2 rounded-lg border text-sm text-left",
+                    "group w-full flex items-center gap-3 px-4 py-2 rounded-lg border text-sm text-left",
                     "bg-white dark:bg-(--bg-surface-2)",
                     "transition-all duration-200",
                     open ? "border-orange-400 ring-2 ring-orange-400/30 shadow-md" : error ? "border-danger-400 ring-2 ring-danger-400/30" : "border-grey-300 dark:border-grey-700 hover:border-orange-400/60",
@@ -97,7 +107,7 @@ export function Datepicker({ value = null, onChange, placeholder = "Select date"
 
             {/* Error message */}
             {error && (
-                <p className="mt-1.5 text-xs text-danger-400 font-aumovio flex items-center gap-1">
+                <p className="mt-2 text-xs text-danger-400 font-aumovio flex items-center gap-1">
                     <span className="inline-block w-1 h-1 rounded-full bg-danger-400 shrink-0" />
                     {error}
                 </p>
@@ -110,16 +120,16 @@ export function Datepicker({ value = null, onChange, placeholder = "Select date"
                         {/* ── Month/Year header ── */}
                         <div className="px-4 pt-4 pb-3 bg-linear-to-br from-orange-400/8 via-orange-400/5 to-purple-400/5 dark:from-orange-400/12 dark:via-orange-400/6 dark:to-purple-400/8 border-b border-grey-200/60 dark:border-grey-700/50">
                             <div className="flex items-center justify-between">
-                                <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-1.5 rounded-lg text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground) hover:bg-orange-400/10 dark:hover:bg-orange-400/15 transition-all duration-150 active:scale-90" aria-label="Previous month">
+                                <button onClick={() => setViewDate(subMonths(viewDate, 1))} className="p-2 rounded-lg text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground) hover:bg-orange-400/10 dark:hover:bg-orange-400/15 transition-all duration-150 active:scale-90" aria-label="Previous month">
                                     <ChevronLeftIcon className="w-4 h-4" />
                                 </button>
 
                                 <div className="text-center">
                                     <p className="text-sm font-aumovio-bold text-black/85 dark:text-white/90 leading-none">{format(viewDate, "MMMM")}</p>
-                                    <p className="text-xs text-(--accent-foreground) font-aumovio-bold mt-0.5 leading-none">{format(viewDate, "yyyy")}</p>
+                                    <p className="text-xs text-(--accent-foreground) font-aumovio-bold mt-1 leading-none">{format(viewDate, "yyyy")}</p>
                                 </div>
 
-                                <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-1.5 rounded-lg text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground) hover:bg-orange-400/10 dark:hover:bg-orange-400/15 transition-all duration-150 active:scale-90" aria-label="Next month">
+                                <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-2 rounded-lg text-grey-500 dark:text-grey-400 hover:text-(--accent-foreground) hover:bg-orange-400/10 dark:hover:bg-orange-400/15 transition-all duration-150 active:scale-90" aria-label="Next month">
                                     <ChevronRightIcon className="w-4 h-4" />
                                 </button>
                             </div>
@@ -136,7 +146,7 @@ export function Datepicker({ value = null, onChange, placeholder = "Select date"
                             </div>
 
                             {/* Day cells */}
-                            <div className="grid grid-cols-7 gap-0.5">
+                            <div className="grid grid-cols-7 gap-1">
                                 {days.map((day, i) => {
                                     const outside = !isSameMonth(day, viewDate);
                                     const selected = value && isSameDay(day, value);
@@ -172,7 +182,7 @@ export function Datepicker({ value = null, onChange, placeholder = "Select date"
                         </div>
 
                         {/* Footer actions */}
-                        <div className="px-4 py-2.5 flex items-center justify-between border-t border-grey-100/80 dark:border-grey-700/50 bg-grey-50/50 dark:bg-white/2">
+                        <div className="px-4 py-3 flex items-center justify-between border-t border-grey-100/80 dark:border-grey-700/50 bg-grey-50/50 dark:bg-white/2">
                             <button
                                 onClick={() => {
                                     onChange?.(null);

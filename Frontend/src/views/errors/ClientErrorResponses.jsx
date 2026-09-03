@@ -12,13 +12,15 @@
  *          LoginTimeOut, InvalidToken, ServiceUnavailable
  */
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import Divider from "../../components/ui/typography/Divider";
 import { H2 } from "../../components/ui/typography/Heading";
 import Paragraph from "../../components/ui/typography/Paragraph";
 import Text from "../../components/ui/typography/Text";
+import { RequestIdTag } from "../../components/feedback/RequestIdTag";
+import { consumeErrorPagePayload } from "../../utils/storage";
 import AuthMiddleware from "../../middleware/authentication/AuthMiddleware";
 import CsrfMiddleware from "../../middleware/security/CsrfMiddleware";
 
@@ -69,22 +71,110 @@ function injectKeyframes() {
     document.head.appendChild(s);
 }
 
-/* ─── Dynamic override resolution ───────────────────────────────────────────
- * Priority (highest → lowest):
- *   1. location.state.title / location.state.subtitle  — explicit caller override
- *   2. location.state._serverError.message             — server message via nav state
- *   3. titleProp / subtitleProp                        — route-level prop override
- *   4. defaultTitle / defaultSubtitle                  — component hardcoded copy
+/* ─── Dynamic override resolution ─────────────────────────────────────────────
+ *
+ * WHAT THIS DOES
+ *   Decides the headline and lead paragraph an error screen shows, preferring
+ *   what the server actually said over the component's hardcoded fallback.
+ *
+ * WHY IT NEEDS TWO SOURCES
+ *   The two ways a user reaches an error screen deliver the server's words by
+ *   completely different routes, and a resolver that knows only one of them is
+ *   dynamic on paper and static in practice:
+ *
+ *     SOFT navigation — `<Navigate state={{ _serverError }}>` from
+ *       ProtectedRoute. React Router state survives, so `location.state` holds
+ *       the envelope. Reaches /unauthorized.
+ *
+ *     HARD navigation — `window.location.replace()` from HttpClient's takeover
+ *       branch. A full document load DESTROYS router state, so `location.state`
+ *       is always null here. The envelope arrives instead through the
+ *       sessionStorage hand-off in `utils/storage.js`. Reaches /login-timeout,
+ *       /invalid-token, /too-many-requests and /service-is-currently-unavailable
+ *       — i.e. four of the eight screens, every one of which previously showed
+ *       hardcoded copy no matter what the server said.
+ *
+ * PRIORITY (highest → lowest)
+ *   1. `location.state.title` / `.subtitle`        — explicit caller override
+ *   2. `location.state._serverError` title/message — server, via soft nav
+ *   3. stashed payload title/message               — server, via hard nav
+ *   4. `titleProp` / `subtitleProp`                — route-level prop override
+ *   5. `defaultTitle` / `defaultSubtitle`          — component hardcoded copy
+ *
+ * ACCURACY RULES (each one is a bug this used to have)
+ *   • Only a NON-EMPTY STRING counts. `??` alone falls through on null and
+ *     undefined but happily renders `""`, so a server sending an empty message
+ *     produced a blank heading — worse than the fallback it skipped.
+ *   • A non-string value is IGNORED, never rendered. React throws "Objects are
+ *     not valid as a React child" on an object, which would white-screen the
+ *     one page whose whole job is to survive a failure.
+ *   • The stashed payload must NAME THIS PAGE'S CODE. Within one document a
+ *     soft navigation between error screens would otherwise caption a 440 with
+ *     a message stashed for a 503.
+ *   • The payload is read ONCE, in a lazy initialiser, because reading CLEARS
+ *     it. Reading in the render body would consume it on the first render and
+ *     lose it on every re-render after.
  */
-function useErrorOverrides(defaultTitle, defaultSubtitle, titleProp, subtitleProp) {
+
+/**
+ * Returns `value` when it is text worth rendering, else null.
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+function usableText(value) {
+    return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+/**
+ * Picks the first usable string from `candidates`, else null.
+ * O(n) in the candidate count (always 4 here), O(1) space.
+ * @param {...unknown} candidates
+ * @returns {string|null}
+ */
+function firstUsable(...candidates) {
+    for (const candidate of candidates) {
+        const text = usableText(candidate);
+        if (text !== null) return text;
+    }
+    return null;
+}
+
+/**
+ * Resolves the title and subtitle for one error screen.
+ *
+ * @param {string} defaultTitle    Component's own headline.
+ * @param {string} defaultSubtitle Component's own lead paragraph.
+ * @param {string} [titleProp]     Route-level override.
+ * @param {string} [subtitleProp]  Route-level override.
+ * @param {number|string} [pageCode] The status this screen renders for. Required
+ *        to read the hard-navigation payload; omit it and only router state and
+ *        props are consulted.
+ * @returns {{ title: string, subtitle: string, requestId: string|null, stored: object|null }}
+ *
+ * @example
+ * const { title, subtitle, requestId } = useErrorOverrides("Access denied.", "No clearance.", titleProp, subtitleProp, 401);
+ */
+function useErrorOverrides(defaultTitle, defaultSubtitle, titleProp, subtitleProp, pageCode) {
     const { state } = useLocation();
-    const title = state?.title ?? state?._serverError?.title ?? titleProp ?? defaultTitle;
-    const subtitle = state?.subtitle ?? state?._serverError?.message ?? subtitleProp ?? defaultSubtitle;
-    return { title, subtitle };
+
+    // Lazy initialiser: consuming CLEARS the payload, so this must happen
+    // exactly once per mount, never in the render body.
+    const [stored] = useState(consumeErrorPagePayload);
+
+    // A payload stashed for a different screen is not this screen's message.
+    const payload = stored && pageCode != null && String(stored.code) === String(pageCode) ? stored : null;
+
+    const serverError = state?._serverError ?? null;
+
+    const title = firstUsable(state?.title, serverError?.title, payload?.title, titleProp) ?? defaultTitle;
+    const subtitle = firstUsable(state?.subtitle, serverError?.message, payload?.message, subtitleProp) ?? defaultSubtitle;
+    const requestId = firstUsable(serverError?.requestId, payload?.requestId);
+
+    return { title, subtitle, requestId, stored: payload };
 }
 
 /* ─── Shared layout wrapper ──────────────────────────────────────────────────── */
-function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bgClass, illustration, leftDecor, rightDecor, children }) {
+function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bgClass, illustration, leftDecor, rightDecor, requestId, children }) {
     useEffect(() => {
         injectKeyframes();
     }, []);
@@ -101,16 +191,29 @@ function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bg
                 />
             </div>
 
-            {/* ── Left side decoration (lg+ only) ── */}
+            {/* ── Left side decoration (lg+ only) ──
+             * Rendered as ambient art: slightly dimmed and edge-faded so the
+             * decorations blend into the page surface instead of competing with
+             * the centre content. Light mode dims a touch more (softer, near-white
+             * surface); dark mode keeps them a little more present.
+             */}
             {leftDecor && (
-                <div className="absolute top-0 bottom-0 left-0 hidden overflow-hidden pointer-events-none w-72 lg:block" aria-hidden="true">
+                <div
+                    className="absolute top-0 bottom-0 left-0 hidden overflow-hidden pointer-events-none w-72 lg:block opacity-70 dark:opacity-90"
+                    aria-hidden="true"
+                    style={{ maskImage: "linear-gradient(to right, black 55%, transparent 100%)", WebkitMaskImage: "linear-gradient(to right, black 55%, transparent 100%)" }}
+                >
                     {leftDecor}
                 </div>
             )}
 
             {/* ── Right side decoration (lg+ only) ── */}
             {rightDecor && (
-                <div className="absolute top-0 bottom-0 right-0 hidden overflow-hidden pointer-events-none w-72 lg:block" aria-hidden="true">
+                <div
+                    className="absolute top-0 bottom-0 right-0 hidden overflow-hidden pointer-events-none w-72 lg:block opacity-70 dark:opacity-90"
+                    aria-hidden="true"
+                    style={{ maskImage: "linear-gradient(to left, black 55%, transparent 100%)", WebkitMaskImage: "linear-gradient(to left, black 55%, transparent 100%)" }}
+                >
                     {rightDecor}
                 </div>
             )}
@@ -185,6 +288,18 @@ function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bg
                             </Button>
                         </NavLink>
                     </div>
+
+                    {/* Correlation id — rendered whenever the server sent one.
+                        This is the single most useful thing a user can read off
+                        an error screen when they contact support, and it used to
+                        appear on the 429 screen alone even though every takeover
+                        hands one over. Click-to-copy; absent when unknown, never
+                        a placeholder. */}
+                    {requestId && (
+                        <div style={{ animation: "err-slide-up .5s .45s ease both", opacity: 0 }}>
+                            <RequestIdTag requestId={requestId} className="block text-[10px] opacity-60 hover:opacity-100" />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -222,24 +337,24 @@ function SpaceLeftDecor() {
                 <svg width="180" height="160" viewBox="0 0 180 160" fill="none">
                     <defs>
                         <radialGradient id="sp-planet" cx="35%" cy="32%">
-                            <stop offset="0%" stopColor="#818cf8" />
-                            <stop offset="55%" stopColor="#4827AF" />
-                            <stop offset="100%" stopColor="#1e0a4a" />
+                            <stop offset="0%" stopColor="var(--err-purple)" />
+                            <stop offset="55%" stopColor="var(--err-purple)" />
+                            <stop offset="100%" stopColor="var(--err-purple-deep)" />
                         </radialGradient>
                         <linearGradient id="sp-ring1" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0" />
-                            <stop offset="25%" stopColor="#a78bfa" stopOpacity="0.7" />
-                            <stop offset="75%" stopColor="#c084fc" stopOpacity="0.7" />
-                            <stop offset="100%" stopColor="#c084fc" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--err-purple-soft)" stopOpacity="0" />
+                            <stop offset="25%" stopColor="var(--err-purple-soft)" stopOpacity="0.7" />
+                            <stop offset="75%" stopColor="var(--err-purple-soft)" stopOpacity="0.7" />
+                            <stop offset="100%" stopColor="var(--err-purple-soft)" stopOpacity="0" />
                         </linearGradient>
                         <linearGradient id="sp-ring2" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#e879f9" stopOpacity="0" />
-                            <stop offset="50%" stopColor="#e879f9" stopOpacity="0.4" />
-                            <stop offset="100%" stopColor="#e879f9" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--err-purple-soft)" stopOpacity="0" />
+                            <stop offset="50%" stopColor="var(--err-purple-soft)" stopOpacity="0.4" />
+                            <stop offset="100%" stopColor="var(--err-purple-soft)" stopOpacity="0" />
                         </linearGradient>
                     </defs>
                     {/* Ring shadow behind planet */}
-                    <ellipse cx="90" cy="80" rx="86" ry="20" fill="none" stroke="#4827AF" strokeWidth="10" opacity="0.3" />
+                    <ellipse cx="90" cy="80" rx="86" ry="20" fill="none" stroke="var(--err-purple)" strokeWidth="10" opacity="0.3" />
                     {/* Planet body */}
                     <circle cx="90" cy="80" r="56" fill="url(#sp-planet)" opacity="0.9" />
                     {/* Surface bands */}
@@ -269,13 +384,13 @@ function SpaceLeftDecor() {
                         cx={x}
                         cy={y}
                         r={i === 2 || i === 4 ? 3 : 2}
-                        fill="#93c5fd"
+                        fill="var(--err-blue-bright)"
                         style={{
                             animation: `err-twinkle ${1.4 + i * 0.45}s ${i * 0.28}s ease-in-out infinite`,
                         }}
                     />
                 ))}
-                <path d="M12 22 L54 10 L84 42 L96 82 M84 42 L62 74 L18 62 L12 22 M54 10 L48 48 L62 74" stroke="#93c5fd" strokeWidth="0.8" strokeDasharray="3 3" opacity="0.3" />
+                <path d="M12 22 L54 10 L84 42 L96 82 M84 42 L62 74 L18 62 L12 22 M54 10 L48 48 L62 74" stroke="var(--err-blue-bright)" strokeWidth="0.8" strokeDasharray="3 3" opacity="0.3" />
             </svg>
 
             {/* Asteroid 1 */}
@@ -288,10 +403,10 @@ function SpaceLeftDecor() {
                 }}
             >
                 <svg width="38" height="26" viewBox="0 0 38 26" fill="none">
-                    <path d="M4 13 C4 8 8 3 16 2 C24 1 34 6 36 13 C38 20 32 24 22 25 C12 26 4 18 4 13Z" fill="#78716c" opacity="0.7" />
-                    <circle cx="10" cy="10" r="2.5" fill="#57534e" opacity="0.8" />
-                    <circle cx="24" cy="16" r="2" fill="#57534e" opacity="0.7" />
-                    <circle cx="18" cy="8" r="1.5" fill="#57534e" opacity="0.6" />
+                    <path d="M4 13 C4 8 8 3 16 2 C24 1 34 6 36 13 C38 20 32 24 22 25 C12 26 4 18 4 13Z" fill="var(--err-rock)" opacity="0.7" />
+                    <circle cx="10" cy="10" r="2.5" fill="var(--err-rock-dark)" opacity="0.8" />
+                    <circle cx="24" cy="16" r="2" fill="var(--err-rock-dark)" opacity="0.7" />
+                    <circle cx="18" cy="8" r="1.5" fill="var(--err-rock-dark)" opacity="0.6" />
                 </svg>
             </div>
 
@@ -305,8 +420,8 @@ function SpaceLeftDecor() {
                 }}
             >
                 <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
-                    <path d="M2 8 C2 4 5 1 12 1 C19 1 22 5 22 8 C22 11 19 15 12 15 C5 15 2 12 2 8Z" fill="#78716c" opacity="0.55" />
-                    <circle cx="7" cy="6" r="1.5" fill="#57534e" opacity="0.7" />
+                    <path d="M2 8 C2 4 5 1 12 1 C19 1 22 5 22 8 C22 11 19 15 12 15 C5 15 2 12 2 8Z" fill="var(--err-rock)" opacity="0.55" />
+                    <circle cx="7" cy="6" r="1.5" fill="var(--err-rock-dark)" opacity="0.7" />
                 </svg>
             </div>
 
@@ -315,8 +430,8 @@ function SpaceLeftDecor() {
                 <svg width="120" height="70" viewBox="0 0 120 70" fill="none" opacity="0.15">
                     <defs>
                         <radialGradient id="sp-neb1">
-                            <stop offset="0%" stopColor="#818cf8" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#c084fc" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--err-purple)" stopOpacity="0.9" />
+                            <stop offset="100%" stopColor="var(--err-purple-soft)" stopOpacity="0" />
                         </radialGradient>
                     </defs>
                     <ellipse cx="60" cy="35" rx="58" ry="30" fill="url(#sp-neb1)" />
@@ -334,26 +449,26 @@ function SpaceLeftDecor() {
             >
                 <svg width="70" height="50" viewBox="0 0 70 50" fill="none" opacity="0.7">
                     {/* Solar panels */}
-                    <rect x="0" y="16" width="22" height="18" rx="2" fill="none" stroke="#60a5fa" strokeWidth="1.5" />
+                    <rect x="0" y="16" width="22" height="18" rx="2" fill="none" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
                     {[0, 1, 2].map((i) => (
-                        <line key={i} x1={7 + i * 7} y1="16" x2={7 + i * 7} y2="34" stroke="#60a5fa" strokeWidth="0.8" opacity="0.5" />
+                        <line key={i} x1={7 + i * 7} y1="16" x2={7 + i * 7} y2="34" stroke="var(--err-blue-soft)" strokeWidth="0.8" opacity="0.5" />
                     ))}
-                    <rect x="48" y="16" width="22" height="18" rx="2" fill="none" stroke="#60a5fa" strokeWidth="1.5" />
+                    <rect x="48" y="16" width="22" height="18" rx="2" fill="none" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
                     {[0, 1, 2].map((i) => (
-                        <line key={i} x1={55 + i * 7} y1="16" x2={55 + i * 7} y2="34" stroke="#60a5fa" strokeWidth="0.8" opacity="0.5" />
+                        <line key={i} x1={55 + i * 7} y1="16" x2={55 + i * 7} y2="34" stroke="var(--err-blue-soft)" strokeWidth="0.8" opacity="0.5" />
                     ))}
                     {/* Body */}
-                    <rect x="22" y="18" width="26" height="14" rx="3" fill="#1e293b" stroke="#60a5fa" strokeWidth="1.5" />
+                    <rect x="22" y="18" width="26" height="14" rx="3" fill="var(--err-chrome-4)" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
                     {/* Connector arms */}
-                    <line x1="22" y1="25" x2="0" y2="25" stroke="#60a5fa" strokeWidth="1.5" />
-                    <line x1="48" y1="25" x2="70" y2="25" stroke="#60a5fa" strokeWidth="1.5" />
+                    <line x1="22" y1="25" x2="0" y2="25" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
+                    <line x1="48" y1="25" x2="70" y2="25" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
                     {/* Antenna */}
-                    <line x1="35" y1="18" x2="35" y2="8" stroke="#93c5fd" strokeWidth="1.2" />
+                    <line x1="35" y1="18" x2="35" y2="8" stroke="var(--err-blue-bright)" strokeWidth="1.2" />
                     <circle
                         cx="35"
                         cy="6"
                         r="2.5"
-                        fill="#93c5fd"
+                        fill="var(--err-blue-bright)"
                         style={{
                             animation: "err-pulse-op 1.5s ease-in-out infinite",
                         }}
@@ -373,13 +488,13 @@ function SpaceLeftDecor() {
                 <svg width="100" height="20" viewBox="0 0 100 20" fill="none">
                     <defs>
                         <linearGradient id="sp-comet-l" x1="100%" y1="0%" x2="0%" y2="0%">
-                            <stop offset="0%" stopColor="white" />
-                            <stop offset="100%" stopColor="white" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--err-star)" />
+                            <stop offset="100%" stopColor="var(--err-star)" stopOpacity="0" />
                         </linearGradient>
                     </defs>
                     <path d="M100 10 L0 10" stroke="url(#sp-comet-l)" strokeWidth="2" opacity="0.5" />
-                    <circle cx="98" cy="10" r="4" fill="white" opacity="0.9" />
-                    <ellipse cx="94" cy="10" rx="6" ry="3" fill="white" opacity="0.2" />
+                    <circle cx="98" cy="10" r="4" fill="var(--err-star)" opacity="0.9" />
+                    <ellipse cx="94" cy="10" rx="6" ry="3" fill="var(--err-star)" opacity="0.2" />
                 </svg>
             </div>
 
@@ -399,7 +514,7 @@ function SpaceLeftDecor() {
                     }}
                 >
                     <svg width={size * 2} height={size * 1.4} viewBox={`0 0 ${size * 2} ${size * 1.4}`} fill="none">
-                        <ellipse cx={size} cy={size * 0.7} rx={size * 0.9} ry={size * 0.6} fill="#78716c" opacity="0.55" />
+                        <ellipse cx={size} cy={size * 0.7} rx={size * 0.9} ry={size * 0.6} fill="var(--err-rock)" opacity="0.55" />
                     </svg>
                 </div>
             ))}
@@ -408,10 +523,11 @@ function SpaceLeftDecor() {
             {stars.map(([left, top], i) => (
                 <div
                     key={i}
-                    className="absolute bg-white rounded-full"
+                    className="absolute rounded-full"
                     style={{
                         left,
                         top,
+                        background: "var(--err-star)",
                         width: i % 4 === 0 ? 3 : i % 3 === 0 ? 2 : 1.5,
                         height: i % 4 === 0 ? 3 : i % 3 === 0 ? 2 : 1.5,
                         animation: `err-twinkle ${1.2 + i * 0.4}s ${i * 0.18}s ease-in-out infinite`,
@@ -424,8 +540,8 @@ function SpaceLeftDecor() {
                 <svg width="140" height="180" viewBox="0 0 140 180" fill="none" opacity="0.08">
                     <defs>
                         <radialGradient id="sp-dust-l">
-                            <stop offset="0%" stopColor="#a5b4fc" stopOpacity="1" />
-                            <stop offset="100%" stopColor="#a5b4fc" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--err-purple-soft)" stopOpacity="1" />
+                            <stop offset="100%" stopColor="var(--err-purple-soft)" stopOpacity="0" />
                         </radialGradient>
                     </defs>
                     <ellipse cx="70" cy="90" rx="70" ry="88" fill="url(#sp-dust-l)" />
@@ -463,26 +579,26 @@ function SpaceRightDecor() {
                 <svg width="58" height="130" viewBox="0 0 58 130" fill="none">
                     <defs>
                         <linearGradient id="sp-rocket-body" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#cbd5e1" />
-                            <stop offset="100%" stopColor="#e2e8f0" />
+                            <stop offset="0%" stopColor="var(--err-metal-light)" />
+                            <stop offset="100%" stopColor="var(--err-metal-light)" />
                         </linearGradient>
                     </defs>
                     {/* Body */}
-                    <path d="M29 4 C18 28 14 52 14 72 L44 72 C44 52 40 28 29 4Z" fill="url(#sp-rocket-body)" stroke="#94a3b8" strokeWidth="1" />
+                    <path d="M29 4 C18 28 14 52 14 72 L44 72 C44 52 40 28 29 4Z" fill="url(#sp-rocket-body)" stroke="var(--err-metal)" strokeWidth="1" />
                     {/* Nose */}
-                    <path d="M29 4 C22 18 18 30 18 38 L40 38 C40 30 36 18 29 4Z" fill="#f97316" />
+                    <path d="M29 4 C22 18 18 30 18 38 L40 38 C40 30 36 18 29 4Z" fill="var(--err-orange)" />
                     {/* Window */}
-                    <circle cx="29" cy="54" r="9" fill="#bfdbfe" stroke="#93c5fd" strokeWidth="2" />
-                    <circle cx="29" cy="54" r="5.5" fill="#3b82f6" opacity="0.6" />
+                    <circle cx="29" cy="54" r="9" fill="var(--err-blue-bright)" stroke="var(--err-blue-bright)" strokeWidth="2" />
+                    <circle cx="29" cy="54" r="5.5" fill="var(--err-blue-soft)" opacity="0.6" />
                     <circle cx="27" cy="52" r="2" fill="white" opacity="0.4" />
                     {/* Left fin */}
-                    <path d="M14 72 L2 95 L14 88Z" fill="#f97316" />
+                    <path d="M14 72 L2 95 L14 88Z" fill="var(--err-orange)" />
                     {/* Right fin */}
-                    <path d="M44 72 L56 95 L44 88Z" fill="#f97316" />
+                    <path d="M44 72 L56 95 L44 88Z" fill="var(--err-orange)" />
                     {/* Exhaust */}
                     <path
                         d="M18 72 C21 88 25 100 29 112 C33 100 37 88 40 72Z"
-                        fill="#fb923c"
+                        fill="var(--err-orange-soft)"
                         opacity="0.85"
                         style={{
                             animation: "err-pulse-op .35s ease-in-out infinite",
@@ -490,7 +606,7 @@ function SpaceRightDecor() {
                     />
                     <path
                         d="M22 76 C25 90 27 102 29 112 C31 102 33 90 36 76Z"
-                        fill="#fde68a"
+                        fill="var(--err-warn-soft)"
                         opacity="0.95"
                         style={{
                             animation: "err-pulse-op .28s .08s ease-in-out infinite",
@@ -520,9 +636,9 @@ function SpaceRightDecor() {
                 <svg width="110" height="110" viewBox="0 0 110 110" fill="none">
                     <defs>
                         <linearGradient id="sp-galaxy" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#818cf8" />
-                            <stop offset="50%" stopColor="#c084fc" />
-                            <stop offset="100%" stopColor="#f472b6" />
+                            <stop offset="0%" stopColor="var(--err-purple)" />
+                            <stop offset="50%" stopColor="var(--err-purple-soft)" />
+                            <stop offset="100%" stopColor="var(--err-purple-soft)" />
                         </linearGradient>
                     </defs>
                     <path d="M55 55 C62 42 76 36 84 48 C92 60 78 74 64 76 C44 80 26 64 30 46 C34 28 56 16 74 24 C92 32 102 56 94 74 C86 92 60 102 42 94" stroke="url(#sp-galaxy)" strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.8" />
@@ -546,8 +662,8 @@ function SpaceRightDecor() {
                 <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
                     <defs>
                         <radialGradient id="sp-mars" cx="35%" cy="32%">
-                            <stop offset="0%" stopColor="#fb923c" />
-                            <stop offset="100%" stopColor="#9a3412" />
+                            <stop offset="0%" stopColor="var(--err-orange-soft)" />
+                            <stop offset="100%" stopColor="var(--err-wood-dark)" />
                         </radialGradient>
                     </defs>
                     <circle cx="21" cy="21" r="19" fill="url(#sp-mars)" />
@@ -568,8 +684,8 @@ function SpaceRightDecor() {
                 <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
                     <defs>
                         <radialGradient id="sp-teal" cx="35%" cy="32%">
-                            <stop offset="0%" stopColor="#34d399" />
-                            <stop offset="100%" stopColor="#064e3b" />
+                            <stop offset="0%" stopColor="var(--err-teal)" />
+                            <stop offset="100%" stopColor="var(--err-green-deep)" />
                         </radialGradient>
                     </defs>
                     <circle cx="15" cy="15" r="13" fill="url(#sp-teal)" />
@@ -610,12 +726,12 @@ function SpaceRightDecor() {
                 <svg width="35" height="8" viewBox="0 0 35 8" fill="none">
                     <defs>
                         <linearGradient id="sp-shoot2" x1="100%" y1="0%" x2="0%" y2="0%">
-                            <stop offset="0%" stopColor="#93c5fd" />
-                            <stop offset="100%" stopColor="#93c5fd" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--err-blue-bright)" />
+                            <stop offset="100%" stopColor="var(--err-blue-bright)" stopOpacity="0" />
                         </linearGradient>
                     </defs>
                     <path d="M35 4 L0 4" stroke="url(#sp-shoot2)" strokeWidth="1.2" />
-                    <circle cx="35" cy="4" r="2.5" fill="#93c5fd" />
+                    <circle cx="35" cy="4" r="2.5" fill="var(--err-blue-bright)" />
                 </svg>
             </div>
 
@@ -624,8 +740,8 @@ function SpaceRightDecor() {
                 <svg width="150" height="90" viewBox="0 0 150 90" fill="none" opacity="0.18">
                     <defs>
                         <radialGradient id="sp-neb2">
-                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--err-purple)" stopOpacity="0.9" />
+                            <stop offset="100%" stopColor="var(--err-purple-soft)" stopOpacity="0" />
                         </radialGradient>
                     </defs>
                     <ellipse cx="75" cy="45" rx="72" ry="38" fill="url(#sp-neb2)" />
@@ -636,10 +752,11 @@ function SpaceRightDecor() {
             {stars.map(([right, top], i) => (
                 <div
                     key={i}
-                    className="absolute bg-white rounded-full"
+                    className="absolute rounded-full"
                     style={{
                         right,
                         top,
+                        background: "var(--err-star)",
                         width: i % 4 === 0 ? 3 : i % 3 === 0 ? 2 : 1.5,
                         height: i % 4 === 0 ? 3 : i % 3 === 0 ? 2 : 1.5,
                         animation: `err-twinkle ${1.3 + i * 0.38}s ${i * 0.22}s ease-in-out infinite`,
@@ -659,13 +776,13 @@ function SpaceRightDecor() {
                 <svg width="110" height="80" viewBox="0 0 110 80" fill="none">
                     <defs>
                         <radialGradient id="sp-alien" cx="35%" cy="32%">
-                            <stop offset="0%" stopColor="#4ade80" />
-                            <stop offset="100%" stopColor="#14532d" />
+                            <stop offset="0%" stopColor="var(--err-green-soft)" />
+                            <stop offset="100%" stopColor="var(--err-green-deep)" />
                         </radialGradient>
                         <linearGradient id="sp-alien-ring" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#86efac" stopOpacity="0" />
-                            <stop offset="50%" stopColor="#86efac" stopOpacity="0.6" />
-                            <stop offset="100%" stopColor="#86efac" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--err-green-soft)" stopOpacity="0" />
+                            <stop offset="50%" stopColor="var(--err-green-soft)" stopOpacity="0.6" />
+                            <stop offset="100%" stopColor="var(--err-green-soft)" stopOpacity="0" />
                         </linearGradient>
                     </defs>
                     <ellipse cx="55" cy="45" rx="50" ry="12" fill="none" stroke="url(#sp-alien-ring)" strokeWidth="5" opacity="0.7" />
@@ -687,19 +804,19 @@ function SpaceRightDecor() {
             >
                 <svg width="55" height="70" viewBox="0 0 55 70" fill="none" opacity="0.65">
                     {/* Main tube */}
-                    <rect x="18" y="10" width="20" height="45" rx="3" fill="#334155" stroke="#60a5fa" strokeWidth="1.2" />
+                    <rect x="18" y="10" width="20" height="45" rx="3" fill="var(--err-chrome-4)" stroke="var(--err-blue-soft)" strokeWidth="1.2" />
                     {/* Aperture */}
-                    <ellipse cx="28" cy="10" rx="12" ry="5" fill="#1e3a5f" stroke="#60a5fa" strokeWidth="1.2" />
+                    <ellipse cx="28" cy="10" rx="12" ry="5" fill="var(--err-chrome-4)" stroke="var(--err-blue-soft)" strokeWidth="1.2" />
                     {/* Solar panel */}
-                    <rect x="0" y="22" width="15" height="22" rx="2" fill="none" stroke="#818cf8" strokeWidth="1.2" />
+                    <rect x="0" y="22" width="15" height="22" rx="2" fill="none" stroke="var(--err-purple)" strokeWidth="1.2" />
                     {[0, 1, 2].map((i) => (
-                        <line key={i} x1={5 + i * 5} y1="22" x2={5 + i * 5} y2="44" stroke="#818cf8" strokeWidth="0.7" opacity="0.5" />
+                        <line key={i} x1={5 + i * 5} y1="22" x2={5 + i * 5} y2="44" stroke="var(--err-purple)" strokeWidth="0.7" opacity="0.5" />
                     ))}
-                    <line x1="15" y1="33" x2="18" y2="33" stroke="#818cf8" strokeWidth="1" />
+                    <line x1="15" y1="33" x2="18" y2="33" stroke="var(--err-purple)" strokeWidth="1" />
                     {/* Thruster */}
                     <path
                         d="M24 55 L20 65 L28 62 L36 65 L32 55Z"
-                        fill="#f97316"
+                        fill="var(--err-orange)"
                         opacity="0.5"
                         style={{
                             animation: "err-pulse-op .4s ease-in-out infinite",
@@ -747,12 +864,12 @@ function SpaceRightDecor() {
                 }}
             >
                 <svg width="50" height="50" viewBox="0 0 50 50" fill="none" opacity="0.4">
-                    <circle cx="25" cy="25" r="20" fill="none" stroke="#93c5fd" strokeWidth="2" strokeDasharray="6 4" />
-                    <circle cx="25" cy="5" r="4" fill="#60a5fa" />
-                    <circle cx="25" cy="45" r="4" fill="#60a5fa" />
-                    <circle cx="5" cy="25" r="4" fill="#60a5fa" />
-                    <circle cx="45" cy="25" r="4" fill="#60a5fa" />
-                    <circle cx="25" cy="25" r="5" fill="#1e40af" stroke="#60a5fa" strokeWidth="1.5" />
+                    <circle cx="25" cy="25" r="20" fill="none" stroke="var(--err-blue-bright)" strokeWidth="2" strokeDasharray="6 4" />
+                    <circle cx="25" cy="5" r="4" fill="var(--err-blue-soft)" />
+                    <circle cx="25" cy="45" r="4" fill="var(--err-blue-soft)" />
+                    <circle cx="5" cy="25" r="4" fill="var(--err-blue-soft)" />
+                    <circle cx="45" cy="25" r="4" fill="var(--err-blue-soft)" />
+                    <circle cx="25" cy="25" r="5" fill="var(--err-blue-deep)" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
                 </svg>
             </div>
         </div>
@@ -763,7 +880,6 @@ function SpaceRightDecor() {
    TERMINAL DECORS  (400)
    ══════════════════════════════════════════════════════════════════════════════ */
 function TerminalLeftDecor() {
-    const codeLines = ["01001000 01100101", "NaN !== NaN", "undefined.map()", "{ ¿¿id¿¿: null }", "0x00 0xFF 0xAA", "¡¿syntax error?!", "null.toString()", "⟨◆☒⟩: undefined"];
     return (
         <div className="absolute inset-0">
             {/* Broken monitor */}
@@ -776,36 +892,36 @@ function TerminalLeftDecor() {
                 }}
             >
                 <svg width="150" height="110" viewBox="0 0 150 110" fill="none">
-                    <rect x="4" y="4" width="142" height="92" rx="6" fill="#111827" stroke="#374151" strokeWidth="2" />
-                    <rect x="10" y="10" width="130" height="80" rx="3" fill="#0f172a" />
+                    <rect x="4" y="4" width="142" height="92" rx="6" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="2" />
+                    <rect x="10" y="10" width="130" height="80" rx="3" fill="var(--err-screen)" />
                     {/* Crack lines on screen */}
-                    <path d="M60 10 L45 45 L80 90" stroke="#fbbf24" strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
-                    <path d="M45 45 L20 70" stroke="#fbbf24" strokeWidth="1" opacity="0.4" strokeLinecap="round" />
+                    <path d="M60 10 L45 45 L80 90" stroke="var(--err-warn-soft)" strokeWidth="1.5" opacity="0.6" strokeLinecap="round" />
+                    <path d="M45 45 L20 70" stroke="var(--err-warn-soft)" strokeWidth="1" opacity="0.4" strokeLinecap="round" />
                     {/* Screen content */}
                     <text
                         x="16"
                         y="28"
                         fontFamily="monospace"
                         fontSize="7"
-                        fill="#ef4444"
+                        fill="var(--err-danger)"
                         style={{
                             animation: "err-glitch 4s ease-in-out infinite",
                         }}
                     >
                         ERROR: Malformed request body
                     </text>
-                    <text x="16" y="40" fontFamily="monospace" fontSize="7" fill="#fbbf24" opacity="0.7">
+                    <text x="16" y="40" fontFamily="monospace" fontSize="7" fill="var(--err-warn-soft)" opacity="0.7">
                         at parseJSON (utils.js:42)
                     </text>
-                    <text x="16" y="52" fontFamily="monospace" fontSize="7" fill="#fbbf24" opacity="0.5">
+                    <text x="16" y="52" fontFamily="monospace" fontSize="7" fill="var(--err-warn-soft)" opacity="0.5">
                         at Request.handle (app.js:18)
                     </text>
-                    <text x="16" y="68" fontFamily="monospace" fontSize="7" fill="#ef4444">
+                    <text x="16" y="68" fontFamily="monospace" fontSize="7" fill="var(--err-danger)">
                         ▌
                     </text>
                     {/* Monitor stand */}
-                    <rect x="65" y="96" width="20" height="8" rx="2" fill="#374151" />
-                    <rect x="55" y="104" width="40" height="4" rx="2" fill="#374151" />
+                    <rect x="65" y="96" width="20" height="8" rx="2" fill="var(--err-chrome-line)" />
+                    <rect x="55" y="104" width="40" height="4" rx="2" fill="var(--err-chrome-line)" />
                 </svg>
             </div>
 
@@ -863,7 +979,7 @@ function TerminalLeftDecor() {
                             key={i}
                             d={`M${cx} ${cy - r * 1.1} L${cx - r} ${cy + r * 0.6} L${cx + r} ${cy + r * 0.6}Z`}
                             fill="none"
-                            stroke="#f59e0b"
+                            stroke="var(--err-warn-bright)"
                             strokeWidth="1.8"
                             style={{
                                 animation: `err-pulse-op ${1.5 + i * 0.5}s ${i * 0.3}s ease-in-out infinite`,
@@ -880,7 +996,7 @@ function TerminalLeftDecor() {
                         key={i}
                         className="font-mono text-xs leading-5 whitespace-nowrap"
                         style={{
-                            color: i === 2 ? "#ef4444" : i === 0 ? "#f59e0b" : "#6b7280",
+                            color: i === 2 ? "var(--err-danger)" : i === 0 ? "var(--err-warn-bright)" : "var(--err-chrome-text)",
                             opacity: 0.5 + (i % 3) * 0.15,
                             animation: `err-drift-l ${3 + i * 0.3}s ${i * 0.2}s ease-in-out infinite`,
                         }}
@@ -893,14 +1009,14 @@ function TerminalLeftDecor() {
             {/* Glitching progress bar */}
             <div className="absolute" style={{ left: 10, top: "79%" }}>
                 <svg width="140" height="20" viewBox="0 0 140 20" fill="none" opacity="0.5">
-                    <rect x="0" y="6" width="140" height="8" rx="4" fill="#1f2937" stroke="#374151" strokeWidth="1" />
+                    <rect x="0" y="6" width="140" height="8" rx="4" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line)" strokeWidth="1" />
                     <rect
                         x="0"
                         y="6"
                         width="72"
                         height="8"
                         rx="4"
-                        fill="#ef4444"
+                        fill="var(--err-danger)"
                         style={{
                             animation: "err-static 1.2s ease-in-out infinite",
                         }}
@@ -911,13 +1027,13 @@ function TerminalLeftDecor() {
                         width="24"
                         height="8"
                         rx="0"
-                        fill="#f59e0b"
+                        fill="var(--err-warn-bright)"
                         opacity="0.6"
                         style={{
                             animation: "err-static 0.9s 0.3s ease-in-out infinite",
                         }}
                     />
-                    <text x="5" y="16" fontFamily="monospace" fontSize="6" fill="#9ca3af">
+                    <text x="5" y="16" fontFamily="monospace" fontSize="6" fill="var(--err-chrome-text)">
                         PROCESSING... ERR
                     </text>
                 </svg>
@@ -933,11 +1049,11 @@ function TerminalLeftDecor() {
                 }}
             >
                 <svg width="60" height="30" viewBox="0 0 60 30" fill="none" opacity="0.5">
-                    <rect x="0" y="10" width="35" height="10" rx="2" fill="#374151" stroke="#6b7280" strokeWidth="1" />
-                    <rect x="35" y="6" width="20" height="18" rx="2" fill="#1f2937" stroke="#4b5563" strokeWidth="1" />
-                    <rect x="38" y="10" width="4" height="5" rx="1" fill="#6b7280" />
-                    <rect x="46" y="10" width="4" height="5" rx="1" fill="#6b7280" />
-                    <line x1="55" y1="15" x2="60" y2="15" stroke="#6b7280" strokeWidth="1.5" />
+                    <rect x="0" y="10" width="35" height="10" rx="2" fill="var(--err-chrome-line)" stroke="var(--err-chrome-text)" strokeWidth="1" />
+                    <rect x="35" y="6" width="20" height="18" rx="2" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line-2)" strokeWidth="1" />
+                    <rect x="38" y="10" width="4" height="5" rx="1" fill="var(--err-chrome-text)" />
+                    <rect x="46" y="10" width="4" height="5" rx="1" fill="var(--err-chrome-text)" />
+                    <line x1="55" y1="15" x2="60" y2="15" stroke="var(--err-chrome-text)" strokeWidth="1.5" />
                 </svg>
             </div>
         </div>
@@ -957,7 +1073,7 @@ function TerminalRightDecor() {
                         right: 12 + (i % 2) * 40,
                         top: `${8 + i * 15}%`,
                         animation: `err-drift-${i % 2 === 0 ? "r" : "l"} ${2 + i * 0.5}s ${i * 0.25}s ease-in-out infinite`,
-                        color: i === 0 ? "#ef4444" : i === 2 ? "#f59e0b" : "#fbbf24",
+                        color: i === 0 ? "var(--err-danger)" : i === 2 ? "var(--err-warn-bright)" : "var(--err-warn-soft)",
                         opacity: 0.5 + (i % 3) * 0.2,
                     }}
                 >
@@ -975,10 +1091,10 @@ function TerminalRightDecor() {
                 }}
             >
                 <svg width="130" height="80" viewBox="0 0 130 80" fill="none" opacity="0.3">
-                    <rect x="0" y="10" width="130" height="12" rx="2" fill="#f59e0b" />
-                    <rect x="15" y="30" width="100" height="8" rx="2" fill="#fbbf24" />
-                    <rect x="5" y="46" width="120" height="10" rx="2" fill="#f59e0b" opacity="0.6" />
-                    <rect x="30" y="62" width="80" height="6" rx="2" fill="#fbbf24" opacity="0.4" />
+                    <rect x="0" y="10" width="130" height="12" rx="2" fill="var(--err-warn-bright)" />
+                    <rect x="15" y="30" width="100" height="8" rx="2" fill="var(--err-warn-soft)" />
+                    <rect x="5" y="46" width="120" height="10" rx="2" fill="var(--err-warn-bright)" opacity="0.6" />
+                    <rect x="30" y="62" width="80" height="6" rx="2" fill="var(--err-warn-soft)" opacity="0.4" />
                     {/* Glitch slices */}
                     <rect
                         x="0"
@@ -986,7 +1102,7 @@ function TerminalRightDecor() {
                         width="40"
                         height="4"
                         rx="0"
-                        fill="#ef4444"
+                        fill="var(--err-danger)"
                         opacity="0.5"
                         style={{
                             animation: "err-static 1s ease-in-out infinite",
@@ -998,7 +1114,7 @@ function TerminalRightDecor() {
                         width="50"
                         height="4"
                         rx="0"
-                        fill="#ef4444"
+                        fill="var(--err-danger)"
                         opacity="0.4"
                         style={{
                             animation: "err-static 1.3s 0.2s ease-in-out infinite",
@@ -1018,52 +1134,52 @@ function TerminalRightDecor() {
             >
                 <svg width="80" height="90" viewBox="0 0 80 90" fill="none">
                     {/* Head */}
-                    <rect x="10" y="10" width="60" height="55" rx="8" fill="#1f2937" stroke="#374151" strokeWidth="2" />
+                    <rect x="10" y="10" width="60" height="55" rx="8" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line)" strokeWidth="2" />
                     {/* Antenna */}
-                    <line x1="40" y1="10" x2="40" y2="2" stroke="#6b7280" strokeWidth="2" />
+                    <line x1="40" y1="10" x2="40" y2="2" stroke="var(--err-chrome-text)" strokeWidth="2" />
                     <circle
                         cx="40"
                         cy="2"
                         r="3"
-                        fill="#ef4444"
+                        fill="var(--err-danger)"
                         style={{
                             animation: "err-pulse-op 1s ease-in-out infinite",
                         }}
                     />
                     {/* X eyes */}
-                    <text x="17" y="38" fontFamily="monospace" fontSize="14" fill="#ef4444" fontWeight="bold">
+                    <text x="17" y="38" fontFamily="monospace" fontSize="14" fill="var(--err-danger)" fontWeight="bold">
                         X
                     </text>
-                    <text x="44" y="38" fontFamily="monospace" fontSize="14" fill="#ef4444" fontWeight="bold">
+                    <text x="44" y="38" fontFamily="monospace" fontSize="14" fill="var(--err-danger)" fontWeight="bold">
                         X
                     </text>
                     {/* Squiggly mouth */}
-                    <path d="M22 50 C27 46 33 54 40 50 C47 46 53 54 58 50" stroke="#6b7280" strokeWidth="2" fill="none" strokeLinecap="round" />
+                    <path d="M22 50 C27 46 33 54 40 50 C47 46 53 54 58 50" stroke="var(--err-chrome-text)" strokeWidth="2" fill="none" strokeLinecap="round" />
                     {/* Body */}
-                    <rect x="22" y="65" width="36" height="22" rx="4" fill="#1f2937" stroke="#374151" strokeWidth="1.5" />
+                    <rect x="22" y="65" width="36" height="22" rx="4" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line)" strokeWidth="1.5" />
                     {/* Body lights */}
                     <circle
                         cx="30"
                         cy="74"
                         r="3"
-                        fill="#ef4444"
+                        fill="var(--err-danger)"
                         style={{
                             animation: "err-flicker 1.5s ease-in-out infinite",
                         }}
                     />
-                    <circle cx="40" cy="74" r="3" fill="#6b7280" />
+                    <circle cx="40" cy="74" r="3" fill="var(--err-chrome-text)" />
                     <circle
                         cx="50"
                         cy="74"
                         r="3"
-                        fill="#f59e0b"
+                        fill="var(--err-warn-bright)"
                         style={{
                             animation: "err-pulse-op 2s ease-in-out infinite",
                         }}
                     />
                     {/* Legs */}
-                    <rect x="26" y="87" width="10" height="3" rx="1.5" fill="#374151" />
-                    <rect x="44" y="87" width="10" height="3" rx="1.5" fill="#374151" />
+                    <rect x="26" y="87" width="10" height="3" rx="1.5" fill="var(--err-chrome-line)" />
+                    <rect x="44" y="87" width="10" height="3" rx="1.5" fill="var(--err-chrome-line)" />
                 </svg>
             </div>
 
@@ -1078,7 +1194,7 @@ function TerminalRightDecor() {
             >
                 <svg width="150" height="60" viewBox="0 0 150 60" fill="none" opacity="0.4">
                     {["TypeError: Cannot read", "  at Object.<anon>", "  at Module._compile", "  at Object.Module"].map((t, i) => (
-                        <text key={i} x={4 + i * 3} y={10 + i * 13} fontFamily="monospace" fontSize="7" fill={i === 0 ? "#ef4444" : "#6b7280"}>
+                        <text key={i} x={4 + i * 3} y={10 + i * 13} fontFamily="monospace" fontSize="7" fill={i === 0 ? "var(--err-danger)" : "var(--err-chrome-text)"}>
                             {t}
                         </text>
                     ))}
@@ -1095,7 +1211,7 @@ function TerminalRightDecor() {
                             y={12 + (i % 2) * 12}
                             fontFamily="monospace"
                             fontSize="9"
-                            fill={i % 3 === 0 ? "#f59e0b" : "#374151"}
+                            fill={i % 3 === 0 ? "var(--err-warn-bright)" : "var(--err-chrome-line)"}
                             style={{
                                 animation: `err-static ${1 + i * 0.1}s ${i * 0.05}s ease-in-out infinite`,
                             }}
@@ -1116,18 +1232,18 @@ function TerminalRightDecor() {
                 }}
             >
                 <svg width="100" height="55" viewBox="0 0 100 55" fill="none" opacity="0.5">
-                    <rect x="0" y="0" width="100" height="55" rx="5" fill="#111827" stroke="#374151" strokeWidth="1" />
-                    <text x="6" y="13" fontFamily="monospace" fontSize="7" fill="#6b7280">
+                    <rect x="0" y="0" width="100" height="55" rx="5" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="1" />
+                    <text x="6" y="13" fontFamily="monospace" fontSize="7" fill="var(--err-chrome-text)">
                         NETWORK STATUS
                     </text>
-                    <line x1="0" y1="17" x2="100" y2="17" stroke="#374151" strokeWidth="0.8" />
+                    <line x1="0" y1="17" x2="100" y2="17" stroke="var(--err-chrome-line)" strokeWidth="0.8" />
                     {[
-                        ["REQ", "400", "#ef4444"],
-                        ["BODY", "BAD", "#f59e0b"],
-                        ["AUTH", "N/A", "#6b7280"],
+                        ["REQ", "400", "var(--err-danger)"],
+                        ["BODY", "BAD", "var(--err-warn-bright)"],
+                        ["AUTH", "N/A", "var(--err-chrome-text)"],
                     ].map(([k, v, c], i) => (
                         <g key={i}>
-                            <text x="6" y={30 + i * 10} fontFamily="monospace" fontSize="7" fill="#6b7280">
+                            <text x="6" y={30 + i * 10} fontFamily="monospace" fontSize="7" fill="var(--err-chrome-text)">
                                 {k}
                             </text>
                             <text x="50" y={30 + i * 10} fontFamily="monospace" fontSize="7" fill={c}>
@@ -1158,21 +1274,21 @@ function VaultLeftDecor() {
             >
                 <svg width="100" height="80" viewBox="0 0 100 80" fill="none">
                     {/* Wall bracket */}
-                    <rect x="40" y="0" width="6" height="30" rx="3" fill="#374151" />
-                    <path d="M46 22 L70 28" stroke="#374151" strokeWidth="4" strokeLinecap="round" />
+                    <rect x="40" y="0" width="6" height="30" rx="3" fill="var(--err-chrome-line)" />
+                    <path d="M46 22 L70 28" stroke="var(--err-chrome-line)" strokeWidth="4" strokeLinecap="round" />
                     {/* Camera body */}
-                    <rect x="60" y="20" width="35" height="20" rx="4" fill="#1f2937" stroke="#4b5563" strokeWidth="1.5" />
+                    <rect x="60" y="20" width="35" height="20" rx="4" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line-2)" strokeWidth="1.5" />
                     {/* Lens */}
-                    <circle cx="64" cy="30" r="8" fill="#111827" stroke="#374151" strokeWidth="1.5" />
-                    <circle cx="64" cy="30" r="5" fill="#030712" />
-                    <circle cx="64" cy="30" r="3" fill="#1d4ed8" opacity="0.6" />
+                    <circle cx="64" cy="30" r="8" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="1.5" />
+                    <circle cx="64" cy="30" r="5" fill="var(--err-chrome-1)" />
+                    <circle cx="64" cy="30" r="3" fill="var(--err-blue-deep)" opacity="0.6" />
                     <circle cx="66" cy="28" r="1.5" fill="white" opacity="0.3" />
                     {/* Record light */}
                     <circle
                         cx="90"
                         cy="26"
                         r="3"
-                        fill="#ef4444"
+                        fill="var(--err-danger)"
                         style={{
                             animation: "err-blink 1s ease-in-out infinite",
                         }}
@@ -1180,7 +1296,7 @@ function VaultLeftDecor() {
                     {/* Scan beam */}
                     <path
                         d="M64 30 L5 60 L5 80 L64 80Z"
-                        fill="#a855f7"
+                        fill="var(--err-purple-soft)"
                         opacity="0.04"
                         style={{
                             animation: "err-laser 2s ease-in-out infinite",
@@ -1201,7 +1317,7 @@ function VaultLeftDecor() {
                             animation: `err-laser ${1.8 + i * 0.4}s ${i * 0.5}s ease-in-out infinite`,
                         }}
                     >
-                        <line x1="0" y1="3" x2="260" y2="3" stroke="#ef4444" strokeWidth="1.5" opacity="0.4" strokeDasharray="6 4" />
+                        <line x1="0" y1="3" x2="260" y2="3" stroke="var(--err-danger)" strokeWidth="1.5" opacity="0.4" strokeDasharray="6 4" />
                     </svg>
                 </div>
             ))}
@@ -1216,10 +1332,10 @@ function VaultLeftDecor() {
                 }}
             >
                 <svg width="90" height="120" viewBox="0 0 90 120" fill="none">
-                    <rect x="5" y="5" width="80" height="110" rx="6" fill="#111827" stroke="#374151" strokeWidth="1.5" />
+                    <rect x="5" y="5" width="80" height="110" rx="6" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="1.5" />
                     {/* Screen */}
-                    <rect x="12" y="12" width="66" height="26" rx="3" fill="#0f172a" stroke="#1e293b" strokeWidth="1" />
-                    <text x="18" y="26" fontFamily="monospace" fontSize="8" fill="#ef4444">
+                    <rect x="12" y="12" width="66" height="26" rx="3" fill="var(--err-screen)" stroke="var(--err-chrome-4)" strokeWidth="1" />
+                    <text x="18" y="26" fontFamily="monospace" fontSize="8" fill="var(--err-danger)">
                         ACCESS DENIED
                     </text>
                     {/* Keypad buttons */}
@@ -1231,8 +1347,8 @@ function VaultLeftDecor() {
                     ].map((row, ri) =>
                         row.map((btn, ci) => (
                             <g key={`${ri}-${ci}`}>
-                                <rect x={14 + ci * 24} y={46 + ri * 18} width="18" height="13" rx="3" fill={btn === "#" ? "#991b1b" : "#1e293b"} stroke="#374151" strokeWidth="0.8" />
-                                <text x={20 + ci * 24} y={56 + ri * 18} fontFamily="monospace" fontSize="7" fill={btn === "#" ? "#fca5a5" : "#9ca3af"} textAnchor="middle">
+                                <rect x={14 + ci * 24} y={46 + ri * 18} width="18" height="13" rx="3" fill={btn === "#" ? "var(--err-danger-strong)" : "var(--err-chrome-4)"} stroke="var(--err-chrome-line)" strokeWidth="0.8" />
+                                <text x={20 + ci * 24} y={56 + ri * 18} fontFamily="monospace" fontSize="7" fill={btn === "#" ? "var(--err-danger-soft)" : "var(--err-chrome-text)"} textAnchor="middle">
                                     {btn}
                                 </text>
                             </g>
@@ -1245,10 +1361,10 @@ function VaultLeftDecor() {
             <div className="absolute" style={{ left: 0, top: "35%" }}>
                 <svg width="280" height="120" viewBox="0 0 280 120" fill="none" opacity="0.15" style={{ animation: "err-laser 2.5s ease-in-out infinite" }}>
                     {[0, 1, 2, 3, 4].map((i) => (
-                        <line key={i} x1="0" y1={12 + i * 24} x2="280" y2={12 + i * 24} stroke="#ef4444" strokeWidth="1" strokeDasharray="8 5" />
+                        <line key={i} x1="0" y1={12 + i * 24} x2="280" y2={12 + i * 24} stroke="var(--err-danger)" strokeWidth="1" strokeDasharray="8 5" />
                     ))}
                     {[0, 1, 2, 3].map((i) => (
-                        <line key={i} x1={35 + i * 70} y1="0" x2={35 + i * 70} y2="120" stroke="#ef4444" strokeWidth="0.8" strokeDasharray="6 6" />
+                        <line key={i} x1={35 + i * 70} y1="0" x2={35 + i * 70} y2="120" stroke="var(--err-danger)" strokeWidth="0.8" strokeDasharray="6 6" />
                     ))}
                 </svg>
             </div>
@@ -1257,9 +1373,9 @@ function VaultLeftDecor() {
             <div className="absolute" style={{ left: 0, top: "56%", width: 260, overflow: "hidden" }}>
                 <svg width="260" height="22" viewBox="0 0 260 22" fill="none">
                     {Array.from({ length: 14 }, (_, i) => (
-                        <rect key={i} x={i * 18} y="0" width="10" height="22" rx="0" fill={i % 2 === 0 ? "#fbbf24" : "#1c1917"} opacity="0.55" />
+                        <rect key={i} x={i * 18} y="0" width="10" height="22" rx="0" fill={i % 2 === 0 ? "var(--err-warn-soft)" : "var(--err-stripe-dark)"} opacity="0.55" />
                     ))}
-                    <text x="30" y="15" fontFamily="monospace" fontSize="9" fill="#111827" fontWeight="bold" opacity="0.7">
+                    <text x="30" y="15" fontFamily="monospace" fontSize="9" fill="var(--err-chrome-2)" fontWeight="bold" opacity="0.7">
                         ⚠ RESTRICTED ZONE ⚠
                     </text>
                 </svg>
@@ -1282,7 +1398,7 @@ function VaultLeftDecor() {
                             cy={y}
                             r={r}
                             fill="none"
-                            stroke="#a855f7"
+                            stroke="var(--err-purple-soft)"
                             strokeWidth="1.2"
                             style={{
                                 animation: `err-pulse-op ${1.5 + i * 0.3}s ${i * 0.2}s ease-in-out infinite`,
@@ -1302,19 +1418,19 @@ function VaultLeftDecor() {
                 }}
             >
                 <svg width="80" height="50" viewBox="0 0 80 50" fill="none" opacity="0.55">
-                    <rect x="0" y="0" width="80" height="50" rx="5" fill="#111827" stroke="#374151" strokeWidth="1.5" />
-                    <rect x="10" y="8" width="20" height="20" rx="2" fill="#1f2937" stroke="#4b5563" strokeWidth="1" />
-                    <circle cx="20" cy="15" r="5" fill="#374151" />
-                    <rect x="10" y="29" width="20" height="3" rx="1" fill="#374151" />
-                    <rect x="36" y="10" width="36" height="4" rx="1" fill="#ef4444" opacity="0.6" />
-                    <text x="36" y="23" fontFamily="monospace" fontSize="6" fill="#6b7280">
+                    <rect x="0" y="0" width="80" height="50" rx="5" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="1.5" />
+                    <rect x="10" y="8" width="20" height="20" rx="2" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line-2)" strokeWidth="1" />
+                    <circle cx="20" cy="15" r="5" fill="var(--err-chrome-line)" />
+                    <rect x="10" y="29" width="20" height="3" rx="1" fill="var(--err-chrome-line)" />
+                    <rect x="36" y="10" width="36" height="4" rx="1" fill="var(--err-danger)" opacity="0.6" />
+                    <text x="36" y="23" fontFamily="monospace" fontSize="6" fill="var(--err-chrome-text)">
                         ID: ███████
                     </text>
-                    <text x="36" y="34" fontFamily="monospace" fontSize="6" fill="#ef4444">
+                    <text x="36" y="34" fontFamily="monospace" fontSize="6" fill="var(--err-danger)">
                         REVOKED
                     </text>
                     {/* Lanyard hole */}
-                    <circle cx="40" cy="2" r="3" fill="#374151" stroke="#4b5563" strokeWidth="1" />
+                    <circle cx="40" cy="2" r="3" fill="var(--err-chrome-line)" stroke="var(--err-chrome-line-2)" strokeWidth="1" />
                 </svg>
             </div>
         </div>
@@ -1336,21 +1452,21 @@ function VaultRightDecor() {
                 <svg width="110" height="140" viewBox="0 0 110 140" fill="none">
                     <defs>
                         <linearGradient id="vlt-lock" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#4b5563" />
-                            <stop offset="100%" stopColor="#1f2937" />
+                            <stop offset="0%" stopColor="var(--err-chrome-line-2)" />
+                            <stop offset="100%" stopColor="var(--err-chrome-3)" />
                         </linearGradient>
                     </defs>
                     {/* Shackle */}
                     <path d="M30 60 L30 30 C30 12 80 12 80 30 L80 60" fill="none" stroke="url(#vlt-lock)" strokeWidth="14" strokeLinecap="round" />
                     {/* Body */}
-                    <rect x="10" y="55" width="90" height="72" rx="10" fill="url(#vlt-lock)" stroke="#374151" strokeWidth="2" />
+                    <rect x="10" y="55" width="90" height="72" rx="10" fill="url(#vlt-lock)" stroke="var(--err-chrome-line)" strokeWidth="2" />
                     {/* Keyhole */}
-                    <circle cx="55" cy="84" r="12" fill="#0f172a" stroke="#4b5563" strokeWidth="1.5" />
-                    <path d="M50 84 L60 84 L57 106 L53 106Z" fill="#0f172a" />
+                    <circle cx="55" cy="84" r="12" fill="var(--err-screen)" stroke="var(--err-chrome-line-2)" strokeWidth="1.5" />
+                    <path d="M50 84 L60 84 L57 106 L53 106Z" fill="var(--err-screen)" />
                     {/* Crack through lock */}
                     <path
                         d="M55 60 L48 80 L60 95 L50 127"
-                        stroke="#ef4444"
+                        stroke="var(--err-danger)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         opacity="0.8"
@@ -1358,8 +1474,8 @@ function VaultRightDecor() {
                             animation: "err-pulse-op 2s ease-in-out infinite",
                         }}
                     />
-                    <path d="M48 80 L35 90" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
-                    <path d="M60 95 L72 105" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+                    <path d="M48 80 L35 90" stroke="var(--err-danger)" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+                    <path d="M60 95 L72 105" stroke="var(--err-danger)" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
                     {/* Rivet details */}
                     {[
                         [20, 65],
@@ -1367,7 +1483,7 @@ function VaultRightDecor() {
                         [20, 118],
                         [90, 118],
                     ].map(([cx, cy], i) => (
-                        <circle key={i} cx={cx} cy={cy} r="4" fill="#374151" stroke="#4b5563" strokeWidth="1" />
+                        <circle key={i} cx={cx} cy={cy} r="4" fill="var(--err-chrome-line)" stroke="var(--err-chrome-line-2)" strokeWidth="1" />
                     ))}
                 </svg>
             </div>
@@ -1389,7 +1505,7 @@ function VaultRightDecor() {
                             cy="40"
                             r={r}
                             fill="none"
-                            stroke="#a855f7"
+                            stroke="var(--err-purple-soft)"
                             strokeWidth="1.5"
                             strokeDasharray={i % 2 === 0 ? "4 3" : "6 2"}
                             style={{
@@ -1397,14 +1513,14 @@ function VaultRightDecor() {
                             }}
                         />
                     ))}
-                    <circle cx="40" cy="40" r="4" fill="#a855f7" opacity="0.8" />
+                    <circle cx="40" cy="40" r="4" fill="var(--err-purple-soft)" opacity="0.8" />
                     {/* Scan line */}
                     <line
                         x1="2"
                         y1="40"
                         x2="78"
                         y2="40"
-                        stroke="#a855f7"
+                        stroke="var(--err-purple-soft)"
                         strokeWidth="1.5"
                         opacity="0.6"
                         style={{
@@ -1445,13 +1561,13 @@ function VaultRightDecor() {
                             <path
                                 d={`M${cx} ${cy - r * 1.1} L${cx - r} ${cy + r * 0.6} L${cx + r} ${cy + r * 0.6}Z`}
                                 fill="none"
-                                stroke="#a855f7"
+                                stroke="var(--err-purple-soft)"
                                 strokeWidth="1.8"
                                 style={{
                                     animation: `err-pulse-op ${1.5 + i * 0.4}s ${i * 0.3}s ease-in-out infinite`,
                                 }}
                             />
-                            <text x={cx} y={cy + 1} textAnchor="middle" fontSize="8" fill="#a855f7" fontWeight="bold">
+                            <text x={cx} y={cy + 1} textAnchor="middle" fontSize="8" fill="var(--err-purple-soft)" fontWeight="bold">
                                 !
                             </text>
                         </g>
@@ -1469,49 +1585,49 @@ function VaultRightDecor() {
                 }}
             >
                 <svg width="90" height="55" viewBox="0 0 90 55" fill="none" opacity="0.55">
-                    <path d="M5 27 C20 5 70 5 85 27 C70 50 20 50 5 27Z" fill="none" stroke="#a855f7" strokeWidth="1.5" />
-                    <circle cx="45" cy="27" r="14" fill="none" stroke="#a855f7" strokeWidth="1.5" />
-                    <circle cx="45" cy="27" r="8" fill="#4c1d95" opacity="0.5" />
+                    <path d="M5 27 C20 5 70 5 85 27 C70 50 20 50 5 27Z" fill="none" stroke="var(--err-purple-soft)" strokeWidth="1.5" />
+                    <circle cx="45" cy="27" r="14" fill="none" stroke="var(--err-purple-soft)" strokeWidth="1.5" />
+                    <circle cx="45" cy="27" r="8" fill="var(--err-purple-deep)" opacity="0.5" />
                     <circle
                         cx="45"
                         cy="27"
                         r="4"
-                        fill="#7c3aed"
+                        fill="var(--err-purple)"
                         style={{
                             animation: "err-pulse-op 1.5s ease-in-out infinite",
                         }}
                     />
                     {/* Scan lines */}
-                    <line x1="5" y1="20" x2="85" y2="20" stroke="#a855f7" strokeWidth="0.8" opacity="0.3" />
+                    <line x1="5" y1="20" x2="85" y2="20" stroke="var(--err-purple-soft)" strokeWidth="0.8" opacity="0.3" />
                     <line
                         x1="5"
                         y1="27"
                         x2="85"
                         y2="27"
-                        stroke="#a855f7"
+                        stroke="var(--err-purple-soft)"
                         strokeWidth="1"
                         opacity="0.5"
                         style={{
                             animation: "err-laser 1.8s ease-in-out infinite",
                         }}
                     />
-                    <line x1="5" y1="34" x2="85" y2="34" stroke="#a855f7" strokeWidth="0.8" opacity="0.3" />
+                    <line x1="5" y1="34" x2="85" y2="34" stroke="var(--err-purple-soft)" strokeWidth="0.8" opacity="0.3" />
                 </svg>
             </div>
 
             {/* Guard tower silhouette */}
             <div className="absolute" style={{ right: 5, top: "58%" }}>
                 <svg width="70" height="90" viewBox="0 0 70 90" fill="none" opacity="0.3">
-                    <rect x="25" y="40" width="20" height="50" fill="#1f2937" />
-                    <rect x="10" y="25" width="50" height="20" rx="2" fill="#111827" stroke="#374151" strokeWidth="1" />
+                    <rect x="25" y="40" width="20" height="50" fill="var(--err-chrome-3)" />
+                    <rect x="10" y="25" width="50" height="20" rx="2" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="1" />
                     {/* Battlement */}
                     {[0, 1, 2, 3, 4].map((i) => (
-                        <rect key={i} x={10 + i * 10} y="15" width="7" height="12" rx="1" fill="#1f2937" stroke="#374151" strokeWidth="1" />
+                        <rect key={i} x={10 + i * 10} y="15" width="7" height="12" rx="1" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line)" strokeWidth="1" />
                     ))}
                     {/* Search light beam */}
                     <path
                         d="M35 30 L5 90 L25 90Z"
-                        fill="#fbbf24"
+                        fill="var(--err-warn-soft)"
                         opacity="0.08"
                         style={{
                             animation: "err-laser 2.5s ease-in-out infinite",
@@ -1522,7 +1638,7 @@ function VaultRightDecor() {
                         cx="35"
                         cy="30"
                         r="5"
-                        fill="#fbbf24"
+                        fill="var(--err-warn-soft)"
                         opacity="0.4"
                         style={{
                             animation: "err-pulse-op 1s ease-in-out infinite",
@@ -1535,7 +1651,7 @@ function VaultRightDecor() {
                         width="10"
                         height="14"
                         rx="1"
-                        fill="#fbbf24"
+                        fill="var(--err-warn-soft)"
                         opacity="0.3"
                         style={{
                             animation: "err-blink 2s ease-in-out infinite",
@@ -1547,15 +1663,15 @@ function VaultRightDecor() {
             {/* Electronic fence */}
             <div className="absolute" style={{ right: 0, top: "74%" }}>
                 <svg width="140" height="40" viewBox="0 0 140 40" fill="none" opacity="0.35">
-                    <line x1="0" y1="15" x2="140" y2="15" stroke="#4b5563" strokeWidth="2" />
-                    <line x1="0" y1="28" x2="140" y2="28" stroke="#4b5563" strokeWidth="1.5" />
+                    <line x1="0" y1="15" x2="140" y2="15" stroke="var(--err-chrome-line-2)" strokeWidth="2" />
+                    <line x1="0" y1="28" x2="140" y2="28" stroke="var(--err-chrome-line-2)" strokeWidth="1.5" />
                     {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                         <g key={i}>
-                            <line x1={20 + i * 20} y1="5" x2={20 + i * 20} y2="38" stroke="#4b5563" strokeWidth="2" />
+                            <line x1={20 + i * 20} y1="5" x2={20 + i * 20} y2="38" stroke="var(--err-chrome-line-2)" strokeWidth="2" />
                             <path
                                 d={`M${14 + i * 20} 5 L${20 + i * 20} 2 L${26 + i * 20} 5`}
                                 fill="none"
-                                stroke="#ef4444"
+                                stroke="var(--err-danger)"
                                 strokeWidth="1"
                                 style={{
                                     animation: `err-spark ${1.5 + i * 0.2}s ${i * 0.15}s ease-in-out infinite`,
@@ -1563,7 +1679,7 @@ function VaultRightDecor() {
                             />
                         </g>
                     ))}
-                    <text x="4" y="38" fontFamily="monospace" fontSize="6" fill="#ef4444" opacity="0.6">
+                    <text x="4" y="38" fontFamily="monospace" fontSize="6" fill="var(--err-danger)" opacity="0.6">
                         HIGH VOLTAGE
                     </text>
                 </svg>
@@ -1590,13 +1706,13 @@ function TimeLeftDecor() {
                 <svg width="170" height="170" viewBox="0 0 170 170" fill="none">
                     <defs>
                         <radialGradient id="tm-clock-face" cx="50%" cy="40%">
-                            <stop offset="0%" stopColor="#fff7ed" />
-                            <stop offset="100%" stopColor="#fed7aa" />
+                            <stop offset="0%" stopColor="var(--err-white)" />
+                            <stop offset="100%" stopColor="var(--err-orange-soft)" />
                         </radialGradient>
                     </defs>
                     {/* Outer bezel */}
-                    <circle cx="85" cy="85" r="80" fill="none" stroke="#f97316" strokeWidth="5" opacity="0.5" />
-                    <circle cx="85" cy="85" r="74" fill="url(#tm-clock-face)" stroke="#fdba74" strokeWidth="2" opacity="0.9" />
+                    <circle cx="85" cy="85" r="80" fill="none" stroke="var(--err-orange)" strokeWidth="5" opacity="0.5" />
+                    <circle cx="85" cy="85" r="74" fill="url(#tm-clock-face)" stroke="var(--err-orange-soft)" strokeWidth="2" opacity="0.9" />
                     {/* Hour markers */}
                     {Array.from({ length: 12 }, (_, i) => {
                         const angle = i * 30 - 90;
@@ -1606,7 +1722,7 @@ function TimeLeftDecor() {
                         const y1 = 85 + r1 * Math.sin((angle * Math.PI) / 180);
                         const x2 = 85 + r2 * Math.cos((angle * Math.PI) / 180);
                         const y2 = 85 + r2 * Math.sin((angle * Math.PI) / 180);
-                        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#ea580c" strokeWidth={i % 3 === 0 ? 3 : 1.5} />;
+                        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--err-orange)" strokeWidth={i % 3 === 0 ? 3 : 1.5} />;
                     })}
                     {/* Hour hand (stopped) */}
                     <line
@@ -1614,7 +1730,7 @@ function TimeLeftDecor() {
                         y1="85"
                         x2="85"
                         y2="42"
-                        stroke="#c2410c"
+                        stroke="var(--err-orange)"
                         strokeWidth="5"
                         strokeLinecap="round"
                         style={{
@@ -1628,7 +1744,7 @@ function TimeLeftDecor() {
                         y1="85"
                         x2="115"
                         y2="65"
-                        stroke="#ea580c"
+                        stroke="var(--err-orange)"
                         strokeWidth="3"
                         strokeLinecap="round"
                         style={{
@@ -1642,7 +1758,7 @@ function TimeLeftDecor() {
                         y1="85"
                         x2="85"
                         y2="25"
-                        stroke="#ef4444"
+                        stroke="var(--err-danger)"
                         strokeWidth="1.5"
                         strokeLinecap="round"
                         style={{
@@ -1650,9 +1766,9 @@ function TimeLeftDecor() {
                             animation: "err-hand-sec 4s linear infinite",
                         }}
                     />
-                    <circle cx="85" cy="85" r="5" fill="#c2410c" />
+                    <circle cx="85" cy="85" r="5" fill="var(--err-orange)" />
                     {/* Melting drip bottom */}
-                    <path d="M65 159 C65 168 72 173 80 168 C85 173 90 168 95 173 C103 168 108 159 105 159" fill="#fdba74" stroke="#f97316" strokeWidth="1.5" opacity="0.6" />
+                    <path d="M65 159 C65 168 72 173 80 168 C85 173 90 168 95 173 C103 168 108 159 105 159" fill="var(--err-orange-soft)" stroke="var(--err-orange)" strokeWidth="1.5" opacity="0.6" />
                 </svg>
             </div>
 
@@ -1668,12 +1784,12 @@ function TimeLeftDecor() {
                     }}
                 >
                     <svg width="40" height="44" viewBox="0 0 40 44" fill="none">
-                        <rect x="2" y="8" width="36" height="34" rx="3" fill="white" stroke="#fdba74" strokeWidth="1.5" opacity="0.8" />
-                        <rect x="2" y="8" width="36" height="12" rx="3" fill="#f97316" opacity="0.7" />
+                        <rect x="2" y="8" width="36" height="34" rx="3" fill="white" stroke="var(--err-orange-soft)" strokeWidth="1.5" opacity="0.8" />
+                        <rect x="2" y="8" width="36" height="12" rx="3" fill="var(--err-orange)" opacity="0.7" />
                         {/* Rings */}
-                        <circle cx="14" cy="8" r="3" fill="none" stroke="#c2410c" strokeWidth="2" />
-                        <circle cx="26" cy="8" r="3" fill="none" stroke="#c2410c" strokeWidth="2" />
-                        <text x="20" y="31" textAnchor="middle" fontSize="12" fill="#92400e" fontWeight="bold">
+                        <circle cx="14" cy="8" r="3" fill="none" stroke="var(--err-orange)" strokeWidth="2" />
+                        <circle cx="26" cy="8" r="3" fill="none" stroke="var(--err-orange)" strokeWidth="2" />
+                        <text x="20" y="31" textAnchor="middle" fontSize="12" fill="var(--err-wood-dark)" fontWeight="bold">
                             {["31", "01", "30"][i]}
                         </text>
                     </svg>
@@ -1690,18 +1806,18 @@ function TimeLeftDecor() {
                 }}
             >
                 <svg width="70" height="70" viewBox="0 0 70 70" fill="none">
-                    <circle cx="35" cy="38" r="26" fill="#1f2937" stroke="#f97316" strokeWidth="2.5" />
-                    <circle cx="35" cy="38" r="20" fill="#111827" />
+                    <circle cx="35" cy="38" r="26" fill="var(--err-chrome-3)" stroke="var(--err-orange)" strokeWidth="2.5" />
+                    <circle cx="35" cy="38" r="20" fill="var(--err-chrome-2)" />
                     {/* Bell ears */}
-                    <path d="M12 20 C8 12 20 8 22 16" fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
-                    <path d="M58 20 C62 12 50 8 48 16" fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M12 20 C8 12 20 8 22 16" fill="none" stroke="var(--err-orange)" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M58 20 C62 12 50 8 48 16" fill="none" stroke="var(--err-orange)" strokeWidth="3" strokeLinecap="round" />
                     {/* Hands */}
                     <line
                         x1="35"
                         y1="38"
                         x2="35"
                         y2="24"
-                        stroke="#f97316"
+                        stroke="var(--err-orange)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         style={{
@@ -1714,7 +1830,7 @@ function TimeLeftDecor() {
                         y1="38"
                         x2="48"
                         y2="32"
-                        stroke="#fdba74"
+                        stroke="var(--err-orange-soft)"
                         strokeWidth="2"
                         strokeLinecap="round"
                         style={{
@@ -1722,10 +1838,10 @@ function TimeLeftDecor() {
                             animation: "err-hand-sec 6s linear infinite",
                         }}
                     />
-                    <circle cx="35" cy="38" r="3" fill="#f97316" />
+                    <circle cx="35" cy="38" r="3" fill="var(--err-orange)" />
                     {/* Feet */}
-                    <circle cx="25" cy="62" r="5" fill="#374151" stroke="#f97316" strokeWidth="1.5" />
-                    <circle cx="45" cy="62" r="5" fill="#374151" stroke="#f97316" strokeWidth="1.5" />
+                    <circle cx="25" cy="62" r="5" fill="var(--err-chrome-line)" stroke="var(--err-orange)" strokeWidth="1.5" />
+                    <circle cx="45" cy="62" r="5" fill="var(--err-chrome-line)" stroke="var(--err-orange)" strokeWidth="1.5" />
                 </svg>
             </div>
 
@@ -1741,17 +1857,17 @@ function TimeLeftDecor() {
                 <svg width="80" height="130" viewBox="0 0 80 130" fill="none" opacity="0.6">
                     {/* Chain links */}
                     {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                        <ellipse key={i} cx="40" cy={10 + i * 14} rx={i % 2 === 0 ? 6 : 4} ry={i % 2 === 0 ? 4 : 6} fill="none" stroke="#f97316" strokeWidth="1.5" opacity="0.7" />
+                        <ellipse key={i} cx="40" cy={10 + i * 14} rx={i % 2 === 0 ? 6 : 4} ry={i % 2 === 0 ? 4 : 6} fill="none" stroke="var(--err-orange)" strokeWidth="1.5" opacity="0.7" />
                     ))}
                     {/* Watch face */}
-                    <circle cx="40" cy="118" r="12" fill="#1f2937" stroke="#f97316" strokeWidth="2" />
-                    <circle cx="40" cy="118" r="9" fill="#111827" />
+                    <circle cx="40" cy="118" r="12" fill="var(--err-chrome-3)" stroke="var(--err-orange)" strokeWidth="2" />
+                    <circle cx="40" cy="118" r="9" fill="var(--err-chrome-2)" />
                     <line
                         x1="40"
                         y1="118"
                         x2="40"
                         y2="111"
-                        stroke="#fdba74"
+                        stroke="var(--err-orange-soft)"
                         strokeWidth="1.5"
                         strokeLinecap="round"
                         style={{
@@ -1764,7 +1880,7 @@ function TimeLeftDecor() {
                         y1="118"
                         x2="46"
                         y2="116"
-                        stroke="#f97316"
+                        stroke="var(--err-orange)"
                         strokeWidth="1"
                         strokeLinecap="round"
                         style={{
@@ -1772,7 +1888,7 @@ function TimeLeftDecor() {
                             animation: "err-hand-sec 5s linear infinite",
                         }}
                     />
-                    <circle cx="40" cy="118" r="2" fill="#f97316" />
+                    <circle cx="40" cy="118" r="2" fill="var(--err-orange)" />
                 </svg>
             </div>
 
@@ -1804,13 +1920,13 @@ function TimeLeftDecor() {
             >
                 <svg width="80" height="55" viewBox="0 0 80 55" fill="none" opacity="0.45">
                     {/* Base ellipse */}
-                    <ellipse cx="40" cy="45" rx="36" ry="9" fill="#92400e" stroke="#f97316" strokeWidth="1.5" />
+                    <ellipse cx="40" cy="45" rx="36" ry="9" fill="var(--err-wood-dark)" stroke="var(--err-orange)" strokeWidth="1.5" />
                     {/* Shadow rays */}
                     {[0, 20, 40, 60, 80, 100, 120, 140, 160].map((deg, i) => (
-                        <line key={i} x1="40" y1="45" x2={40 + 32 * Math.cos(((deg - 90) * Math.PI) / 180)} y2={45 + 8 * Math.sin(((deg - 90) * Math.PI) / 180)} stroke="#f97316" strokeWidth="0.8" opacity={0.2 + i * 0.06} />
+                        <line key={i} x1="40" y1="45" x2={40 + 32 * Math.cos(((deg - 90) * Math.PI) / 180)} y2={45 + 8 * Math.sin(((deg - 90) * Math.PI) / 180)} stroke="var(--err-orange)" strokeWidth="0.8" opacity={0.2 + i * 0.06} />
                     ))}
                     {/* Gnomon */}
-                    <path d="M40 8 L40 45 L70 45" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M40 8 L40 45 L70 45" fill="none" stroke="var(--err-warn-soft)" strokeWidth="2" strokeLinecap="round" />
                 </svg>
             </div>
         </div>
@@ -1839,7 +1955,7 @@ function TimeRightDecor() {
                 }}
             >
                 <svg width="90" height="90" viewBox="0 0 90 90" fill="none">
-                    <path d="M55 10 C30 15 12 35 15 58 C18 80 38 92 62 86 C38 85 22 66 24 46 C26 26 42 12 55 10Z" fill="#fde68a" stroke="#f59e0b" strokeWidth="1.5" opacity="0.8" />
+                    <path d="M55 10 C30 15 12 35 15 58 C18 80 38 92 62 86 C38 85 22 66 24 46 C26 26 42 12 55 10Z" fill="var(--err-warn-soft)" stroke="var(--err-warn-bright)" strokeWidth="1.5" opacity="0.8" />
                 </svg>
             </div>
 
@@ -1855,7 +1971,7 @@ function TimeRightDecor() {
                     }}
                 >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M6 1 L7 5 L11 5 L8 7.5 L9 11 L6 9 L3 11 L4 7.5 L1 5 L5 5Z" fill="#fde68a" opacity="0.7" />
+                        <path d="M6 1 L7 5 L11 5 L8 7.5 L9 11 L6 9 L3 11 L4 7.5 L1 5 L5 5Z" fill="var(--err-warn-soft)" opacity="0.7" />
                     </svg>
                 </div>
             ))}
@@ -1871,22 +1987,22 @@ function TimeRightDecor() {
                 }}
             >
                 <svg width="70" height="110" viewBox="0 0 70 110" fill="none">
-                    <rect x="5" y="0" width="60" height="8" rx="4" fill="#f97316" />
-                    <rect x="5" y="102" width="60" height="8" rx="4" fill="#f97316" />
+                    <rect x="5" y="0" width="60" height="8" rx="4" fill="var(--err-orange)" />
+                    <rect x="5" y="102" width="60" height="8" rx="4" fill="var(--err-orange)" />
                     {/* Glass shape top */}
-                    <path d="M10 8 L60 8 L38 54 L38 56 L32 56 L32 54Z" fill="#fff7ed" stroke="#fdba74" strokeWidth="1.5" opacity="0.8" />
+                    <path d="M10 8 L60 8 L38 54 L38 56 L32 56 L32 54Z" fill="var(--err-white)" stroke="var(--err-orange-soft)" strokeWidth="1.5" opacity="0.8" />
                     {/* Glass shape bottom */}
-                    <path d="M32 56 L38 56 L60 102 L10 102Z" fill="#fff7ed" stroke="#fdba74" strokeWidth="1.5" opacity="0.8" />
+                    <path d="M32 56 L38 56 L60 102 L10 102Z" fill="var(--err-white)" stroke="var(--err-orange-soft)" strokeWidth="1.5" opacity="0.8" />
                     {/* Sand (nearly empty top) */}
-                    <path d="M10 8 L60 8 L42 38 L28 38Z" fill="#f97316" opacity="0.4" />
+                    <path d="M10 8 L60 8 L42 38 L28 38Z" fill="var(--err-orange)" opacity="0.4" />
                     {/* Sand (full bottom) */}
-                    <path d="M35 58 L58 102 L12 102Z" fill="#f97316" opacity="0.7" />
+                    <path d="M35 58 L58 102 L12 102Z" fill="var(--err-orange)" opacity="0.7" />
                     {/* Sand grain falling */}
                     <circle
                         cx="35"
                         cy="56"
                         r="1.5"
-                        fill="#f97316"
+                        fill="var(--err-orange)"
                         style={{
                             animation: "err-drop .6s ease-in-out infinite",
                         }}
@@ -1906,8 +2022,8 @@ function TimeRightDecor() {
                         right,
                         top,
                         transform: `rotate(${rot}deg)`,
-                        borderColor: "#f97316",
-                        color: "#f97316",
+                        borderColor: "var(--err-orange)",
+                        color: "var(--err-orange)",
                         opacity: 0.5,
                         animation: `err-pulse-op ${2 + i * 0.6}s ${i * 0.4}s ease-in-out infinite`,
                     }}
@@ -1941,14 +2057,14 @@ function TimeRightDecor() {
                 }}
             >
                 <svg width="110" height="50" viewBox="0 0 110 50" fill="none" opacity="0.55">
-                    <rect x="0" y="0" width="110" height="50" rx="6" fill="#111827" stroke="#f97316" strokeWidth="1.5" />
-                    <text x="10" y="30" fontFamily="monospace" fontSize="22" fontWeight="bold" fill="#f97316" style={{ animation: "err-blink 1s step-end infinite" }}>
+                    <rect x="0" y="0" width="110" height="50" rx="6" fill="var(--err-chrome-2)" stroke="var(--err-orange)" strokeWidth="1.5" />
+                    <text x="10" y="30" fontFamily="monospace" fontSize="22" fontWeight="bold" fill="var(--err-orange)" style={{ animation: "err-blink 1s step-end infinite" }}>
                         00:00
                     </text>
-                    <text x="75" y="18" fontFamily="monospace" fontSize="8" fill="#6b7280">
+                    <text x="75" y="18" fontFamily="monospace" fontSize="8" fill="var(--err-chrome-text)">
                         SESSION
                     </text>
-                    <text x="75" y="30" fontFamily="monospace" fontSize="8" fill="#ef4444">
+                    <text x="75" y="30" fontFamily="monospace" fontSize="8" fill="var(--err-danger)">
                         EXPIRED
                     </text>
                 </svg>
@@ -1965,23 +2081,23 @@ function TimeRightDecor() {
             >
                 <svg width="60" height="90" viewBox="0 0 60 90" fill="none" opacity="0.6">
                     {/* Band top */}
-                    <rect x="20" y="0" width="20" height="22" rx="3" fill="#374151" />
+                    <rect x="20" y="0" width="20" height="22" rx="3" fill="var(--err-chrome-line)" />
                     {[4, 10, 16].map((y) => (
-                        <line key={y} x1="20" y1={y} x2="40" y2={y} stroke="#4b5563" strokeWidth="0.8" />
+                        <line key={y} x1="20" y1={y} x2="40" y2={y} stroke="var(--err-chrome-line-2)" strokeWidth="0.8" />
                     ))}
                     {/* Watch face */}
-                    <circle cx="30" cy="42" r="22" fill="#1f2937" stroke="#f97316" strokeWidth="2" />
-                    <circle cx="30" cy="42" r="18" fill="#111827" />
+                    <circle cx="30" cy="42" r="22" fill="var(--err-chrome-3)" stroke="var(--err-orange)" strokeWidth="2" />
+                    <circle cx="30" cy="42" r="18" fill="var(--err-chrome-2)" />
                     {Array.from({ length: 12 }, (_, i) => {
                         const a = ((i * 30 - 90) * Math.PI) / 180;
-                        return <circle key={i} cx={30 + 15 * Math.cos(a)} cy={42 + 15 * Math.sin(a)} r={i % 3 === 0 ? 2 : 1} fill="#f97316" opacity={i % 3 === 0 ? 0.8 : 0.4} />;
+                        return <circle key={i} cx={30 + 15 * Math.cos(a)} cy={42 + 15 * Math.sin(a)} r={i % 3 === 0 ? 2 : 1} fill="var(--err-orange)" opacity={i % 3 === 0 ? 0.8 : 0.4} />;
                     })}
                     <line
                         x1="30"
                         y1="42"
                         x2="30"
                         y2="30"
-                        stroke="#fdba74"
+                        stroke="var(--err-orange-soft)"
                         strokeWidth="2"
                         strokeLinecap="round"
                         style={{
@@ -1994,7 +2110,7 @@ function TimeRightDecor() {
                         y1="42"
                         x2="40"
                         y2="42"
-                        stroke="#f97316"
+                        stroke="var(--err-orange)"
                         strokeWidth="1.5"
                         strokeLinecap="round"
                         style={{
@@ -2002,15 +2118,15 @@ function TimeRightDecor() {
                             animation: "err-hand-sec 5s linear infinite",
                         }}
                     />
-                    <circle cx="30" cy="42" r="2.5" fill="#f97316" />
+                    <circle cx="30" cy="42" r="2.5" fill="var(--err-orange)" />
                     {/* Band bottom */}
-                    <rect x="20" y="64" width="20" height="26" rx="3" fill="#374151" />
+                    <rect x="20" y="64" width="20" height="26" rx="3" fill="var(--err-chrome-line)" />
                     {[68, 74, 80].map((y) => (
-                        <line key={y} x1="20" y1={y} x2="40" y2={y} stroke="#4b5563" strokeWidth="0.8" />
+                        <line key={y} x1="20" y1={y} x2="40" y2={y} stroke="var(--err-chrome-line-2)" strokeWidth="0.8" />
                     ))}
                     {/* Buckle */}
-                    <rect x="22" y="76" width="16" height="8" rx="2" fill="none" stroke="#6b7280" strokeWidth="1.2" />
-                    <line x1="30" y1="76" x2="30" y2="84" stroke="#6b7280" strokeWidth="1" />
+                    <rect x="22" y="76" width="16" height="8" rx="2" fill="none" stroke="var(--err-chrome-text)" strokeWidth="1.2" />
+                    <line x1="30" y1="76" x2="30" y2="84" stroke="var(--err-chrome-text)" strokeWidth="1" />
                 </svg>
             </div>
 
@@ -2025,10 +2141,10 @@ function TimeRightDecor() {
                 }}
             >
                 <svg width="28" height="44" viewBox="0 0 28 44" fill="none" opacity="0.35">
-                    <rect x="2" y="0" width="24" height="4" rx="2" fill="#f97316" />
-                    <rect x="2" y="40" width="24" height="4" rx="2" fill="#f97316" />
-                    <path d="M4 4 L24 4 L16 22 L16 22 L14 22 L14 22Z" fill="#f97316" opacity="0.4" />
-                    <path d="M14 22 L24 40 L4 40Z" fill="#f97316" opacity="0.7" />
+                    <rect x="2" y="0" width="24" height="4" rx="2" fill="var(--err-orange)" />
+                    <rect x="2" y="40" width="24" height="4" rx="2" fill="var(--err-orange)" />
+                    <path d="M4 4 L24 4 L16 22 L16 22 L14 22 L14 22Z" fill="var(--err-orange)" opacity="0.4" />
+                    <path d="M14 22 L24 40 L4 40Z" fill="var(--err-orange)" opacity="0.7" />
                 </svg>
             </div>
         </div>
@@ -2045,14 +2161,14 @@ function CircuitLeftDecor() {
             <div className="absolute" style={{ left: 5, top: "5%" }}>
                 <svg width="200" height="300" viewBox="0 0 200 300" fill="none" opacity="0.45">
                     {/* Horizontal traces */}
-                    <path d="M0 40 L80 40 L80 80 L160 80 L160 120 L200 120" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M0 100 L50 100 L50 140 L130 140 L130 100 L200 100" stroke="#22c55e" strokeWidth="1.5" strokeDasharray="6 3" />
-                    <path d="M0 200 L40 200 L40 160 L100 160 L100 200 L200 200" stroke="#22c55e" strokeWidth="2" />
-                    <path d="M0 260 L70 260 L70 220 L150 220 L150 260 L200 260" stroke="#22c55e" strokeWidth="1.5" strokeDasharray="4 4" />
+                    <path d="M0 40 L80 40 L80 80 L160 80 L160 120 L200 120" stroke="var(--err-green)" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M0 100 L50 100 L50 140 L130 140 L130 100 L200 100" stroke="var(--err-green)" strokeWidth="1.5" strokeDasharray="6 3" />
+                    <path d="M0 200 L40 200 L40 160 L100 160 L100 200 L200 200" stroke="var(--err-green)" strokeWidth="2" />
+                    <path d="M0 260 L70 260 L70 220 L150 220 L150 260 L200 260" stroke="var(--err-green)" strokeWidth="1.5" strokeDasharray="4 4" />
                     {/* Broken segment (red) */}
                     <path
                         d="M160 80 L160 120"
-                        stroke="#ef4444"
+                        stroke="var(--err-danger)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         style={{
@@ -2068,20 +2184,20 @@ function CircuitLeftDecor() {
                         [70, 260],
                         [150, 220],
                     ].map(([x, y], i) => (
-                        <rect key={i} x={x - 5} y={y - 5} width="10" height="10" rx="2" fill={i === 1 || i === 5 ? "#ef4444" : "#16a34a"} opacity={i === 1 || i === 5 ? 0.8 : 0.6} />
+                        <rect key={i} x={x - 5} y={y - 5} width="10" height="10" rx="2" fill={i === 1 || i === 5 ? "var(--err-danger)" : "var(--err-green)"} opacity={i === 1 || i === 5 ? 0.8 : 0.6} />
                     ))}
                     {/* IC chip */}
-                    <rect x="100" y="180" width="50" height="32" rx="3" fill="none" stroke="#15803d" strokeWidth="2" />
+                    <rect x="100" y="180" width="50" height="32" rx="3" fill="none" stroke="var(--err-green-deep)" strokeWidth="2" />
                     {[0, 1, 2, 3, 4].map((i) => (
                         <g key={i}>
-                            <line x1={100} y1={184 + i * 5} x2={92} y2={184 + i * 5} stroke="#22c55e" strokeWidth="1.5" />
-                            <line x1={150} y1={184 + i * 5} x2={158} y2={184 + i * 5} stroke="#22c55e" strokeWidth="1.5" />
+                            <line x1={100} y1={184 + i * 5} x2={92} y2={184 + i * 5} stroke="var(--err-green)" strokeWidth="1.5" />
+                            <line x1={150} y1={184 + i * 5} x2={158} y2={184 + i * 5} stroke="var(--err-green)" strokeWidth="1.5" />
                         </g>
                     ))}
                     {/* Broken X on chip */}
                     <path
                         d="M110 188 L140 208 M140 188 L110 208"
-                        stroke="#ef4444"
+                        stroke="var(--err-danger)"
                         strokeWidth="1.5"
                         style={{
                             animation: "err-pulse-op 1.5s ease-in-out infinite",
@@ -2116,16 +2232,16 @@ function CircuitLeftDecor() {
             >
                 <svg width="120" height="30" viewBox="0 0 120 30" fill="none">
                     {[
-                        [0, "#ef4444", 0.7],
-                        [12, "#991b1b", 0.5],
-                        [22, "#ef4444", 0.8],
-                        [36, "#7f1d1d", 0.4],
-                        [44, "#ef4444", 0.6],
-                        [56, "#991b1b", 0.7],
-                        [66, "#ef4444", 0.5],
-                        [80, "#7f1d1d", 0.6],
-                        [90, "#ef4444", 0.4],
-                        [102, "#991b1b", 0.7],
+                        [0, "var(--err-danger)", 0.7],
+                        [12, "var(--err-danger-strong)", 0.5],
+                        [22, "var(--err-danger)", 0.8],
+                        [36, "var(--err-danger-strong)", 0.4],
+                        [44, "var(--err-danger)", 0.6],
+                        [56, "var(--err-danger-strong)", 0.7],
+                        [66, "var(--err-danger)", 0.5],
+                        [80, "var(--err-danger-strong)", 0.6],
+                        [90, "var(--err-danger)", 0.4],
+                        [102, "var(--err-danger-strong)", 0.7],
                     ].map(([x, col, op], i) => (
                         <rect key={i} x={x} y={5 + (i % 3) * 7} width={8 + (i % 4) * 2} height={10 + (i % 2) * 5} rx="1" fill={col} opacity={op} />
                     ))}
@@ -2148,9 +2264,9 @@ function CircuitLeftDecor() {
                         const x2 = 52 - Math.sin(i * 0.8) * 22;
                         return (
                             <g key={i}>
-                                <circle cx={x1} cy={y} r="4" fill={i % 2 === 0 ? "#ef4444" : "#991b1b"} opacity="0.8" />
-                                <circle cx={x2} cy={y} r="4" fill={i % 2 === 0 ? "#991b1b" : "#ef4444"} opacity="0.8" />
-                                <line x1={x1} y1={y} x2={x2} y2={y} stroke="#ef4444" strokeWidth="1" opacity="0.4" />
+                                <circle cx={x1} cy={y} r="4" fill={i % 2 === 0 ? "var(--err-danger)" : "var(--err-danger-strong)"} opacity="0.8" />
+                                <circle cx={x2} cy={y} r="4" fill={i % 2 === 0 ? "var(--err-danger-strong)" : "var(--err-danger)"} opacity="0.8" />
+                                <line x1={x1} y1={y} x2={x2} y2={y} stroke="var(--err-danger)" strokeWidth="1" opacity="0.4" />
                             </g>
                         );
                     })}
@@ -2167,32 +2283,32 @@ function CircuitLeftDecor() {
                 }}
             >
                 <svg width="130" height="80" viewBox="0 0 130 80" fill="none" opacity="0.45">
-                    <rect x="35" y="20" width="60" height="40" rx="5" fill="#1f2937" stroke="#ef4444" strokeWidth="1.5" />
+                    <rect x="35" y="20" width="60" height="40" rx="5" fill="var(--err-chrome-3)" stroke="var(--err-danger)" strokeWidth="1.5" />
                     {/* Pins left */}
                     {[0, 1, 2, 3].map((i) => (
                         <g key={i}>
-                            <line x1="10" y1={27 + i * 8} x2="35" y2={27 + i * 8} stroke="#22c55e" strokeWidth="1.5" />
-                            <rect x="5" y={24 + i * 8} width="6" height="5" rx="1" fill="#16a34a" />
+                            <line x1="10" y1={27 + i * 8} x2="35" y2={27 + i * 8} stroke="var(--err-green)" strokeWidth="1.5" />
+                            <rect x="5" y={24 + i * 8} width="6" height="5" rx="1" fill="var(--err-green)" />
                         </g>
                     ))}
                     {/* Pins right */}
                     {[0, 1, 2, 3].map((i) => (
                         <g key={i}>
-                            <line x1="95" y1={27 + i * 8} x2="120" y2={27 + i * 8} stroke="#22c55e" strokeWidth="1.5" />
-                            <rect x="119" y={24 + i * 8} width="6" height="5" rx="1" fill="#16a34a" />
+                            <line x1="95" y1={27 + i * 8} x2="120" y2={27 + i * 8} stroke="var(--err-green)" strokeWidth="1.5" />
+                            <rect x="119" y={24 + i * 8} width="6" height="5" rx="1" fill="var(--err-green)" />
                         </g>
                     ))}
                     {/* Inner broken X */}
                     <path
                         d="M48 28 L82 52 M82 28 L48 52"
-                        stroke="#ef4444"
+                        stroke="var(--err-danger)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         style={{
                             animation: "err-pulse-op 1.5s ease-in-out infinite",
                         }}
                     />
-                    <text x="52" y="44" fontFamily="monospace" fontSize="8" fill="#ef4444" opacity="0.8">
+                    <text x="52" y="44" fontFamily="monospace" fontSize="8" fill="var(--err-danger)" opacity="0.8">
                         VOID
                     </text>
                 </svg>
@@ -2206,8 +2322,8 @@ function CircuitLeftDecor() {
                     style={{
                         left: 8 + i * 12,
                         top: `${74 + i * 5}%`,
-                        borderColor: "#ef4444",
-                        color: "#ef4444",
+                        borderColor: "var(--err-danger)",
+                        color: "var(--err-danger)",
                         opacity: 0.4,
                         transform: `rotate(${-3 + i * 6}deg)`,
                         animation: `err-drift-l ${2.5 + i * 0.4}s ${i * 0.3}s ease-in-out infinite`,
@@ -2249,13 +2365,13 @@ function CircuitRightDecor() {
             >
                 <svg width="120" height="70" viewBox="0 0 120 70" fill="none">
                     {Array.from({ length: 25 }, (_, i) => (
-                        <rect key={i} x={i * 4.5} y={8} width={i % 4 === 0 ? 3 : 1.5} height={i === 12 ? 40 : 50} rx="0.5" fill={i === 12 ? "#ef4444" : i % 5 === 0 ? "#991b1b" : "#1f2937"} opacity={i === 12 ? 0.8 : 0.6} />
+                        <rect key={i} x={i * 4.5} y={8} width={i % 4 === 0 ? 3 : 1.5} height={i === 12 ? 40 : 50} rx="0.5" fill={i === 12 ? "var(--err-danger)" : i % 5 === 0 ? "var(--err-danger-strong)" : "var(--err-chrome-3)"} opacity={i === 12 ? 0.8 : 0.6} />
                     ))}
-                    <text x="8" y="66" fontFamily="monospace" fontSize="7" fill="#9ca3af">
+                    <text x="8" y="66" fontFamily="monospace" fontSize="7" fill="var(--err-chrome-text)">
                         4 8 0 ??? 2 2 X X
                     </text>
                     {/* Glitch slash */}
-                    <path d="M0 0 L120 70" stroke="#ef4444" strokeWidth="2" opacity="0.4" />
+                    <path d="M0 0 L120 70" stroke="var(--err-danger)" strokeWidth="2" opacity="0.4" />
                 </svg>
             </div>
 
@@ -2272,7 +2388,7 @@ function CircuitRightDecor() {
                     {Array.from({ length: 6 }, (_, row) =>
                         Array.from({ length: 8 }, (_, col) => {
                             const isErr = (row + col) % 3 === 0;
-                            return <rect key={`${row}-${col}`} x={col * 16 + 2} y={row * 15 + 2} width="13" height="12" rx="2" fill={isErr ? "#991b1b" : "#1f2937"} opacity={isErr ? 0.7 : 0.3} stroke={isErr ? "#ef4444" : "none"} strokeWidth="0.8" />;
+                            return <rect key={`${row}-${col}`} x={col * 16 + 2} y={row * 15 + 2} width="13" height="12" rx="2" fill={isErr ? "var(--err-danger-strong)" : "var(--err-chrome-3)"} opacity={isErr ? 0.7 : 0.3} stroke={isErr ? "var(--err-danger)" : "none"} strokeWidth="0.8" />;
                         }),
                     )}
                     {/* Scanning line */}
@@ -2281,7 +2397,7 @@ function CircuitRightDecor() {
                         y1="50"
                         x2="130"
                         y2="50"
-                        stroke="#ef4444"
+                        stroke="var(--err-danger)"
                         strokeWidth="1.5"
                         opacity="0.5"
                         style={{
@@ -2299,8 +2415,8 @@ function CircuitRightDecor() {
                     style={{
                         right: 10 + i * 15,
                         top: `${80 + i * 6}%`,
-                        borderColor: "#ef4444",
-                        color: "#ef4444",
+                        borderColor: "var(--err-danger)",
+                        color: "var(--err-danger)",
                         opacity: 0.4,
                         transform: `rotate(${-5 + i * 10}deg)`,
                         animation: `err-pulse-op ${2 + i * 0.5}s ${i * 0.4}s ease-in-out infinite`,
@@ -2320,28 +2436,28 @@ function CircuitRightDecor() {
                 }}
             >
                 <svg width="140" height="75" viewBox="0 0 140 75" fill="none" opacity="0.5">
-                    <rect x="0" y="0" width="140" height="75" rx="5" fill="#111827" stroke="#374151" strokeWidth="1" />
-                    <rect x="0" y="0" width="140" height="16" rx="5" fill="#1f2937" />
-                    <text x="6" y="11" fontFamily="monospace" fontSize="7" fill="#6b7280">
+                    <rect x="0" y="0" width="140" height="75" rx="5" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="1" />
+                    <rect x="0" y="0" width="140" height="16" rx="5" fill="var(--err-chrome-3)" />
+                    <text x="6" y="11" fontFamily="monospace" fontSize="7" fill="var(--err-chrome-text)">
                         JWT PAYLOAD
                     </text>
-                    <text x="6" y="25" fontFamily="monospace" fontSize="6" fill="#ef4444">
+                    <text x="6" y="25" fontFamily="monospace" fontSize="6" fill="var(--err-danger)">
                         {"{"}
                     </text>
-                    <text x="12" y="35" fontFamily="monospace" fontSize="6" fill="#f59e0b">
+                    <text x="12" y="35" fontFamily="monospace" fontSize="6" fill="var(--err-warn-bright)">
                         "sub": "███████",
                     </text>
-                    <text x="12" y="44" fontFamily="monospace" fontSize="6" fill="#f59e0b">
-                        "exp": <tspan fill="#ef4444">INVALID</tspan>,
+                    <text x="12" y="44" fontFamily="monospace" fontSize="6" fill="var(--err-warn-bright)">
+                        "exp": <tspan fill="var(--err-danger)">INVALID</tspan>,
                     </text>
-                    <text x="12" y="53" fontFamily="monospace" fontSize="6" fill="#f59e0b">
+                    <text x="12" y="53" fontFamily="monospace" fontSize="6" fill="var(--err-warn-bright)">
                         "sig": "???",
                     </text>
-                    <text x="6" y="62" fontFamily="monospace" fontSize="6" fill="#ef4444">
+                    <text x="6" y="62" fontFamily="monospace" fontSize="6" fill="var(--err-danger)">
                         {"}"} ← TAMPERED
                     </text>
-                    <line x1="0" y1="67" x2="140" y2="67" stroke="#374151" strokeWidth="0.8" />
-                    <text x="5" y="73" fontFamily="monospace" fontSize="6" fill="#ef4444">
+                    <line x1="0" y1="67" x2="140" y2="67" stroke="var(--err-chrome-line)" strokeWidth="0.8" />
+                    <text x="5" y="73" fontFamily="monospace" fontSize="6" fill="var(--err-danger)">
                         SIGNATURE MISMATCH
                     </text>
                 </svg>
@@ -2368,13 +2484,13 @@ function CircuitRightDecor() {
                 <svg width="130" height="35" viewBox="0 0 130 35" fill="none" opacity="0.45">
                     {/* Packet flow with gaps */}
                     {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                        <rect key={i} x={i * 18} y="10" width="12" height="14" rx="2" fill={i === 2 || i === 4 ? "#ef4444" : "#1f2937"} stroke={i === 2 || i === 4 ? "#ef4444" : "#374151"} strokeWidth="1" opacity={i === 2 || i === 4 ? 0.3 : 0.7} />
+                        <rect key={i} x={i * 18} y="10" width="12" height="14" rx="2" fill={i === 2 || i === 4 ? "var(--err-danger)" : "var(--err-chrome-3)"} stroke={i === 2 || i === 4 ? "var(--err-danger)" : "var(--err-chrome-line)"} strokeWidth="1" opacity={i === 2 || i === 4 ? 0.3 : 0.7} />
                     ))}
-                    <text x="0" y="32" fontFamily="monospace" fontSize="6" fill="#6b7280">
+                    <text x="0" y="32" fontFamily="monospace" fontSize="6" fill="var(--err-chrome-text)">
                         PKT LOSS: 28.5%
                     </text>
                     {/* Arrow */}
-                    <path d="M125 17 L130 17 M128 14 L130 17 L128 20" stroke="#6b7280" strokeWidth="1" fill="none" />
+                    <path d="M125 17 L130 17 M128 14 L130 17 L128 20" stroke="var(--err-chrome-text)" strokeWidth="1" fill="none" />
                 </svg>
             </div>
         </div>
@@ -2391,21 +2507,21 @@ function ServerLeftDecor() {
             <div className="absolute" style={{ left: 0, top: "0%" }}>
                 <svg width="180" height="260" viewBox="0 0 180 260" fill="none" opacity="0.55">
                     {/* Vertical poles */}
-                    <line x1="30" y1="0" x2="30" y2="260" stroke="#92400e" strokeWidth="6" strokeLinecap="round" />
-                    <line x1="140" y1="0" x2="140" y2="260" stroke="#92400e" strokeWidth="6" strokeLinecap="round" />
+                    <line x1="30" y1="0" x2="30" y2="260" stroke="var(--err-wood-dark)" strokeWidth="6" strokeLinecap="round" />
+                    <line x1="140" y1="0" x2="140" y2="260" stroke="var(--err-wood-dark)" strokeWidth="6" strokeLinecap="round" />
                     {/* Horizontal crossbars */}
                     {[30, 90, 150, 210].map((y) => (
-                        <line key={y} x1="30" y1={y} x2="140" y2={y} stroke="#92400e" strokeWidth="5" strokeLinecap="round" />
+                        <line key={y} x1="30" y1={y} x2="140" y2={y} stroke="var(--err-wood-dark)" strokeWidth="5" strokeLinecap="round" />
                     ))}
                     {/* Diagonal braces */}
-                    <line x1="30" y1="30" x2="140" y2="90" stroke="#a16207" strokeWidth="3" opacity="0.7" />
-                    <line x1="140" y1="90" x2="30" y2="150" stroke="#a16207" strokeWidth="3" opacity="0.7" />
-                    <line x1="30" y1="150" x2="140" y2="210" stroke="#a16207" strokeWidth="3" opacity="0.7" />
+                    <line x1="30" y1="30" x2="140" y2="90" stroke="var(--err-wood)" strokeWidth="3" opacity="0.7" />
+                    <line x1="140" y1="90" x2="30" y2="150" stroke="var(--err-wood)" strokeWidth="3" opacity="0.7" />
+                    <line x1="30" y1="150" x2="140" y2="210" stroke="var(--err-wood)" strokeWidth="3" opacity="0.7" />
                     {/* Warning stripe bars */}
                     {[30, 90, 150].map((y, i) => (
                         <g key={i}>
                             {Array.from({ length: 8 }, (_, j) => (
-                                <rect key={j} x={30 + j * 14} y={y - 3} width="7" height="8" fill={j % 2 === 0 ? "#fbbf24" : "#1c1917"} opacity="0.8" />
+                                <rect key={j} x={30 + j * 14} y={y - 3} width="7" height="8" fill={j % 2 === 0 ? "var(--err-warn-soft)" : "var(--err-stripe-dark)"} opacity="0.8" />
                             ))}
                         </g>
                     ))}
@@ -2422,13 +2538,13 @@ function ServerLeftDecor() {
                 }}
             >
                 <svg width="80" height="58" viewBox="0 0 80 58" fill="none">
-                    <path d="M8 38 C8 20 16 6 40 4 C64 6 72 20 72 38Z" fill="#fbbf24" stroke="#f59e0b" strokeWidth="2" />
-                    <rect x="4" y="36" width="72" height="14" rx="7" fill="#fbbf24" stroke="#f59e0b" strokeWidth="2" />
+                    <path d="M8 38 C8 20 16 6 40 4 C64 6 72 20 72 38Z" fill="var(--err-warn-soft)" stroke="var(--err-warn-bright)" strokeWidth="2" />
+                    <rect x="4" y="36" width="72" height="14" rx="7" fill="var(--err-warn-soft)" stroke="var(--err-warn-bright)" strokeWidth="2" />
                     {/* Stripe */}
                     <path d="M14 22 L66 22" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.6" />
                     {/* Vent holes */}
-                    <circle cx="35" cy="14" r="3" fill="#f59e0b" opacity="0.5" />
-                    <circle cx="45" cy="14" r="3" fill="#f59e0b" opacity="0.5" />
+                    <circle cx="35" cy="14" r="3" fill="var(--err-warn-bright)" opacity="0.5" />
+                    <circle cx="45" cy="14" r="3" fill="var(--err-warn-bright)" opacity="0.5" />
                 </svg>
             </div>
 
@@ -2443,9 +2559,9 @@ function ServerLeftDecor() {
                 }}
             >
                 <svg width="50" height="50" viewBox="0 0 50 50" fill="none">
-                    <path d="M35 6 C42 6 46 12 44 18 L28 34 L20 42 C16 46 10 46 6 42 C2 38 2 32 6 28 L14 20 L30 4 C31 5 33 6 35 6Z" fill="#4b5563" stroke="#6b7280" strokeWidth="1.5" />
-                    <circle cx="10" cy="38" r="5" fill="#374151" stroke="#6b7280" strokeWidth="1.5" />
-                    <circle cx="38" cy="10" r="5" fill="#374151" stroke="#6b7280" strokeWidth="1.5" />
+                    <path d="M35 6 C42 6 46 12 44 18 L28 34 L20 42 C16 46 10 46 6 42 C2 38 2 32 6 28 L14 20 L30 4 C31 5 33 6 35 6Z" fill="var(--err-chrome-line-2)" stroke="var(--err-chrome-text)" strokeWidth="1.5" />
+                    <circle cx="10" cy="38" r="5" fill="var(--err-chrome-line)" stroke="var(--err-chrome-text)" strokeWidth="1.5" />
+                    <circle cx="38" cy="10" r="5" fill="var(--err-chrome-line)" stroke="var(--err-chrome-text)" strokeWidth="1.5" />
                 </svg>
             </div>
 
@@ -2459,8 +2575,8 @@ function ServerLeftDecor() {
                 }}
             >
                 <svg width="50" height="60" viewBox="0 0 50 60" fill="none">
-                    <path d="M25 4 L44 55 H6Z" fill="#f97316" stroke="#ea580c" strokeWidth="2" />
-                    <rect x="6" y="43" width="38" height="7" rx="3" fill="#f97316" stroke="#ea580c" strokeWidth="1.5" />
+                    <path d="M25 4 L44 55 H6Z" fill="var(--err-orange)" stroke="var(--err-orange)" strokeWidth="2" />
+                    <rect x="6" y="43" width="38" height="7" rx="3" fill="var(--err-orange)" stroke="var(--err-orange)" strokeWidth="1.5" />
                     {/* White stripes */}
                     <path d="M14 30 L36 30" stroke="white" strokeWidth="4" strokeLinecap="round" opacity="0.7" />
                 </svg>
@@ -2477,27 +2593,27 @@ function ServerLeftDecor() {
             >
                 <svg width="130" height="90" viewBox="0 0 130 90" fill="none" opacity="0.5">
                     {/* Paper */}
-                    <rect x="10" y="5" width="110" height="78" rx="3" fill="#1e3a5f" stroke="#3b82f6" strokeWidth="1.5" />
+                    <rect x="10" y="5" width="110" height="78" rx="3" fill="var(--err-chrome-4)" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
                     {/* Grid lines */}
                     {[0, 1, 2, 3, 4, 5].map((i) => (
-                        <line key={`h${i}`} x1="10" y1={18 + i * 12} x2="120" y2={18 + i * 12} stroke="#3b82f6" strokeWidth="0.5" opacity="0.3" />
+                        <line key={`h${i}`} x1="10" y1={18 + i * 12} x2="120" y2={18 + i * 12} stroke="var(--err-blue-soft)" strokeWidth="0.5" opacity="0.3" />
                     ))}
                     {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                        <line key={`v${i}`} x1={22 + i * 16} y1="5" x2={22 + i * 16} y2="83" stroke="#3b82f6" strokeWidth="0.5" opacity="0.3" />
+                        <line key={`v${i}`} x1={22 + i * 16} y1="5" x2={22 + i * 16} y2="83" stroke="var(--err-blue-soft)" strokeWidth="0.5" opacity="0.3" />
                     ))}
                     {/* Server drawing */}
-                    <rect x="30" y="25" width="50" height="35" rx="2" fill="none" stroke="#60a5fa" strokeWidth="1.5" />
+                    <rect x="30" y="25" width="50" height="35" rx="2" fill="none" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
                     {[0, 1, 2].map((i) => (
-                        <rect key={i} x="34" y={29 + i * 10} width="42" height="7" rx="1" fill="none" stroke="#60a5fa" strokeWidth="1" />
+                        <rect key={i} x="34" y={29 + i * 10} width="42" height="7" rx="1" fill="none" stroke="var(--err-blue-soft)" strokeWidth="1" />
                     ))}
-                    <text x="15" y="14" fontFamily="monospace" fontSize="7" fill="#60a5fa">
+                    <text x="15" y="14" fontFamily="monospace" fontSize="7" fill="var(--err-blue-soft)">
                         SERVER BLUEPRINT
                     </text>
                     {/* X through it */}
-                    <path d="M30 25 L80 60 M80 25 L30 60" stroke="#ef4444" strokeWidth="2" opacity="0.5" />
+                    <path d="M30 25 L80 60 M80 25 L30 60" stroke="var(--err-danger)" strokeWidth="2" opacity="0.5" />
                     {/* Roll */}
-                    <ellipse cx="10" cy="44" rx="5" ry="39" fill="#1e3a5f" stroke="#3b82f6" strokeWidth="1.5" />
-                    <ellipse cx="120" cy="44" rx="5" ry="39" fill="#1e3a5f" stroke="#3b82f6" strokeWidth="1.5" />
+                    <ellipse cx="10" cy="44" rx="5" ry="39" fill="var(--err-chrome-4)" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
+                    <ellipse cx="120" cy="44" rx="5" ry="39" fill="var(--err-chrome-4)" stroke="var(--err-blue-soft)" strokeWidth="1.5" />
                 </svg>
             </div>
 
@@ -2505,7 +2621,7 @@ function ServerLeftDecor() {
             <div className="absolute" style={{ left: 0, top: "94%", overflow: "hidden", width: 180 }}>
                 <svg width="180" height="18" viewBox="0 0 180 18" fill="none">
                     {Array.from({ length: 12 }, (_, i) => (
-                        <rect key={i} x={i * 15} y="0" width="9" height="18" rx="0" fill={i % 2 === 0 ? "#fbbf24" : "#111827"} opacity="0.6" />
+                        <rect key={i} x={i * 15} y="0" width="9" height="18" rx="0" fill={i % 2 === 0 ? "var(--err-warn-soft)" : "var(--err-chrome-2)"} opacity="0.6" />
                     ))}
                 </svg>
             </div>
@@ -2527,14 +2643,14 @@ function ServerRightDecor() {
             >
                 <svg width="150" height="110" viewBox="0 0 150 110" fill="none">
                     {/* Cloud body */}
-                    <ellipse cx="75" cy="55" rx="64" ry="34" fill="#374151" opacity="0.8" />
-                    <circle cx="45" cy="45" r="22" fill="#4b5563" opacity="0.8" />
-                    <circle cx="80" cy="38" r="26" fill="#6b7280" opacity="0.8" />
-                    <circle cx="110" cy="46" r="20" fill="#4b5563" opacity="0.8" />
+                    <ellipse cx="75" cy="55" rx="64" ry="34" fill="var(--err-chrome-line)" opacity="0.8" />
+                    <circle cx="45" cy="45" r="22" fill="var(--err-chrome-line-2)" opacity="0.8" />
+                    <circle cx="80" cy="38" r="26" fill="var(--err-chrome-text)" opacity="0.8" />
+                    <circle cx="110" cy="46" r="20" fill="var(--err-chrome-line-2)" opacity="0.8" />
                     {/* Lightning bolts */}
                     <path
                         d="M65 65 L55 82 L62 82 L52 100"
-                        stroke="#fbbf24"
+                        stroke="var(--err-warn-soft)"
                         strokeWidth="3.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -2544,7 +2660,7 @@ function ServerRightDecor() {
                     />
                     <path
                         d="M90 62 L82 76 L88 76 L80 92"
-                        stroke="#fbbf24"
+                        stroke="var(--err-warn-soft)"
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -2566,7 +2682,7 @@ function ServerRightDecor() {
                             y1={y}
                             x2={x - 3}
                             y2={y + 10}
-                            stroke="#93c5fd"
+                            stroke="var(--err-blue-bright)"
                             strokeWidth="1.5"
                             opacity="0.5"
                             style={{
@@ -2587,17 +2703,17 @@ function ServerRightDecor() {
                 }}
             >
                 <svg width="90" height="130" viewBox="0 0 90 130" fill="none">
-                    <rect x="10" y="5" width="70" height="110" rx="6" fill="#111827" stroke="#374151" strokeWidth="2" />
+                    <rect x="10" y="5" width="70" height="110" rx="6" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="2" />
                     {/* Server rack units */}
                     {[0, 1, 2, 3, 4].map((i) => (
                         <g key={i}>
-                            <rect x="16" y={14 + i * 20} width="58" height="15" rx="2" fill="#1f2937" stroke="#374151" strokeWidth="1" />
+                            <rect x="16" y={14 + i * 20} width="58" height="15" rx="2" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line)" strokeWidth="1" />
                             {/* Error/off lights */}
                             <circle
                                 cx="22"
                                 cy={21 + i * 20}
                                 r="3"
-                                fill={i === 0 ? "#ef4444" : "#374151"}
+                                fill={i === 0 ? "var(--err-danger)" : "var(--err-chrome-line)"}
                                 style={
                                     i === 0
                                         ? {
@@ -2606,9 +2722,9 @@ function ServerRightDecor() {
                                         : {}
                                 }
                             />
-                            <circle cx="30" cy={21 + i * 20} r="2.5" fill="#374151" />
+                            <circle cx="30" cy={21 + i * 20} r="2.5" fill="var(--err-chrome-line)" />
                             {/* Bar */}
-                            <rect x="36" y={18 + i * 20} width="32" height="5" rx="2" fill="#0f172a" opacity="0.8" />
+                            <rect x="36" y={18 + i * 20} width="32" height="5" rx="2" fill="var(--err-screen)" opacity="0.8" />
                         </g>
                     ))}
                     {/* Zzz sleep indicators */}
@@ -2622,7 +2738,7 @@ function ServerRightDecor() {
                             x={x}
                             y={y}
                             fontSize={sz}
-                            fill="#6b7280"
+                            fill="var(--err-chrome-text)"
                             fontWeight="bold"
                             fontFamily="sans-serif"
                             style={{
@@ -2633,8 +2749,8 @@ function ServerRightDecor() {
                         </text>
                     ))}
                     {/* Stand */}
-                    <rect x="25" y="115" width="40" height="8" rx="3" fill="#374151" />
-                    <rect x="15" y="123" width="60" height="5" rx="2.5" fill="#374151" />
+                    <rect x="25" y="115" width="40" height="8" rx="3" fill="var(--err-chrome-line)" />
+                    <rect x="15" y="123" width="60" height="5" rx="2.5" fill="var(--err-chrome-line)" />
                 </svg>
             </div>
 
@@ -2648,12 +2764,12 @@ function ServerRightDecor() {
                 }}
             >
                 <svg width="24" height="80" viewBox="0 0 24 80" fill="none" style={{ transform: "rotate(20deg)" }}>
-                    <rect x="9" y="0" width="6" height="50" rx="3" fill="#6b7280" />
-                    <rect x="10" y="50" width="4" height="25" rx="2" fill="#9ca3af" />
-                    <path d="M8 74 L12 80 L16 74Z" fill="#4b5563" />
+                    <rect x="9" y="0" width="6" height="50" rx="3" fill="var(--err-chrome-text)" />
+                    <rect x="10" y="50" width="4" height="25" rx="2" fill="var(--err-chrome-text)" />
+                    <path d="M8 74 L12 80 L16 74Z" fill="var(--err-chrome-line-2)" />
                     {/* Handle grip lines */}
                     {[8, 16, 24, 32].map((y) => (
-                        <line key={y} x1="9" y1={y} x2="15" y2={y} stroke="#4b5563" strokeWidth="1.5" />
+                        <line key={y} x1="9" y1={y} x2="15" y2={y} stroke="var(--err-chrome-line-2)" strokeWidth="1.5" />
                     ))}
                 </svg>
             </div>
@@ -2664,8 +2780,8 @@ function ServerRightDecor() {
                 style={{
                     right: 5,
                     top: "88%",
-                    borderColor: "#f59e0b",
-                    color: "#f59e0b",
+                    borderColor: "var(--err-warn-bright)",
+                    color: "var(--err-warn-bright)",
                     opacity: 0.5,
                     transform: "rotate(-4deg)",
                     animation: "err-pulse-op 2s ease-in-out infinite",
@@ -2682,7 +2798,7 @@ function ServerRightDecor() {
    400 — Bad Request
    ══════════════════════════════════════════════════════════════════════════════ */
 export function BadRequest({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle } = useErrorOverrides("You said what now?", "The request arrived garbled beyond comprehension. Even the server looked twice.", titleProp, subtitleProp);
+    const { title, subtitle, requestId } = useErrorOverrides("You said what now?", "The request arrived garbled beyond comprehension. Even the server looked twice.", titleProp, subtitleProp, 400);
     return (
         <ErrorLayout
             code="400"
@@ -2692,7 +2808,7 @@ export function BadRequest({ title: titleProp, subtitle: subtitleProp } = {}) {
             linkLabel="Start fresh"
             accentClass="text-warn-500 dark:text-warn-400"
             bgClass="bg-gradient-to-br from-white via-warn-50/30 to-yellow-50/20 dark:from-[var(--bg-surface)] dark:via-[var(--bg-surface-2)] dark:to-[var(--bg-surface)]"
-            illustration={<BadRequestIllustration />}
+            requestId={requestId} illustration={<BadRequestIllustration />}
             leftDecor={<TerminalLeftDecor />}
             rightDecor={<TerminalRightDecor />}
         />
@@ -2757,8 +2873,8 @@ function BadRequestIllustration() {
    401 — Unauthorized
    ══════════════════════════════════════════════════════════════════════════════ */
 export function Unauthorized({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle } = useErrorOverrides("Access denied.", "You don't have clearance for this zone. Credentials, please.", titleProp, subtitleProp);
-    return <ErrorLayout code="401" title={title} subtitle={subtitle} linkTo="/" linkLabel="Return to safety" accentClass="text-purple-400" bgClass="bg-gradient-to-br from-white via-purple-50/20 to-white dark:from-[var(--bg-surface)] dark:via-purple-950/30 dark:to-[var(--bg-surface)]" illustration={<UnauthorizedIllustration />} leftDecor={<VaultLeftDecor />} rightDecor={<VaultRightDecor />} />;
+    const { title, subtitle, requestId } = useErrorOverrides("Access denied.", "You don't have clearance for this zone. Credentials, please.", titleProp, subtitleProp, 401);
+    return <ErrorLayout code="401" title={title} subtitle={subtitle} linkTo="/" linkLabel="Return to safety" accentClass="text-(--secondary-foreground)" bgClass="bg-gradient-to-br from-white via-purple-50/20 to-white dark:from-[var(--bg-surface)] dark:via-purple-950/30 dark:to-[var(--bg-surface)]" requestId={requestId} illustration={<UnauthorizedIllustration />} leftDecor={<VaultLeftDecor />} rightDecor={<VaultRightDecor />} />;
 }
 
 function UnauthorizedIllustration() {
@@ -2831,8 +2947,8 @@ function UnauthorizedIllustration() {
    404 — Page Not Found
    ══════════════════════════════════════════════════════════════════════════════ */
 export function PageNotFound({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle } = useErrorOverrides("Lost in the void.", "This page packed its bags and went exploring. We have no idea where it ended up.", titleProp, subtitleProp);
-    return <ErrorLayout code="404" title={title} subtitle={subtitle} linkTo="/" linkLabel="Beam me home" accentClass="text-blue-400" bgClass="bg-gradient-to-br from-white via-blue-50/20 to-white dark:from-[#06080F] dark:via-[#0a1020] dark:to-[#06080F]" illustration={<PageNotFoundIllustration />} leftDecor={<SpaceLeftDecor />} rightDecor={<SpaceRightDecor />} />;
+    const { title, subtitle, requestId } = useErrorOverrides("Lost in the void.", "This page packed its bags and went exploring. We have no idea where it ended up.", titleProp, subtitleProp, 404);
+    return <ErrorLayout code="404" title={title} subtitle={subtitle} linkTo="/" linkLabel="Beam me home" accentClass="text-(--blue-foreground)" bgClass="bg-gradient-to-br from-white via-blue-50/20 to-white dark:from-[#06080F] dark:via-[#0a1020] dark:to-[#06080F]" requestId={requestId} illustration={<PageNotFoundIllustration />} leftDecor={<SpaceLeftDecor />} rightDecor={<SpaceRightDecor />} />;
 }
 
 function PageNotFoundIllustration() {
@@ -2906,14 +3022,14 @@ function PageNotFoundIllustration() {
    440 — Login Timeout
    ══════════════════════════════════════════════════════════════════════════════ */
 export function LoginTimeOut({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle } = useErrorOverrides("Time stole your session.", "You were gone a little too long. Your session slipped away while you were distracted.", titleProp, subtitleProp);
+    const { title, subtitle, requestId } = useErrorOverrides("Time stole your session.", "You were gone a little too long. Your session slipped away while you were distracted.", titleProp, subtitleProp, 440);
 
     useEffect(() => {
         import.meta.env.VITE_ENV === "development" ? "" : AuthMiddleware.signout();
         CsrfMiddleware.clearToken();
     }, []);
 
-    return <ErrorLayout code="440" title={title} subtitle={subtitle} linkTo="/auth" linkLabel="Sign in again" accentClass="text-(--accent-foreground)" bgClass="bg-gradient-to-br from-white via-orange-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#180a00] dark:to-[var(--bg-surface)]" illustration={<LoginTimeOutIllustration />} leftDecor={<TimeLeftDecor />} rightDecor={<TimeRightDecor />} />;
+    return <ErrorLayout code="440" title={title} subtitle={subtitle} linkTo="/auth" linkLabel="Sign in again" accentClass="text-(--accent-foreground)" bgClass="bg-gradient-to-br from-white via-orange-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#180a00] dark:to-[var(--bg-surface)]" requestId={requestId} illustration={<LoginTimeOutIllustration />} leftDecor={<TimeLeftDecor />} rightDecor={<TimeRightDecor />} />;
 }
 
 function LoginTimeOutIllustration() {
@@ -2998,7 +3114,7 @@ function LoginTimeOutIllustration() {
    498 — Invalid Token
    ══════════════════════════════════════════════════════════════════════════════ */
 export function InvalidToken({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle } = useErrorOverrides("Token corrupted.", "Your access token arrived in pieces. Someone's been tampering — or time ate it.", titleProp, subtitleProp);
+    const { title, subtitle, requestId } = useErrorOverrides("Token corrupted.", "Your access token arrived in pieces. Someone's been tampering — or time ate it.", titleProp, subtitleProp, 498);
 
     useEffect(() => {
         import.meta.env.VITE_ENV === "development" ? "" : AuthMiddleware.signout();
@@ -3006,7 +3122,7 @@ export function InvalidToken({ title: titleProp, subtitle: subtitleProp } = {}) 
     }, []);
 
     return (
-        <ErrorLayout code="498" title={title} subtitle={subtitle} linkTo="/auth" linkLabel="Get a fresh token" accentClass="text-danger-400" bgClass="bg-gradient-to-br from-white via-danger-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#160606] dark:to-[var(--bg-surface)]" illustration={<InvalidTokenIllustration />} leftDecor={<CircuitLeftDecor />} rightDecor={<CircuitRightDecor />} />
+        <ErrorLayout code="498" title={title} subtitle={subtitle} linkTo="/auth" linkLabel="Get a fresh token" accentClass="text-danger-400" bgClass="bg-gradient-to-br from-white via-danger-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#160606] dark:to-[var(--bg-surface)]" requestId={requestId} illustration={<InvalidTokenIllustration />} leftDecor={<CircuitLeftDecor />} rightDecor={<CircuitRightDecor />} />
     );
 }
 
@@ -3022,9 +3138,9 @@ function InvalidTokenIllustration() {
                 }}
             >
                 <svg width="70" height="70" viewBox="0 0 70 70" fill="none">
-                    <circle cx="35" cy="35" r="24" stroke="#D82822" strokeWidth="5" strokeDasharray="8 3" opacity=".8" />
-                    <circle cx="35" cy="35" r="14" stroke="#D82822" strokeWidth="3" opacity=".4" />
-                    <path d="M35 11 L32 25 L38 35 L30 50" stroke="#D82822" strokeWidth="2" strokeLinecap="round" opacity=".9" />
+                    <circle cx="35" cy="35" r="24" stroke="var(--err-danger)" strokeWidth="5" strokeDasharray="8 3" opacity=".8" />
+                    <circle cx="35" cy="35" r="14" stroke="var(--err-danger)" strokeWidth="3" opacity=".4" />
+                    <path d="M35 11 L32 25 L38 35 L30 50" stroke="var(--err-danger)" strokeWidth="2" strokeLinecap="round" opacity=".9" />
                 </svg>
             </div>
             <div
@@ -3036,18 +3152,18 @@ function InvalidTokenIllustration() {
                 }}
             >
                 <svg width="100" height="50" viewBox="0 0 100 50" fill="none">
-                    <rect x="0" y="20" width="60" height="10" rx="2" fill="#D82822" opacity=".7" />
-                    <rect x="12" y="12" width="8" height="8" rx="1" fill="#D82822" opacity=".8" />
-                    <rect x="28" y="12" width="8" height="8" rx="1" fill="#D82822" opacity=".6" />
-                    <rect x="42" y="12" width="8" height="8" rx="1" fill="#D82822" opacity=".7" />
-                    <path d="M60 18 L68 22 L63 26 L72 30" stroke="#D82822" strokeWidth="2" strokeLinecap="round" opacity=".6" />
+                    <rect x="0" y="20" width="60" height="10" rx="2" fill="var(--err-danger)" opacity=".7" />
+                    <rect x="12" y="12" width="8" height="8" rx="1" fill="var(--err-danger)" opacity=".8" />
+                    <rect x="28" y="12" width="8" height="8" rx="1" fill="var(--err-danger)" opacity=".6" />
+                    <rect x="42" y="12" width="8" height="8" rx="1" fill="var(--err-danger)" opacity=".7" />
+                    <path d="M60 18 L68 22 L63 26 L72 30" stroke="var(--err-danger)" strokeWidth="2" strokeLinecap="round" opacity=".6" />
                     <rect
                         x="72"
                         y="16"
                         width="22"
                         height="14"
                         rx="2"
-                        fill="#D82822"
+                        fill="var(--err-danger)"
                         opacity=".3"
                         style={{
                             animation: "err-static 1.5s ease-in-out infinite",
@@ -3090,10 +3206,252 @@ function InvalidTokenIllustration() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   429 — Too Many Requests
+   ══════════════════════════════════════════════════════════════════════════════
+
+   WHY THIS VIEW EXISTS
+   Before it, a 429 fell through to ServiceUnavailable (523) — "The server is
+   napping", with a "Try the home page" button. Both halves were wrong: the
+   server is healthy, and retrying is what sustains a rate-limit block. The
+   backend limiter counts EVERY request in its window, so an auto-retrying
+   client feeds the counter that is blocking it and can never recover.
+
+   Hence the two deliberate design rules here:
+     1. NO auto-retry and NO auto-redirect. The retry button stays disabled
+        until the countdown reaches zero.
+     2. The countdown is the primary content, because "wait N seconds" is the
+        only action that actually resolves this state.
+
+   Theme is a queue at a gate, not a fault: a red light, requests backed up
+   behind a barrier, and one released at a time. Distinct from every sibling
+   (vault 401, space 404, clock 440, circuit 498, seal 422, server 523).
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/** Fallback wait when no source supplies a retry delay, in seconds. */
+const RATE_LIMIT_FALLBACK_SECONDS = 60;
+
+
+/**
+ * Normalises any of the retry-delay shapes this app can receive into seconds.
+ *
+ * ⚠ The backend is NOT consistent here, so string parsing is required rather
+ * than optional. `RateLimiterMiddleware` sends `"252 seconds"`, while
+ * `AuthService`'s account lockout sends a bare `"30"`, and the `Retry-After`
+ * header is a plain integer. `parseInt` handles all three; `Number()` would
+ * yield `NaN` for the first and silently fall back to the default.
+ *
+ * @param {*} raw
+ * @returns {number|null} Whole positive seconds, or null when unusable.
+ */
+function parseRetrySeconds(raw) {
+    if (raw === null || raw === undefined) return null;
+    const parsed = typeof raw === "number" ? raw : Number.parseInt(String(raw), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.ceil(parsed) : null;
+}
+
+/**
+ * Resolves the retry delay, in seconds, from the most specific source available.
+ *
+ * Precedence — most authoritative first:
+ *   1. Router state (a same-document navigation carrying the live server error)
+ *   2. The sessionStorage payload from `HttpClient`'s hard redirect
+ *   3. An explicit prop
+ *   4. The fallback constant
+ *
+ * @param {number|undefined} retryAfterProp
+ * @param {object|undefined} state  - `useLocation().state`
+ * @param {object|null} stored      - Payload from `useErrorOverrides`
+ * @returns {number} Whole seconds, never negative.
+ */
+function resolveRetryAfter(retryAfterProp, state, stored) {
+    const fromState = state?._serverError?.error?.details?.find?.((d) => d?.field === "retryAfter")?.issue ?? state?.retryAfter;
+    return parseRetrySeconds(fromState) ?? parseRetrySeconds(stored?.retryAfter) ?? parseRetrySeconds(retryAfterProp) ?? RATE_LIMIT_FALLBACK_SECONDS;
+}
+
+/**
+ * `137` → `"2:17"`, `59` → `"0:59"`.
+ *
+ * @param {number} totalSeconds
+ * @returns {string}
+ */
+function formatCountdown(totalSeconds) {
+    const safe = Math.max(0, totalSeconds);
+    const minutes = Math.floor(safe / 60);
+    const seconds = safe % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+/**
+ * 429 — Too Many Requests.
+ *
+ * @param {object}  [props]
+ * @param {string}  [props.title]
+ * @param {string}  [props.subtitle]
+ * @param {number}  [props.retryAfter] - Seconds to wait. Router state overrides this.
+ * @param {string}  [props.requestId]  - Correlation id, rendered click-to-copy when present.
+ */
+export function TooManyRequests({ title: titleProp, subtitle: subtitleProp, retryAfter: retryAfterProp, requestId: requestIdProp } = {}) {
+    const { state } = useLocation();
+
+    // ONE consumption for the whole screen. `useErrorOverrides` already reads
+    // the stashed payload in a lazy initialiser and hands it back, so this view
+    // must NOT consume it a second time — reading CLEARS it, and whichever
+    // reader ran second used to get null. That is why the countdown and the
+    // headline are resolved from the same object here.
+    const {
+        title,
+        subtitle,
+        requestId: resolvedRequestId,
+        stored,
+    } = useErrorOverrides(
+        "Easy there — too many requests.",
+        "You've sent more requests than we allow in a short window. Nothing is broken and nothing was lost. Wait for the timer below, then continue.",
+        titleProp,
+        subtitleProp,
+        429,
+    );
+
+    const requestId = resolvedRequestId ?? requestIdProp ?? null;
+    const [remaining, setRemaining] = useState(() => resolveRetryAfter(retryAfterProp, state, stored));
+
+    // One interval, cleared on unmount (CWE-362 — never setState after unmount).
+    // Counts down to zero and stops; it never fires a request of its own,
+    // because an automatic retry is exactly what keeps a rate limit engaged.
+    useEffect(() => {
+        if (remaining <= 0) return undefined;
+        const id = setInterval(() => setRemaining((s) => (s <= 1 ? 0 : s - 1)), 1000);
+        return () => clearInterval(id);
+    }, [remaining]);
+
+    const expired = remaining <= 0;
+    const handleRetry = useCallback(() => {
+        if (expired) window.location.reload();
+    }, [expired]);
+
+    return (
+        <ErrorLayout
+            code="429"
+            title={title}
+            subtitle={subtitle}
+            linkTo="/"
+            linkLabel="Back to home"
+            accentClass="text-(--turquoise-foreground)"
+            bgClass="bg-gradient-to-br from-white via-turquoise-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#04161a] dark:to-[var(--bg-surface)]"
+            requestId={requestId} illustration={<TooManyRequestsIllustration />}
+            leftDecor={<QueueLeftDecor />}
+            rightDecor={<QueueRightDecor />}
+        >
+            <div className="mt-4 space-y-3">
+                {/* Countdown — the primary content, because waiting is the only
+                    action that clears this state. */}
+                <div className="p-4 text-center border bg-white/60 dark:bg-white/5 border-(--turquoise-foreground)/20 rounded-xl" aria-live="polite">
+                    <p className="mb-1 text-xs tracking-wide uppercase text-grey-500 dark:text-grey-400 font-aumovio">{expired ? "You can try again" : "You can try again in"}</p>
+                    <p className={`font-aumovio-bold tabular-nums text-3xl ${expired ? "text-success-500 dark:text-success-400" : "text-(--turquoise-foreground)"}`}>{expired ? "Ready" : formatCountdown(remaining)}</p>
+                </div>
+
+                <Button variant="primary" fullWidth disabled={!expired} onClick={handleRetry}>
+                    {expired ? "Try again" : `Please wait — ${formatCountdown(remaining)}`}
+                </Button>
+
+                <div className="p-4 text-sm text-left border bg-white/60 dark:bg-white/5 border-(--turquoise-foreground)/20 rounded-xl text-grey-600 dark:text-grey-400 font-aumovio">
+                    <p className="mb-2 font-aumovio-bold text-black/70 dark:text-white/70">While you wait:</p>
+                    <ul className="space-y-1 list-disc list-inside">
+                        <li>Avoid refreshing — each attempt extends the wait</li>
+                        <li>Close duplicate tabs running the app</li>
+                        <li>If this repeats, tell IT how often it happens</li>
+                    </ul>
+                </div>
+            </div>
+        </ErrorLayout>
+    );
+}
+
+function TooManyRequestsIllustration() {
+    return (
+        <div className="relative flex items-center justify-center" style={{ width: 220, height: 220 }}>
+            {/* Signal head — red lamp lit, amber and green dark. Fixed semantic
+                colours: a traffic signal reads wrong in any other palette. */}
+            <div className="relative" style={{ animation: "err-float 4s ease-in-out infinite" }}>
+                <div className="flex flex-col items-center gap-2 px-3 py-3 border-2 bg-grey-100 dark:bg-(--bg-surface-3) border-grey-300 dark:border-grey-600 rounded-xl" style={{ width: 62 }}>
+                    <div className="w-8 h-8 rounded-full bg-danger-400" style={{ animation: "err-pulse-op 1.6s ease-in-out infinite" }} />
+                    <div className="w-8 h-8 rounded-full bg-warn-400/25 dark:bg-warn-400/15" />
+                    <div className="w-8 h-8 rounded-full bg-success-400/20 dark:bg-success-400/12" />
+                </div>
+                <div className="w-3 mx-auto h-9 bg-grey-300 dark:bg-grey-700" />
+                <div className="w-12 h-2 mx-auto rounded-full bg-grey-300 dark:bg-grey-700" />
+            </div>
+
+            {/* Queued requests, held behind the barrier and drifting in place. */}
+            <div className="absolute flex items-center gap-2" style={{ left: 4, top: 104 }}>
+                {[0, 1, 2, 3].map((i) => (
+                    <div
+                        key={i}
+                        className="rounded-full bg-(--turquoise-foreground)"
+                        style={{
+                            width: 10,
+                            height: 10,
+                            opacity: 0.85 - i * 0.18,
+                            animation: `err-floatxs 2.4s ease-in-out ${i * 0.25}s infinite`,
+                        }}
+                    />
+                ))}
+            </div>
+
+            {/* The barrier itself. */}
+            <div className="absolute rounded-full bg-grey-400 dark:bg-grey-600" style={{ left: 76, top: 92, width: 4, height: 36 }} />
+        </div>
+    );
+}
+
+function QueueLeftDecor() {
+    return (
+        <div className="absolute inset-0">
+            <svg width="200" height="300" viewBox="0 0 200 300" fill="none" opacity="0.5" style={{ position: "absolute", left: 0, top: "8%" }}>
+                {/* Stanchion posts with slack ropes — a queue line, drawn flat. */}
+                {[40, 100, 160].map((x) => (
+                    <g key={x}>
+                        <line x1={x} y1="120" x2={x} y2="220" stroke="var(--err-chrome-line)" strokeWidth="5" strokeLinecap="round" />
+                        <circle cx={x} cy="114" r="7" fill="var(--err-chrome-line)" />
+                    </g>
+                ))}
+                <path d="M40 130 Q70 160 100 130" stroke="var(--err-chrome-line)" strokeWidth="3" fill="none" strokeLinecap="round" />
+                <path d="M100 130 Q130 160 160 130" stroke="var(--err-chrome-line)" strokeWidth="3" fill="none" strokeLinecap="round" />
+            </svg>
+        </div>
+    );
+}
+
+function QueueRightDecor() {
+    return (
+        <div className="absolute inset-0">
+            {/* Waiting dots drifting upward — motion without urgency. */}
+            {[
+                { size: 12, style: { right: 60, top: "18%", animationDelay: "0s" } },
+                { size: 8, style: { right: 110, top: "34%", animationDelay: ".6s" } },
+                { size: 14, style: { right: 44, top: "52%", animationDelay: "1.2s" } },
+                { size: 9, style: { right: 96, top: "70%", animationDelay: "1.8s" } },
+            ].map(({ size, style }, i) => (
+                <div
+                    key={i}
+                    className="absolute rounded-full bg-(--turquoise-foreground)"
+                    style={{
+                        width: size,
+                        height: size,
+                        opacity: 0.35,
+                        animation: "err-float 5s ease-in-out infinite",
+                        ...style,
+                    }}
+                />
+            ))}
+        </div>
+    );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    523 — Service Unavailable
    ══════════════════════════════════════════════════════════════════════════════ */
 export function ServiceUnavailable({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle } = useErrorOverrides("The server is napping.", "This is usually caused by a temporary network issue, server restart, or the application service being unavailable.", titleProp, subtitleProp);
+    const { title, subtitle, requestId } = useErrorOverrides("The server is napping.", "This is usually caused by a temporary network issue, server restart, or the application service being unavailable.", titleProp, subtitleProp, 523);
     return (
         <ErrorLayout
             code="523"
@@ -3101,9 +3459,9 @@ export function ServiceUnavailable({ title: titleProp, subtitle: subtitleProp } 
             subtitle={subtitle}
             linkTo="/"
             linkLabel="Try the home page"
-            accentClass="text-purple-400 dark:text-purple-300"
+            accentClass="text-(--secondary-foreground)"
             bgClass="bg-gradient-to-br from-white via-purple-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#120a1e] dark:to-[var(--bg-surface)]"
-            illustration={<ServiceUnavailableIllustration />}
+            requestId={requestId} illustration={<ServiceUnavailableIllustration />}
             leftDecor={<ServerLeftDecor />}
             rightDecor={<ServerRightDecor />}
         >
@@ -3142,14 +3500,14 @@ function ServiceUnavailableIllustration() {
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <div className="flex gap-4 mb-2">
                             <svg width="14" height="8" viewBox="0 0 14 8">
-                                <path d="M1 1 Q7 8 13 1" stroke="#9ca3af" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                <path d="M1 1 Q7 8 13 1" stroke="var(--err-chrome-text)" strokeWidth="2" fill="none" strokeLinecap="round" />
                             </svg>
                             <svg width="14" height="8" viewBox="0 0 14 8">
-                                <path d="M1 1 Q7 8 13 1" stroke="#9ca3af" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                <path d="M1 1 Q7 8 13 1" stroke="var(--err-chrome-text)" strokeWidth="2" fill="none" strokeLinecap="round" />
                             </svg>
                         </div>
                         <svg width="20" height="10" viewBox="0 0 20 10">
-                            <path d="M2 2 Q10 10 18 2" stroke="#9ca3af" strokeWidth="2" fill="none" strokeLinecap="round" />
+                            <path d="M2 2 Q10 10 18 2" stroke="var(--err-chrome-text)" strokeWidth="2" fill="none" strokeLinecap="round" />
                         </svg>
                     </div>
                 </div>
@@ -3186,9 +3544,9 @@ function ServiceUnavailableIllustration() {
             ))}
             <div className="absolute bottom-4 left-8" style={{ animation: "err-shake 2s ease-in-out infinite" }}>
                 <svg width="28" height="32" viewBox="0 0 28 32" fill="none">
-                    <path d="M14 2L26 30H2L14 2Z" fill="#FFD600" stroke="#B39600" strokeWidth="1.5" />
-                    <rect x="2" y="24" width="24" height="4" rx="2" fill="#FFD600" stroke="#B39600" strokeWidth="1" />
-                    <path d="M13 10V18M13 22V23" stroke="#B39600" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M14 2L26 30H2L14 2Z" fill="var(--err-warn-soft)" stroke="var(--err-wood-dark)" strokeWidth="1.5" />
+                    <rect x="2" y="24" width="24" height="4" rx="2" fill="var(--err-warn-soft)" stroke="var(--err-wood-dark)" strokeWidth="1" />
+                    <path d="M13 10V18M13 22V23" stroke="var(--err-wood-dark)" strokeWidth="2" strokeLinecap="round" />
                 </svg>
             </div>
         </div>
@@ -3220,20 +3578,20 @@ function SealLeftDecor() {
                 <svg width="150" height="150" viewBox="0 0 150 150" fill="none">
                     <defs>
                         <radialGradient id="seal-grad" cx="40%" cy="35%">
-                            <stop offset="0%" stopColor="#D85A30" />
-                            <stop offset="100%" stopColor="#7f2810" />
+                            <stop offset="0%" stopColor="var(--err-orange)" />
+                            <stop offset="100%" stopColor="var(--err-wood-dark)" />
                         </radialGradient>
                     </defs>
                     {/* Wax blob */}
                     <path d="M75 10 C110 12 142 38 140 75 C138 112 110 142 75 140 C40 138 10 108 10 75 C10 42 40 8 75 10Z" fill="url(#seal-grad)" opacity="0.85" />
                     {/* Embossed pattern rings */}
-                    <circle cx="75" cy="75" r="50" fill="none" stroke="#f97316" strokeWidth="1.5" opacity="0.4" />
-                    <circle cx="75" cy="75" r="38" fill="none" stroke="#f97316" strokeWidth="1" opacity="0.3" />
+                    <circle cx="75" cy="75" r="50" fill="none" stroke="var(--err-orange)" strokeWidth="1.5" opacity="0.4" />
+                    <circle cx="75" cy="75" r="38" fill="none" stroke="var(--err-orange)" strokeWidth="1" opacity="0.3" />
                     {/* X mark — tampered */}
-                    <path d="M55 55 L95 95 M95 55 L55 95" stroke="#fca5a5" strokeWidth="4" strokeLinecap="round" style={{ animation: "err-pulse-op 2s ease-in-out infinite" }} />
+                    <path d="M55 55 L95 95 M95 55 L55 95" stroke="var(--err-danger-soft)" strokeWidth="4" strokeLinecap="round" style={{ animation: "err-pulse-op 2s ease-in-out infinite" }} />
                     {/* Wax edge texture */}
                     {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => (
-                        <ellipse key={i} cx={75 + 62 * Math.cos((deg * Math.PI) / 180)} cy={75 + 62 * Math.sin((deg * Math.PI) / 180)} rx="5" ry="3" fill="#b83c15" opacity="0.6" transform={`rotate(${deg}, ${75 + 62 * Math.cos((deg * Math.PI) / 180)}, ${75 + 62 * Math.sin((deg * Math.PI) / 180)})`} />
+                        <ellipse key={i} cx={75 + 62 * Math.cos((deg * Math.PI) / 180)} cy={75 + 62 * Math.sin((deg * Math.PI) / 180)} rx="5" ry="3" fill="var(--err-orange)" opacity="0.6" transform={`rotate(${deg}, ${75 + 62 * Math.cos((deg * Math.PI) / 180)}, ${75 + 62 * Math.sin((deg * Math.PI) / 180)})`} />
                     ))}
                 </svg>
             </div>
@@ -3246,7 +3604,7 @@ function SealLeftDecor() {
                     style={{
                         left: 10 + (i % 2) * 40,
                         top: `${46 + i * 9}%`,
-                        color: i % 2 === 0 ? "#c04828" : "#6b7280",
+                        color: i % 2 === 0 ? "var(--err-orange)" : "var(--err-chrome-text)",
                         opacity: 0.45 + (i % 3) * 0.1,
                         animation: `err-drift-${i % 2 === 0 ? "l" : "r"} ${2.5 + i * 0.3}s ${i * 0.2}s ease-in-out infinite`,
                     }}
@@ -3259,16 +3617,16 @@ function SealLeftDecor() {
             <div className="absolute" style={{ left: 20, top: "75%", animation: "err-bob 4s ease-in-out infinite" }}>
                 <svg width="110" height="50" viewBox="0 0 110 50" fill="none" opacity="0.5">
                     {/* Link 1 */}
-                    <ellipse cx="18" cy="25" rx="14" ry="9" fill="none" stroke="#6b7280" strokeWidth="3" />
+                    <ellipse cx="18" cy="25" rx="14" ry="9" fill="none" stroke="var(--err-chrome-text)" strokeWidth="3" />
                     {/* Break gap */}
-                    <line x1="32" y1="20" x2="44" y2="20" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-                    <line x1="32" y1="30" x2="44" y2="30" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+                    <line x1="32" y1="20" x2="44" y2="20" stroke="var(--err-danger)" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+                    <line x1="32" y1="30" x2="44" y2="30" stroke="var(--err-danger)" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
                     {/* Link 2 */}
-                    <ellipse cx="62" cy="25" rx="14" ry="9" fill="none" stroke="#6b7280" strokeWidth="3" />
-                    <line x1="76" y1="20" x2="88" y2="20" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-                    <line x1="76" y1="30" x2="88" y2="30" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+                    <ellipse cx="62" cy="25" rx="14" ry="9" fill="none" stroke="var(--err-chrome-text)" strokeWidth="3" />
+                    <line x1="76" y1="20" x2="88" y2="20" stroke="var(--err-danger)" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+                    <line x1="76" y1="30" x2="88" y2="30" stroke="var(--err-danger)" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
                     {/* Link 3 — floating away */}
-                    <ellipse cx="102" cy="22" rx="8" ry="6" fill="none" stroke="#6b7280" strokeWidth="2.5" opacity="0.6" style={{ animation: "err-floatxs 2.5s ease-in-out infinite" }} />
+                    <ellipse cx="102" cy="22" rx="8" ry="6" fill="none" stroke="var(--err-chrome-text)" strokeWidth="2.5" opacity="0.6" style={{ animation: "err-floatxs 2.5s ease-in-out infinite" }} />
                 </svg>
             </div>
 
@@ -3294,8 +3652,8 @@ function SealLeftDecor() {
                 style={{
                     left: 18,
                     top: "91%",
-                    borderColor: "#D85A30",
-                    color: "#D85A30",
+                    borderColor: "var(--err-orange)",
+                    color: "var(--err-orange)",
                     opacity: 0.5,
                     transform: "rotate(-5deg)",
                     animation: "err-pulse-op 2.5s ease-in-out infinite",
@@ -3313,33 +3671,33 @@ function SealRightDecor() {
             {/* Signature slip / envelope */}
             <div className="absolute" style={{ right: 10, top: "6%", animation: "err-floatxs 5s 1s ease-in-out infinite" }}>
                 <svg width="140" height="100" viewBox="0 0 140 100" fill="none">
-                    <rect x="4" y="4" width="132" height="92" rx="6" fill="#111827" stroke="#374151" strokeWidth="1.5" />
+                    <rect x="4" y="4" width="132" height="92" rx="6" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="1.5" />
                     {/* Envelope flap */}
-                    <path d="M4 4 L70 52 L136 4Z" fill="#1f2937" stroke="#374151" strokeWidth="1" />
+                    <path d="M4 4 L70 52 L136 4Z" fill="var(--err-chrome-3)" stroke="var(--err-chrome-line)" strokeWidth="1" />
                     {/* Contents — hash lines */}
-                    <text x="14" y="68" fontFamily="monospace" fontSize="7" fill="#6b7280">
+                    <text x="14" y="68" fontFamily="monospace" fontSize="7" fill="var(--err-chrome-text)">
                         HMAC-SHA256
                     </text>
-                    <rect x="14" y="74" width="80" height="4" rx="1" fill="#374151" />
-                    <rect x="14" y="81" width="100" height="4" rx="1" fill="#374151" />
+                    <rect x="14" y="74" width="80" height="4" rx="1" fill="var(--err-chrome-line)" />
+                    <rect x="14" y="81" width="100" height="4" rx="1" fill="var(--err-chrome-line)" />
                     {/* Red X corner stamp */}
-                    <path d="M112 60 L130 80 M130 60 L112 80" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "err-pulse-op 1.5s ease-in-out infinite" }} />
+                    <path d="M112 60 L130 80 M130 60 L112 80" stroke="var(--err-danger)" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "err-pulse-op 1.5s ease-in-out infinite" }} />
                 </svg>
             </div>
 
             {/* Compare panel — two columns */}
             <div className="absolute" style={{ right: 6, top: "32%", animation: "err-floatxs 4s ease-in-out infinite" }}>
                 <svg width="150" height="110" viewBox="0 0 150 110" fill="none" opacity="0.6">
-                    <rect x="0" y="0" width="150" height="110" rx="5" fill="#111827" stroke="#374151" strokeWidth="1" />
-                    <rect x="0" y="0" width="150" height="16" rx="5" fill="#1f2937" />
-                    <text x="8" y="11" fontFamily="monospace" fontSize="7" fill="#6b7280">
+                    <rect x="0" y="0" width="150" height="110" rx="5" fill="var(--err-chrome-2)" stroke="var(--err-chrome-line)" strokeWidth="1" />
+                    <rect x="0" y="0" width="150" height="16" rx="5" fill="var(--err-chrome-3)" />
+                    <text x="8" y="11" fontFamily="monospace" fontSize="7" fill="var(--err-chrome-text)">
                         SIGNATURE COMPARE
                     </text>
-                    <line x1="75" y1="0" x2="75" y2="110" stroke="#374151" strokeWidth="0.8" />
-                    <text x="10" y="28" fontFamily="monospace" fontSize="6" fill="#22c55e">
+                    <line x1="75" y1="0" x2="75" y2="110" stroke="var(--err-chrome-line)" strokeWidth="0.8" />
+                    <text x="10" y="28" fontFamily="monospace" fontSize="6" fill="var(--err-green)">
                         Expected
                     </text>
-                    <text x="82" y="28" fontFamily="monospace" fontSize="6" fill="#ef4444">
+                    <text x="82" y="28" fontFamily="monospace" fontSize="6" fill="var(--err-danger)">
                         Received
                     </text>
                     {[
@@ -3351,14 +3709,14 @@ function SealRightDecor() {
                         ["9e51", "3b7a", false],
                     ].map(([exp, got, match], i) => (
                         <g key={i}>
-                            <text x="10" y={40 + i * 11} fontFamily="monospace" fontSize="6.5" fill={match ? "#22c55e" : "#6b7280"}>
+                            <text x="10" y={40 + i * 11} fontFamily="monospace" fontSize="6.5" fill={match ? "var(--err-green)" : "var(--err-chrome-text)"}>
                                 {exp}
                             </text>
-                            <text x="82" y={40 + i * 11} fontFamily="monospace" fontSize="6.5" fill={match ? "#22c55e" : "#ef4444"} style={!match ? { animation: "err-static 1.2s ease-in-out infinite" } : {}}>
+                            <text x="82" y={40 + i * 11} fontFamily="monospace" fontSize="6.5" fill={match ? "var(--err-green)" : "var(--err-danger)"} style={!match ? { animation: "err-static 1.2s ease-in-out infinite" } : {}}>
                                 {got}
                             </text>
                             {!match && (
-                                <text x="60" y={40 + i * 11} fontFamily="monospace" fontSize="8" fill="#ef4444">
+                                <text x="60" y={40 + i * 11} fontFamily="monospace" fontSize="8" fill="var(--err-danger)">
                                     ≠
                                 </text>
                             )}
@@ -3375,8 +3733,8 @@ function SealRightDecor() {
                     style={{
                         right: 12 + i * 8,
                         top: `${72 + i * 6}%`,
-                        borderColor: "#D85A30",
-                        color: "#D85A30",
+                        borderColor: "var(--err-orange)",
+                        color: "var(--err-orange)",
                         opacity: 0.35 + i * 0.08,
                         transform: `rotate(${-6 + i * 7}deg)`,
                         animation: `err-pulse-op ${2 + i * 0.5}s ${i * 0.3}s ease-in-out infinite`,
@@ -3389,12 +3747,12 @@ function SealRightDecor() {
             {/* Key icon — wrong/broken */}
             <div className="absolute" style={{ right: 25, top: "55%", animation: "err-wander 6s 2s ease-in-out infinite" }}>
                 <svg width="60" height="60" viewBox="0 0 60 60" fill="none" opacity="0.5">
-                    <circle cx="22" cy="22" r="14" fill="none" stroke="#6b7280" strokeWidth="3" />
-                    <circle cx="22" cy="22" r="7" fill="none" stroke="#6b7280" strokeWidth="2" />
-                    <line x1="32" y1="32" x2="54" y2="54" stroke="#6b7280" strokeWidth="3" strokeLinecap="round" />
-                    <line x1="44" y1="42" x2="50" y2="38" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" />
+                    <circle cx="22" cy="22" r="14" fill="none" stroke="var(--err-chrome-text)" strokeWidth="3" />
+                    <circle cx="22" cy="22" r="7" fill="none" stroke="var(--err-chrome-text)" strokeWidth="2" />
+                    <line x1="32" y1="32" x2="54" y2="54" stroke="var(--err-chrome-text)" strokeWidth="3" strokeLinecap="round" />
+                    <line x1="44" y1="42" x2="50" y2="38" stroke="var(--err-chrome-text)" strokeWidth="2.5" strokeLinecap="round" />
                     {/* Red X through key */}
-                    <path d="M10 10 L34 34 M34 10 L10 34" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" opacity="0.6" style={{ animation: "err-flicker 2s ease-in-out infinite" }} />
+                    <path d="M10 10 L34 34 M34 10 L10 34" stroke="var(--err-danger)" strokeWidth="2" strokeLinecap="round" opacity="0.6" style={{ animation: "err-flicker 2s ease-in-out infinite" }} />
                 </svg>
             </div>
 
@@ -3402,7 +3760,7 @@ function SealRightDecor() {
             <div className="absolute" style={{ right: 0, top: "90%" }}>
                 <svg width="160" height="30" viewBox="0 0 160 30" fill="none" opacity="0.3">
                     {["3F", "??", "C4", "XX", "A9", "00", "??", "B2", "FF", "!!"].map((h, i) => (
-                        <text key={i} x={i * 16 + 2} y={12 + (i % 2) * 10} fontFamily="monospace" fontSize="9" fill={["??", "XX", "!!"].includes(h) ? "#ef4444" : "#374151"} style={{ animation: `err-static ${1 + i * 0.12}s ${i * 0.06}s ease-in-out infinite` }}>
+                        <text key={i} x={i * 16 + 2} y={12 + (i % 2) * 10} fontFamily="monospace" fontSize="9" fill={["??", "XX", "!!"].includes(h) ? "var(--err-danger)" : "var(--err-chrome-line)"} style={{ animation: `err-static ${1 + i * 0.12}s ${i * 0.06}s ease-in-out infinite` }}>
                             {h}
                         </text>
                     ))}
@@ -3415,17 +3773,28 @@ function SealRightDecor() {
 /* ══════════════════════════════════════════════════════════════════════════════
    422 — Unprocessable Entity (Signature Mismatch)
    ══════════════════════════════════════════════════════════════════════════════ */
-export function SignatureMismatch() {
+export function SignatureMismatch({ title: titleProp, subtitle: subtitleProp } = {}) {
+    // Brought onto the shared resolver so all eight screens behave identically.
+    // It was the only page that hardcoded its copy outright, which meant a
+    // server that explained WHICH signature failed had no way to say so.
+    const { title, subtitle, requestId } = useErrorOverrides(
+        "The seal has been broken.",
+        "Your request arrived intact — but the signature doesn't match. The payload may have been altered in transit, or the wrong signing key was used.",
+        titleProp,
+        subtitleProp,
+        422,
+    );
+
     return (
         <ErrorLayout
             code="422"
-            title="The seal has been broken."
-            subtitle="Your request arrived intact — but the signature doesn't match. The payload may have been altered in transit, or the wrong signing key was used."
+            title={title}
+            subtitle={subtitle}
             linkTo="/"
             linkLabel="Start over"
             accentClass="text-(--accent-foreground)"
             bgClass="bg-gradient-to-br from-white via-orange-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#180a00] dark:to-[var(--bg-surface)]"
-            illustration={<SignatureMismatchIllustration />}
+            requestId={requestId} illustration={<SignatureMismatchIllustration />}
             leftDecor={<SealLeftDecor />}
             rightDecor={<SealRightDecor />}
         >
@@ -3504,6 +3873,7 @@ export default {
     PageNotFound,
     LoginTimeOut,
     InvalidToken,
+    TooManyRequests,
     ServiceUnavailable,
     SignatureMismatch,
 };

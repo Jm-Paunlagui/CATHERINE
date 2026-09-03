@@ -31,7 +31,7 @@ export function List({ items = [], variant = "ul", icons, iconColor = "text-(--a
             <ul className={base}>
                 {items.map((item, i) => (
                     <li key={i} className="flex items-start gap-2">
-                        <CheckCircleIcon className={`w-5 h-5 shrink-0 mt-0.5 ${iconColor}`} />
+                        <CheckCircleIcon className={`w-5 h-5 shrink-0 mt-1 ${iconColor}`} />
                         <span className="text-black/75 dark:text-white/75">{item}</span>
                     </li>
                 ))}

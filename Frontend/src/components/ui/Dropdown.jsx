@@ -40,7 +40,7 @@ export function Dropdown({ trigger, items = [], placement = "bottom-start", widt
                 <div
                     className={`absolute z-50 ${PLACEMENT[placement]} ${WIDTHS[width]}
           bg-(--bg-surface) dark:bg-(--bg-surface-2) border border-grey-200 dark:border-grey-700
-          rounded-xl shadow-2xl py-1.5 animate-scale-in origin-top ${TRANSITION_SNAP}`}
+          rounded-xl shadow-2xl py-2 animate-scale-in origin-top ${TRANSITION_SNAP}`}
                 >
                     {items.map((item, i) => {
                         if (item.divider) return <div key={i} className="my-1.5 border-t border-grey-200 dark:border-grey-700" />;
@@ -54,7 +54,7 @@ export function Dropdown({ trigger, items = [], placement = "bottom-start", widt
                                     }
                                 }}
                                 disabled={item.disabled}
-                                className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-left
+                                className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left
                   ${TRANSITION_COLORS} font-aumovio
                   ${item.disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
                   ${item.danger ? "text-danger-500 dark:text-danger-300 hover:bg-danger-100 dark:hover:bg-danger-400/10" : "text-black/80 dark:text-white/80 hover:bg-orange-50 dark:hover:bg-orange-400/5 hover:text-(--accent-foreground)"}`}
@@ -64,7 +64,7 @@ export function Dropdown({ trigger, items = [], placement = "bottom-start", widt
                                 {item.shortcut && (
                                     <kbd
                                         className="text-xs text-grey-400 font-mono bg-grey-100 dark:bg-(--bg-surface-3)
-                    border border-grey-200 dark:border-grey-700 rounded px-1.5 py-0.5"
+                    border border-grey-200 dark:border-grey-700 rounded px-1.5 py-1"
                                     >
                                         {item.shortcut}
                                     </kbd>

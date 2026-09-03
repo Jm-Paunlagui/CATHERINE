@@ -86,13 +86,25 @@ function shuffle(length) {
 }
 
 function useShuffleIndices(titleLen, subtitleLen) {
-    const tQueue = useRef(shuffle(titleLen));
+    // `useState`'s lazy initializer computes each shuffle exactly once per
+    // mount (its setter is never called — this is a "compute once" idiom,
+    // not reactive state) and, unlike a ref, its return value is safe to
+    // read during render. The refs below are seeded from these same arrays
+    // instead of a fresh shuffle() call, so `tQueue.current[0]` and
+    // `initialTQueue[0]` stay in sync — reading `tQueue.current` directly in
+    // the useState initializers further down (the original shape here) trips
+    // react-hooks/refs: refs aren't guaranteed consistent across a
+    // discarded/replayed render under concurrent React.
+    const [initialTQueue] = useState(() => shuffle(titleLen));
+    const [initialSQueue] = useState(() => shuffle(subtitleLen));
+
+    const tQueue = useRef(initialTQueue);
     const tPos = useRef(0);
-    const sQueue = useRef(shuffle(subtitleLen));
+    const sQueue = useRef(initialSQueue);
     const sPos = useRef(0);
 
-    const [titleIdx, setTitleIdx] = useState(() => tQueue.current[0]);
-    const [subtitleIdx, setSubtitleIdx] = useState(() => sQueue.current[0]);
+    const [titleIdx, setTitleIdx] = useState(() => initialTQueue[0]);
+    const [subtitleIdx, setSubtitleIdx] = useState(() => initialSQueue[0]);
     const [visible, setVisible] = useState(true);
 
     useEffect(() => {

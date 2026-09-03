@@ -52,7 +52,7 @@ export function RequestIdTag({ requestId, className = "", title = "Click to copy
     if (!requestId) return null;
 
     return (
-        <button type="button" onClick={handleCopy} className={`inline-flex items-center gap-1.5 font-mono cursor-copy transition-colors ${className}`} title={title}>
+        <button type="button" onClick={handleCopy} className={`inline-flex items-center gap-2 font-mono cursor-copy transition-colors ${className}`} title={title}>
             Request ID: {requestId}
             {copied ? <LuCopyCheck className="size-[1.1em] text-success-400 shrink-0" aria-hidden /> : <LuCopy className="size-[1.1em] shrink-0" aria-hidden />}
         </button>

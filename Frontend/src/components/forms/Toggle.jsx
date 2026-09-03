@@ -23,9 +23,31 @@ const COLORS = {
     danger: "bg-danger-400",
 };
 
+/**
+ * Thumb colour per track colour.
+ *
+ * The thumb is NOT unconditionally white. `accent`/`orange`/`purple` are
+ * palette-adaptive families, so on a pale palette (Sage Mist `#ccdcc4`, Blush
+ * Petal `#ffc0cb`, Arctic Ice `#f0faff`) a white thumb sits on a near-white
+ * track and the on/off state stops being readable at a glance. The
+ * `--on-*-text` tokens are the binary white/black foreground computed against
+ * that family's own anchor.
+ *
+ * `success` and `danger` are FIXED semantic colours, exempt from palette
+ * swapping, so they keep a plain white thumb.
+ */
+const THUMBS = {
+    accent: "bg-(--on-accent-text)",
+    orange: "bg-(--on-accent-text)",
+    purple: "bg-(--on-secondary-text)",
+    success: "bg-white",
+    danger: "bg-white",
+};
+
 export function Toggle({ checked = false, onChange, label, description, disabled = false, size = "md", color = "orange", labelPosition = "right" }) {
     const sz = SIZES[size] ?? SIZES.md;
     const col = COLORS[color] ?? COLORS.orange;
+    const thumbCol = THUMBS[color] ?? THUMBS.orange;
 
     const track = (
         <button
@@ -42,8 +64,8 @@ export function Toggle({ checked = false, onChange, label, description, disabled
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
         >
             <span
-                className={`${sz.thumb} inline-block bg-white rounded-full shadow-sm
-        transform ${TRANSITION_TRANSFORM_SPRING} mx-0.5
+                className={`${sz.thumb} inline-block ${checked ? thumbCol : "bg-white"} rounded-full shadow-sm
+        transform ${TRANSITION_TRANSFORM_SPRING} mx-1
         ${checked ? sz.translate : "translate-x-0"}`}
             />
         </button>

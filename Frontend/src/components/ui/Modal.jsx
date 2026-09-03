@@ -6,7 +6,7 @@
  *   onClose  — () => void
  *   title    — string
  *   size     — 'sm'|'md'|'lg'|'xl'|'2xl'|'full'
- *   variant  — 'default'|'danger'|'success'
+ *   variant  — 'default'|'danger'|'success'|'warning'
  *   footer   — ReactNode
  *   bodyClassName — extra classes for the scrollable body (e.g. 'hide-scrollbar')
  *   children
@@ -27,6 +27,7 @@ const SIZES = {
     lg: "max-w-lg",
     xl: "max-w-2xl",
     "2xl": "max-w-4xl",
+    "3xl": "max-w-6xl",
     full: "max-w-full min-h-screen rounded-none",
 };
 
@@ -34,6 +35,7 @@ const VARIANTS = {
     default: "",
     danger: "border-t-4 border-danger-400",
     success: "border-t-4 border-success-400",
+    warning: "border-t-4 border-warn-400",
 };
 
 export function Modal({ open, onClose, title, size = "md", variant = "default", footer, bodyClassName = "", children }) {

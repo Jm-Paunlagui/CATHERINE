@@ -71,7 +71,7 @@ export class ErrorBoundary extends Component {
 
                 {/* ── Metadata footer ── */}
                 {requestId && (
-                    <div className="mt-4 mb-4 px-4 py-2.5 rounded-lg bg-grey-100/60 dark:bg-white/5 border border-grey-200/50 dark:border-white/5">
+                    <div className="mt-4 mb-4 px-4 py-3 rounded-lg bg-grey-100/60 dark:bg-white/5 border border-grey-200/50 dark:border-white/5">
                         <RequestIdTag requestId={requestId} className="text-[11px] text-grey-400 dark:text-grey-500 hover:text-(--accent-foreground)" title="Click to copy — share this ID with support" />
                     </div>
                 )}

@@ -37,7 +37,7 @@ export function Radio({ name, options = [], value, onChange, label: groupLabel, 
                 {options.map((opt) => (
                     <label
                         key={opt.value}
-                        className={`flex items-start gap-2.5 cursor-pointer
+                        className={`flex items-start gap-3 cursor-pointer
               ${
                   variant === "card"
                       ? `p-4 rounded-xl border ${TRANSITION_COLORS}
@@ -46,23 +46,26 @@ export function Radio({ name, options = [], value, onChange, label: groupLabel, 
               }
               ${opt.disabled || disabled ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
-                        <div className="relative shrink-0 mt-0.5">
+                        <div className="relative shrink-0 mt-1">
                             <input type="radio" name={name} value={opt.value} checked={value === opt.value} onChange={() => !opt.disabled && !disabled && onChange?.(opt.value)} disabled={opt.disabled || disabled} className="sr-only" />
                             <div
                                 className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${TRANSITION_COLORS}
                 ${value === opt.value ? "border-orange-400 bg-orange-400" : "border-grey-300 dark:border-grey-600 hover:border-orange-400 bg-white dark:bg-(--bg-surface-3)"}`}
                             >
-                                {value === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                {/* Inner dot sits on `bg-orange-400`, the palette PRIMARY — a hardcoded
+                                    white dot disappears on a pale palette (Sage Mist, Blush Petal,
+                                    Arctic Ice). Same fix as Checkbox's tick. */}
+                                {value === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-(--on-accent-text)" />}
                             </div>
                         </div>
                         <div>
                             <p className={`text-sm font-aumovio ${value === opt.value ? "text-(--accent-foreground) font-aumovio-bold" : "text-black/80 dark:text-white/80"}`}>{opt.label}</p>
-                            {opt.description && <p className="text-xs text-grey-400 mt-0.5">{opt.description}</p>}
+                            {opt.description && <p className="text-xs text-grey-400 mt-1">{opt.description}</p>}
                         </div>
                     </label>
                 ))}
             </div>
-            {error && <p className="mt-1.5 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
+            {error && <p className="mt-2 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
         </fieldset>
     );
 }

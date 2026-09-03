@@ -34,7 +34,7 @@ export function ListGroup({ items = [], variant = "default", selectable = false,
                     {item.icon && <item.icon className="w-4 h-4 text-grey-400 dark:text-grey-500 shrink-0" />}
                     <div className="flex-1 min-w-0">
                         <p className={`font-aumovio-bold truncate ${item.active ? "text-(--accent-foreground)" : "text-black/85 dark:text-white/85"}`}>{item.label}</p>
-                        {item.description && <p className="text-xs text-grey-500 dark:text-grey-400 truncate mt-0.5">{item.description}</p>}
+                        {item.description && <p className="text-xs text-grey-500 dark:text-grey-400 truncate mt-1">{item.description}</p>}
                     </div>
                     {item.meta && <span className="text-xs text-grey-400 dark:text-grey-500 shrink-0">{item.meta}</span>}
                     {item.badge && item.badge}

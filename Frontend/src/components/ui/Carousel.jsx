@@ -70,7 +70,7 @@ export function Carousel({ items = [], autoPlay = true, interval = 4000, showDot
 
             {/* Dots */}
             {showDots && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-2">
                     {items.map((_, i) => (
                         <button
                             key={i}

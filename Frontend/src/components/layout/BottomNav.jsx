@@ -23,7 +23,7 @@ export function BottomNav({ items = [], variant = "default" }) {
                 <NavLink key={item.id} to={item.href}>
                     {({ isActive }) => (
                         <div
-                            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl
+                            className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl
               ${TRANSITION_COLORS} cursor-pointer relative
               ${isActive ? "text-(--nav-active-text)" : "text-grey-400 hover:text-grey-600 dark:hover:text-grey-300"}`}
                         >

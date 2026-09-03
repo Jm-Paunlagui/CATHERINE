@@ -1,10 +1,10 @@
-/**
- * Navbar.jsx — Responsive top navigation bar (Aumovio Design System v3.0)
+﻿/**
+ * Navbar.jsx â€” Responsive top navigation bar (Aumovio Design System v3.0)
  *
  * CUSTOMISATION
- * ─────────────
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * Edit nav.config.jsx to change links, groups, and role assignments.
- * This file is the renderer only — no link or auth logic lives here.
+ * This file is the renderer only â€” no link or auth logic lives here.
  *
  * Layout: sticky top bar with centred desktop links + right-rail (theme toggle, avatar).
  * Mobile: slide-down drawer with grouped links and Account section.
@@ -17,18 +17,19 @@ import { NavLink, useLocation } from "react-router-dom";
 
 import { ANIMATE_SCALE_IN, ANIMATE_SCALE_OUT, ANIMATE_SLIDE_DOWN, BASE_COLOR_TEXT, DELAY_1, MAIN_FOREGROUND_COLOR_TEXT, MAIN_OVERLAY_COLOR_BG, MAIN_PULSE_COLOR_BG, SECONDARY_COLOR_TEXT, SUBTITLE_COLOR_TEXT, TITLE_COLOR_TEXT, TRANSITION_COLORS, TRANSITION_SNAP, TRANSITION_SPRING } from "../../assets/styles/pre-set-styles";
 
+import { useVersion } from "../../contexts/version/VersionContext";
 import PersonalizeModal from "../../features/personalize/PersonalizeModal";
 import ProfileModal from "../feedback/ProfileModal";
-import { useVersion } from "../../contexts/version/VersionContext";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
 import Logo from "../ui/Logo";
 import { VersionBadge } from "../ui/VersionBadge";
+import { canSeeVersion } from "./config/nav.config";
 import { useNav } from "./config/useNav";
 
 const APP_DISPLAY_NAME = import.meta.env.VITE_APP_NAME || null;
 
-// ── Role helpers ──────────────────────────────────────────────────────────────
+// â”€â”€ Role helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function resolveRoleLabel(role) {
     if (role === "SUPER_ADMIN") return "Super ADMIN";
     if (role === "ADMIN") return "ADMIN";
@@ -45,7 +46,7 @@ function resolveRoleBadgeVariant(role) {
     return "grey";
 }
 
-// ── NavItem — flat link pill ──────────────────────────────────────────────────
+// â”€â”€ NavItem â€” flat link pill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function NavItem({ item }) {
     return (
         <NavLink to={item.href}>
@@ -61,7 +62,7 @@ function NavItem({ item }) {
     );
 }
 
-// ── DropdownGroup — hover mega-menu ───────────────────────────────────────────
+// â”€â”€ DropdownGroup â€” hover mega-menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Computes its own active state from the current pathname so the hook can stay
 // data-only and the renderer decides what "active" means.
 function DropdownGroup({ group, isLoading }) {
@@ -82,7 +83,7 @@ function DropdownGroup({ group, isLoading }) {
             {group.items.length > 0 && (
                 // Outer wrapper is the full hover target. `pt-2` is a transparent
                 // bridge spanning the visual gap so the cursor never leaves the
-                // `group` while travelling from the trigger down to the menu card —
+                // `group` while travelling from the trigger down to the menu card â€”
                 // this is what stops the dropdown vanishing mid-navigation.
                 <div
                     className={`
@@ -107,7 +108,7 @@ function DropdownGroup({ group, isLoading }) {
                                         <NavLink key={item.name} to={item.href}>
                                             <div
                                                 className={`
-                                                    flex items-center justify-between p-2.5 rounded-lg
+                                                    flex items-center justify-between p-3 rounded-lg
                                                     ${TRANSITION_COLORS}
                                                     hover:bg-(--nav-hover-bg)
                                                     ${active ? "text-(--nav-active-text) font-aumovio-bold" : "text-grey-700 dark:text-grey-300 hover:text-(--nav-active-text)"}
@@ -115,9 +116,9 @@ function DropdownGroup({ group, isLoading }) {
                                             >
                                                 <div>
                                                     <p className="text-sm font-aumovio">{item.name}</p>
-                                                    {item.description && <p className="text-xs text-grey-400 mt-0.5">{item.description}</p>}
+                                                    {item.description && <p className="text-xs text-grey-400 mt-1">{item.description}</p>}
                                                 </div>
-                                                <span className="text-grey-300 dark:text-grey-600 text-sm">→</span>
+                                                <span className="text-grey-300 dark:text-grey-600 text-sm">â†’</span>
                                             </div>
                                         </NavLink>
                                     );
@@ -131,7 +132,7 @@ function DropdownGroup({ group, isLoading }) {
     );
 }
 
-// ── Main Navbar ───────────────────────────────────────────────────────────────
+// â”€â”€ Main Navbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Navbar() {
     const { user, isLoading, navGroups, profileItems, authFlatLinks, publicLinks, profileOpen, closeProfile } = useNav();
     const { version, stage } = useVersion();
@@ -160,7 +161,7 @@ export default function Navbar() {
 
     // Flat link bar: loading skeleton | authenticated flat links | public links
     const navigationLinks = useMemo(() => {
-        if (isLoading) return [{ name: "Loading…", href: "#", isLoading: true }];
+        if (isLoading) return [{ name: "Loadingâ€¦", href: "#", isLoading: true }];
         if (user) return authFlatLinks.map((item) => ({ ...item, current: isActive(item.href.split("/")[1], 1) }));
         return publicLinks.map((item) => ({ ...item, current: isActive(item.href.split("/")[1] || "", 1) }));
     }, [isLoading, user, authFlatLinks, publicLinks, isActive]);
@@ -183,17 +184,33 @@ export default function Navbar() {
                         <div className="relative">
                             <div className="relative flex items-center justify-between h-16 px-4">
                                 {/* Logo + version badge */}
-                                <div className="flex items-center gap-2.5">
+                                <div className="flex items-center gap-3 min-w-0">
                                     <NavLink to="/" className="flex items-center gap-2">
                                         <Logo className="h-8 md:h-10 lg:h-12 w-auto" />
-                                        {APP_DISPLAY_NAME && <span className={`hidden md:block tracking-widest text-base ${BASE_COLOR_TEXT}`}>{APP_DISPLAY_NAME}</span>}
+                                        {/* App name from `sm` up, not `md` â€” the centred link bar
+                                            only appears at `lg`, so the whole 640â€“1024px band is
+                                            empty space between the logo and the right rail.
+                                            `whitespace-nowrap` keeps it on one line in the tight
+                                            640â€“768px part of that band; `min-w-0` on the wrapper
+                                            stops it from ever shoving the right rail off-screen. */}
+                                        {APP_DISPLAY_NAME && <span className={`hidden sm:block whitespace-nowrap tracking-widest text-sm md:text-base ${BASE_COLOR_TEXT}`}>{APP_DISPLAY_NAME}</span>}
                                     </NavLink>
-                                    {/* Version + release-stage badge → links to Version History.
-                                        Visibility owned by the wrapper span — VersionBadge's own
-                                        `inline-flex` base class fights a `hidden` passed via className. */}
-                                    <span className="hidden md:inline-flex">
-                                        <VersionBadge version={version} stage={stage} to="/support/changelog" />
-                                    </span>
+                                    {/* Version + release-stage badge â†’ links to Version History.
+                                        Visibility owned by the wrapper span â€” VersionBadge's own
+                                        `inline-flex` base class fights a `hidden` passed via className.
+                                        Two spans because `short` is a prop, not a responsive class:
+                                        compact stage label ("Î²") in the narrow 640â€“768px band, full
+                                        label ("Beta") from `md` up where there is room. */}
+                                    {canSeeVersion(userRole) && (
+                                        <>
+                                            <span className="hidden sm:inline-flex md:hidden">
+                                                <VersionBadge version={version} stage={stage} to="/about/changelog" short />
+                                            </span>
+                                            <span className="hidden md:inline-flex">
+                                                <VersionBadge version={version} stage={stage} to="/about/changelog" />
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
 
                                 {/* Desktop centred link bar */}
@@ -202,7 +219,7 @@ export default function Navbar() {
                                         {navigationLinks.map((item, i) =>
                                             item.isLoading ? (
                                                 <div key={`loading-${i}`} className={`${SECONDARY_COLOR_TEXT} animate-pulse ${MAIN_PULSE_COLOR_BG} px-3 py-2 rounded-lg text-sm`}>
-                                                    <span className={`inline-block w-20 bg-(--accent-subtle) rounded animate-pulse text-transparent ${DELAY_1}`}>Loading…</span>
+                                                    <span className={`inline-block w-20 bg-(--accent-subtle) rounded animate-pulse text-transparent ${DELAY_1}`}>Loadingâ€¦</span>
                                                 </div>
                                             ) : (
                                                 <NavItem key={item.name} item={item} />
@@ -249,10 +266,11 @@ export default function Navbar() {
                                                 >
                                                     {/* USER info header */}
                                                     <div className="px-4 py-3 border-b border-grey-100 dark:border-grey-800">
-                                                        <div className="flex items-center gap-2.5">
+                                                        <div className="flex items-center gap-3">
                                                             <Avatar name={userName} size="sm" />
                                                             <div className="min-w-0">
                                                                 <p className="text-sm font-aumovio-bold text-black/85 dark:text-(--color-dark-text) truncate">{userName}</p>
+                                                                {userDivision && <p className="text-xs text-grey-400 dark:text-grey-500 truncate">{userDivision}</p>}
                                                                 <Badge variant={roleBadge} size="xs" pill>
                                                                     {roleLabel}
                                                                 </Badge>
@@ -261,7 +279,7 @@ export default function Navbar() {
                                                     </div>
 
                                                     {/* Profile menu items */}
-                                                    <div className="py-1.5 px-1.5 space-y-0.5">
+                                                    <div className="py-2 px-1.5 space-y-1">
                                                         {profileItems.map((item, i) => {
                                                             if (item.divider) {
                                                                 return <div key={`divider-${i}`} className="my-1 h-px bg-(--bg-surface-3) mx-2" />;
@@ -272,7 +290,7 @@ export default function Navbar() {
                                                                     <button
                                                                         onClick={item.onClick ?? (() => {})}
                                                                         className={`
-                                                                        w-full flex items-center gap-2.5
+                                                                        w-full flex items-center gap-3
                                                                         px-3 py-2 rounded-lg text-sm font-aumovio
                                                                         ${TRANSITION_COLORS}
                                                                         ${item.danger ? "text-danger-500 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-400/10" : "text-grey-700 dark:text-grey-300 hover:bg-(--nav-hover-bg) hover:text-(--nav-active-text)"}
@@ -280,6 +298,13 @@ export default function Navbar() {
                                                                     >
                                                                         {Icon && <Icon className="w-4 h-4 shrink-0" />}
                                                                         {item.label}
+                                                                        {item.badge && (
+                                                                            <span className="ml-auto shrink-0">
+                                                                                <Badge variant={item.badge.variant} size="xs" pill>
+                                                                                    {item.badge.label}
+                                                                                </Badge>
+                                                                            </span>
+                                                                        )}
                                                                     </button>
                                                                 </MenuItem>
                                                             );
@@ -320,10 +345,11 @@ export default function Navbar() {
                             >
                                 {/* Mobile user card */}
                                 {user && (
-                                    <div className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl bg-(--accent-subtle) border border-(--border-subtle)">
+                                    <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-(--accent-subtle) border border-(--border-subtle)">
                                         <Avatar name={userName} size="sm" />
                                         <div className="min-w-0">
                                             <p className="text-sm font-aumovio-bold text-black/85 dark:text-(--color-dark-text) truncate">{userName}</p>
+                                            {userDivision && <p className="text-xs text-grey-400 dark:text-grey-500 truncate">{userDivision}</p>}
                                             <Badge variant={roleBadge} size="xs" pill>
                                                 {roleLabel}
                                             </Badge>
@@ -341,7 +367,7 @@ export default function Navbar() {
                                             ${item.isLoading ? `${SECONDARY_COLOR_TEXT} animate-pulse bg-(--accent-subtle) cursor-default` : item.current ? `${MAIN_FOREGROUND_COLOR_TEXT} bg-(--nav-active-bg) border border-(--nav-active-border)/25` : `${TITLE_COLOR_TEXT} hover:bg-(--nav-hover-bg) hover:text-(--nav-active-text)`}
                                         `}
                                         >
-                                            {item.isLoading ? <span className="w-20 bg-(--accent-subtle) rounded animate-pulse text-transparent">…</span> : item.name}
+                                            {item.isLoading ? <span className="w-20 bg-(--accent-subtle) rounded animate-pulse text-transparent">â€¦</span> : item.name}
                                         </div>
                                     </NavLink>
                                 ))}
@@ -382,7 +408,7 @@ export default function Navbar() {
                                                         key={item.id}
                                                         onClick={item.onClick ?? (() => {})}
                                                         className={`
-                                                        w-full flex items-center gap-2.5
+                                                        w-full flex items-center gap-3
                                                         px-3 py-2 rounded-xl text-sm font-aumovio
                                                         transition-colors duration-150 text-left
                                                         ${item.danger ? "text-danger-500 hover:bg-danger-50 dark:hover:bg-danger-400/10" : `${SUBTITLE_COLOR_TEXT} hover:bg-(--nav-hover-bg) hover:text-(--nav-active-text)`}
@@ -390,6 +416,13 @@ export default function Navbar() {
                                                     >
                                                         {Icon && <Icon className="w-4 h-4 shrink-0" />}
                                                         {item.label}
+                                                        {item.badge && (
+                                                            <span className="ml-auto shrink-0">
+                                                                <Badge variant={item.badge.variant} size="xs" pill>
+                                                                    {item.badge.label}
+                                                                </Badge>
+                                                            </span>
+                                                        )}
                                                     </button>
                                                 );
                                             })}
@@ -398,27 +431,31 @@ export default function Navbar() {
 
                                 {/* Mobile personalize */}
                                 <div className="pt-3 border-t border-grey-100 dark:border-grey-800">
-                                    <button onClick={() => setPersonalizeOpen(true)} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-aumovio text-left ${TRANSITION_COLORS} text-grey-600 dark:text-grey-400 hover:bg-(--nav-hover-bg) hover:text-(--nav-active-text)`}>
+                                    <button onClick={() => setPersonalizeOpen(true)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-aumovio text-left ${TRANSITION_COLORS} text-grey-600 dark:text-grey-400 hover:bg-(--nav-hover-bg) hover:text-(--nav-active-text)`}>
                                         <PaintBrushIcon className="w-4 h-4 shrink-0" />
                                         Personalize
                                     </button>
                                 </div>
 
-                                {/* Mobile version + release-stage badge → Version History */}
-                                <div className="pt-3 mt-1 border-t border-grey-100 dark:border-grey-800 flex justify-center">
-                                    <VersionBadge version={version} stage={stage} to="/support/changelog" />
-                                </div>
+                                {/* Mobile version + release-stage badge â†’ Version History.
+                                    Gated: ADMIN / SUPER_ADMIN only (see canSeeVersion). */}
+                                {canSeeVersion(userRole) && (
+                                    <div className="pt-3 mt-1 border-t border-grey-100 dark:border-grey-800 flex justify-center">
+                                        <VersionBadge version={version} stage={stage} to="/about/changelog" />
+                                    </div>
+                                )}
                             </div>
                         </Transition>
                     </>
                 )}
             </Menu>
 
-            {/* Profile modal — portalled to body */}
+            {/* Profile modal â€” portalled to body */}
             <ProfileModal open={profileOpen} onClose={closeProfile} user={user} />
 
-            {/* Personalize modal — portalled to body */}
+            {/* Personalize modal â€” portalled to body */}
             <PersonalizeModal open={personalizeOpen} onClose={() => setPersonalizeOpen(false)} />
         </>
     );
 }
+

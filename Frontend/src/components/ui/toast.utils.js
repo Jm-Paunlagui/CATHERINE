@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { toast as t } from "react-toastify";
 import { copyToClipboard } from "../../utils/clipboard";
+import { getStatusSeverity, getStatusTitle } from "../../constants/httpStatus";
 
 /**
  * Extract a standardised error shape from an Axios error for `<ApiErrorAlert>`.
@@ -11,21 +12,29 @@ import { copyToClipboard } from "../../utils/clipboard";
  * traces must not render in the UI even when the server includes them in
  * development mode).
  *
+ * `title` and `severity` fall back to the shared status map in
+ * `src/constants/httpStatus.js` when the server sent no envelope — an Axios
+ * timeout, a DNS failure, or an edge-proxy 5xx all reach a catch block with
+ * `response === undefined`, and an alert with a blank heading reads as a bug
+ * in the app rather than a failure to reach it.
+ *
  * @param {Error & { response?: object, requestId?: string }} err
  * @param {string} [fallbackMsg="An unexpected error occurred."]
- * @returns {{ title: string|null, code: number|null, message: string, requestId: string|null, type: string|null, details: Array<{field:string,issue:string}>|null, hint: string|null }}
+ * @returns {{ title: string|null, code: number|null, message: string, requestId: string|null, type: string|null, details: Array<{field:string,issue:string}>|null, hint: string|null, severity: "info"|"warning"|"danger" }}
  */
 export function extractApiError(err, fallbackMsg = "An unexpected error occurred.") {
     const data = err?.response?.data;
     const errBody = data?.error;
+    const code = data?.code ?? err?.response?.status ?? null;
     return {
-        title: data?.title ?? null,
-        code: data?.code ?? err?.response?.status ?? null,
+        title: data?.title ?? (code == null ? null : getStatusTitle(code)),
+        code,
         message: data?.message ?? fallbackMsg,
         requestId: err?.requestId ?? data?.requestId ?? null,
         type: errBody?.type ?? null,
         details: Array.isArray(errBody?.details) ? errBody.details : null,
         hint: errBody?.hint ?? null,
+        severity: getStatusSeverity(code),
     };
 }
 

@@ -28,7 +28,7 @@ export function Rating({ value = 0, max = 5, onChange, size = "md", color = "ora
     const col = COLORS[color] ?? COLORS.orange;
 
     return (
-        <div className="inline-flex items-center gap-0.5 font-aumovio">
+        <div className="inline-flex items-center gap-1 font-aumovio">
             {Array.from({ length: max }, (_, i) => i + 1).map((star) => (
                 <button key={star} type="button" disabled={readOnly} onClick={() => onChange?.(star)} onMouseEnter={() => !readOnly && setHover(star)} onMouseLeave={() => !readOnly && setHover(null)} className={`${TRANSITION_SNAP} ${readOnly ? "cursor-default" : "cursor-pointer hover:scale-110"}`} aria-label={`${star} star${star !== 1 ? "s" : ""}`}>
                     <svg className={`${sz} ${TRANSITION_COLORS} ${display >= star ? col : "text-grey-200 dark:text-grey-600"}`} viewBox="0 0 20 20" fill="currentColor">

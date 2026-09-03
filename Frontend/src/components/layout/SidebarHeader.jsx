@@ -22,10 +22,11 @@ import { Badge } from "../ui/Badge";
 import Logo from "../ui/Logo";
 import { Tooltip } from "../ui/Tooltip";
 import { VersionBadge } from "../ui/VersionBadge";
+import { canSeeVersion } from "./config/nav.config";
 import { useNav } from "./config/useNav";
 
 const APP_DISPLAY_NAME = import.meta.env.VITE_APP_NAME || null;
-const CHANGELOG_HREF = "/support/changelog";
+const CHANGELOG_HREF = "/about/changelog";
 
 // ── Role helpers (shared with Navbar) ─────────────────────────────────────────
 function resolveRoleLabel(role) {
@@ -53,6 +54,7 @@ export default function SidebarHeader() {
     const userName = user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() : "";
     const roleLabel = resolveRoleLabel(user?.role);
     const roleBadge = resolveRoleBadgeVariant(user?.role);
+    const showVersion = canSeeVersion(user?.role);
 
     return (
         <>
@@ -71,7 +73,7 @@ export default function SidebarHeader() {
                 ].join(" ")}
             >
                 {/* ── Left: logo + app name + version ── */}
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3 min-w-0">
                     {/* Logo + app name — white logo on desktop gradient */}
                     <NavLink to="/" className="flex items-center gap-2">
                         {/* Mobile/tablet: theme-aware logo */}
@@ -83,19 +85,34 @@ export default function SidebarHeader() {
                         <span className="hidden lg:block">
                             <Logo variant="chrome" className="h-12 w-auto" />
                         </span>
-                        {APP_DISPLAY_NAME && <span className="hidden md:block tracking-widest text-base font-normal leading-relaxed text-(--text-primary) lg:text-(--chrome-from-text) lg:drop-shadow-sm">{APP_DISPLAY_NAME}</span>}
+                        {/* App name from `sm` up, not `md` — this bar carries no navigation
+                            (the menu lives in the Sidebar), so the entire 640–1024px band is
+                            empty space between the logo and the right rail.
+                            `whitespace-nowrap` keeps it on one line in the tight 640–768px
+                            part of that band; `min-w-0` on the wrapper stops it from ever
+                            shoving the Personalize/avatar rail off-screen. */}
+                        {APP_DISPLAY_NAME && <span className="hidden sm:block whitespace-nowrap tracking-widest text-sm md:text-base font-normal leading-relaxed text-(--text-primary) lg:text-(--chrome-from-text) lg:drop-shadow-sm">{APP_DISPLAY_NAME}</span>}
                     </NavLink>
 
                     {/* Version badge — normal on mobile/tablet, glass on desktop gradient.
                         Visibility owned by the wrapper span, not VersionBadge's className —
                         the component's own `inline-flex` base class fights a `hidden` passed
-                        via className at equal specificity. */}
-                    <span className="hidden md:inline-flex lg:hidden">
-                        <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} />
-                    </span>
-                    <span className="hidden lg:inline-flex">
-                        <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} glass />
-                    </span>
+                        via className at equal specificity. Three spans, not two, because
+                        `short` is a prop rather than a responsive class: compact stage label
+                        ("β") in the narrow 640–768px band, full label from `md` up. */}
+                    {showVersion && (
+                        <>
+                            <span className="hidden sm:inline-flex md:hidden">
+                                <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} short />
+                            </span>
+                            <span className="hidden md:inline-flex lg:hidden">
+                                <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} />
+                            </span>
+                            <span className="hidden lg:inline-flex">
+                                <VersionBadge version={version} stage={stage} to={CHANGELOG_HREF} glass />
+                            </span>
+                        </>
+                    )}
                 </div>
 
                 {/* ── Right: Personalize + Avatar profile dropdown ── */}
@@ -125,7 +142,7 @@ export default function SidebarHeader() {
                                 <MenuItems className="absolute right-0 z-50 mt-2 w-56 bg-(--bg-surface-2) rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-(--color-dark-muted)/20 focus:outline-none overflow-hidden">
                                     {/* User info header */}
                                     <div className="px-4 py-3 border-b border-grey-100 dark:border-grey-800">
-                                        <div className="flex items-center gap-2.5">
+                                        <div className="flex items-center gap-3">
                                             <Avatar name={userName} size="sm" />
                                             <div className="min-w-0">
                                                 <p className="text-sm font-aumovio-bold text-(--text-primary) truncate">{userName || "USER"}</p>
@@ -137,7 +154,7 @@ export default function SidebarHeader() {
                                     </div>
 
                                     {/* Profile menu items */}
-                                    <div className="py-1.5 px-1.5 space-y-0.5">
+                                    <div className="py-2 px-1.5 space-y-1">
                                         {profileItems.map((item, i) => {
                                             if (item.divider) {
                                                 return <div key={`divider-${i}`} className="my-1 h-px bg-(--bg-surface-3) mx-2" />;
@@ -145,9 +162,16 @@ export default function SidebarHeader() {
                                             const Icon = item.icon;
                                             return (
                                                 <MenuItem key={item.id}>
-                                                    <button onClick={item.onClick ?? (() => {})} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-aumovio ${TRANSITION_COLORS} ${item.danger ? "text-danger-500 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-400/10" : "text-(--text-secondary) hover:bg-(--nav-hover-bg) hover:text-(--text-accent)"}`}>
+                                                    <button onClick={item.onClick ?? (() => {})} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-aumovio ${TRANSITION_COLORS} ${item.danger ? "text-danger-500 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-400/10" : "text-(--text-secondary) hover:bg-(--nav-hover-bg) hover:text-(--text-accent)"}`}>
                                                         {Icon && <Icon className="w-4 h-4 shrink-0" />}
                                                         {item.label}
+                                                        {item.badge && (
+                                                            <span className="ml-auto shrink-0">
+                                                                <Badge variant={item.badge.variant} size="xs" pill>
+                                                                    {item.badge.label}
+                                                                </Badge>
+                                                            </span>
+                                                        )}
                                                     </button>
                                                 </MenuItem>
                                             );

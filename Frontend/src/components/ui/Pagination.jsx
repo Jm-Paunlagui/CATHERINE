@@ -65,7 +65,7 @@ function PageSizeSelect({ value, options, onChange, selSz, radius }) {
             <button
                 type="button"
                 onClick={() => setOpen((o) => !o)}
-                className={`flex items-center gap-1.5 pl-2.5 pr-2 cursor-pointer font-aumovio-bold shrink-0
+                className={`flex items-center gap-2 pl-2.5 pr-2 cursor-pointer font-aumovio-bold shrink-0
                     border ${TRANSITION_COLORS} ${selSz} ${radius} ${DEFAULT_CLS}
                     ${open ? "border-orange-400 text-(--accent-foreground)" : ""}`}
             >
@@ -88,7 +88,7 @@ function PageSizeSelect({ value, options, onChange, selSz, radius }) {
                                 onChange(n);
                                 setOpen(false);
                             }}
-                            className={`flex items-center px-3 py-1.5 cursor-pointer font-aumovio-bold ${TRANSITION_COLORS}
+                            className={`flex items-center px-3 py-2 cursor-pointer font-aumovio-bold ${TRANSITION_COLORS}
                                 ${n === value ? "bg-orange-400 text-(--on-accent-text)" : "text-black/70 dark:text-white/70 hover:bg-orange-400/10 dark:hover:bg-orange-400/10 hover:text-(--accent-foreground)"}`}
                         >
                             {n.toLocaleString()}
@@ -115,7 +115,7 @@ export function Pagination({ page, totalPages, onChange, siblingCount = 1, showE
 
     const btn = (label, target, disabled, icon) => (
         <button
-            key={typeof label === "string" ? label : undefined}
+            key={String(label)}
             onClick={() => !disabled && onChange?.(target)}
             disabled={disabled}
             aria-label={typeof label === "string" ? label : undefined}
@@ -133,7 +133,7 @@ export function Pagination({ page, totalPages, onChange, siblingCount = 1, showE
             {hasPerPage && (
                 <>
                     <PageSizeSelect value={pageSize} options={pageSizeOptions} onChange={onPageSizeChange} selSz={selSz} radius={radius} />
-                    {hasNav && <span className="w-px h-4 bg-grey-200 dark:bg-grey-700 mx-0.5 shrink-0" />}
+                    {hasNav && <span className="w-px h-4 bg-grey-200 dark:bg-grey-700 mx-1 shrink-0" />}
                 </>
             )}
             {hasNav && (
