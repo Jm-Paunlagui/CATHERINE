@@ -5,7 +5,7 @@
  * Renders nothing (null) when the row's status is not in `excludableStatuses` — Retain rows
  * never show this control because they are already in the DB and cannot be soft-excluded.
  *
- * Styling contract:
+ * Styling is fixed so every stepper's exclude control looks identical:
  *   - Exclude: danger-400 text, danger hover background
  *   - Restore: success-400 text, success hover background
  *   - `faBan` icon for Exclude, `faRedoAlt` icon for Restore
@@ -56,7 +56,7 @@ export function ExcludeRestoreButton({ excluded, onToggle, status, excludableSta
     return (
         <button
             type="button"
-            onClick={onToggle}
+            onClick={() => onToggle()}
             aria-label={excluded ? "Restore row" : "Exclude row"}
             className={[
                 "flex items-center gap-1 px-2 py-1 rounded-md text-xs font-aumovio-bold",

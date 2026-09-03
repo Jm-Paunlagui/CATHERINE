@@ -6,7 +6,7 @@
  * is either real data from the auth cache or intentional navigation.
  */
 
-import { faArrowTrendUp, faBuildingColumns, faCalendarDays, faChartBar, faCreditCard, faIdCard, faRightFromBracket, faUserShield, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faArrowTrendUp, faChartBar, faRightFromBracket, faUserShield, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useNavigate } from "react-router-dom";
 import { ANIMATE_ENTER_UP, ANIMATE_FADE_IN_UP, ANIM_DELAY_0, ANIM_DELAY_100, ANIM_DELAY_200, BASE_COLOR_BG, BASE_COLOR_TEXT, GRADIENT_COLOR_TEXT, HOVER_LIFT, STANDARD_BORDER, TITLE_COLOR_TEXT, TRANSITION_SPRING, staggerDelay } from "../../assets/styles/pre-set-styles";

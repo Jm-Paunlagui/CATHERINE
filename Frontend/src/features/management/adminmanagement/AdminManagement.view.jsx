@@ -79,10 +79,9 @@ const ROLE_BADGE_VARIANTS = {
  * @param {Function} onResetPw
  * @param {Function} onResetSig
  * @param {Function} onDelete
- * @param {Function|null} onPermissions - null when caller is not SUPER_ADMIN; cluster is still shown read-only
  * @returns {Array}
  */
-function buildColumns(onEdit, onResetPw, onResetSig, onDelete, onPermissions) {
+function buildColumns(onEdit, onResetPw, onResetSig, onDelete) {
     return [
         {
             key: "empId",
@@ -156,7 +155,6 @@ function buildColumns(onEdit, onResetPw, onResetSig, onDelete, onPermissions) {
  * @param {Function} onResetPw
  * @param {Function} onResetSig
  * @param {Function} onDelete
- * @param {Function|null} onPermissions - null when caller is not SUPER_ADMIN; cluster is still shown read-only
  * @returns {Array}
  */
 function buildRobotColumns(onEdit, onResetPw, onResetSig, onDelete) {
@@ -505,7 +503,7 @@ function AdminManagementView() {
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-grey-100 dark:bg-grey-800/40 border border-grey-200 dark:border-grey-700">
                         <CpuChipIcon className="w-4 h-4 text-green-500 shrink-0" />
                         <p className="text-xs text-black/60 dark:text-white/60 font-aumovio">
-                            Role is fixed as <span className="font-aumovio-bold text-green-600 dark:text-green-400">ROBOT</span>. Robot accounts are used for RPA/automation and bypass the duplicate-name check in RFID uploads.
+                            Role is fixed as <span className="font-aumovio-bold text-green-600 dark:text-green-400">ROBOT</span>. Robot accounts are used for RPA/automation and bypass the duplicate-name check on bulk uploads.
                         </p>
                     </div>
 

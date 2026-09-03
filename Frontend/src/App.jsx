@@ -23,7 +23,7 @@ import ProtectedRoute from "./components/routing/ProtectedRoute";
 import Breadcrumb from "./components/ui/Breadcrumb";
 import Button from "./components/ui/Button";
 import { useLayout } from "./contexts/layout/LayoutContext";
-import { BadRequest, InvalidToken, LoginTimeOut, PageNotFound, ServiceUnavailable, SignatureMismatch, Unauthorized } from "./views/errors/ClientErrorResponses";
+import { BadRequest, InvalidToken, LoginTimeOut, PageNotFound, ServiceUnavailable, SignatureMismatch, TooManyRequests, Unauthorized } from "./views/errors/ClientErrorResponses";
 
 const LoginView = lazy(() => import("./features/auth/Login.view"));
 const LogoutView = lazy(() => import("./features/auth/Logout.view"));
@@ -33,12 +33,14 @@ const DashboardView = lazy(() => import("./features/dashboard/Dashboard.view"));
 // Management
 const LogsManagementView = lazy(() => import("./features/management/logsmanagement/LogsManagement.view"));
 const AdminManagementView = lazy(() => import("./features/management/adminmanagement/AdminManagement.view"));
+const MetricsView = lazy(() => import("./features/management/metrics/Metrics.view"));
 
 // Support
 const ChangelogView = lazy(() => import("./features/support/changelog/Changelog.view"));
 const GettingStartedView = lazy(() => import("./features/other/gettingstarted/GettingStarted.view"));
 const DatabaseConnectionView = lazy(() => import("./features/other/databaseconnection/DatabaseConnection.view"));
 const MiraOrmView = lazy(() => import("./features/other/miraorm/MiraOrm.view"));
+const MoneyView = lazy(() => import("./features/other/money/Money.view"));
 const CORSSetupView = lazy(() => import("./features/other/corssetup/CORSSetup.view"));
 const HomeView = lazy(() => import("./features/home/Home.view"));
 
@@ -58,7 +60,7 @@ const ROLES = {
 // NOTE: /about/getting-started is intentionally NOT bare — it renders inside the
 // normal app shell (sidebar + header + breadcrumb). Its own section navigation
 // lives in the page as a right-hand "On this page" rail, like the Tailwind docs.
-const BARE_ROUTES = ["/auth", "/", "/user/logout", "/unauthorized", "/login-timeout", "/invalid-token", "/bad-request", "/page-not-found", "/service-is-currently-unavailable", "/signature-mismatch", "/auth/change-password"];
+const BARE_ROUTES = ["/auth", "/", "/user/logout", "/unauthorized", "/login-timeout", "/invalid-token", "/bad-request", "/page-not-found", "/service-is-currently-unavailable", "/signature-mismatch", "/too-many-requests", "/auth/change-password"];
 
 function isBareRoute(pathname) {
     return BARE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
@@ -233,6 +235,7 @@ function AppRoutes() {
             <Route path="about/getting-started" element={<GettingStartedView />} />
             <Route path="about/database-connection" element={<DatabaseConnectionView />} />
             <Route path="about/mira-orm" element={<MiraOrmView />} />
+            <Route path="about/money" element={<MoneyView />} />
             <Route path="about/cors-setup" element={<CORSSetupView />} />
             {/* Version History — public read-only (backend GET /changelog is unauthenticated) */}
             <Route path="about/changelog" element={<ChangelogView />} />
@@ -248,10 +251,11 @@ function AppRoutes() {
                 <Route path="dashboard" element={<DashboardView />} />
             </Route>
 
-            {/* Management — Logs + Admin Management: SUPER_ADMIN only */}
+            {/* Management — Logs + Admin Management + Metrics: SUPER_ADMIN only */}
             <Route element={<ProtectedRoute role={[ROLES.SADMIN]} />}>
                 <Route path="system/logging-and-observability" element={<LogsManagementView />} />
                 <Route path="system/admin-management" element={<AdminManagementView />} />
+                <Route path="system/metrics" element={<MetricsView />} />
             </Route>
 
             {/* Error pages */}
@@ -262,6 +266,7 @@ function AppRoutes() {
             <Route path="page-not-found" element={<PageNotFound />} />
             <Route path="service-is-currently-unavailable" element={<ServiceUnavailable />} />
             <Route path="signature-mismatch" element={<SignatureMismatch />} />
+            <Route path="too-many-requests" element={<TooManyRequests />} />
             <Route path="*" element={<Navigate to="/page-not-found" replace />} />
         </Routes>
     );

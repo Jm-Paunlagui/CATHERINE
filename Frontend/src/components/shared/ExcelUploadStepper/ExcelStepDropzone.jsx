@@ -6,8 +6,8 @@
  * and the Proceed button.
  *
  * Receives all data via props. Never imports any feature hook or API file.
-
- * Replaces per-feature Step 1 upload components.
+ * One dropzone for every import feature — each previously carried its own
+ * near-identical copy.
  */
 
 import { faCheck, faCheckCircle, faExclamationCircle, faExclamationTriangle, faFileExcel, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -17,6 +17,7 @@ import PropTypes from "prop-types";
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { ANIMATE_FADE_IN_UP, ANIMATE_SHAKE, TITLE_COLOR_TEXT, TRANSITION_COLORS } from "../../../assets/styles/pre-set-styles";
+import Alert from "../../ui/Alert";
 import Button from "../../ui/Button";
 
 /**
@@ -25,9 +26,13 @@ import Button from "../../ui/Button";
  * @param {object}        props
  * @param {File|null}     props.uploadFile           - Currently selected file, or null.
  * @param {Array<object>} [props.parsedRows=[]]      - SheetJS-parsed rows for row-count display.
- * @param {Array<object>|null} [props.parsedDuplicates=null] - Intra-file duplicates. null = feature does not use duplicate detection.
+ * @param {Array<object>|null} [props.parsedDuplicates=null] - Intra-file duplicates, for features that detect them. null = feature does not use.
  * @param {string|null}   [props.parseError=null]    - Client-side header or parse error message.
  * @param {string[]}      [props.headersMissing=[]]  - Missing required column names.
+ * @param {Array<{ rowNumber: number, column: string, issue: string }>} [props.parseWarnings=[]] -
+ *   Non-blocking precision warnings from parseExcelBufferSafe (e.g. a credential
+ *   value beyond Number.MAX_SAFE_INTEGER). Never blocks Proceed — the server-side
+ *   guard is authoritative and rejects the affected row at /verify.
  * @param {string|null}   props.fileError            - File type or size validation error.
  * @param {boolean}       props.shaking              - When true, applies ANIMATE_SHAKE to the dropzone.
  * @param {boolean}       props.verifying            - True while the verify request is in flight.
@@ -42,7 +47,7 @@ import Button from "../../ui/Button";
  * @param {string}        [props.dropzoneLabel]      - Idle label inside the dropzone.
  * @param {string}        [props.proceedLabel]       - Text on the Proceed button.
  */
-export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicates = null, parseError = null, headersMissing = [], fileError, shaking, verifying, maxFileSize, onShakingEnd, onFile, onRemoveFile, onProceed, onDownloadTemplate, formatFileSize, requiredHeaders = [], dropzoneLabel = "Drag & drop your Excel file here", proceedLabel = "Proceed to Verify Data" }) {
+export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicates = null, parseError = null, headersMissing = [], parseWarnings = [], fileError, shaking, verifying, maxFileSize, onShakingEnd, onFile, onRemoveFile, onProceed, onDownloadTemplate, formatFileSize, requiredHeaders = [], dropzoneLabel = "Drag & drop your Excel file here", proceedLabel = "Proceed to Verify Data" }) {
     const onDrop = useCallback(
         (accepted) => {
             const f = accepted[0];
@@ -68,7 +73,7 @@ export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicate
         <div className={`space-y-6 ${ANIMATE_FADE_IN_UP}`}>
             {/* Requirements info panel */}
             <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-400/10 border border-blue-400/30 flex items-start gap-3">
-                <FontAwesomeIcon icon={faFileExcel} className="text-(--blue-foreground) text-xl mt-0.5 shrink-0" />
+                <FontAwesomeIcon icon={faFileExcel} className="text-(--blue-foreground) text-xl mt-1 shrink-0" />
                 <div className="flex-1 min-w-0">
                     <p className="font-aumovio-bold text-(--blue-foreground) mb-1">Required Excel Columns</p>
                     {requiredHeaders.length > 0 && (
@@ -126,10 +131,10 @@ export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicate
             {/* File info card */}
             {uploadFile && (
                 <div className="p-4 rounded-lg bg-success-100/20 dark:bg-success-400/10 border border-success-400/30 flex items-start gap-4">
-                    <FontAwesomeIcon icon={faFileExcel} className="text-2xl text-success-400 mt-0.5 shrink-0" />
+                    <FontAwesomeIcon icon={faFileExcel} className="text-2xl text-success-400 mt-1 shrink-0" />
                     <div className="flex-1 min-w-0">
                         <p className="font-aumovio-bold text-black/85 dark:text-white/85 truncate">{uploadFile.name}</p>
-                        <p className="text-sm text-black/50 dark:text-white/50 mt-0.5">
+                        <p className="text-sm text-black/50 dark:text-white/50 mt-1">
                             {formatFileSize(uploadFile.size)} · Modified: {new Date(uploadFile.lastModified).toLocaleString()}
                         </p>
 
@@ -178,22 +183,37 @@ export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicate
                 </div>
             )}
 
-            {/* Intra-file duplicate warning — shown only when parsedDuplicates is non-null */}
+            {/* Precision warnings — non-blocking. The server-side guard is authoritative;
+                this only helps the user fix the file before it gets rejected at /verify. */}
+            {parseWarnings.length > 0 && !parseError && !headersMissing.length && (
+                <Alert variant="warning" title={`${parseWarnings.length} value${parseWarnings.length !== 1 ? "s" : ""} may have lost precision`}>
+                    <ul className="text-sm space-y-1 mt-1">
+                        {parseWarnings.slice(0, 5).map((w, i) => (
+                            <li key={`${w.rowNumber}-${w.column}-${i}`}>
+                                Row {w.rowNumber} — <span className="font-aumovio-bold font-mono">{w.column}</span>: {w.issue}
+                            </li>
+                        ))}
+                    </ul>
+                    {parseWarnings.length > 5 && <p className="text-xs mt-1 opacity-80">+ {parseWarnings.length - 5} more</p>}
+                </Alert>
+            )}
+
+            {/* Intra-file duplicate warning — only when parsedDuplicates is non-null */}
             {parsedDuplicates !== null && !parseError && !headersMissing.length && hasDuplicates && (
                 <div className="p-4 rounded-lg bg-warn-100/50 dark:bg-warn-400/10 border border-warn-400/30">
                     <div className="flex items-start gap-3">
-                        <FontAwesomeIcon icon={faExclamationTriangle} className="text-warn-500 dark:text-warn-400 text-lg shrink-0 mt-0.5" />
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="text-warn-500 dark:text-warn-400 text-lg shrink-0 mt-1" />
                         <div className="flex-1 min-w-0">
                             <p className="font-aumovio-bold text-warn-700 dark:text-warn-300 mb-1">
                                 {parsedDuplicates.length} duplicate value{parsedDuplicates.length !== 1 ? "s" : ""} found in file
                             </p>
                             <p className="text-sm text-warn-600 dark:text-warn-400/80 mb-3">The rows below share the same value for a field that must be unique. Please have HR review and correct the file before uploading — you cannot proceed until all duplicates are resolved.</p>
-                            <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
                                 {parsedDuplicates.map(({ field, value, rowIndices }) => (
                                     <div key={`${field}-${value}`} className="flex items-start gap-2 text-sm text-warn-700 dark:text-warn-300">
                                         <FontAwesomeIcon icon={faExclamationCircle} className="text-xs mt-1 shrink-0 opacity-70" />
                                         <span>
-                                            Rows <span className="font-aumovio-bold">{rowIndices.map((i) => i + 1).join(", ")}</span> share the same <span className="font-aumovio-bold font-mono">{field}</span>: <span className="font-mono bg-warn-100 dark:bg-warn-400/10 px-1 py-0.5 rounded text-base">{String(value)}</span>
+                                            Rows <span className="font-aumovio-bold">{rowIndices.map((i) => i + 1).join(", ")}</span> share the same <span className="font-aumovio-bold font-mono">{field}</span>: <span className="font-mono bg-warn-100 dark:bg-warn-400/10 px-1 py-1 rounded text-base">{String(value)}</span>
                                         </span>
                                     </div>
                                 ))}
@@ -222,6 +242,13 @@ ExcelStepDropzone.propTypes = {
     parsedDuplicates: PropTypes.array,
     parseError: PropTypes.string,
     headersMissing: PropTypes.arrayOf(PropTypes.string),
+    parseWarnings: PropTypes.arrayOf(
+        PropTypes.shape({
+            rowNumber: PropTypes.number,
+            column: PropTypes.string,
+            issue: PropTypes.string,
+        }),
+    ),
     fileError: PropTypes.string,
     shaking: PropTypes.bool,
     verifying: PropTypes.bool,
