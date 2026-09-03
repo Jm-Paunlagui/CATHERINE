@@ -63,6 +63,12 @@ const {
     buildJoinSQL,
 } = require("../../src/utils/oracle-mongo-wrapper/joins/joinBuilder");
 
+// The exact-decimal money value type. Its round-trip against a REAL Oracle
+// NUMBER(19,4) column is the one assertion demo mode structurally cannot make
+// (§4.3) — only a live driver reveals whether the fetchTypeHandler actually
+// keeps a scaled NUMBER exact across the wire.
+const { Money } = require("../../src/utils/money");
+
 // ─── Table Column Schemas ─────────────────────────────────────────────────────
 
 const SAPBook = {
@@ -2440,6 +2446,161 @@ describe("30. Performance Utilities", function () {
                 throw e;
             }
         }
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 32. MONEY — LIVE PRECISION ROUND-TRIP (real NUMBER(19,4) / NUMBER(19,8))
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// WHY THIS SECTION EXISTS
+//   Demo mode holds money as JS strings in memory — it can prove the Money type
+//   is internally consistent, but it CANNOT prove the value survives a real
+//   Oracle column, because there is no Oracle in the loop. node-oracledb returns
+//   a NUMBER as a JS double by default, silently rounding a scaled value BEFORE
+//   any code sees it. The only honest test of "money is exact end to end" is to
+//   write boundary values to a real NUMBER(19,4)/(19,8) column, read them back
+//   through the money-safe fetchTypeHandler, and assert the string is identical.
+//
+//   These tests run only against a real DB (this whole file is excluded from the
+//   root Vitest suite) — exactly where the assertion is meaningful.
+describe("32. Money — Live Precision Round-Trip", function () {
+    const MONEY_TBL = "TEST_MONEY_RT";
+
+    // The money-safe fetchTypeHandler, applied on the raw read. Selection is on
+    // scale > 0, mirroring src/config/adapters/oracle.js — a scaled NUMBER comes
+    // back as a STRING so Money.from() parses it losslessly; scale-0 keys stay
+    // numbers. Passing it explicitly here proves the read path, independent of
+    // whatever default the wrapper's own execute options carry.
+    function moneyFetchTypeHandler(metaData) {
+        if (
+            metaData.dbType === inventoryDB.oracledb.DB_TYPE_NUMBER &&
+            metaData.scale > 0
+        ) {
+            return { type: inventoryDB.oracledb.STRING };
+        }
+        return undefined;
+    }
+
+    beforeAll(async function () {
+        this.timeout(60_000);
+        await dropIfExists(inventoryDB, MONEY_TBL);
+        await schema.createTable(MONEY_TBL, {
+            ID: { type: "NUMBER", primaryKey: true },
+            // Posted amount: exact, scale 4.
+            AMOUNT: { type: "NUMBER(19,4)", notNull: true },
+            // Rate / unit price: higher precision, scale 8.
+            RATE: { type: "NUMBER(19,8)" },
+            LABEL: { type: "VARCHAR2(100)" },
+        });
+    });
+
+    afterAll(async function () {
+        await dropIfExists(inventoryDB, MONEY_TBL);
+    });
+
+    // Boundary set: max magnitude, four-decimal fractions, a value that would
+    // overflow MAX_SAFE_INTEGER if held as a scaled double, negatives, and zero.
+    // Each AMOUNT is the canonical fixed-scale-4 string (Money.toStorage()).
+    const CASES = [
+        { id: 1, label: "max integer magnitude", amount: "999999999999999.0000" },
+        { id: 2, label: "four-decimal fraction", amount: "1500.5000" },
+        { id: 3, label: "unsafe-if-double", amount: "12345678901.2345" },
+        { id: 4, label: "smallest unit", amount: "0.0001" },
+        { id: 5, label: "negative", amount: "-4200.7500" },
+        { id: 6, label: "zero", amount: "0.0000" },
+    ];
+
+    it("32.1 writes bind the fixed-scale STRING, never a JS number", async function () {
+        // Bind each amount as the string Money produces — the value never passes
+        // through a JS double on the way in.
+        await inventoryDB.withConnection(async (conn) => {
+            for (const c of CASES) {
+                await conn.execute(
+                    `INSERT INTO "${MONEY_TBL}" (ID, AMOUNT, LABEL) VALUES (:id, :amount, :label)`,
+                    {
+                        id: c.id,
+                        amount: Money.from(c.amount).toStorage(),
+                        label: c.label,
+                    },
+                    { autoCommit: true },
+                );
+            }
+        });
+        expect(await rowCount(inventoryDB, MONEY_TBL)).toBe(CASES.length);
+    });
+
+    it("32.2 reads back every boundary AMOUNT byte-identical via Money.from().toStorage()", async function () {
+        const rows = await inventoryDB.withConnection((conn) =>
+            conn
+                .execute(
+                    `SELECT ID, AMOUNT FROM "${MONEY_TBL}" ORDER BY ID`,
+                    {},
+                    {
+                        outFormat: inventoryDB.oracledb.OUT_FORMAT_OBJECT,
+                        fetchTypeHandler: moneyFetchTypeHandler,
+                    },
+                )
+                .then((r) => r.rows),
+        );
+
+        expect(rows.length).toBe(CASES.length);
+        for (const row of rows) {
+            const expected = CASES.find((c) => c.id === row.ID);
+            // The scaled NUMBER came back as a STRING (fetchTypeHandler), so no
+            // double ever touched it. Normalising both sides through Money proves
+            // the stored value equals what we wrote — to the last of four places.
+            expect(Money.from(row.AMOUNT).toStorage()).toBe(
+                Money.from(expected.amount).toStorage(),
+            );
+        }
+    });
+
+    it("32.3 a scale-8 RATE round-trips exact (higher precision than a posting)", async function () {
+        const RATE_STR = "58.10250000"; // 8 places, a real FX-rate shape
+        await inventoryDB.withConnection((conn) =>
+            conn.execute(
+                `UPDATE "${MONEY_TBL}" SET RATE = :rate WHERE ID = :id`,
+                { rate: RATE_STR, id: 2 },
+                { autoCommit: true },
+            ),
+        );
+
+        const row = await inventoryDB.withConnection((conn) =>
+            conn
+                .execute(
+                    `SELECT RATE FROM "${MONEY_TBL}" WHERE ID = :id`,
+                    { id: 2 },
+                    {
+                        outFormat: inventoryDB.oracledb.OUT_FORMAT_OBJECT,
+                        fetchTypeHandler: moneyFetchTypeHandler,
+                    },
+                )
+                .then((r) => r.rows[0]),
+        );
+
+        // Read back as a STRING (scale 8 > 0). Its numeric value equals the rate
+        // we wrote, with no double rounding — Number() only for the comparison.
+        expect(typeof row.RATE).toBe("string");
+        expect(Number(row.RATE)).toBe(Number(RATE_STR));
+    });
+
+    it("32.4 WITHOUT the fetchTypeHandler, the SAME column returns a rounded double (the defect this guards)", async function () {
+        // Prove the guard is load-bearing: read AMOUNT with DEFAULT handling and
+        // show it comes back as a JS number, not the exact string. This is the
+        // silent rounding demo mode can never surface.
+        const row = await inventoryDB.withConnection((conn) =>
+            conn
+                .execute(
+                    `SELECT AMOUNT FROM "${MONEY_TBL}" WHERE ID = :id`,
+                    { id: 3 }, // "12345678901.2345"
+                    { outFormat: inventoryDB.oracledb.OUT_FORMAT_OBJECT },
+                )
+                .then((r) => r.rows[0]),
+        );
+        // Default path hands back a double — the exact-decimal contract is only
+        // upheld by the fetchTypeHandler, which is why it ships in the adapter.
+        expect(typeof row.AMOUNT).toBe("number");
     });
 });
 

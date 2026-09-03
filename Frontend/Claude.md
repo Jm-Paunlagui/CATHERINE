@@ -1355,4 +1355,191 @@ Validation / error state?
 
 ---
 
+## 13. Money, live streaming, and the HTTP-status contract
+
+This section is the **worked three-layer example**. It ties together the money
+capability (`components/shared/money.js` + `constants/currencies.js`), the live
+stream hook (`useLiveStream`), the pagination vocabulary (`utils/pagination.js`),
+and the HTTP-status contract (`constants/httpStatus.js` + `HttpClient`). Read
+§3 first — this only adds the money-specific rules on top of that pattern.
+
+### 13.1 The string-first money contract
+
+Money crosses the wire as a **fixed-scale decimal STRING** (`"1500.5000"`),
+never a JSON number. The backend serialises it that way on purpose
+(`Money.toJSON === Money.toStorage`); a JS `number` cannot carry more than ~15
+significant digits without rounding, and rounding money is a defect, not a
+detail. The client therefore:
+
+- **keeps the string as the source of truth** — store it, compare it, pass it
+  back to the API verbatim;
+- **coerces to a Number ONLY at the display boundary**, inside `formatMoney`,
+  where the value is thrown away after rendering and nothing is posted from it.
+
+```js
+import { formatMoney } from "../../components/shared/money";
+
+formatMoney("1500.5000", "PHP")               // "₱1,500.50"
+formatMoney("1500", "JPY")                     // "¥1,500"    (0 display decimals)
+formatMoney("1.2345", "KWD")                   // "KD 1.234"  (3 display decimals)
+formatMoney(null, "USD")                        // "$0.00"     (nullText default = zero)
+formatMoney("nope", "USD", { nullText: "—" })  // "—"         (never "$NaN" / "$∞")
+```
+
+**Rules:**
+
+- Never do arithmetic on a money string in the browser. Sums, splits, and
+  conversions are the backend's job (`Money`, `FxRateService`). The client
+  formats; it does not compute.
+- There is **no currency column** — the base currency is a system fact. A view
+  that shows a converted figure asks the API for the converted amount; it does
+  not convert client-side.
+- Display scale (2–4 decimals) comes from the registry per currency; storage
+  scale is always 4. `getDisplayScale(code)` and the ISO 4217 registry live in
+  `constants/currencies.js` (a frozen mirror of the backend registry).
+
+```js
+import { getCurrency, getDisplayScale, isValidCurrency, CURRENCY_CODES } from "../../constants/currencies";
+```
+
+### 13.2 The three layers for a money view
+
+**Layer 1 — API (`balance.api.js`):** raw calls, money returned as strings.
+SSE stream URLs are built here (native `EventSource`, not Axios) off
+`API_BASE_URL_TRIMMED`, exactly as `logsmanagement.api.js` does.
+
+```js
+import httpClient from "../../middleware/HttpClient";
+import { API_BASE_URL_TRIMMED } from "../../config/apiBase";
+
+export const balanceApi = {
+    // Server returns e.g. { data: { amount: "12500.0000", currency: "PHP" }, page, pageSize, total }
+    get: (id) => httpClient.get(`accounts/${id}/balance`),
+    ledger: (id, { page, pageSize }) =>
+        httpClient.get(`accounts/${id}/ledger`, { params: { page, pageSize } }),
+    // SSE endpoint — consumed by EventSource in the hook, never by httpClient.
+    streamUrl: (id) => `${API_BASE_URL_TRIMMED}/accounts/${id}/stream`,
+};
+```
+
+**Layer 2 — Hook (`balance.hook.js`):** state + the live stream + pagination.
+
+```js
+import { useState, useCallback } from "react";
+import { balanceApi } from "./balance.api";
+import { useLiveStream } from "../../hooks/useLiveStream";
+import { buildPageSizeOptions } from "../../utils/pagination";
+
+export const useBalance = (accountId) => {
+    const [balance, setBalance] = useState(null); // { amount: string, currency: string }
+    const [rows, setRows] = useState([]);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
+    const [total, setTotal] = useState(0);
+
+    const refetch = useCallback(async () => {
+        const [b, l] = await Promise.all([
+            balanceApi.get(accountId),
+            balanceApi.ledger(accountId, { page, pageSize }),
+        ]);
+        setBalance(b.data?.data ?? null);   // amount stays a STRING
+        setRows(l.data?.data ?? []);
+        setTotal(l.data?.total ?? 0);
+    }, [accountId, page, pageSize]);
+
+    // Live balance: the SSE `update` event just says "something changed" →
+    // invalidate + refetch. Never trust a number pushed down the stream; go
+    // ask the authoritative endpoint. Mirrors ScopedSsePoller on the server.
+    const { isLive } = useLiveStream({
+        url: accountId != null ? balanceApi.streamUrl(accountId) : null,
+        enabled: accountId != null,
+        onUpdate: refetch,
+    });
+
+    const pageSizeOptions = buildPageSizeOptions(total);
+
+    return { balance, rows, page, setPage, pageSize, setPageSize, total, pageSizeOptions, isLive, refetch };
+};
+```
+
+**Layer 3 — View (`Balance.view.jsx`):** presentation only, billing hook pattern.
+
+```jsx
+import { useBalance } from "./balance.hook";
+import { formatMoney } from "../../components/shared/money";
+import { Pagination } from "../../components/ui/Pagination";
+import { Badge } from "../../components/ui/Badge";
+
+const hook = useBalance(accountId);
+
+// Amount is a string; formatMoney is the ONLY place it becomes a number.
+<h2>{formatMoney(hook.balance?.amount, hook.balance?.currency)}</h2>
+<Badge variant={hook.isLive ? "green" : "grey"}>{hook.isLive ? "Live" : "Offline"}</Badge>
+
+// Ledger rows: each row.amount is also a string.
+{hook.rows.map((r) => (
+    <td key={r.id}>{formatMoney(r.amount, r.currency ?? hook.balance?.currency)}</td>
+))}
+
+<Pagination page={hook.page} totalPages={Math.ceil(hook.total / hook.pageSize)} onChange={hook.setPage} />
+```
+
+### 13.3 Pagination vocabulary (`utils/pagination.js`)
+
+Server pages are 1-based. The client speaks `page` / `pageSize` / `total`, and
+derives page-size choices from the row count so a 12-row table does not offer
+"100 per page".
+
+```js
+import { buildPageSizeOptions, getPageSizeDivisors } from "../../utils/pagination";
+
+buildPageSizeOptions(total)  // e.g. [10, 20, 50] scaled to the dataset size
+```
+
+- Always send `page` and `pageSize` as query params (see Layer 1).
+- `totalPages = Math.ceil(total / pageSize)` — compute it in the view, don't
+  store a stale copy.
+
+### 13.4 The HTTP-status contract (`constants/httpStatus.js` + `HttpClient`)
+
+`HttpClient`'s response interceptor routes every failed response through
+`resolveStatusHandling(status, type)`, which decides — from a single source of
+truth — whether the app should:
+
+- **take over the screen** with a full error route (`TAKEOVER_ROUTE_BY_STATUS`,
+  e.g. `440 → /session-expired`, `498 → /invalid-token`, `429 →
+  /too-many-requests`, outage statuses → `/service-is-currently-unavailable`);
+- **end the session** (`SESSION_ENDING_STATUSES`) — clear auth state and stop
+  in-flight work;
+- **let the caller handle it inline** (`SELF_HANDLED_ENDPOINTS` /
+  `CSRF_ERROR_CODES`), so a form validation error surfaces as a field message,
+  not a page takeover.
+
+**What this means for a feature author:**
+
+- Do **not** hand-roll `if (status === 401)` ladders in a hook. Throw the error
+  up; the interceptor already applied the contract. Catch only for the inline,
+  self-handled cases (a 400 validation body → a toast/field error).
+- Money mutations (POST/PUT/PATCH) that must be safe to retry should send an
+  `idempotency-key` header so a network retry replays the same server outcome
+  instead of double-posting (the backend's `IdempotencyMiddleware` returns the
+  stored 2xx, or `409` if the key is reused with a different body).
+- SSE streams authenticate with the HTTP-only cookie (`withCredentials`), carry
+  no CSRF header (a GET is not a mutating request), and reconnect on their own —
+  `useLiveStream` reflects that with `isLive`; do not add a manual retry loop.
+
+### 13.5 Security notes for money views (CWE cross-refs)
+
+- **CWE-200 / CWE-312 (sensitive data exposure):** never log a full balance or
+  ledger payload to the console; treat amounts as sensitive. See §5.4.
+- **CWE-20 (input validation):** validate a currency code against
+  `isValidCurrency` before using it; never pass an arbitrary code into
+  `Intl.NumberFormat` (it throws on an unknown code — `formatMoney` already
+  guards this and falls back to `nullText`).
+- **CWE-362 (race conditions):** the live `update` → `refetch` path can overlap
+  a user-driven refetch; `useRequest` de-duplicates concurrent identical calls
+  (§7.1). Rely on it rather than juggling in-flight flags by hand.
+
+---
+
 _Last updated: Aumovio Design System v3.1 — React 19 + Tailwind v4 + Animation System_

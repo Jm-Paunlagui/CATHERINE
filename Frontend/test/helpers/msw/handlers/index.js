@@ -8,11 +8,7 @@
  */
 
 import { csrfHandlers } from "./csrf.handlers";
-import { metricsHandlers } from "./metrics.handlers";
-import { auditLogHandlers } from "./auditLog.handlers";
 
 export const handlers = [
     ...csrfHandlers,
-    ...metricsHandlers,
-    ...auditLogHandlers,
 ];

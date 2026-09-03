@@ -702,6 +702,137 @@ Full API documented in `src/utils/oracle-mongo-wrapper/README.md`.
 
 ---
 
+## Money — Representation, Schema, and Accounting Rules
+
+CATHERINE ships an **exact-decimal money capability**, not a money *feature*
+(no Wallet, no Transactions route, no Finance nav group). The rules below are
+**booking rules, not engineering preferences** — each has an audit consequence
+if broken. The worked reference lives at the `/about/money` page; this section is
+the enforced contract for backend code.
+
+### Value type — `src/utils/money.js`
+
+- Money is the `Money` value type: a `BigInt` coefficient plus an integer scale.
+  **Never** hold a monetary amount in a JS `number`, `parseFloat`, or `FLOAT`.
+- `Money.from(value)` accepts a **string** (canonical `-123.4500`) or a **BigInt**
+  (whole units). It **rejects a JS `number`** — a `number` is already rounded to
+  a double, so accepting one would launder a rounding error into the ledger.
+- `STORAGE_SCALE = 4`. `MAX_INTEGER_DIGITS = 15` (matches `NUMBER(19,4)`).
+- `toStorage()` returns a fixed-scale-4 string and **throws 400 if the value
+  carries more than 4 non-zero decimals**. This is the input-discipline gate.
+- `toJSON()` === `toStorage()`, so money **serialises as a string, never a
+  number**, over the wire and into signed payloads.
+
+### `allocate()` vs `divide()` — posted vs derived (§3.7.1)
+
+| Operation | Output is | Residue rule |
+|---|---|---|
+| `allocate(weights)` | **posted** — money owed to a party | Largest-remainder. Parts sum to the total **exactly**. Always succeeds, always balances. |
+| `divide(d, { precision })` | **derived** — a unit cost, rate, or display figure | `precision` is **required**; returns `{ quotient, remainder }`. Nothing posted, so nothing owed. |
+
+- `allocate()` distributes at `STORAGE_SCALE` (4), never at the source value's
+  scale, and uses a **deterministic tie-break** (remainder DESC, then original
+  index ASC). Callers must tie-break on a **stable business key (ID ascending)**,
+  never on array position, so a re-run of a period report is byte-identical
+  (§3.7.2). Assert shuffle-invariance in property tests.
+- Never absorb allocation residue into a rounding-difference / CTA equity account
+  — that instrument is for translation on consolidation, not apportionment.
+- `Money.assertBalanced(parts, total, label)` guards every split.
+
+### Column contract (§3.2, §3.7.3) — two column classes, not one
+
+| Class | Type | Rule |
+|---|---|---|
+| **Posted amount** | `NUMBER(19,4)` | Input above 4 decimals rejected with 400 (`toStorage()`). |
+| **Rate / unit price** | `NUMBER(19,8)` | Higher scale permitted; a rate is **never itself a posting** — do not pass it through `toStorage()`. |
+
+- Every money column is `NUMBER(19,4)`. **Never** bare `NUMBER`, `FLOAT`, or a
+  raw scaled-integer column.
+- **No `CURRENCY` column on money tables.** The base currency is a system fact in
+  config (`MONEY_BASE_CURRENCY`), never a column on a transaction row. Only the
+  3-letter ISO 4217 code is ever persisted; symbols are presentation-only.
+- Add `CHECK` constraints for non-negative balances and for split invariants
+  wherever a total decomposes into parts.
+- **Bind money as its fixed-scale string** through `parseUpdate`, so the value
+  never round-trips through a JS double on the way to a `NUMBER(19,4)` column.
+- `src/config/adapters/oracle.js` installs a `fetchTypeHandler` that returns any
+  `NUMBER` with **scale > 0 as a string** (rule 3b). Scale-0 columns (IDs,
+  counts) stay numbers. Blast radius is zero until a scaled column exists.
+- The `oracle-mongo-wrapper` `convertTypes` is **FENCED**: it converts only
+  pure-integer strings (and only when `Number.isSafeInteger`). Any decimal or
+  exponent is left as a string. **Do not apply it to money or rate values.**
+
+### Transaction discipline (§3.6)
+
+- Every multi-row money mutation runs inside
+  `new Transaction(db).withTransaction(async (session) => { ... })`.
+- Use **named savepoints** for partial rollback in batch credit paths.
+- Every write goes through `parseUpdate` bind variables — **no interpolation**.
+  The one documented exception remains `PIVOT IN (...)`.
+
+### Ledger integrity — signed fields (§3.4)
+
+- `src/utils/integrity/signedFields.js` — one `makeSignedFields({ domain, fields,
+  moneyFields })` factory produces **one** projection used by both signer and
+  verifier. MEAL's projection drifted into four copies; that drift made
+  legitimately corrected rows read TAMPERED forever. There must be exactly one
+  builder.
+- **Money fields are canonicalised** (`canonicalMoney` → `Money.toStorage()`,
+  fixed scale 4, explicit trailing zeros) *before* they reach
+  `CryptoVault.buildPayload`. Otherwise `1500`, `1500.00`, `"1500.5000"` and
+  `1500.5` produce four different digests and a row signed from a string can
+  never verify against a value read back as a number.
+
+### Accounting rules (§3.7)
+
+- **Ledgers are append-only (§3.7.4).** A posted row is never `UPDATE`d. A mistake
+  is corrected with a **reversing entry** (equal-and-opposite) plus the correct
+  one, leaving both visible. Row hashes are defence in depth, not the primary
+  control — append-only removes the opportunity to tamper in the first place.
+- **Rate rows are append-only too (§3.7.9).** A rate is never `UPDATE`d; a
+  correction closes the current window and opens a new one, so converting a
+  historical row reproduces the same figure forever.
+- **Single-entry is a documented limitation (§3.7.5).** The demo ledger records
+  `DIRECTION` + `AMOUNT`. It yields a correct balance but cannot produce a trial
+  balance or detect a missing counter-posting. Double-entry would add paired
+  postings summing to zero, enforced by a `CHECK` or a transaction-level assert.
+- **Period close / cut-off (§3.7.6).** No period model ships, but the rule stands:
+  once a period closes, no posting may land inside it. Retro-posting into a
+  closed period is the most common money-system defect and is invisible until
+  reconciliation.
+- **Segregation of duties (§3.7.8).** Any money-moving route should support
+  maker/checker via `AuthMiddleware.requireAccess(predicate)` — the initiator is
+  not the approver.
+- **Rate sourcing (§3.7.9).** Ship the table shape, the service, and a documented
+  adapter interface. **Do not ship a provider integration** (YAGNI + auditability:
+  a rate must record who set it, when, from what source, over what window).
+- **Base-currency change is a prospective epoch (§3.7.10).** Under IAS 21 a change
+  in functional currency is applied prospectively — never restate history. The
+  base currency is a **time-keyed epoch** (`CURRENCY_CODE` + `EFFECTIVE_FROM`); a
+  money row is interpreted using the base in force at its own `CREATED_AT`. A
+  change **appends a new epoch**; it never edits an existing one. `bootGuard`
+  refuses an **in-place** change to the current epoch's currency once ledger rows
+  exist under it (armed only when `MONEY_LEDGER_TABLES` is set), and requires a
+  new epoch instead. No migration script ships — under prospective treatment there
+  is nothing to migrate.
+
+### Retention (§3.7.7)
+
+Money records carry statutory retention independent of application need:
+**Philippine BIR (RR 17-2013) — 10 years; SOX — 7 years.** Set retention
+deliberately; do not inherit a default.
+
+### Excel / export (§3.3)
+
+- `excelFormat.js` `moneyFmtFor(currencyCode)` builds one number format per
+  currency from the registry (symbol + display scale), negatives in red so a
+  credit is never misread as a debit.
+- `exportCurrencyBasis(...)` stamps every workbook with the currency and the
+  **conversion basis** (base, target, rates as-of date). An exported figure with
+  no stated basis is not auditable.
+
+---
+
 ## PKG Compilation
 
 Compile into standalone Windows executable via `pkg`:
