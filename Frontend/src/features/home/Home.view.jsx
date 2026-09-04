@@ -39,8 +39,12 @@ function HomeContent() {
 
     return (
         <>
-            {/* ── Announcement banner ─────────────────────────────────── */}
-            <Banner variant="promo" sticky dismissible>
+            {/* ── Announcement banner ─────────────────────────────────────
+                Deliberately NOT `sticky`. The Navbar is `sticky top-0 z-50`; a
+                second sticky bar pinned to the same top-0 paints over it (it is
+                later in the DOM), which is what this used to do. Let it scroll
+                away instead — the Navbar is the only thing that stays pinned. */}
+            <Banner variant="promo" dismissible>
                 Project Catherine — An open-source cybersecurity-hardened web application template for the AI era.
             </Banner>
 

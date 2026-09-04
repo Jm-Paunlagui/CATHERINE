@@ -692,9 +692,22 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains
 
 ## 6. Routing & Access Control
 
+> **Roles are STRINGS, not numbers.** `ProtectedRoute` compares
+> `role.includes(user.role)` where `user.role` is the `T_ADMINS_DEV.ROLE` value
+> (`"SUPER_ADMIN" | "ADMIN" | "USER"`). Passing a numeric array — `role={[2, 3]}` —
+> matches nothing and **silently denies every user**, including a super admin.
+
 ```jsx
-// App.jsx role constants — define ALL roles here
-const ROLES = { SADMIN: 3, ADMIN: 2, USER: 1 };
+// App.jsx role constants — define ALL roles here.
+// The value is the string persisted in T_ADMINS_DEV.ROLE.
+const ROLES = {
+    SADMIN: "SUPER_ADMIN",
+    ADMIN: "ADMIN",
+    USER: "USER",
+    APPROVER: "APPROVER",
+    VIEWER: "VIEWER",
+    ROBOT: "ROBOT",
+};
 
 // Role-only guard
 <Route element={<ProtectedRoute role={[ROLES.USER, ROLES.ADMIN]} />}>
@@ -702,15 +715,20 @@ const ROLES = { SADMIN: 3, ADMIN: 2, USER: 1 };
 </Route>
 
 // Role + fine-grained permission
+// `check` is a predicate over the decoded user — the app defines the
+// permission vocabulary; the template ships only the mechanism.
 <Route element={
   <ProtectedRoute
     role={[ROLES.ADMIN, ROLES.SADMIN]}
-    check={(user) => user.area?.includes('FINANCE')}
+    check={(user) => user.permissions?.includes('FINANCE')}
   />
 }>
   <Route path="finance" element={<FinanceView />} />
 </Route>
 ```
+
+`ProtectedRoute` props: `role` (array of role strings), `check` (`(user) => boolean`),
+`redirectTo` (default `/unauthorized`).
 
 Permission strings (`area` values) defined **inline at each route** in `App.jsx`, not in shared constant — keeps access control readable and co-located with route.
 

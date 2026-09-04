@@ -5,7 +5,11 @@
  * Your application defines permission logic inline at the route level.
  *
  * Props:
- *   role        — array of allowed role numbers, e.g. [2, 3]
+ *   role        — array of allowed role STRINGS, e.g. ["ADMIN", "SUPER_ADMIN"].
+ *                 The check below is `role.includes(user.role)` and `user.role`
+ *                 is the T_ADMINS_DEV.ROLE string. A NUMERIC array (`[2, 3]`)
+ *                 matches nothing and silently denies everyone — including a
+ *                 super admin. Use the ROLES map in App.jsx, never raw numbers.
  *   check       — predicate: (user) => boolean  ← define permissions here
  *   redirectTo  — redirect path if unauthorized (default: '/unauthorized')
  *
@@ -14,13 +18,14 @@
  *   // Role-only
  *   <ProtectedRoute role={[ROLES.ADMIN, ROLES.SADMIN]} />
  *
- *   // Permission-based (your app defines the permission strings)
- *   <ProtectedRoute check={(user) => user.area?.includes('FINANCE')} />
+ *   // Permission-based (your app defines the permission vocabulary)
+ *   <ProtectedRoute check={(user) => user.permissions?.includes('FINANCE')} />
  *
- *   // Combined
- *   <ProtectedRoute check={(user) =>
- *       user.userLevel >= ROLES.ADMIN && user.area?.includes('HR_MANAGER')
- *   } />
+ *   // Combined — role gate plus a predicate
+ *   <ProtectedRoute
+ *       role={[ROLES.ADMIN, ROLES.SADMIN]}
+ *       check={(user) => user.permissions?.includes('HR_MANAGER')}
+ *   />
  */
 
 import { useEffect, useState } from "react";
