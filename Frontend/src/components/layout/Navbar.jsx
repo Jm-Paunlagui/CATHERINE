@@ -49,15 +49,21 @@ function resolveRoleBadgeVariant(role) {
 // â”€â”€ NavItem â€” flat link pill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function NavItem({ item }) {
     return (
-        <NavLink to={item.href}>
-            <div
-                className={`
-                    ${item.current ? `${MAIN_FOREGROUND_COLOR_TEXT} bg-(--nav-active-bg) border border-(--nav-active-border)/25 shadow` : `${TITLE_COLOR_TEXT} hover:bg-(--nav-hover-bg) hover:text-(--nav-active-text)`}
-                    px-3 py-2 rounded-lg text-sm font-aumovio ${TRANSITION_COLORS} cursor-pointer
-                `}
-            >
-                {item.name}
-            </div>
+        // The NavLink (the <a>) is the focusable element, so the focus ring must
+        // live here â€” putting styling only on an inner <div> leaves the browser's
+        // default outline on the anchor, which lingers as a box after a mouse
+        // click. `focus:outline-none` kills that; `focus-visible:ring-*` restores
+        // a proper ring for keyboard users only. Padding/rounding also move here
+        // so the ring hugs the pill, matching the profile button's pattern.
+        <NavLink
+            to={item.href}
+            className={`
+                block px-3 py-2 rounded-lg text-sm font-aumovio ${TRANSITION_COLORS} cursor-pointer
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/50
+                ${item.current ? `${MAIN_FOREGROUND_COLOR_TEXT} bg-(--nav-active-bg) border border-(--nav-active-border)/25 shadow` : `${TITLE_COLOR_TEXT} hover:bg-(--nav-hover-bg) hover:text-(--nav-active-text)`}
+            `}
+        >
+            {item.name}
         </NavLink>
     );
 }
@@ -105,7 +111,7 @@ function DropdownGroup({ group, isLoading }) {
                                 {group.items.map((item) => {
                                     const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
                                     return (
-                                        <NavLink key={item.name} to={item.href}>
+                                        <NavLink key={item.name} to={item.href} className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/50">
                                             <div
                                                 className={`
                                                     flex items-center justify-between p-3 rounded-lg
@@ -148,9 +154,12 @@ export default function Navbar() {
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
-    // Active check by path segment depth
-    const split = pathname.split("/");
-    const isActive = useCallback((seg, depth = 1) => split[depth] === seg, [split]);
+    // Active check by full path, not first segment. Links that share a prefix
+    // (e.g. /about/getting-started and /about/help) both have "about" as their
+    // depth-1 segment, so a segment match lit them up together. Match the whole
+    // href instead: exact, or a prefix followed by "/" so /about/help does not
+    // also match /about/helpdesk. Same rule DropdownGroup already uses.
+    const isActive = useCallback((href) => pathname === href || (href !== "/" && pathname.startsWith(href + "/")), [pathname]);
 
     // Derived user display values
     const userName = user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() : "";
@@ -162,8 +171,8 @@ export default function Navbar() {
     // Flat link bar: loading skeleton | authenticated flat links | public links
     const navigationLinks = useMemo(() => {
         if (isLoading) return [{ name: "Loadingâ€¦", href: "#", isLoading: true }];
-        if (user) return authFlatLinks.map((item) => ({ ...item, current: isActive(item.href.split("/")[1], 1) }));
-        return publicLinks.map((item) => ({ ...item, current: isActive(item.href.split("/")[1] || "", 1) }));
+        if (user) return authFlatLinks.map((item) => ({ ...item, current: isActive(item.href) }));
+        return publicLinks.map((item) => ({ ...item, current: isActive(item.href) }));
     }, [isLoading, user, authFlatLinks, publicLinks, isActive]);
 
     return (
@@ -359,7 +368,7 @@ export default function Navbar() {
 
                                 {/* Flat navigation links */}
                                 {navigationLinks.map((item, i) => (
-                                    <NavLink key={item.name || `mobile-${i}`} to={item.isLoading ? "#" : item.href} onClick={item.isLoading ? (e) => e.preventDefault() : undefined}>
+                                    <NavLink key={item.name || `mobile-${i}`} to={item.isLoading ? "#" : item.href} onClick={item.isLoading ? (e) => e.preventDefault() : undefined} className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/50">
                                         <div
                                             className={`
                                             px-3 py-2 rounded-xl text-sm font-aumovio
@@ -379,7 +388,7 @@ export default function Navbar() {
                                         {group.items.map((item) => {
                                             const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
                                             return (
-                                                <NavLink key={item.name} to={item.href}>
+                                                <NavLink key={item.name} to={item.href} className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/50">
                                                     <div
                                                         className={`
                                                             px-3 py-2 rounded-xl text-sm font-aumovio
