@@ -1400,5 +1400,296 @@
     "coAuthors": [],
     "createdAt": "2026-07-16T06:59:14.946Z",
     "updatedAt": "2026-07-16T06:59:14.946Z"
+  },
+  {
+    "id": "4a2a4664-a680-4981-bacd-c7f724ad4173",
+    "displayDate": "2026-09-03",
+    "version": "1.0.0-dev.41",
+    "title": "Design System Refresh",
+    "message": "Every screen now uses the component library in the state proven by nine months of production traffic, and the error pages finally render with their intended colours.",
+    "whatChanged": [
+      {
+        "text": "Error pages rebuilt with per-status illustrations",
+        "items": [
+          "Added the 74-variable colour palette they depend on, in both light and dark",
+          "Without it every error screen was drawing with undefined colours"
+        ]
+      },
+      {
+        "text": "Refreshed charts, form controls, alerts and layout chrome"
+      },
+      {
+        "text": "Refreshed 36 core interface primitives"
+      },
+      {
+        "text": "Added the full app icon set and web manifest"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-09-03T09:03:40.930Z",
+    "updatedAt": "2026-09-03T09:03:40.930Z"
+  },
+  {
+    "id": "90a881c2-4ec9-4b57-bd60-3f6eaac41ecb",
+    "displayDate": "2026-09-03",
+    "version": "1.0.0-dev.42",
+    "title": "Request Lifecycle and Boot Safety",
+    "message": "Closes a set of faults that were invisible while they happened — the app looked healthy in every one of them. Sessions now expire cleanly, a stalled server no longer hangs the login screen, and a misconfigured deployment fails at build time instead of silently at runtime.",
+    "whatChanged": [
+      {
+        "text": "Sign-in screen can no longer hang forever on a stalled server",
+        "items": [
+          "Requests that are accepted but never answered now time out",
+          "Previously the loading screen stayed up indefinitely"
+        ]
+      },
+      {
+        "text": "Session expiry is reliable in a background tab",
+        "items": [
+          "Countdown now reads the clock instead of counting ticks, which browsers drop when a tab is not in front",
+          "Expiry runs exactly once instead of racing itself"
+        ]
+      },
+      {
+        "text": "A page left open across a deployment recovers itself",
+        "items": [
+          "It reloads once to pick up the new version rather than showing a blank screen"
+        ]
+      },
+      {
+        "text": "Stale data now refreshes on screens that are already open",
+        "items": [
+          "Previously only the next visit to a screen saw the update"
+        ]
+      },
+      {
+        "text": "A misconfigured production build now fails loudly",
+        "items": [
+          "A missing or insecure API address used to produce a build that looked fine and was completely dead once deployed"
+        ]
+      },
+      {
+        "text": "Request traces distinguish never-signed-in from dropped-cookie from tampered-cookie",
+        "items": [
+          "Credentials themselves are never written to a log"
+        ]
+      },
+      {
+        "text": "Server refuses to start in production without its allowed-origins list"
+      },
+      {
+        "text": "Scheduled jobs can no longer run on more than one worker at a time"
+      }
+    ],
+    "type": "fix",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-09-03T09:03:40.945Z",
+    "updatedAt": "2026-09-03T09:03:40.945Z"
+  },
+  {
+    "id": "d59ceb67-43b8-424d-b88e-51d158de0d01",
+    "displayDate": "2026-09-03",
+    "version": "1.0.0-dev.43",
+    "title": "Exact-Decimal Money Support",
+    "message": "Adds multi-currency money handling that never rounds. Amounts are exact from entry through storage to export, and the two operations that cannot be exact — division and splitting — now hand back the remainder instead of quietly losing it.",
+    "whatChanged": [
+      {
+        "text": "Money is held exactly, never as a decimal approximation",
+        "items": [
+          "Addition, subtraction and multiplication are exact at any size",
+          "An amount carrying more precision than can be stored is rejected, never silently rounded to fit"
+        ]
+      },
+      {
+        "text": "Splitting an amount always adds back up to the original",
+        "items": [
+          "Dividing 100 three ways distributes the last unit rather than losing it",
+          "The same split run twice gives the same answer, so a re-run of a report matches to the last unit"
+        ]
+      },
+      {
+        "text": "Division states its precision up front and returns the remainder"
+      },
+      {
+        "text": "Fixed rounding that was happening inside the database driver",
+        "items": [
+          "Exact values were being converted to approximations before any of our code saw them",
+          "The rule is derived from the column definition, so a new money column is protected automatically"
+        ]
+      },
+      {
+        "text": "Multi-currency support with conversion at display and export time",
+        "items": [
+          "Currency codes are stored, never symbols, so no character can be corrupted by a database charset",
+          "Historical figures convert at the rate that applied on their own date, so a past statement never changes value"
+        ]
+      },
+      {
+        "text": "Repeat-safe money operations — a retried request cannot post twice"
+      },
+      {
+        "text": "Tamper-evident records share one definition between signing and checking"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-09-03T09:03:40.951Z",
+    "updatedAt": "2026-09-03T09:03:40.951Z"
+  },
+  {
+    "id": "520a7e81-d530-4fe3-b596-4c633b8382d6",
+    "displayDate": "2026-09-03",
+    "version": "1.0.0-dev.44",
+    "title": "Template Identity Restore",
+    "message": "Removes another project's identity and domain code that arrived with the component refresh. Navigation links all resolve again, and a build now produces a correctly named executable.",
+    "whatChanged": [
+      {
+        "text": "Restored the project's own name, version and build output name",
+        "items": [
+          "Builds were producing an executable named after a different project",
+          "Restored a dependency that had been dropped while still in use, and an archiving library that had been downgraded",
+          "Removed 14 script shortcuts pointing at files that do not exist here"
+        ]
+      },
+      {
+        "text": "Every navigation link now leads somewhere",
+        "items": [
+          "The menu listed 22 destinations of which only 3 existed",
+          "Observability and the new money reference page are now reachable"
+        ]
+      },
+      {
+        "text": "Removed 31 unused files belonging to the other project",
+        "items": [
+          "One of them referenced a file absent from this repository, so it could never have loaded"
+        ]
+      },
+      {
+        "text": "Made the shared upload vocabulary generic instead of canteen-specific"
+      },
+      {
+        "text": "Removed the other project's branding from four on-screen messages"
+      }
+    ],
+    "type": "refactor",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-09-03T09:03:40.960Z",
+    "updatedAt": "2026-09-03T09:03:40.960Z"
+  },
+  {
+    "id": "294cbd53-6cc3-4a29-93d8-7e41204ed1dd",
+    "displayDate": "2026-09-03",
+    "version": "1.0.0-dev.45",
+    "title": "Money Test Suite — All Green",
+    "message": "1,187 backend tests and 30 frontend tests pass. The frontend had no test suite at all before this; the money rules are now enforced by tests rather than by convention.",
+    "whatChanged": [
+      {
+        "text": "Backend — 11 new suites, 1,187 tests passing",
+        "items": [
+          "Money splitting proven to balance across randomised inputs and to be order-independent",
+          "Rejection cases covered: excess precision refused rather than rounded, oversized amounts survive a full save-and-reload",
+          "Database driver proven to hand back exact money while leaving counts and identifiers alone"
+        ]
+      },
+      {
+        "text": "Frontend — test harness stood up from nothing, 30 tests passing"
+      },
+      {
+        "text": "Fixed a flaw in the status-code checker itself",
+        "items": [
+          "Any error message containing a comma was misread, which would have hidden real problems"
+        ]
+      },
+      {
+        "text": "Documented the money rules, storage formats and accounting constraints"
+      },
+      {
+        "text": "Added security-advisory ledgers and deployment runbooks"
+      }
+    ],
+    "type": "test",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-09-03T09:03:40.966Z",
+    "updatedAt": "2026-09-03T09:03:40.966Z"
+  },
+  {
+    "id": "e8ef6610-c60f-481b-a1b0-c2071d7dbd49",
+    "displayDate": "2026-09-04",
+    "version": "1.0.0-dev.46",
+    "title": "Help Center, Documentation and Test Coverage",
+    "message": "Adds a searchable Help Center with a floating assistant available on every page, backed by the template's first full documentation set and a frontend test suite that grew from 30 to 554 tests.",
+    "whatChanged": [
+      {
+        "text": "Added a Help Center at /about/help with category browsing and search",
+        "items": [
+          "Floating assistant on every page, including sign-in",
+          "Deterministic lookup over a static corpus — no model, no network call",
+          "Hidden for automation roles and on the Help Center page itself"
+        ]
+      },
+      {
+        "text": "Documented the template end to end — 13 technical guides with diagrams",
+        "items": [
+          "Authentication, error handling, data layer, money and caching",
+          "Logging, metrics, changelog, admin management, boot and build"
+        ]
+      },
+      {
+        "text": "Grew frontend test coverage from 1 file to 32 across six categories",
+        "items": [
+          "Added integration, security, performance, reliability and chaos suites",
+          "Locked the frontend/backend status-code contract with a parity test",
+          "554 frontend tests and 1,187 backend tests passing"
+        ]
+      },
+      {
+        "text": "Fixed overlapping page furniture on the landing and dashboard screens"
+      },
+      {
+        "text": "Corrected developer documentation that disagreed with the code",
+        "items": [
+          "Access-control roles are strings; the numeric form denied everyone",
+          "The documented middleware chain was missing the CSRF protection step"
+        ]
+      },
+      {
+        "text": "Hardened the demo-account seeder against signature drift"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-09-04T16:19:53.630Z",
+    "updatedAt": "2026-09-04T16:19:53.630Z"
   }
 ]
