@@ -34,6 +34,7 @@ const icon = (Glyph) => <Glyph size={SIZE} strokeWidth={STROKE} />;
 export const PUBLIC_LINKS = [
     { name: "Home", href: "/home", icon: icon(LuHouse) },
     { name: "Getting Started", href: "/about/getting-started", icon: icon(LuRocket) },
+    { name: "Help Center", href: "/about/help", icon: icon(LuCircleHelp) },
     { name: "Sign In", href: "/auth", icon: icon(LuLogIn) },
 ];
 
@@ -97,7 +98,10 @@ const SYSTEM_GROUP = {
 const SUPPORT_GROUP = {
     label: "Support",
     color: "grey",
-    items: [{ name: "Getting Started", href: "/about/getting-started", icon: icon(LuCircleHelp), description: "Set-up walkthrough and where to go next" }],
+    items: [
+        { name: "Getting Started", href: "/about/getting-started", icon: icon(LuCircleHelp), description: "Set-up walkthrough and where to go next" },
+        { name: "Help Center", href: "/about/help", icon: icon(LuCircleHelp), description: "Searchable answers about accounts, sessions, logging, and more" },
+    ],
 };
 
 // ── Role-based nav groups ─────────────────────────────────────────────────────

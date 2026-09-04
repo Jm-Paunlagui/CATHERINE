@@ -20,6 +20,7 @@ import Navbar from "./components/layout/Navbar";
 import Sidebar from "./components/layout/Sidebar";
 import SidebarHeader from "./components/layout/SidebarHeader";
 import ProtectedRoute from "./components/routing/ProtectedRoute";
+import { HelpAssistant } from "./components/shared/HelpAssistant/HelpAssistant";
 import Breadcrumb from "./components/ui/Breadcrumb";
 import Button from "./components/ui/Button";
 import { useLayout } from "./contexts/layout/LayoutContext";
@@ -42,6 +43,7 @@ const DatabaseConnectionView = lazy(() => import("./features/other/databaseconne
 const MiraOrmView = lazy(() => import("./features/other/miraorm/MiraOrm.view"));
 const MoneyView = lazy(() => import("./features/other/money/Money.view"));
 const CORSSetupView = lazy(() => import("./features/other/corssetup/CORSSetup.view"));
+const HelpView = lazy(() => import("./features/support/help/Help.view"));
 const HomeView = lazy(() => import("./features/home/Home.view"));
 
 // Role constants — must match the strings stored in T_ADMINS_DEV.ROLE
@@ -239,6 +241,9 @@ function AppRoutes() {
             <Route path="about/cors-setup" element={<CORSSetupView />} />
             {/* Version History — public read-only (backend GET /changelog is unauthenticated) */}
             <Route path="about/changelog" element={<ChangelogView />} />
+            {/* Help Center — public: unauthenticated visitors see general categories,
+                authenticated users see up to their role tier. */}
+            <Route path="about/help" element={<HelpView />} />
 
             {/* Change password — accessible to all valid roles including APPROVER/VIEWER/ROBOT.
                 Listed in BARE_ROUTES so no navbar/sidebar renders during this flow. */}
@@ -277,6 +282,10 @@ export default function App() {
         <>
             <ToastContainer position="bottom-right" autoClose={5000} hideProgressBar={false} closeOnClick pauseOnHover draggable theme="colored" className="z-50" />
             <AppContent />
+            {/* Global Help Assistant — floats on every route (incl. /auth), suppresses
+                itself on /about/help and for automation (ROBOT) roles. Mounted
+                OUTSIDE Suspense and route gating so it persists across navigation. */}
+            <HelpAssistant />
         </>
     );
 }
