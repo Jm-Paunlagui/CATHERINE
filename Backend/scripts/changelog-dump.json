@@ -32,7 +32,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-02T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:27:55.762Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0002-0000-0000-000000000002",
@@ -66,7 +66,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-06T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:28:20.389Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0003-0000-0000-000000000003",
@@ -100,7 +100,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-11T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:29:37.943Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0004-0000-0000-000000000004",
@@ -134,7 +134,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-16T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:30:26.847Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0005-0000-0000-000000000005",
@@ -165,7 +165,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-20T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:30:50.631Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0006-0000-0000-000000000006",
@@ -205,7 +205,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-27T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:31:06.030Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0007-0000-0000-000000000007",
@@ -236,7 +236,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-02T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:31:21.368Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0008-0000-0000-000000000008",
@@ -264,7 +264,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-08T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:31:35.736Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0009-0000-0000-000000000009",
@@ -289,7 +289,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-14T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:31:57.797Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0010-0000-0000-000000000010",
@@ -320,7 +320,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-20T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:32:10.869Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0011-0000-0000-000000000011",
@@ -345,7 +345,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-24T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:32:25.264Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0012-0000-0000-000000000012",
@@ -373,7 +373,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-28T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:32:37.882Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ca7e1100-0013-0000-0000-000000000013",
@@ -401,7 +401,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-05-04T08:00:00.000Z",
-    "updatedAt": "2026-06-18T02:32:56.338Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "3d64de09-948a-433a-8101-554250fcbea9",
@@ -441,7 +441,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-05T07:16:54.728Z",
-    "updatedAt": "2026-06-18T02:33:22.608Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "46d3d198-a38f-4717-ba4e-64374dca4053",
@@ -478,7 +478,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-05T08:55:44.509Z",
-    "updatedAt": "2026-06-18T02:33:37.719Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "9625a063-623e-4a7a-a5e1-7a4de817f3d7",
@@ -521,7 +521,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-08T04:01:36.924Z",
-    "updatedAt": "2026-06-18T02:33:54.081Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "3e6d718e-9a6c-40b5-a580-b94252d9c2a8",
@@ -565,7 +565,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-15T04:02:11.804Z",
-    "updatedAt": "2026-06-18T02:34:12.014Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "f82900ba-61c6-49a6-ae0b-e99ff74c3176",
@@ -614,7 +614,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-18T09:21:17.836Z",
-    "updatedAt": "2026-06-18T09:21:17.836Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "a8e93459-baa8-4d51-8296-96a4e7122763",
@@ -662,7 +662,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-19T09:14:49.047Z",
-    "updatedAt": "2026-06-19T09:14:49.047Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "3cf91049-f9de-4cf2-987d-4e55550ef850",
@@ -703,7 +703,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-20T10:23:56.750Z",
-    "updatedAt": "2026-06-20T10:23:56.750Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "c51b96a4-bd48-4b6f-8762-a8c4147b3563",
@@ -745,7 +745,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-30T08:30:59.784Z",
-    "updatedAt": "2026-06-30T08:30:59.784Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "cb17bfdf-2555-4f92-8cef-c93798b6c6e3",
@@ -778,7 +778,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-30T09:10:48.868Z",
-    "updatedAt": "2026-06-30T09:10:48.868Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "770b5810-989b-42c1-a240-a6e07911098f",
@@ -825,7 +825,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T00:20:30.228Z",
-    "updatedAt": "2026-07-01T00:20:30.228Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "ef5f5c55-3815-4b76-8110-927d280ef4c4",
@@ -854,7 +854,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T01:33:03.288Z",
-    "updatedAt": "2026-07-01T01:33:03.288Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "5490f376-b2a4-4ed6-bbd4-90359a29d30f",
@@ -894,7 +894,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T01:52:29.498Z",
-    "updatedAt": "2026-07-01T01:52:29.498Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "afff8915-9c09-4597-b459-5e57a39b71c5",
@@ -937,7 +937,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T04:10:52.569Z",
-    "updatedAt": "2026-07-01T04:10:52.569Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
   },
   {
     "id": "22bca4f4-849a-4582-9dc6-13660c086aff",
@@ -998,6 +998,407 @@
       "Claude Opus"
     ],
     "createdAt": "2026-07-01T05:36:08.305Z",
-    "updatedAt": "2026-07-01T05:36:08.305Z"
+    "updatedAt": "2026-07-01T05:43:32.965Z"
+  },
+  {
+    "id": "32f88a03-37e7-4a47-b3e2-d828d807e1b8",
+    "displayDate": "2026-07-01",
+    "version": "1.0.0-dev.28",
+    "title": "Version Badge Resolves on Public Pages",
+    "message": "The version badge in the navbar and home page now shows the correct version immediately, without requiring login first.",
+    "whatChanged": [
+      {
+        "text": "Version badge now fetches from the changelog API on all pages including the home page and login screen"
+      },
+      {
+        "text": "Removed unnecessary authentication gate — the changelog endpoint is already public"
+      },
+      {
+        "text": "Fixed \"Session Expiring Soon\" modal incorrectly appearing on public pages when a previous session had expired"
+      }
+    ],
+    "type": "patch",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-01T06:22:18.655Z",
+    "updatedAt": "2026-07-01T06:22:18.655Z"
+  },
+  {
+    "id": "bc62a856-1b1b-41e8-8b6f-8a26db59daed",
+    "displayDate": "2026-07-01",
+    "version": "1.0.0-dev.29",
+    "title": "Datepicker No Longer Clipped Inside Modals",
+    "message": "The date picker calendar now displays fully when opened inside a modal dialog, instead of being cut off by the modal boundary.",
+    "whatChanged": [
+      {
+        "text": "Calendar dropdown now renders above all other content via a portal"
+      },
+      {
+        "text": "Fixed positioning ensures the calendar appears directly below the trigger button regardless of scroll or modal context"
+      },
+      {
+        "text": "Outside-click dismissal still works correctly with the portal"
+      }
+    ],
+    "type": "patch",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-01T06:31:40.529Z",
+    "updatedAt": "2026-07-01T06:31:40.529Z"
+  },
+  {
+    "id": "5a4a17ae-8a53-4f0a-91f8-8cd104dc2e59",
+    "displayDate": "2026-07-01",
+    "version": "1.0.0-dev.30",
+    "title": "HTTPS Certificate Loading for Compiled Builds",
+    "message": "Compiled (pkg) builds now load the PFX certificate correctly. A clear error message is shown if the certificate file is missing instead of a silent exit.",
+    "whatChanged": [
+      {
+        "text": "Removed unused PEM key/cert fallback that caused pkg build failures"
+      },
+      {
+        "text": "PFX certificate filename is now configurable via PFX_FILENAME env var"
+      },
+      {
+        "text": "Certificate directory resolves relative to the executable in compiled builds (certs/ must sit next to the .exe)"
+      },
+      {
+        "text": "Server prints a visible error and exits cleanly when the PFX file is not found instead of crashing silently"
+      }
+    ],
+    "type": "fix",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-01T07:28:46.715Z",
+    "updatedAt": "2026-07-01T07:28:46.715Z"
+  },
+  {
+    "id": "84bb8943-0166-4a84-a0b7-44f0449a8ddd",
+    "displayDate": "2026-07-01",
+    "version": "1.0.0-dev.31",
+    "title": "Changelog Store Works in Compiled Builds",
+    "message": "Version History now loads and saves correctly when running as a compiled executable. Previously the encrypted store could not be read or written in packaged deployments.",
+    "whatChanged": [
+      {
+        "text": "Changelog data directory now resolves next to the executable in compiled (pkg) builds instead of inside the read-only snapshot"
+      },
+      {
+        "text": "Normal development runs are unaffected — data/ still resolves to the project root"
+      }
+    ],
+    "type": "patch",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-01T07:39:06.434Z",
+    "updatedAt": "2026-07-01T07:39:06.434Z"
+  },
+  {
+    "id": "a5604898-74a1-4767-af80-ac6451e29f10",
+    "displayDate": "2026-07-14",
+    "version": "1.0.0-dev.32",
+    "title": "Reliability Layer & Audit Log Fallback",
+    "message": "Batch saves and emails now survive outages instead of silently failing — failed rows are reported, emails retry with backup recipients, and audit logging works even without a database table by writing to daily text files.",
+    "whatChanged": [
+      {
+        "text": "Batch writes retry transient database failures and report per-row success/failure instead of returning a false success"
+      },
+      {
+        "text": "Outbound emails retry automatically and fall back to configured backup recipients; delivery failures are surfaced, never dropped"
+      },
+      {
+        "text": "Audit logs fall back to text files under logs/Main (year/month/day) when no audit table exists — db, file, and auto storage modes",
+        "items": [
+          "Audit table name now configurable (dev/prod defaults built in)"
+        ]
+      },
+      {
+        "text": "Database driver outages now return proper 503/504 responses instead of a generic 500"
+      },
+      {
+        "text": "New Email Failure dialog shows undelivered content so operators can capture it before dismissing"
+      },
+      {
+        "text": "Upload verify-status components made template-generic with app-extensible conflict types"
+      },
+      {
+        "text": "Removed product-specific code from the template (QR stub PDF, billing/settlement config, branded navigation)"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Fable",
+      "Claude Sonnet"
+    ],
+    "createdAt": "2026-07-14T02:34:11.711Z",
+    "updatedAt": "2026-07-14T02:34:11.711Z"
+  },
+  {
+    "id": "c19eed09-6f17-4da0-8c50-e3edec218157",
+    "displayDate": "2026-07-14",
+    "version": "1.0.0-dev.33",
+    "title": "Docs & Home Pages Adapt to All Palettes",
+    "message": "Getting Started guides and the landing page now stay readable under every personalization palette. Previously, light palettes made headings, highlighted code, and the entire home hero fade into the background.",
+    "whatChanged": [
+      {
+        "text": "Accent-coloured heading words (CATHERINE, Mira, CORS) now use contrast-checked colours on every palette"
+      },
+      {
+        "text": "Home hero badge, title, subtitle, and buttons adapt to the palette gradient instead of assuming white text"
+      },
+      {
+        "text": "Inline code highlights and demo credentials in the guides stay legible on light and dark palettes"
+      },
+      {
+        "text": "Icons, links, and stat cards on the home page use contrast-safe accent colours"
+      },
+      {
+        "text": "Dashboard welcome name and Version History heading fixed by the same change"
+      }
+    ],
+    "type": "patch",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Fable",
+      "Claude Sonnet"
+    ],
+    "createdAt": "2026-07-14T04:33:23.251Z",
+    "updatedAt": "2026-07-14T04:33:23.251Z"
+  },
+  {
+    "id": "d3a8c50e-41f0-457b-86bd-142923799714",
+    "displayDate": "2026-07-14",
+    "version": "1.0.0-dev.34",
+    "title": "Windows Service Auto-Start for the Backend",
+    "message": "The backend now installs as a Windows service that starts automatically after every server reboot and restarts itself after a crash. Fatal startup errors are now printed with their cause instead of exiting silently.",
+    "whatChanged": [
+      {
+        "text": "New deploy/winsw kit installs backend.exe as a Windows service",
+        "items": [
+          "Starts automatically on reboot (Automatic, Delayed Start)",
+          "Restarts itself 10 seconds after a crash",
+          "Service account credentials prompted at install, never stored"
+        ]
+      },
+      {
+        "text": "Fatal startup errors (e.g. port already in use) now print their cause instead of exiting silently"
+      },
+      {
+        "text": "Compiled exe finds its .env and writes logs next to itself, regardless of how it is started"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-14T06:48:02.820Z",
+    "updatedAt": "2026-07-14T06:48:02.820Z"
+  },
+  {
+    "id": "ca2cc9d6-fd95-4f96-ad1d-b401bd521c12",
+    "displayDate": "2026-07-14",
+    "version": "1.0.0-dev.35",
+    "title": "Server Deployment Compatibility Fix",
+    "message": "Fixed compiled backend failing to connect to Oracle on servers with alternate Instant Client DLL naming. Build now auto-deploys native addons alongside the executable.",
+    "whatChanged": [
+      {
+        "text": "Fixed Oracle Thick mode validation rejecting servers with oraociei.dll (v23.x early builds)"
+      },
+      {
+        "text": "Added postbuild script that auto-copies native addons (oracledb, argon2) to dist/",
+        "items": [
+          "Auto-discovers binaries by scanning node_modules — no hardcoded versions",
+          "Filters to win32-x64 platform only"
+        ]
+      },
+      {
+        "text": "Removed insecure .env resolution path that could bake secrets into compiled exe"
+      },
+      {
+        "text": "Isolated jsPDF and dependencies into a lazy-loaded chunk (~150 kB gzip saved from initial load)"
+      },
+      {
+        "text": "Fixed Vite chunk splitting to correctly separate react-router from react core"
+      }
+    ],
+    "type": "patch",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-14T09:32:35.440Z",
+    "updatedAt": "2026-07-14T09:32:35.440Z"
+  },
+  {
+    "id": "3a77b872-878d-4e09-8a6f-2ad040c2831e",
+    "displayDate": "2026-07-15",
+    "version": "1.0.0-dev.36",
+    "title": "Navigation Crash Recovery",
+    "message": "Navigating to documentation pages no longer shows a blank screen. The app now recovers from errors automatically and shows a friendly fallback instead of going blank, and the Getting Started docs are back in the signed-out sidebar.",
+    "whatChanged": [
+      {
+        "text": "Fixed blank page when navigating between pages — errors now show a recovery screen with a \"Try again\" option instead of an empty screen"
+      },
+      {
+        "text": "App auto-reloads once when a new deployment makes old page files stale, removing the need to refresh manually"
+      },
+      {
+        "text": "Error reports now reach the observability dashboard immediately instead of waiting up to 30 seconds (previously lost if the tab was closed)"
+      },
+      {
+        "text": "Restored the \"Getting Started\" and \"About\" sections in the sidebar for signed-out visitors"
+      }
+    ],
+    "type": "fix",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Fable",
+      "Claude Sonnet"
+    ],
+    "createdAt": "2026-07-15T01:49:56.274Z",
+    "updatedAt": "2026-07-15T01:49:56.274Z"
+  },
+  {
+    "id": "252b492f-8046-4959-b4f6-1ab78b83b8e8",
+    "displayDate": "2026-07-15",
+    "version": "1.0.0-dev.37",
+    "title": "Copyable Request ID for Support Tracing",
+    "message": "Error alerts and the email-delivery-failure dialog can now show a one-click-to-copy Request ID, so a failed operation can be quoted to support and traced to the exact incident in the audit logs.",
+    "whatChanged": [
+      {
+        "text": "Added a shared, click-to-copy Request ID control with a copy icon that confirms when copied"
+      },
+      {
+        "text": "Surfaced the Request ID in the \"Email delivery failed\" dialog, placed under the recipient count"
+      },
+      {
+        "text": "Unified the Request ID display across error alerts, the error screen, and the email-failure dialog into one consistent control"
+      },
+      {
+        "text": "Wired the Request ID through the email-delivery-failure helper so future flows can pass it straight to the dialog"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-15T10:02:46.589Z",
+    "updatedAt": "2026-07-15T10:02:46.589Z"
+  },
+  {
+    "id": "7426b845-e1ca-4df6-a40a-eba0e96f2b6d",
+    "displayDate": "2026-07-16",
+    "version": "1.0.0-dev.38",
+    "title": "SMTP Custom CA Certificate Support",
+    "message": "Email delivery now works with internal certificate authorities. Set SMTP_CA_FILE to the CA filename in certs/ to resolve \"unable to get local issuer certificate\" errors.",
+    "whatChanged": [
+      {
+        "text": "SharedTransporter loads a custom CA .pem from certs/ when SMTP_CA_FILE is set"
+      },
+      {
+        "text": "Resolution mirrors PFX_FILENAME pattern (pkg build → next to exe, dev → project root)"
+      },
+      {
+        "text": "Graceful fallback when file is missing — logs warning, uses system CA bundle"
+      },
+      {
+        "text": "Added SMTP_CA_FILE to .env.example with documentation"
+      }
+    ],
+    "type": "patch",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-16T06:57:59.063Z",
+    "updatedAt": "2026-07-16T06:57:59.063Z"
+  },
+  {
+    "id": "2a4a1077-1061-415b-96b1-ad568a16963a",
+    "displayDate": "2026-07-16",
+    "version": "1.0.0-dev.39",
+    "title": "Structured Error Alert Layout",
+    "message": "API error alerts now display a clear layered layout — title at top, message body, and metadata footer — matching the backend's error envelope for faster debugging.",
+    "whatChanged": [
+      {
+        "text": "Error alerts show the HTTP status title as a bold heading"
+      },
+      {
+        "text": "HTTP code and error type paired in a metadata footer (e.g. \"401 · AuthenticationError\")"
+      },
+      {
+        "text": "Request ID copy icon scales to match surrounding text size"
+      },
+      {
+        "text": "Request ID copy button works reliably on all click targets"
+      },
+      {
+        "text": "ErrorBoundary wraps request ID in a distinct card with dark mode support"
+      },
+      {
+        "text": "extractApiError now surfaces title and code from the backend response"
+      }
+    ],
+    "type": "refactor",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-16T06:58:41.316Z",
+    "updatedAt": "2026-07-16T06:58:41.316Z"
+  },
+  {
+    "id": "dc189cbd-37cb-484e-8841-e1aeff73fcc3",
+    "displayDate": "2026-07-16",
+    "version": "1.0.0-dev.40",
+    "title": "File-Based Audit Log Query Support",
+    "message": "Audit logs are now fully visible in the dashboard when using file-based storage mode — no Oracle table required.",
+    "whatChanged": [
+      {
+        "text": "Audit log file model now reads and queries JSON-lines files",
+        "items": [
+          "Supports pagination, filtering, aggregation, and latest-record detection",
+          "In-memory filter matching covers date range, regex, $or, and exact equality"
+        ]
+      },
+      {
+        "text": "Stats cards (Total Requests, Success, Error rates, etc.) populate from file data"
+      },
+      {
+        "text": "SSE live-update poller detects new file-based records"
+      },
+      {
+        "text": "Delete range removes entire day directories and reports accurate row counts"
+      },
+      {
+        "text": "Safety caps prevent OOM: files > 50 MB skipped, no-date queries scan today only"
+      },
+      {
+        "text": "Updated unit tests to verify file model delegation instead of stub assertions"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-07-16T06:59:14.946Z",
+    "updatedAt": "2026-07-16T06:59:14.946Z"
   }
 ]
