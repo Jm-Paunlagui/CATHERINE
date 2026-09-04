@@ -28,6 +28,8 @@ const {
     createDb,
     OracleCollection,
 } = require("../src/utils/oracle-mongo-wrapper");
+const { isDemoMode } = require("../src/config/demoMode");
+const AdminModel = require("../src/models/admin.model");
 
 const DEMO_PASSWORD = "Demo@123";
 
@@ -46,6 +48,15 @@ const USERS = [
 ];
 
 async function seed() {
+    if (isDemoMode()) {
+        console.log(
+            "\n🚫  DEMO_MODE=true — accounts are served from the in-memory store " +
+                "(src/models/demo/demoStore.js): admin / manager / user, password Demo@123. " +
+                "No database seeding is needed or possible in this mode.\n",
+        );
+        process.exit(0);
+    }
+
     const db = createDb("appDb");
 
     const adminsCol = new OracleCollection("T_ADMINS_DEV", db);
@@ -70,12 +81,18 @@ async function seed() {
             continue;
         }
 
-        const sig = await CryptoVault.signRecord("T_ADMINS_DEV", {
-            USERNAME: a.username,
-            PASSWORD: pwHash,
-            ROLE: a.role,
-            IS_ACTIVE: "Y",
-        });
+        // Canonical projection lives on AdminModel — a second hand-rolled copy
+        // here would silently drift from it (see sql/01_schema.sql's note on
+        // buildSignedFields()) and sign the wrong field set.
+        const sig = await CryptoVault.signRecord(
+            AdminModel.SIGN_CONTEXT,
+            AdminModel.buildSignedFields({
+                USERNAME: a.username,
+                PASSWORD: pwHash,
+                ROLE: a.role,
+                IS_ACTIVE: "Y",
+            }),
+        );
 
         if (existing && force) {
             // Re-hash password and re-sign the row
@@ -111,22 +128,37 @@ async function seed() {
     // ── Seed users ────────────────────────────────────────────────────────────
     for (const u of USERS) {
         const existing = await usersCol.find({ USERNAME: u.username }).next();
-        if (existing) {
+        if (existing && !force) {
             console.log(
-                `   ⏭  T_USERS_DEV:  "${u.username}" already exists — skipped.`,
+                `   ⏭  T_USERS_DEV:  "${u.username}" already exists — skipped. (use --force to re-hash)`,
             );
             continue;
         }
 
-        await usersCol.insertOne({
-            USERNAME: u.username,
-            PASSWORD: pwHash,
-            FIRST_NAME: u.firstName ?? null,
-            LAST_NAME: u.lastName ?? null,
-            EMAIL: u.email ?? null,
-            IS_ACTIVE: "Y",
-        });
-        console.log(`   ✅  T_USERS_DEV:  "${u.username}" created.`);
+        if (existing && force) {
+            // Re-hash password only — T_USERS_DEV has no SYSSIGNATURE column.
+            await usersCol.updateOne(
+                { USERNAME: u.username },
+                {
+                    $set: {
+                        PASSWORD: pwHash,
+                        IS_ACTIVE: "Y",
+                        UPDATED_AT: new Date(),
+                    },
+                },
+            );
+            console.log(`   🔄  T_USERS_DEV:  "${u.username}" re-hashed.`);
+        } else {
+            await usersCol.insertOne({
+                USERNAME: u.username,
+                PASSWORD: pwHash,
+                FIRST_NAME: u.firstName ?? null,
+                LAST_NAME: u.lastName ?? null,
+                EMAIL: u.email ?? null,
+                IS_ACTIVE: "Y",
+            });
+            console.log(`   ✅  T_USERS_DEV:  "${u.username}" created.`);
+        }
     }
 
     console.log(

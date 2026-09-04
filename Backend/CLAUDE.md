@@ -559,20 +559,29 @@ PFX_PASSPHRASE            # Passphrase for PFX certificate (HTTPS)
 
 Always use helpers from `constants/responses/`. **Never return raw data.**
 
+Success carries **five** top-level keys — `requestId` is part of the contract, not
+an optional extra. Error carries **six**: `title` is derived server-side from the
+status code via `getStatusTitle(code)` and is what the frontend's
+`ClientErrorResponses` / `ApiErrorAlert` fall back to. Anything typed, asserted,
+or reviewed against a four-key success shape is wrong.
+
 ```json
-// Success
+// Success — sendSuccess(message, data, code, requestId)
 {
   "status": "success",
   "code": 200,
   "message": "User fetched successfully",
+  "requestId": "req_V1StGXR8_Z5jdHi6B-myT",
   "data": { ... }
 }
 
-// Error
+// Error — sendError(message, code, opts)
 {
   "status": "error",
   "code": 400,
+  "title": "Bad Request",
   "message": "Invalid request data",
+  "requestId": "req_V1StGXR8_Z5jdHi6B-myT",
   "error": {
     "type": "ValidationError",
     "details": [
@@ -583,6 +592,12 @@ Always use helpers from `constants/responses/`. **Never return raw data.**
   }
 }
 ```
+
+`title` comes from `HTTP_STATUS_TITLES` in `src/constants/responses/index.js`, which
+the frontend mirrors code-for-code in `Frontend/src/constants/httpStatus.js`. That
+parity is enforced by `Frontend/test/unit/constants/httpStatus.test.js`, which reads
+these backend files directly — changing a title on one side without the other fails
+the suite.
 
 ```js
 // In controllers
@@ -617,34 +632,60 @@ throw new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, HTTP_STATUS.FORBIDDEN, {
 
 ## Middleware Stack (order matters — do not reorder)
 
+**`src/app.js` is the authority — read the numbered comments there, do not trust a
+count from this file.** The chain is 13 numbered steps plus sub-steps `3a`, `4a` and
+`5a`, which is 17 `app.use` calls. A sub-step exists where a later addition had to
+land *inside* an existing step's ordering constraint rather than after it.
+
 ```js
-// app.js
-app.use(helmetMiddleware.handle); // 1. Security headers
-app.use(securityFilter.handle); // 2. Block scanners / traversal EARLY
-app.use(addRequestId.handle); // 3. Inject X-Request-Id before logging
-app.use(jsonParser.handle); // 4. Body parsing before logging (req.body available)
-app.use(urlencodedParser.handle);
-app.use(requestLogger.handle); // 5. Log incoming + completed requests
-app.use(trackResponseTime.handle); // 6. X-Response-Time header
-app.use(compressionMiddleware.handle); // 7. Compress responses
-app.use(corsMiddleware.handle); // 8. CORS
-app.use(cookieParser.handle); // 9. Cookie parsing
-app.use(captureResponseBody.handle); // 10. Capture body for logging
-app.use(createIpFilter.handle); // 11. IP allowlist
-app.use(defaultRateLimiter.handle); // 12. Rate limiting
-app.use("/api", preventRedirects.handle); // 13. API-only redirect prevention
+// app.js — numbered exactly as the file comments them
+app.use(defaultHelmet.handle);            // 1.  Security headers
+app.use(defaultSecurityFilter.handle);    // 2.  Block scanners / traversal EARLY
+app.use(defaultTraceability.handle);      // 3.  Request ID + request/response logging
+app.use(defaultAuditLog.handle);          // 3a. Audit-log DB persistence (setImmediate after res.end)
+app.use(defaultBodyParser.jsonHandler);   // 4.  Body parsing — before route handlers
+app.use(defaultBodyParser.urlencodedHandler);
+app.use(defaultTraceability.logIncoming); // 4a. Incoming-request log line — AFTER body parsers so req.body is populated
+app.use(defaultResponseTime.handle);      // 5.  X-Response-Time header + per-route metrics
+app.use(defaultMetrics.handle);           // 5a. Metrics collection — after ResponseTime so both timings exist
+app.use(defaultCompression.handle);       // 6.  Compression
+app.use(defaultCors.handle);              // 7.  CORS
+app.use(defaultCookieParser.handle);      // 8.  Cookie parsing
+app.use(/* CSRF gate */);                 // 9.  CSRF — AFTER cookie-parser so the secret cookie is readable.
+                                          //     /api/v1/csrf/* is exempt (catch-22: you cannot send a
+                                          //     token header on the request that fetches the token).
+app.use(defaultErrorHandler.captureResponseBody); // 10. Capture body for logging
+app.use(defaultIpFilter.handle);          // 11. IP allowlist (ENABLE_IP_FILTER)
+app.use(defaultRateLimiter.handle);       // 12. Rate limiting — Sliding Window Counter over NodeCache
+app.use("/api", defaultPreventRedirects.handle); // 13. API-only redirect prevention
+
+// Then, after the chain:
+app.use("/api/v1", routes);
+app.use(defaultErrorHandler.notFoundHandler); // 404
+app.use(defaultErrorHandler.handle);          // global error handler — everything funnels here
 ```
+
+**Step 9 is a security step and must not be dropped when this list is summarised.**
 
 ---
 
 ## Auth Routes (Standard)
 
 ```
-POST /api/v1/auth/register
-POST /api/v1/auth/login
-POST /api/v1/auth/refresh
-POST /api/v1/auth/logout
+POST  /api/v1/auth/login            public    rate-limited + validateRequiredFields(["userId","password"])
+POST  /api/v1/auth/refresh          public    rate-limited
+POST  /api/v1/auth/logout           auth
+GET   /api/v1/auth/me               auth
+PATCH /api/v1/auth/change-password  auth      rate-limited + validateRequiredFields(["currentPassword","newPassword"])
 ```
+
+**There is no `/auth/register`.** Self-registration is deliberately absent: accounts
+are provisioned through the admin-management router, and
+`test/server/integration/auth/register.test.js` locks that in — it asserts the route
+returns 404 *intentionally*. Do not add one back without deciding who is allowed to
+create accounts: that is an access-control decision, not a missing CRUD endpoint.
+
+Note the login credential field is **`userId`**, not `username`.
 
 ---
 
@@ -659,10 +700,16 @@ POST /api/v1/auth/logout
 
 ## Validation
 
-- Validate all incoming request bodies using `zod` (preferred) or `express-validator`
-- Validation middleware sits **before** controller in route definition
-- Reject early — never let invalid data reach service layer
-- Validation errors become `AppError` with `details` array matching error response shape
+- **`zod` is NOT a dependency of this template.** The installed validator is
+  `express-validator`; the auth routes use `AuthMiddleware.validateRequiredFields([...])`.
+  Add `zod` deliberately if you want it — do not assume it is already there.
+- `validateRequiredFields` is also an operator-injection guard, not just a presence
+  check: it rejects objects and arrays and string-coerces survivors, so a JSON body
+  like `{ "userId": { "$ne": null } }` cannot reach the query builder.
+- Validation middleware sits **before** the controller in the route definition
+- Reject early — never let invalid data reach the service layer
+- Validation errors become `AppError` with a `details` array matching the error
+  response shape above
 
 ---
 
