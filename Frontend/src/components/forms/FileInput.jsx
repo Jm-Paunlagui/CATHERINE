@@ -95,7 +95,7 @@ export function FileInput({ label, name, accept, multiple = false, disabled = fa
                     ))}
                 </ul>
             )}
-            {error && <p className="mt-1.5 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
+            {error && <p className="mt-2 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
         </div>
     );
 }

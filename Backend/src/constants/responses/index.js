@@ -26,11 +26,13 @@ const HTTP_STATUS_TITLES = {
     403: "Forbidden Access",
     404: "Not Found",
     405: "Method Not Allowed",
+    408: "Request Timeout",
     409: "Conflict Detected",
     410: "Gone Permanently",
     413: "Payload Too Large",
     422: "Unprocessable Entity",
     423: "Locked Resource",
+    428: "Precondition Required",
     429: "Too Many Requests",
     440: "Session Timeout",
     498: "Invalid Token",
@@ -38,6 +40,8 @@ const HTTP_STATUS_TITLES = {
     500: "Internal Server Error",
     502: "Bad Gateway",
     503: "Service Unavailable",
+    504: "Gateway Timeout",
+    507: "Insufficient Storage",
     523: "Origin Unreachable",
 };
 

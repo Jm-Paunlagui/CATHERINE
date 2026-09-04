@@ -17,7 +17,7 @@ export function DeviceMockup({ device = "phone", color = "dark", children }) {
                     className={`flex items-center gap-2 px-4 py-3 border-b
         ${color === "dark" ? "border-grey-700 bg-grey-800" : "border-grey-200 bg-grey-50"}`}
                 >
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-2">
                         {["bg-danger-400", "bg-warn-400", "bg-success-400"].map((c, i) => (
                             <span key={i} className={`w-3 h-3 rounded-full ${c}`} />
                         ))}

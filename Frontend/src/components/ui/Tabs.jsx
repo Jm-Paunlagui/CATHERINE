@@ -15,7 +15,7 @@ import { useState } from "react";
 import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 
 const SZ = {
-    sm: "px-3 py-1.5 text-xs",
+    sm: "px-3 py-2 text-xs",
     md: "px-4 py-2 text-sm",
     lg: "px-5 py-3 text-base",
 };
@@ -60,7 +60,7 @@ export function Tabs({ tabs = [], defaultTab, activeTab: controlledTab, variant 
                             }
                         }}
                         disabled={tab.disabled}
-                        className={`flex items-center gap-1.5 whitespace-nowrap
+                        className={`flex items-center gap-2 whitespace-nowrap
               disabled:opacity-40 disabled:cursor-not-allowed
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent)/40 rounded
               ${sz} ${fullWidth ? "flex-1 justify-center" : ""}
@@ -70,7 +70,7 @@ export function Tabs({ tabs = [], defaultTab, activeTab: controlledTab, variant 
                         {tab.label}
                         {tab.badge !== undefined && (
                             <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-aumovio-bold
+                                className={`text-[10px] px-1.5 py-1 rounded-full font-aumovio-bold
                 ${tab.id === active && variant === "boxed" ? "bg-(--on-accent-text)/20 text-(--on-accent-text)" : "bg-(--accent-subtle) text-(--accent-foreground)"}`}
                             >
                                 {tab.badge}

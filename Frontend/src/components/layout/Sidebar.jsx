@@ -1,17 +1,17 @@
-/**
- * Sidebar.jsx — Collapsible left sidebar (Aumovio Design System v3.0)
+﻿/**
+ * Sidebar.jsx â€” Collapsible left sidebar (Aumovio Design System v3.0)
  *
  * CUSTOMISATION
- * ─────────────
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * Edit nav.config.jsx to change links, groups, and role assignments.
- * This file is the renderer only — no link or auth logic lives here.
+ * This file is the renderer only â€” no link or auth logic lives here.
  *
  * ICON FLEXIBILITY
- * ────────────────
- *   Heroicon forwardRef — icon: UserCircleIcon         (typeof === "object", has .render)
- *   React Icons element — icon: <MdDataUsage size={16} /> (JSX ReactNode)
- *   FontAwesome object  — icon: faHome                 (has .iconName)
- *   Function component  — icon: MyIcon                 (typeof === "function")
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ *   Heroicon forwardRef â€” icon: UserCircleIcon         (typeof === "object", has .render)
+ *   React Icons element â€” icon: <MdDataUsage size={16} /> (JSX ReactNode)
+ *   FontAwesome object  â€” icon: faHome                 (has .iconName)
+ *   Function component  â€” icon: MyIcon                 (typeof === "function")
  */
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -21,10 +21,13 @@ import { NavLink, useLocation } from "react-router-dom";
 
 import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 import { useLayout } from "../../contexts/layout/LayoutContext";
+import { useVersion } from "../../contexts/version/VersionContext";
 import { Tooltip } from "../ui/Tooltip";
+import { VersionBadge } from "../ui/VersionBadge";
+import { canSeeVersion } from "./config/nav.config";
 import { useNav } from "./config/useNav";
 
-// ── Group colour palette ──────────────────────────────────────────────────────
+// â”€â”€ Group colour palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const GROUP_COLOR_MAP = {
     orange: {
         dot: "bg-[var(--side-active-border)]",
@@ -40,7 +43,7 @@ const GROUP_COLOR_MAP = {
     },
     // Palette-responsive families (purple/secondary, blue, yellow, turquoise) use
     // contrast-safe per-family CSS variables computed by applyPaletteVars() so the
-    // dot and active text stay visible on dark palette surfaces (e.g. The Divine,
+    // dot and active text stay visible on dark palette surfaces (e.g. Toasted Copper,
     // where the raw yellow/secondary anchors are near-black). Mirrors the orange
     // entry. Defaults for the brand palette live in index.css.
     purple: {
@@ -123,7 +126,7 @@ const GROUP_COLOR_MAP = {
 const DEFAULT_COL = GROUP_COLOR_MAP.orange;
 const resolveColor = (key) => GROUP_COLOR_MAP[key] ?? DEFAULT_COL;
 
-// ── Flexible icon renderer ────────────────────────────────────────────────────
+// â”€â”€ Flexible icon renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function NavIcon({ icon, className = "w-4 h-4 shrink-0" }) {
     if (!icon) return null;
     if (typeof icon === "function") {
@@ -142,7 +145,7 @@ function NavIcon({ icon, className = "w-4 h-4 shrink-0" }) {
     return <span className="shrink-0 flex items-center justify-center">{icon}</span>;
 }
 
-// ── FlatNavItem ───────────────────────────────────────────────────────────────
+// â”€â”€ FlatNavItem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Renders a NavLink for items with an href, or a <button> for action-only items
 // (e.g. "Your Profile" which opens a modal via onClick).
 // Tailwind-docs-inspired: hybrid left-border + subtle tinted bg on active.
@@ -153,7 +156,7 @@ function FlatNavItem({ item, collapsed, colorKey = "orange", danger = false }) {
     const isActionOnly = !item.href || (item.onClick && !item.href);
 
     const sharedClassName = `
-        flex items-center gap-2.5 py-1.5 text-sm font-aumovio
+        flex items-center gap-3 py-2 text-sm font-aumovio
         ${TRANSITION_COLORS}
         ${collapsed ? "justify-center px-0! w-10 h-10 mx-auto rounded-xl" : "px-3"}
         ${danger ? `text-danger-500 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-400/10 ${collapsed ? GROUP_COLOR_MAP.danger.collapsedBg : ""}` : isActive ? `${col.activeText} font-aumovio-bold` : `text-(--text-secondary) ${col.hoverText} ${collapsed ? col.collapsedBg : ""}`}
@@ -188,19 +191,19 @@ function FlatNavItem({ item, collapsed, colorKey = "orange", danger = false }) {
     return inner;
 }
 
-// ── SidebarGroup ──────────────────────────────────────────────────────────────
+// â”€â”€ SidebarGroup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Tailwind-docs-inspired: groups default to expanded, chevron shown on hover
 // only, child items use left-border active indicator with subtle tinted bg.
 function SidebarGroup({ group, collapsed, currentPath }) {
     const col = resolveColor(group.color ?? "orange");
     const isGroupActive = group.items.some((item) => currentPath === item.href || (item.href !== "/" && currentPath.startsWith(item.href + "/")));
-    // Default expanded (Tailwind docs style) — user can still collapse
+    // Default expanded (Tailwind docs style) â€” user can still collapse
     const [expanded, setExpanded] = useState(true);
     const toggle = useCallback(() => setExpanded((v) => !v), []);
 
     if (collapsed) {
         return (
-            <div className="flex flex-col items-center gap-0.5 py-1">
+            <div className="flex flex-col items-center gap-1 py-1">
                 {group.items.map((item) => {
                     const active = currentPath === item.href || (item.href !== "/" && currentPath.startsWith(item.href + "/"));
                     return (
@@ -221,8 +224,8 @@ function SidebarGroup({ group, collapsed, currentPath }) {
 
     return (
         <div className="mb-1 pr-2">
-            {/* Group header — chevron visible on hover only (Tailwind docs style) */}
-            <button onClick={toggle} className={`group/hdr w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-aumovio-bold uppercase tracking-wider ${TRANSITION_COLORS} ${isGroupActive ? col.activeText : "text-(--text-tertiary) hover:text-(--text-secondary)"}`}>
+            {/* Group header â€” chevron visible on hover only (Tailwind docs style) */}
+            <button onClick={toggle} className={`group/hdr w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-aumovio-bold uppercase tracking-wider ${TRANSITION_COLORS} ${isGroupActive ? col.activeText : "text-(--text-tertiary) hover:text-(--text-secondary)"}`}>
                 {/* Dot indicator - */}
                 {/* <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${col.dot}`} /> */}
                 <span className="flex-1 text-left">{group.label}</span>
@@ -231,14 +234,14 @@ function SidebarGroup({ group, collapsed, currentPath }) {
             </button>
 
             {expanded && (
-                <div className="mt-0.5 ml-4 pl-0 border-l border-grey-200/50 dark:border-(--color-dark-muted)/15 space-y-px">
+                <div className="mt-1 ml-4 pl-0 border-l border-grey-200/50 dark:border-(--color-dark-muted)/15 space-y-px">
                     {group.items.map((item) => {
                         const active = currentPath === item.href || (item.href !== "/" && currentPath.startsWith(item.href + "/"));
                         return (
                             <NavLink key={item.name} to={item.href}>
                                 <div
                                     className={`
-                                        flex items-center gap-2 pl-4 pr-3 py-1.5 text-sm font-aumovio
+                                        flex items-center gap-2 pl-4 pr-3 py-2 text-sm font-aumovio
                                         ${TRANSITION_COLORS}
                                         ${active ? `${col.activeText} font-aumovio-bold -ml-px ${col.activeBorder}` : `text-(--text-secondary) ${col.hoverText} -ml-px border-l-2 border-transparent`}
                                     `}
@@ -257,23 +260,25 @@ function SidebarGroup({ group, collapsed, currentPath }) {
     );
 }
 
-// ── Main Sidebar ──────────────────────────────────────────────────────────────
-// Desktop (lg+): always visible, always expanded — no collapsed icon-only mode.
+// â”€â”€ Main Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Desktop (lg+): always visible, always expanded â€” no collapsed icon-only mode.
 // Tablet/mobile (< lg): hidden by default, shown as an overlay when the
 // breadcrumb toggle sets sidebarOpen = true.
 export default function Sidebar() {
     const { layout, sidebarOpen, toggleSidebar } = useLayout();
     const { pathname } = useLocation();
     const { user, isLoading, navGroups, authFlatLinks, publicLinks } = useNav();
+    const { version, stage } = useVersion();
 
-    // Sidebar is only rendered in sidebar layout mode — guard AFTER all hooks
+    // Sidebar is only rendered in sidebar layout mode â€” guard AFTER all hooks
     if (layout !== "sidebar") return null;
 
     const isAuth = Boolean(user) && !isLoading;
+    const showVersion = canSeeVersion(user?.role);
 
     return (
         <>
-            {/* Backdrop overlay — tablet/mobile only, when sidebar is open */}
+            {/* Backdrop overlay â€” tablet/mobile only, when sidebar is open */}
             {sidebarOpen && <div className="absolute inset-0 z-30 bg-black/30 lg:hidden" onClick={toggleSidebar} aria-hidden="true" />}
 
             <aside
@@ -290,13 +295,27 @@ export default function Sidebar() {
                     "lg:translate-x-0!",
                 ].join(" ")}
             >
-                {/* ── Navigation ── */}
-                <nav className="flex-1 overflow-y-auto hide-scrollbar px-2 py-3 space-y-0.5">
+                {/* â”€â”€ Navigation â”€â”€ */}
+                <nav className="flex-1 overflow-y-auto hide-scrollbar px-2 py-3 space-y-1">
                     {!isAuth && publicLinks.map((item) => <FlatNavItem key={item.name} item={item} collapsed={false} />)}
                     {isAuth && authFlatLinks.map((item) => <FlatNavItem key={item.name} item={item} collapsed={false} colorKey="orange" />)}
-                    {navGroups.map((group) => <SidebarGroup key={group.label} group={group} collapsed={false} currentPath={pathname} />)}
+                    {isAuth && navGroups.map((group) => <SidebarGroup key={group.label} group={group} collapsed={false} currentPath={pathname} />)}
                 </nav>
+
+                {/* â”€â”€ Drawer footer: version + release stage â†’ Version History â”€â”€
+                    `lg:hidden` on purpose. From `lg` up SidebarHeader always shows
+                    its glass badge on the gradient bar, so rendering here too would
+                    duplicate it â€” and a `display:none` element contributes no width,
+                    so the desktop sidebar's `w-auto` sizing is untouched. Below `sm`
+                    the header hides the badge entirely, which makes this drawer the
+                    only place a phone user can reach the changelog. */}
+                {showVersion && (
+                    <div className="lg:hidden shrink-0 px-2 py-3 border-t border-(--border-elevation) flex justify-center">
+                        <VersionBadge version={version} stage={stage} to="/about/changelog" />
+                    </div>
+                )}
             </aside>
         </>
     );
 }
+

@@ -10,17 +10,17 @@
 /**
  * Builds the 3-step array consumed by the Stepper component.
  * Steps 1 and 2 are identical across all Excel upload features.
- * Only the step-3 description varies by feature (e.g. "Records updated").
+ * Only the step-3 description varies by feature (e.g. "Invoices updated").
  *
  * @param {string} completeDescription - Description text for the Complete step.
  * @returns {Array<{ id: string, label: string, description: string }>}
  *
  * @example
- * const steps = makeUploadSteps('Records updated');
+ * const steps = makeUploadSteps('Invoices updated');
  * // [
  * //   { id: 'upload',   label: 'Upload File',  description: 'Select your .xlsx file' },
  * //   { id: 'verify',   label: 'Verify Data',  description: 'Review DB-classified rows' },
- * //   { id: 'complete', label: 'Complete',     description: 'Records updated' },
+ * //   { id: 'complete', label: 'Complete',     description: 'Invoices updated' },
  * // ]
  */
 export function makeUploadSteps(completeDescription) {
@@ -39,9 +39,8 @@ export function makeUploadSteps(completeDescription) {
  * Stable tie-break by original array index.
  *
  * When `useExcluded` is true (default), excluded rows always sort after
- * non-excluded rows within the same status group — the shared uploader
- * behaviour. Set to false for features that have no excluded flag
- * at all.
+ * non-excluded rows within the same status group. Set to false for features
+ * that have no excluded flag.
  *
  * @param {Array<object>} rows - Classified rows to sort.
  * @param {{ [status: string]: number }} sortOrder - Map of status → sort priority (lower = first).

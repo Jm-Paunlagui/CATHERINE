@@ -1,7 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { applyPaletteVars, clearPaletteVars, findPalette, generateCustomColors } from "../../features/personalize/personalize.palettes";
-
-const ThemeContext = createContext(null);
+import { ThemeContext } from "./useTheme";
 
 const PERSONALIZE_KEY = "aumovio-personalize";
 const LEGACY_KEY = "aumovio-theme";
@@ -22,7 +21,9 @@ function loadPrefs() {
                 customColor: typeof p.customColor === "string" ? p.customColor : null,
             };
         }
-    } catch {}
+    } catch {
+        /* corrupt or unavailable localStorage — fall through to legacy/env default */
+    }
     const legacy = localStorage.getItem(LEGACY_KEY);
     return {
         mode: ["light", "dark", "system"].includes(legacy) ? legacy : import.meta.env.VITE_THEME || "system",
@@ -33,7 +34,7 @@ function loadPrefs() {
 }
 
 export function ThemeProvider({ children }) {
-    const init = useMemo(loadPrefs, []);
+    const init = useMemo(() => loadPrefs(), []);
 
     const [mode, setMode] = useState(init.mode);
     const [transparency, setTransparency] = useState(init.transparency);
@@ -42,13 +43,24 @@ export function ThemeProvider({ children }) {
 
     const [resolved, setResolved] = useState(() => (mode === "system" ? getSystemTheme() : mode));
 
-    // OS dark-mode listener
+    // Re-resolve `resolved` synchronously during render when `mode` changes
+    // (React's documented "adjusting state when a prop changes" pattern),
+    // instead of in the effect below — the old effect called setResolved(...)
+    // synchronously on every mode change, which trips
+    // react-hooks/set-state-in-effect and flashes the previous theme before a
+    // post-render effect would correct it. Covers both branches (non-system ->
+    // mode itself; system -> current OS preference).
+    const [prevMode, setPrevMode] = useState(mode);
+    if (mode !== prevMode) {
+        setPrevMode(mode);
+        setResolved(mode === "system" ? getSystemTheme() : mode);
+    }
+
+    // OS dark-mode listener — purely a subscription to matchMedia, with the
+    // resulting setResolved() called from the "change" handler, not
+    // synchronously within the effect body.
     useEffect(() => {
-        if (mode !== "system") {
-            setResolved(mode);
-            return;
-        }
-        setResolved(getSystemTheme());
+        if (mode !== "system") return;
         const mql = window.matchMedia("(prefers-color-scheme: dark)");
         const handler = (e) => setResolved(e.matches ? "dark" : "light");
         mql.addEventListener("change", handler);
@@ -61,7 +73,9 @@ export function ThemeProvider({ children }) {
         try {
             localStorage.setItem(PERSONALIZE_KEY, JSON.stringify({ mode, transparency, palette, customColor }));
             localStorage.setItem(LEGACY_KEY, mode);
-        } catch {}
+        } catch {
+            /* localStorage unavailable (private mode / SSR) — preferences not persisted */
+        }
     }, [mode, resolved, transparency, palette, customColor]);
 
     // Transparency — set data-transparency attribute on <html>.
@@ -112,13 +126,6 @@ export function ThemeProvider({ children }) {
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-/**
- * @returns {{ mode, theme, isDark, setMode, toggle,
- *             transparency, setTransparency,
- *             palette, setPalette, customColor, setCustomColor }}
- */
-export function useTheme() {
-    const ctx = useContext(ThemeContext);
-    if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
-    return ctx;
-}
+// The `ThemeContext` object and the `useTheme` consumer hook live in
+// ./useTheme.js so this file exports only the `ThemeProvider` component
+// (react-refresh/only-export-components).

@@ -5,6 +5,10 @@
  *   columns        — [{ key, label, sortable?, render?: (row) => ReactNode, width? }]
  *   data           — array of row objects (each needs a unique `id`)
  *   loading        — boolean
+ *   loadingRows    — number of skeleton body rows to render while `loading`
+ *                    (default 5). Pass the table's page size so the skeleton
+ *                    occupies the SAME height as the first loaded page and the
+ *                    layout doesn't jump when data arrives.
  *   selectable     — boolean
  *   selectedIds    — Set<id>
  *   onSelect       — (id, checked) => void
@@ -23,11 +27,54 @@
  */
 
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
-import { Fragment } from "react";
+import { Fragment, memo } from "react";
 import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 import Skeleton from "./Skeleton";
 
-export function Table({ columns = [], data = [], loading = false, selectable = false, selectedIds = new Set(), onSelect, onSelectAll, sortKey, sortDir = "asc", onSort, emptyText = "No records found.", stickyHeader = false, striped = false, compact = false, rowClassName, rowTitle, expandRow, wrapperClassName = "" }) {
+/**
+ * TableRow — memoised per-row renderer.
+ *
+ * Receives only stable, pre-derived primitive/plain props (`isSelected` as a
+ * boolean rather than the whole `selectedIds` Set, `customCls`/`title` as
+ * already-computed strings rather than the `rowClassName`/`rowTitle`
+ * functions themselves) so that when `Table`'s caller produces a genuinely
+ * new `data` array reference (e.g. one row appended or excluded) but an
+ * individual row's own object/derived values are unchanged, `React.memo`'s
+ * default shallow prop comparison bails out and that row's `col.render()`
+ * calls are skipped — turning a single-row mutation back into O(1) work
+ * instead of O(rows).
+ */
+const TableRow = memo(function TableRow({ row, ri, columns, selectable, isSelected, onSelect, cellPad, customCls, title, striped, expanded }) {
+    return (
+        <Fragment>
+            <tr
+                title={title}
+                className={
+                    customCls
+                        ? `${TRANSITION_COLORS} ${customCls}`
+                        : `${TRANSITION_COLORS}
+                       ${striped && ri % 2 === 1 ? "bg-grey-50/50 dark:bg-white/3" : "bg-(--bg-surface) dark:bg-(--bg-surface-2)"}
+                       ${isSelected ? "bg-orange-50 dark:bg-orange-400/5" : ""}
+                       hover:bg-orange-50/60 dark:hover:bg-orange-400/5`
+                }
+            >
+                {selectable && (
+                    <td className={cellPad}>
+                        <input type="checkbox" checked={isSelected} onChange={(e) => onSelect?.(row.id, e.target.checked)} className="w-4 h-4 cursor-pointer accent-orange-400" />
+                    </td>
+                )}
+                {columns.map((col) => (
+                    <td key={col.key} className={`${cellPad} text-black/75 dark:text-white/75`}>
+                        {col.render ? col.render(row) : (row[col.key] ?? "—")}
+                    </td>
+                ))}
+            </tr>
+            {expanded}
+        </Fragment>
+    );
+});
+
+export function Table({ columns = [], data = [], loading = false, loadingRows = 5, selectable = false, selectedIds = new Set(), onSelect, onSelectAll, sortKey, sortDir = "asc", onSort, emptyText = "No records found.", stickyHeader = false, striped = false, compact = false, rowClassName, rowTitle, expandRow, wrapperClassName = "" }) {
     const allSelected = data.length > 0 && data.every((r) => selectedIds.has(r.id));
     const someSelected = data.some((r) => selectedIds.has(r.id));
     const cellPad = compact ? "px-4 py-2" : "px-5 py-3.5";
@@ -65,7 +112,7 @@ export function Table({ columns = [], data = [], loading = false, selectable = f
                                 <span className="flex items-center gap-1">
                                     {col.label}
                                     {col.sortable && (
-                                        <span className="flex flex-col -space-y-0.5">
+                                        <span className="flex flex-col -space-y-1">
                                             <ChevronUpIcon className={`w-2.5 h-2.5 ${sortKey === col.key && sortDir === "asc" ? "text-(--accent-foreground)" : "text-grey-300 dark:text-grey-600"}`} />
                                             <ChevronDownIcon className={`w-2.5 h-2.5 ${sortKey === col.key && sortDir === "desc" ? "text-(--accent-foreground)" : "text-grey-300 dark:text-grey-600"}`} />
                                         </span>
@@ -77,7 +124,7 @@ export function Table({ columns = [], data = [], loading = false, selectable = f
                 </thead>
                 <tbody className="divide-y divide-grey-100 dark:divide-grey-800">
                     {loading ? (
-                        Array.from({ length: 5 }, (_, i) => (
+                        Array.from({ length: Math.max(1, loadingRows) }, (_, i) => (
                             <tr key={i} className="bg-(--bg-surface) dark:bg-(--bg-surface-2)">
                                 {selectable && (
                                     <td className={cellPad}>
@@ -98,38 +145,22 @@ export function Table({ columns = [], data = [], loading = false, selectable = f
                             </td>
                         </tr>
                     ) : (
-                        data.map((row, ri) => {
-                            const isSelected = selectedIds.has(row.id);
-                            const customCls = rowClassName?.(row) ?? "";
-                            const title = rowTitle?.(row);
-                            return (
-                                <Fragment key={row.id ?? ri}>
-                                    <tr
-                                        title={title}
-                                        className={
-                                            customCls
-                                                ? `${TRANSITION_COLORS} ${customCls}`
-                                                : `${TRANSITION_COLORS}
-                                               ${striped && ri % 2 === 1 ? "bg-grey-50/50 dark:bg-white/3" : "bg-(--bg-surface) dark:bg-(--bg-surface-2)"}
-                                               ${isSelected ? "bg-orange-50 dark:bg-orange-400/5" : ""}
-                                               hover:bg-orange-50/60 dark:hover:bg-orange-400/5`
-                                        }
-                                    >
-                                        {selectable && (
-                                            <td className={cellPad}>
-                                                <input type="checkbox" checked={isSelected} onChange={(e) => onSelect?.(row.id, e.target.checked)} className="w-4 h-4 cursor-pointer accent-orange-400" />
-                                            </td>
-                                        )}
-                                        {columns.map((col) => (
-                                            <td key={col.key} className={`${cellPad} text-black/75 dark:text-white/75`}>
-                                                {col.render ? col.render(row) : (row[col.key] ?? "—")}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                    {expandRow?.(row) ?? null}
-                                </Fragment>
-                            );
-                        })
+                        data.map((row, ri) => (
+                            <TableRow
+                                key={row.id ?? ri}
+                                row={row}
+                                ri={ri}
+                                columns={columns}
+                                selectable={selectable}
+                                isSelected={selectedIds.has(row.id)}
+                                onSelect={onSelect}
+                                cellPad={cellPad}
+                                customCls={rowClassName?.(row) ?? ""}
+                                title={rowTitle?.(row)}
+                                striped={striped}
+                                expanded={expandRow?.(row) ?? null}
+                            />
+                        ))
                     )}
                 </tbody>
             </table>

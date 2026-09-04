@@ -1,11 +1,11 @@
 /**
  * VerifyStatusSummary.jsx — Canonical status-count chip strip for the verify stage
- * of every Excel Upload Stepper.
+ * of every Excel Upload Stepper, whatever the feature.
  *
- * SINGLE SOURCE OF TRUTH for the summary chips so every stepper renders
- * identically. Counts rows by the 5 standard statuses (Create, Update, Retain,
- * Conflict, Pending); every feature-specific blocker is aggregated into the
- * single Conflict count via isConflictStatus(). Excluded rows are tallied
+ * SINGLE SOURCE OF TRUTH for the summary chips so every stepper renders identically.
+ * Counts rows by the 5 standard statuses (Create,
+ * Update, Retain, Conflict, Pending); every feature-specific blocker is aggregated
+ * into the single Conflict count via isConflictStatus(). Excluded rows are tallied
  * separately and shown only when present.
  *
  * Pure presentational — receives rows via props, never imports a feature hook/API.

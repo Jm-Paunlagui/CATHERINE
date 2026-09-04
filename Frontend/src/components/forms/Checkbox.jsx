@@ -26,8 +26,8 @@ export function Checkbox({ id, name, label, checked = false, onChange, disabled 
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         ${error ? "border-danger-400" : ""}`}
             >
-                {checked && !indeterminate && <CheckIcon className="w-3 h-3 text-white" strokeWidth={3} />}
-                {indeterminate && <MinusIcon className="w-3 h-3 text-white" strokeWidth={3} />}
+                {checked && !indeterminate && <CheckIcon className="w-3 h-3 text-(--on-accent-text)" strokeWidth={3} />}
+                {indeterminate && <MinusIcon className="w-3 h-3 text-(--on-accent-text)" strokeWidth={3} />}
             </div>
         </div>
     );
@@ -43,7 +43,7 @@ export function Checkbox({ id, name, label, checked = false, onChange, disabled 
                 {inputEl}
                 <div>
                     <p className={`text-sm font-aumovio-bold ${checked ? "text-(--accent-foreground)" : "text-black/85 dark:text-white/85"}`}>{label}</p>
-                    {description && <p className="text-xs text-grey-400 mt-0.5">{description}</p>}
+                    {description && <p className="text-xs text-grey-400 mt-1">{description}</p>}
                 </div>
             </label>
         );
@@ -51,14 +51,14 @@ export function Checkbox({ id, name, label, checked = false, onChange, disabled 
     return (
         <div className="font-aumovio">
             <label
-                className={`flex items-start gap-2.5 cursor-pointer
+                className={`flex items-start gap-3 cursor-pointer
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
             >
                 {inputEl}
                 {label && (
                     <div>
                         <span className="text-sm text-black/80 dark:text-white/80 font-aumovio">{label}</span>
-                        {description && <p className="text-xs text-grey-400 mt-0.5">{description}</p>}
+                        {description && <p className="text-xs text-grey-400 mt-1">{description}</p>}
                     </div>
                 )}
             </label>

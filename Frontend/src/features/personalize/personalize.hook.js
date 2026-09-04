@@ -1,5 +1,5 @@
 import { useLayout } from "../../contexts/layout/LayoutContext";
-import { useTheme } from "../../contexts/theme/ThemeContext";
+import { useTheme } from "../../contexts/theme/useTheme";
 
 /**
  * usePersonalize — hook for the Personalize modal.

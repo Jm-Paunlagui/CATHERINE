@@ -23,14 +23,17 @@ export function Clipboard({ value = "", label, showCode = false, variant = "inli
         setTimeout(() => setCopied(false), 2000);
     }, [value]);
 
-    if (variant === "block") {
+    // `showCode` is an alternate trigger for the code-block layout, honouring
+    // its own JSDoc ("shows as code block") independently of `variant` — a
+    // caller can pass either `variant="block"` or `showCode` to get it.
+    if (variant === "block" || showCode) {
         return (
             <div className="relative font-mono border rounded-xl bg-grey-900 dark:bg-black border-grey-700">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-grey-700">
                     <span className="text-xs text-grey-400">{label ?? "Code"}</span>
                     <button
                         onClick={copy}
-                        className={`flex items-center gap-1.5 text-xs transition-colors
+                        className={`flex items-center gap-2 text-xs transition-colors
               ${copied ? "text-success-400" : "text-grey-400 hover:text-white"}`}
                     >
                         {copied ? (

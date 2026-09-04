@@ -6,10 +6,12 @@
  * pill) and VerifyStatusSummary (the count chips) so the two never drift. Backend
  * classifiers still emit the specific keys; this layer groups them under Conflict.
  *
- * The vocabulary below is deliberately generic. A consuming application with
- * feature-specific blockers extends it at startup via
- * `registerConflictSubtypes({ MyStatus: "My Label" })` instead of editing this
- * file — the badge and summary pick the new subtypes up automatically.
+ * The map below is a STARTER VOCABULARY, not a fixed contract. `Conflict`,
+ * `DuplicateRow`, `Duplicate`, `IntraFileDupe` and `Invalid` are generic to any
+ * Excel import; `NotInMaster`, `OutOfPeriod` and `Omitted` are the shapes an
+ * uploader that reconciles against a master list or a date window tends to need.
+ * Add, rename, or drop entries to match whatever your backend classifier actually
+ * emits — `isConflictStatus` derives from this object, so the two cannot drift.
  */
 
 /**
@@ -21,27 +23,20 @@
 export const CONFLICT_SUBTYPE_LABELS = {
     Conflict:      null,
     DuplicateRow:  "Duplicate Row",
-    Invalid:       "Invalid",
     Duplicate:     "Duplicate",
-    NotFound:      "Not Found",
-    NoPeriod:      "No Period",
-    Stale:         "Stale",
     IntraFileDupe: "File Dupe",
+    Invalid:       "Invalid",
+    NotInMaster:   "Not in Master List",
+    OutOfPeriod:   "Out of Period",
+    // A master-list record absent from the uploaded file — rendered as an
+    // ordinary row in the verify table rather than a blocker. Purely additive;
+    // only uploaders that reconcile against a master list emit it.
+    Omitted:       "Omitted",
 };
 
 /**
- * Registers app-specific Conflict subtypes (or overrides a label). Call once at
- * startup — e.g. from the app's entry point — before any verify table renders.
- *
- * @param {{ [status: string]: string|null }} subtypes
- */
-export function registerConflictSubtypes(subtypes) {
-    Object.assign(CONFLICT_SUBTYPE_LABELS, subtypes);
-}
-
-/**
  * True when a row status is a kind of Conflict — the generic "Conflict" or any
- * registered blocker subtype (DuplicateRow, NotFound, NoPeriod, …).
+ * feature-specific blocker subtype (DuplicateRow, NotInMaster, OutOfPeriod, …).
  *
  * @param {string|null|undefined} status
  * @returns {boolean}

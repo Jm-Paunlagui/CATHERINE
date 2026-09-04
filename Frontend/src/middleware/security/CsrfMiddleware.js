@@ -40,8 +40,61 @@ class CsrfMiddleware {
         // Token TTL — 5 minutes, matching the backend CSRF token lifetime
         this._tokenMaxAge = 300000;
 
+        // Per-request timeout for the three CSRF endpoints. `fetch()` has NO
+        // default timeout: a backend that accepts the TCP connection but never
+        // responds (stalled thread pool, half-open connection after a network
+        // blip) leaves the promise pending forever — it neither resolves nor
+        // rejects, so the retry/backoff loop below never fires either. That
+        // strands main.jsx's CsrfGate on <LoadingScreen /> permanently, because
+        // it only leaves that state on `isInitialized` or `error`, and a
+        // pending promise produces neither. Mirrors HttpClient's 30s Axios
+        // timeout, but shorter — this runs on the boot path where the user is
+        // staring at a spinner with nothing else on screen.
+        this._requestTimeout = 10000;
+
         // Event listeners
         this._listeners = new Set();
+    }
+
+    /**
+     * `fetch` with a hard timeout. Aborts the request once `_requestTimeout`
+     * elapses so the caller gets a rejection it can retry or surface, instead
+     * of a promise that never settles.
+     *
+     * @param {string} url
+     * @param {RequestInit} [options]
+     * @returns {Promise<Response>}
+     * @throws {Error} `CSRF request timed out after Nms` on abort.
+     */
+    async _fetchWithTimeout(url, options = {}) {
+        // `AbortSignal.timeout` in preference to AbortController + setTimeout:
+        // it self-cleans (no timer to clear, so a fast response cannot leak a
+        // pending handle) and, unlike setTimeout, it is NOT replaced by
+        // Vitest's fake timers — a suite that calls
+        // `vi.useFakeTimers({ shouldAdvanceTime: true })` and then advances the
+        // clock past the timeout would otherwise abort a request the test never
+        // intended to abort. Falls back to a manual controller on any engine
+        // without the static (pre-Chrome 103 / Safari 16).
+        const signal = typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(this._requestTimeout) : undefined;
+
+        let controller = null;
+        let timer = null;
+        if (!signal) {
+            controller = new AbortController();
+            timer = setTimeout(() => controller.abort(), this._requestTimeout);
+        }
+
+        try {
+            return await fetch(url, { ...options, signal: signal ?? controller.signal });
+        } catch (err) {
+            // AbortSignal.timeout rejects with TimeoutError; controller.abort() with AbortError.
+            if (err?.name === "TimeoutError" || err?.name === "AbortError") {
+                throw new Error(`CSRF request timed out after ${this._requestTimeout}ms: ${url}`);
+            }
+            throw err;
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
     }
 
     // ─── Public API ───────────────────────────────────────────────────────────
@@ -118,7 +171,7 @@ class CsrfMiddleware {
      * Returns { success, isValid, expiresAt } or throws.
      */
     async getStatus() {
-        const response = await fetch(`${API_BASE_URL}csrf/status`, {
+        const response = await this._fetchWithTimeout(`${API_BASE_URL}csrf/status`, {
             method: "GET",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
@@ -206,7 +259,7 @@ class CsrfMiddleware {
     async _fetchWithRetry() {
         for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
             try {
-                const response = await fetch(`${API_BASE_URL}csrf/token`, {
+                const response = await this._fetchWithTimeout(`${API_BASE_URL}csrf/token`, {
                     method: "GET",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
@@ -265,7 +318,7 @@ class CsrfMiddleware {
             if (this._token) headers["x-csrf-token"] = this._token;
             headers["X-Client-Username"] = this._getTraceabilityHeader();
 
-            const response = await fetch(`${API_BASE_URL}csrf/refresh`, {
+            const response = await this._fetchWithTimeout(`${API_BASE_URL}csrf/refresh`, {
                 method: "POST",
                 credentials: "include",
                 headers,

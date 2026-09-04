@@ -334,7 +334,7 @@ export function ColorPicker({ value, onChange, presets = [], label, className = 
 
             {/* Quick-pick presets */}
             {presets.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                     {presets.map((p) => {
                         const hex = normalizeHex(p) || "#000000";
                         const selected = hex === currentHex;

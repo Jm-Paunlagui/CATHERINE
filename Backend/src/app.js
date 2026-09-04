@@ -128,6 +128,11 @@ app.use(defaultAuditLog.handle);
 app.use(defaultBodyParser.jsonHandler);
 app.use(defaultBodyParser.urlencodedHandler);
 
+// 4a. Incoming-request log line — mounted AFTER the body parsers so the
+//     "[Incoming Request]" trace carries the parsed [BODY @ …]. See
+//     TraceabilityMiddleware.logIncoming for why this is split from `handle`.
+app.use(defaultTraceability.logIncoming);
+
 // 5. Response-time tracking (X-Response-Time header + per-route metrics)
 app.use(defaultResponseTime.handle.bind(defaultResponseTime));
 

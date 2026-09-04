@@ -440,7 +440,7 @@ export function ComingSoon({ title = "Coming Soon", subtitle = "We're laying the
                     <div
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-aumovio
                             bg-purple-400/8 dark:bg-purple-400/15 border-purple-400/20 dark:border-purple-400/30
-                            text-purple-500 dark:text-purple-300 text-sm
+                            text-(--secondary-foreground) text-sm
                             ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_500}`}
                     >
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">

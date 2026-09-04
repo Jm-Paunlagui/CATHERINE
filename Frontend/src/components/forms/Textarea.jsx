@@ -13,7 +13,7 @@ export function Textarea({ label, name, value = "", onChange, placeholder, rows 
     const ref = useRef(null);
     const SZ = {
         sm: "px-3 py-2 text-xs",
-        md: "px-3.5 py-2.5 text-sm",
+        md: "px-4 py-3 text-sm",
         lg: "px-4 py-3 text-base",
     };
     const RESIZE = {
@@ -58,7 +58,7 @@ export function Textarea({ label, name, value = "", onChange, placeholder, rows 
           ${SZ[size] ?? SZ.md}
           ${error ? "border-danger-400 focus:ring-danger-400/30" : "border-grey-300 dark:border-grey-700 focus:ring-orange-400/30 focus:border-orange-400"}`}
             />
-            <div className="flex justify-between mt-1.5">
+            <div className="flex justify-between mt-2">
                 {error ? <p className="text-xs text-danger-400 font-aumovio-bold">{error}</p> : <p className="text-xs text-grey-400">{helper}</p>}
                 {showCount && maxLength && (
                     <span className={`text-xs font-aumovio-bold ${value.length >= maxLength ? "text-danger-400" : "text-grey-400"}`}>

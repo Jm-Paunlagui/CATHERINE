@@ -16,9 +16,9 @@ import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 const SZ = {
     // label + chevron + rounded track the size so the trigger matches a Button of
     // the same size (e.g. sm Select aligns in height/radius with a sm Button in a toolbar).
-    sm: { trigger: "py-1.5 text-xs", item: "py-1 text-xs px-2.5", label: "text-xs", chevron: "w-3.5 h-3.5", rounded: "rounded-lg" },
-    md: { trigger: "py-2 text-sm", item: "py-1.5 text-sm px-3", label: "text-sm", chevron: "w-4 h-4", rounded: "rounded-xl" },
-    lg: { trigger: "py-2.5 text-base", item: "py-2 text-base px-3.5", label: "text-base", chevron: "w-4 h-4", rounded: "rounded-xl" },
+    sm: { trigger: "py-2 text-xs", item: "py-1 text-xs px-3", label: "text-xs", chevron: "w-3.5 h-3.5", rounded: "rounded-lg" },
+    md: { trigger: "py-2 text-sm", item: "py-2 text-sm px-3", label: "text-sm", chevron: "w-4 h-4", rounded: "rounded-xl" },
+    lg: { trigger: "py-3 text-base", item: "py-2 text-base px-4", label: "text-base", chevron: "w-4 h-4", rounded: "rounded-xl" },
 };
 
 export function Select({
@@ -167,7 +167,7 @@ export function Select({
                         const dropdownEl = (
                             <ul
                                 ref={dropdownRef}
-                                className={`${fixed ? "z-9999" : "absolute top-full mt-1.5 left-0 z-50 min-w-full w-max max-w-[20rem]"} max-h-52 overflow-y-auto overflow-x-hidden
+                                className={`${fixed ? "z-9999" : "absolute top-full mt-2 left-0 z-50 min-w-full w-max max-w-[20rem]"} max-h-52 overflow-y-auto overflow-x-hidden
                                 bg-white dark:bg-(--bg-surface-2) border border-grey-200 dark:border-grey-700
                                 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/40 py-1
                                 [&::-webkit-scrollbar]:hidden`}
@@ -207,7 +207,7 @@ export function Select({
                     })()}
             </div>
 
-            {error && <p className="mt-1.5 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
+            {error && <p className="mt-2 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
         </div>
     );
 }

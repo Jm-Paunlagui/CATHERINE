@@ -1,77 +1,173 @@
 /**
- * DocShell.jsx — Layout wrapper for documentation pages (Tailwind-docs style).
+ * DocShell — two-column reading shell: an article column and a sticky
+ * "On This Page" rail, with an optional full-width header band above both.
  *
- * Renders the article column on the left and a right-hand "On this page" rail
- * that scroll-spies the section registry. Used inside the normal app shell, so
- * the rail's sticky offset is layout-aware:
- *   • sidebar mode → inner content area scrolls (header above it) → small offset
- *   • top mode     → window scrolls under the sticky Navbar (h-16) → clear the bar
+ * ── The rail deliberately mirrors Version History's DateJourneyNav ─────────
+ * Same card shell (`BASE_COLOR_BG` + `STANDARD_BORDER`, rounded-2xl, p-4,
+ * lg:w-72), same header treatment (accent icon + label + short accent
+ * underline + a muted count line), same journey line: a 1px vertical connector
+ * with a dot per item, an accent-tinted active row, and a trailing chevron.
+ * Two rails that do the same job on the same product should not look like they
+ * came from different applications — if you restyle one, restyle both.
  *
- * Shared (tier 3) by Getting Started, Database Connection, and any future docs view.
+ * ── Breakpoint and DOM order, also copied from that page ──────────────────
+ * The rail appears at `lg` (≥1024px), not `xl`, and the row is
+ * `lg:flex-row-reverse` with the NAV FIRST in the DOM. That single ordering
+ * gives the mobile stack its natural "browse, then read" sequence while the
+ * desktop visual order still puts the rail on the right — one rail instance,
+ * never a desktop copy plus a mobile copy. Below `lg` the rail collapses to a
+ * disclosure toggle rather than vanishing, so small screens keep the ability
+ * to jump between sections.
+ *
+ * ── Contract with the caller ──────────────────────────────────────────────
+ *   • Every `sections[i].id` must match the `id` of an element rendered
+ *     inside `children`.
+ *   • Those elements need a `scroll-mt-*` utility (`scroll-mt-6` pairs with
+ *     the default rail offset) so a jumped-to heading lands with a little
+ *     breathing room rather than flush against the top edge.
+ *   • `sections` must be referentially stable across renders that did not
+ *     actually change the section list — `useScrollSpy` rebuilds its
+ *     IntersectionObserver on every new array identity.
+ *   • `header` sits ABOVE the article/rail row, not inside the article — it
+ *     is not part of `sections` and is never a scrollspy target.
  */
 
-import { useCallback } from "react";
-import { TRANSITION_SMOOTH } from "../../../assets/styles/pre-set-styles";
+import { faChevronDown, faChevronRight, faListUl } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useState } from "react";
+
+import { BASE_COLOR_BG, BASE_COLOR_TEXT, STANDARD_BORDER, TRANSITION_COLORS } from "../../../assets/styles/pre-set-styles";
 import { useLayout } from "../../../contexts/layout/LayoutContext";
 import { useScrollSpy } from "./useScrollSpy";
 
-// ── "On this page" rail (right) ───────────────────────────────────────────────
-function OnThisPage({ sections, activeSection, onJump }) {
+/**
+ * Sticky offset for the rail, per layout mode. The correct value depends on
+ * what the SCROLLPORT is, and that differs between the two shells:
+ *
+ *   sidebar — the scrollport is `#app-main-scroll` (App.jsx applies
+ *             `overflow-y-auto` only in this mode). SidebarHeader and Breadcrumb
+ *             render OUTSIDE that element, so nothing can cover the rail and a
+ *             small breathing gap is all that is needed.
+ *
+ *   top     — there is no bounded scrollport; the WINDOW scrolls. Navbar.jsx is
+ *             `sticky top-0 z-50` over that same viewport and is `h-16` plus a
+ *             1px bottom border = 65px tall. A rail pinned at 24px therefore
+ *             spends its first 41px behind the navbar, hiding the "On This Page"
+ *             heading. Clear the navbar, then add the same breathing gap.
+ *
+ * Keep `TOP` in step with Navbar.jsx's height if that ever changes.
+ */
+const RAIL_TOP_BY_LAYOUT = {
+    sidebar: "lg:top-6", // 24px
+    top: "lg:top-22", // 88px = 64px navbar + 1px border + 23px gap
+};
+
+/**
+ * One jump target in the rail. Mirrors DateJourneyNav's DateRailItem: the dot
+ * sits on the vertical connector drawn by the parent <ul>.
+ *
+ * @param {{ section: {id: string, label: string}, active: boolean, onJump: Function }} props
+ */
+function SectionRailItem({ section, active, onJump }) {
     return (
-        <nav>
-            <p className="text-[11px] font-aumovio-bold uppercase tracking-widest text-grey-400 mb-3 pl-4">On this page</p>
-            <ul className="border-l border-grey-200/60 dark:border-grey-700/40 space-y-px">
-                {sections.map((s) => {
-                    const isActive = activeSection === s.id;
-                    return (
-                        <li key={s.id}>
-                            <a
-                                href={`#${s.id}`}
-                                onClick={(e) => onJump(e, s.id)}
-                                className={`block -ml-px pl-4 py-1.5 text-sm border-l-2 ${TRANSITION_SMOOTH}
-                                    ${isActive ? "border-orange-400 text-(--accent-foreground) font-aumovio-bold" : "border-transparent text-(--text-secondary) hover:text-(--text-primary) hover:border-grey-300 dark:hover:border-grey-600"}`}
-                            >
-                                {s.label}
-                            </a>
-                        </li>
-                    );
-                })}
-            </ul>
-        </nav>
+        <li>
+            <a
+                href={`#${section.id}`}
+                onClick={(e) => onJump(e, section.id)}
+                aria-current={active ? "location" : undefined}
+                className={`group relative w-full flex items-center gap-3 pl-6 pr-2 py-2 rounded-lg text-left ${TRANSITION_COLORS} ${active ? "bg-orange-400/10 dark:bg-orange-400/10" : "hover:bg-grey-100 dark:hover:bg-white/5"}`}
+            >
+                {/* Rail dot — sits on the vertical connector drawn by the list */}
+                <span className={`absolute left-2 w-2 h-2 rounded-full ring-2 ring-(--bg-surface) ${active ? "bg-(--accent-icon)" : "bg-grey-300 dark:bg-white/20"}`} />
+
+                <span className={`flex-1 min-w-0 block text-sm leading-tight truncate ${active ? "font-semibold text-(--accent-foreground)" : `font-medium ${BASE_COLOR_TEXT} opacity-80`}`}>{section.label}</span>
+
+                <FontAwesomeIcon icon={faChevronRight} className={`w-2.5 h-2.5 shrink-0 ${TRANSITION_COLORS} ${active ? "text-(--accent-icon)" : "text-grey-300 dark:text-white/20 group-hover:text-grey-400"}`} />
+            </a>
+        </li>
     );
 }
 
 /**
  * @param {object} props
- * @param {{id: string, label: string}[]} props.sections  Section registry (stable ref).
- * @param {React.ReactNode} props.children  The article content (sections with matching ids).
- * @returns {JSX.Element}
+ * @param {{ id: string, label: string }[]} [props.sections=[]] - Ordered
+ *   section registry. An empty array renders the article full-width with no rail.
+ * @param {string} [props.title="On This Page"] - Rail heading; also the nav's
+ *   accessible name.
+ * @param {string} [props.railTop] - Tailwind sticky offset for the rail,
+ *   measured from the top of the SCROLLPORT. Omit it: the default is chosen per
+ *   layout mode by {@link RAIL_TOP_BY_LAYOUT}, because the scrollport is
+ *   `#app-main-scroll` in sidebar mode but the WINDOW in top mode — and only in
+ *   top mode does the sticky Navbar sit over that same viewport and need
+ *   clearing. Pass a value only to override that for one page.
+ * @param {import('react').ReactNode} [props.header=null] - Optional content
+ *   rendered full-width above the article/rail row, inside the same padded
+ *   container the two columns share.
+ * @param {string} [props.className=""] - Extra classes on the outer container.
+ * @param {import('react').ReactNode} props.children - The article content.
  */
-export function DocShell({ sections, children }) {
+export function DocShell({ sections = [], title = "On This Page", railTop, header = null, className = "", children }) {
     const { layout } = useLayout();
-    const activeSection = useScrollSpy(sections);
+    const resolvedRailTop = railTop ?? RAIL_TOP_BY_LAYOUT[layout] ?? RAIL_TOP_BY_LAYOUT.top;
+    const activeId = useScrollSpy(sections);
+    // Mobile disclosure only — the `lg:block` below always reveals the list on
+    // desktop regardless of this value, exactly as DateJourneyNav does.
+    const [navOpen, setNavOpen] = useState(false);
 
-    // sidebar mode → inner content div scrolls (header above it) → small offset.
-    // top mode → window scrolls under the sticky Navbar (h-16) → clear the bar.
-    const railTop = layout === "sidebar" ? "top-6" : "top-20";
-
-    const handleJump = useCallback((e, id) => {
+    /**
+     * Smooth-scroll to a section instead of letting the browser hard-jump.
+     *
+     * The URL hash is deliberately NOT written: this shell renders inside a
+     * react-router route, and a manual history write here would race the
+     * router's own history handling for no user-visible gain.
+     *
+     * @param {import('react').MouseEvent<HTMLAnchorElement>} e
+     * @param {string} id
+     */
+    const handleJump = (e, id) => {
+        const el = document.getElementById(id);
+        if (!el) return; // Anchor not mounted — let the browser resolve the href.
         e.preventDefault();
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, []);
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        setNavOpen(false); // collapse the mobile disclosure after jumping
+    };
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-aumovio">
-            <div className="flex gap-10">
-                {/* ── Article ───────────────────────────────────────────────── */}
-                <article className="min-w-0 flex-1 max-w-4xl">{children}</article>
+        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${className}`}>
+            {header && <div className="mb-8">{header}</div>}
 
-                {/* ── "On this page" rail (desktop only) ────────────────────── */}
-                <aside className="hidden xl:block w-56 shrink-0">
-                    <div className={`sticky ${railTop} max-h-[calc(100vh-8rem)] overflow-y-auto pb-8`}>
-                        <OnThisPage sections={sections} activeSection={activeSection} onJump={handleJump} />
-                    </div>
-                </aside>
+            {/* DOM order is nav-then-article so the mobile stack reads "browse,
+                then read"; lg:flex-row-reverse flips it to article-left on desktop. */}
+            <div className="flex flex-col lg:flex-row-reverse lg:items-start gap-6 lg:gap-8">
+                {sections.length > 0 && (
+                    <nav aria-label={title} className={`rounded-2xl ${BASE_COLOR_BG} ${STANDARD_BORDER} p-4 lg:w-72 lg:shrink-0 lg:sticky ${resolvedRailTop}`}>
+                        {/* Header — a disclosure toggle on mobile, a plain heading on desktop */}
+                        <button type="button" onClick={() => setNavOpen(!navOpen)} aria-expanded={navOpen} className="w-full flex items-center justify-between gap-2 lg:pointer-events-none">
+                            <span className="flex items-center gap-2">
+                                <FontAwesomeIcon icon={faListUl} className="w-3.5 h-3.5 text-(--accent-icon)" />
+                                <span className={`text-sm font-semibold ${BASE_COLOR_TEXT}`}>{title}</span>
+                            </span>
+                            <FontAwesomeIcon icon={faChevronDown} className={`w-3 h-3 text-grey-400 lg:hidden ${TRANSITION_COLORS} ${navOpen ? "rotate-180" : ""}`} />
+                        </button>
+                        <span className="block mt-1 w-10 h-0.5 rounded-full bg-(--accent-icon)" />
+                        <p className={`mt-2 text-xs ${BASE_COLOR_TEXT} opacity-45`}>
+                            {sections.length} section{sections.length !== 1 ? "s" : ""}
+                        </p>
+
+                        <div className={`${navOpen ? "block" : "hidden"} lg:block`}>
+                            <div className="mt-3 max-h-[22rem] lg:max-h-[calc(100vh-19rem)] overflow-y-auto pr-1">
+                                {/* Vertical connector behind the dots — the "journey" line */}
+                                <ul className="relative space-y-1 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-grey-200 dark:before:bg-white/10">
+                                    {sections.map((section) => (
+                                        <SectionRailItem key={section.id} section={section} active={section.id === activeId} onJump={handleJump} />
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </nav>
+                )}
+
+                <article className="flex-1 min-w-0">{children}</article>
             </div>
         </div>
     );

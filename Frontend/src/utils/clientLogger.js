@@ -51,7 +51,6 @@ const clientLogger = {
         }
 
         if (import.meta.env.DEV) {
-            // eslint-disable-next-line no-console -- dev-only echo for developer ergonomics
             console.error("[ClientLogger]", message, info);
         }
 

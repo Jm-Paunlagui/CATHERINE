@@ -15,7 +15,7 @@
  *   className — sizing & layout classes (default: "h-8 w-auto")
  *   alt       — alt text
  */
-import { useTheme } from "../../contexts/theme/ThemeContext";
+import { useTheme } from "../../contexts/theme/useTheme";
 
 import logoLight from "../../assets/aumovio/AUMOVIO_Logo_orange_black_RGB.png";
 import logoDark from "../../assets/aumovio/AUMOVIO_Logo_orange_white_RGB.png";

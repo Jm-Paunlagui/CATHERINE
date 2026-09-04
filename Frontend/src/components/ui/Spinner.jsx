@@ -34,7 +34,7 @@ export function Spinner({ size = "md", variant = "ring", color = "primary", labe
     } else if (variant === "dots") {
         const dotCol = color === "primary" ? "bg-orange-400" : color === "white" ? "bg-white" : "bg-grey-400";
         element = (
-            <div className="flex gap-1.5 items-center">
+            <div className="flex gap-2 items-center">
                 {[0, 1, 2].map((i) => (
                     <div key={i} className={`w-2 h-2 rounded-full ${dotCol} animate-bounce`} style={{ animationDelay: `${i * 0.15}s` }} />
                 ))}

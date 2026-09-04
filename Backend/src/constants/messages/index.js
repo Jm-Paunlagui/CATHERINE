@@ -19,4 +19,6 @@ module.exports = {
   ...require("./cache.messages"),
   ...require("./changelog.messages"),
   ...require("./resilience.messages"),
+  ...require("./upload.messages"),
+  ...require("./sse.messages"),
 };

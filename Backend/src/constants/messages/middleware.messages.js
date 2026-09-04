@@ -31,6 +31,26 @@ const middlewareMessages = {
     `Security filter: HTTP method blocked — ${method} ${path} from ${ip}.`,
   IP_BLOCKED_SUSPICIOUS: (ip, method, path) =>
     `Security filter: request from blocked IP — ${method} ${path} from ${ip}.`,
+
+  // ── Cluster cron-leader election (server.js primary process) ─────────────
+  // ClusterRole.isCronLeader fails CLOSED (see src/utils/clusterRole.js);
+  // these are the election-lifecycle templates the primary process uses so a
+  // broken election is loud, never silent.
+  CRON_LEADER_ELECTED: (workerId, pid, context) =>
+    `Cron leader elected: worker id=${workerId} pid=${pid} (${context}).`,
+  CRON_LEADER_NONE_ELECTED: (context) =>
+    `CRITICAL: cluster has ZERO cron leader workers (${context}) — scheduled jobs will not run on ANY worker until a leader is elected.`,
+  CRON_LEADER_MULTIPLE_ELECTED: (context, count) =>
+    `CRITICAL: cluster has ${count} cron leader workers stamped CRON_LEADER=true (${context}) — scheduled jobs are not guaranteed idempotent, so duplicate leaders risk double-processing.`,
+  CRON_LEADER_REFORK_FAILED: (deadWorkerId, reason) =>
+    `CRITICAL: failed to fork a replacement for worker id=${deadWorkerId}: ${reason}. If that worker was the cron leader, the cluster now has NO cron leader.`,
+  CRON_WORKER_DISCONNECTED: (pid, workerId) =>
+    `Worker ${pid} disconnected (id=${workerId}) — awaiting exit before replacing.`,
+  CRON_WORKER_EXITED: (pid, code, signal, wasCronLeader) =>
+    `Worker ${pid} died (code=${code}, signal=${signal}) — replacing…` +
+    (wasCronLeader
+      ? " (was cron leader — replacement inherits leadership)"
+      : ""),
 };
 
 module.exports = { middlewareMessages };

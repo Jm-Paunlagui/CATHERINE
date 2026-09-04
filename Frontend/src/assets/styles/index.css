@@ -439,6 +439,108 @@
 
 @variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* ─── Error-page decor palette (theme-aware SVG tokens) ─────────────────────
+   The playful HTTP error pages (ClientErrorResponses.jsx) render rich SVG
+   decorations (terminals, vaults, servers, space scenes …). SVG fill/stroke
+   attributes cannot use Tailwind `dark:` variants, so those decors were
+   previously hard-coded to a dark aesthetic and looked wrong in light mode.
+
+   These `--err-*` custom properties give every decor a semantic, theme-aware
+   colour. Light-mode defaults live here; the [data-theme="dark"] block below
+   restores the original dark aesthetic. Consumed in JSX via `var(--err-*)`.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+    /* Device chrome — bodies/screens of terminals, servers, keypads, cameras.
+       Cool slate-neutrals a shade deeper than the near-white surface so shapes
+       stay legible without hard edges. Progresses light→dark for depth.        */
+    --err-chrome-1: #cfd6e0; /* darkest device body                         */
+    --err-chrome-2: #dbe0e9; /* device body                                 */
+    --err-chrome-3: #e6eaf1; /* panel/rack unit                             */
+    --err-chrome-4: #c4ccd9; /* raised element                              */
+    --err-chrome-line: #aeb8c8; /* borders/frame lines                     */
+    --err-chrome-line-2: #98a3b6; /* secondary lines                       */
+    --err-chrome-text: #7b8798; /* muted screen text                       */
+    --err-screen: #d4dbe6; /* inset screen surface                          */
+
+    /* Semantic accents — softened + slightly desaturated so they read as gentle
+       pastels on the light surface instead of clashing at full saturation.     */
+    --err-danger: #e05a53; /* danger base (muted red)                        */
+    --err-danger-strong: #b04844; /* deep danger                             */
+    --err-danger-soft: #f4b9b6; /* light danger                              */
+    --err-warn: #d98b3a; /* warn/amber base                                 */
+    --err-warn-bright: #e8a94e; /* bright amber                             */
+    --err-warn-soft: #f3cd8a; /* soft amber                                 */
+    --err-purple: #8b6fd0; /* purple base (softened)                         */
+    --err-purple-soft: #b491e0; /* soft purple                              */
+    --err-purple-deep: #6f5aa8; /* deep purple                              */
+    --err-blue: #5b8ae0; /* blue base (softened)                            */
+    --err-blue-soft: #86adec; /* soft blue                                  */
+    --err-blue-bright: #aecbf3; /* bright blue                              */
+    --err-blue-deep: #4a72c4; /* deep blue                                  */
+    --err-green: #4fa877; /* green base (softened)                           */
+    --err-green-soft: #86cfa3; /* soft green                                */
+    --err-green-deep: #3d7d5b; /* deep green                               */
+    --err-orange: #e0783f; /* orange base (echoes brand accent)              */
+    --err-orange-soft: #f0a778; /* soft orange                              */
+    --err-teal: #4bab9e; /* teal accent                                     */
+
+    /* Neutral materials — space rocks, chains, tools, metal. Cool-neutral so
+       they sit quietly against the surface.                                    */
+    --err-metal: #a4adbd; /* mid metal (tools/rockets)                       */
+    --err-metal-light: #c8cfdb; /* light metal                              */
+    --err-rock: #9a938c; /* asteroid / stone                                */
+    --err-rock-dark: #77706a; /* stone shadow / craters                    */
+    --err-wood: #b08a4a; /* scaffolding / wood                              */
+    --err-wood-dark: #97663a; /* darker wood                               */
+    --err-stripe-dark: #9a938c; /* hazard-tape dark bar                     */
+    --err-white: #ffffff; /* pure white highlights (mode-independent)       */
+    --err-star: #92a0b5; /* stars/comets/highlights — visible on light bg   */
+}
+
+[data-theme="dark"] {
+    /* Device chrome — restore the original dark-device aesthetic */
+    --err-chrome-1: #030712;
+    --err-chrome-2: #111827;
+    --err-chrome-3: #1f2937;
+    --err-chrome-4: #334155;
+    --err-chrome-line: #374151;
+    --err-chrome-line-2: #4b5563;
+    --err-chrome-text: #9ca3af;
+    --err-screen: #0f172a;
+
+    /* Semantic accents — brighter for dark surfaces */
+    --err-danger: #ef4444;
+    --err-danger-strong: #991b1b;
+    --err-danger-soft: #fca5a5;
+    --err-warn: #f59e0b;
+    --err-warn-bright: #fbbf24;
+    --err-warn-soft: #fbbf24;
+    --err-purple: #a855f7;
+    --err-purple-soft: #c084fc;
+    --err-purple-deep: #4c1d95;
+    --err-blue: #60a5fa;
+    --err-blue-soft: #60a5fa;
+    --err-blue-bright: #93c5fd;
+    --err-blue-deep: #1e40af;
+    --err-green: #22c55e;
+    --err-green-soft: #4ade80;
+    --err-green-deep: #14532d;
+    --err-orange: #f97316;
+    --err-orange-soft: #fb923c;
+    --err-teal: #34d399;
+
+    /* Neutral materials */
+    --err-metal: #94a3b8;
+    --err-metal-light: #cbd5e1;
+    --err-rock: #78716c;
+    --err-rock-dark: #57534e;
+    --err-wood: #a16207;
+    --err-wood-dark: #92400e;
+    --err-stripe-dark: #1c1917;
+    --err-white: #ffffff;
+    --err-star: #ffffff;
+}
+
 /* ─── Font Faces ────────────────────────────────────────────────────────── */
 @font-face {
     font-family: "Aumovio";
@@ -688,6 +790,39 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
     }
     50% {
         transform: translateY(-14px);
+    }
+}
+
+/* ── Wave drift ──────────────────────────────────────────────────────────────
+   Horizontal parallax used by the Consumption Window's data-driven wave.
+   The wave paths are drawn wider than the viewBox so a lateral shift reads as
+   a continuous rolling swell, never a hard edge sliding into view. Two speeds
+   layer for depth; a gentle vertical swell keeps the crest breathing.        */
+@keyframes wave-drift {
+    0% {
+        transform: translate3d(0, 0, 0);
+    }
+    100% {
+        transform: translate3d(-25%, 0, 0);
+    }
+}
+
+@keyframes wave-drift-slow {
+    0% {
+        transform: translate3d(0, 0, 0);
+    }
+    100% {
+        transform: translate3d(-16.6667%, 0, 0);
+    }
+}
+
+@keyframes wave-swell {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
     }
 }
 
@@ -1152,6 +1287,40 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
     }
 }
 
+/* ── AI gradient ring (rotating conic border) ────────────────────────────── */
+/*
+ * A "powered-by-AI" affordance: a conic gradient that revolves around the
+ * element's border. Driven by an animatable custom property (@property) so the
+ * browser can interpolate the angle on the compositor — smooth and cheap.
+ * Colours reuse the palette-adaptive gradient tokens, so the ring recolours
+ * automatically with the user's accent palette (brand orange → purple default).
+ */
+@property --ai-ring-angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes ai-ring-spin {
+    to {
+        --ai-ring-angle: 360deg;
+    }
+}
+
+/* Transform-based spin (Framer "orbit" technique): rotate an oversized disc that
+   carries a STATIC conic gradient, instead of animating the conic's angle. A
+   compositor-only transform never repaints the gradient per frame, so the orbit
+   glides continuously with no perceptible "wait at the tail then jump" — the
+   artefact you get when interpolating a @property angle. */
+@keyframes ai-ring-orbit {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* ── Staggered list item enter ───────────────────────────────────────────── */
 @keyframes list-item-in {
     from {
@@ -1301,6 +1470,18 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
 .animate-float-lg {
     animation: float-lg 4s var(--ease-standard) infinite;
 }
+/* Wave drift — three layered speeds for a rolling-swell parallax. Paired with
+   a wide wave path (drawn ~2x the viewBox) so the lateral shift never exposes
+   a seam. Applied while the Consumption Window is loading its data. */
+.animate-wave-drift {
+    animation: wave-drift 7s linear infinite;
+}
+.animate-wave-drift-slow {
+    animation: wave-drift-slow 11s linear infinite;
+}
+.animate-wave-swell {
+    animation: wave-swell 4s var(--ease-standard) infinite;
+}
 .animate-bounce-slow {
     animation: bounce-slow 2s infinite;
 }
@@ -1331,6 +1512,379 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
 .animate-gradient {
     animation: gradient-shift 4s var(--ease-standard) infinite;
     background-size: 300% 300%;
+}
+
+/* ── AI gradient ring utilities (subtle "sweep") ─────────────────────────── */
+/*
+ * .ai-ring            — base container (position + a masked border layer)
+ * .ai-ring-hover      — ring appears/animates on hover (FAB affordance)
+ * .ai-ring-active     — ring always visible + animating (explicit active state)
+ * .ai-ring-focus      — ring appears ONLY when the wrapped input has text
+ *                       (i.e. the user is actually typing), NOT on mere focus —
+ *                       so an autofocused search box stays quiet until used.
+ *
+ * DESIGN INTENT (UI/UX): deliberately UNDERSTATED. Not a bold multi-colour band —
+ * a single soft accent arc on an otherwise-transparent conic that slowly revolves
+ * around the border, like a gentle comet tracing the edge. Reads as "quietly
+ * powered by AI", not a loud neon frame.
+ *
+ * Subtlety levers (all tokens):
+ *   • Thin border (--ai-ring-width: 1.5px).
+ *   • ONE colour only (--accent) — no from/to split, so it never looks like
+ *     "two colours". It fades transparent → accent → transparent across a short
+ *     arc, held at --ai-ring-strength alpha (never full saturation).
+ *   • Capped layer opacity (--ai-ring-opacity).
+ *   • Slow rotation (--ai-ring-speed).
+ *   • Faint blurred halo (--ai-ring-glow) that is ALSO masked to the ring, so it
+ *     glows around the edge only — never a blob in the centre.
+ *
+ * Theme awareness: the arc colour is --accent, rewritten by JS per palette AND
+ * per light/dark mode. --ai-ring-opacity/glow lift slightly in dark mode.
+ * Honours prefers-reduced-motion by freezing rotation (arc still shows).
+ *
+ * Implementation: ::before paints the sweeping conic and is masked (content-box
+ * vs border-box XOR) to just the border thickness — no wrapper, no layout
+ * shift. ::after is the SAME masked ring, blurred, for a soft halo.
+ */
+/* ─────────────────────────────────────────────────────────────────────────
+   BEHAVIOUR CONSTANTS — calibrated from frame-by-frame analysis of the
+   reference orbit clip (docs/orbit-color-behavior-analysis.md).
+
+   Measured from all 237 frames of sample-orbit.mp4:
+     • Revolution period : ~2.2s  (angular-unwrap 2.26s ≈ autocorrelation 2.23s)
+     • Direction         : clockwise, constant/linear speed, seamless loop
+     • Beam length       : ~3% of the perimeter — a SHORT, tight comet head,
+                           bright core then a SHARP cutoff (not a long fade)
+     • Core thickness    : ~2px crisp line
+     • Glow              : subtle ~6px halo (NOT a big neon bloom)
+     • Contrast          : head ≈ 20× brighter than the resting track
+     • Hue               : a SINGLE hue — it never rainbow-cycles
+
+   Only the COLOUR is theme-driven (--ai-ring-color from the palette accent);
+   every behaviour lever above is fixed so all palettes feel identical.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+    --ai-ring-width: 2px; /* crisp ~2px core (measured) */
+    --ai-ring-opacity: 0.85; /* head reads bright — high peak-to-base contrast */
+    --ai-ring-strength: 0.9; /* near-full arc alpha at the head (20× contrast) */
+    --ai-ring-speed: 2.2s; /* one lap ≈ 2.2s (measured revolution period) */
+    --ai-ring-glow: 0.28; /* subtle halo — small, not a bloom */
+    /* Comet hue — theme-aware. Light mode uses the deep brand accent; dark mode
+       switches to the brighter --accent-on-dark so the arc still has enough
+       luminance to read over the near-black surface. Follows JS palette
+       overrides automatically because both fall back to the palette --accent. */
+    --ai-ring-color: var(--accent, #ff4208);
+}
+[data-theme="dark"] {
+    --ai-ring-opacity: 0.95; /* lift further so the bright head reads on dark */
+    --ai-ring-glow: 0.34;
+    --ai-ring-color: var(--accent-on-dark, #ff7040); /* brighter comet on dark */
+}
+
+.ai-ring {
+    isolation: isolate;
+}
+/* Establish a positioning context for the masked pseudo-element ring — but only
+   when the element isn't already positioned. Using :where() keeps this at zero
+   specificity so an explicit `fixed`/`absolute`/`sticky` utility on the same
+   element (e.g. the fixed Help FAB) always wins and the button stays put. */
+.ai-ring:where(:not(.fixed):not(.absolute):not(.sticky):not(.static)) {
+    position: relative;
+}
+
+/* Orbit paint (calibrated to the reference clip): a SINGLE bright comet — a short
+   ~9° head with a quick fading tail and a sharp cutoff, wrapping seamlessly at
+   0/360 while revolving continuously around the border. ::before is the crisp
+   core; ::after is the same comet blurred into a subtle halo. Works on any shape
+   (pill inputs AND the circular FAB) because it uses the border-mask (content-box
+   exclude) rather than a shape-specific radial clip. The conic angle is animated
+   on the compositor via the registered @property, so motion is smooth/gap-free. */
+.ai-ring::before,
+.ai-ring::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: var(--ai-ring-width);
+    /* SHORT bright comet, calibrated to the reference clip: a bright ~9° head
+       (measured ~3% of the perimeter) that fades to a thin tail and cuts off
+       sharply — NOT the long 190° smear it was before. The head sits near full
+       accent alpha (--ai-ring-strength) for the ~20× peak-to-base contrast the
+       video shows; the rest of the ring is transparent (near-invisible track).
+       Wraps seamlessly at 0/360 so the loop is gap-free. */
+    background: conic-gradient(
+        from var(--ai-ring-angle),
+        color-mix(in srgb, var(--ai-ring-color) calc(var(--ai-ring-strength) * 100%), transparent) 0deg,  /* bright head */
+        color-mix(in srgb, var(--ai-ring-color) calc(var(--ai-ring-strength) * 60%), transparent) 9deg,   /* end of bright core */
+        color-mix(in srgb, var(--ai-ring-color) 18%, transparent) 24deg,                                  /* short fading tail */
+        transparent 40deg,                                                                                /* sharp cutoff */
+        transparent 352deg,                                                                               /* dark track all the way round */
+        color-mix(in srgb, var(--ai-ring-color) calc(var(--ai-ring-strength) * 100%), transparent) 360deg /* seamless wrap to head */
+    );
+    /* Mask to just the border thickness so nothing paints across the centre. */
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    /* Rotation runs persistently (paused while hidden); only opacity is toggled by
+       the triggers below, so turning the orbit on/off is a pure opacity fade. */
+    animation: ai-ring-spin var(--ai-ring-speed) linear infinite;
+    animation-play-state: paused;
+    transition: opacity var(--duration-moderate) var(--ease-standard);
+    pointer-events: none;
+}
+
+/* The crisp orbiting ring. */
+.ai-ring::before {
+    z-index: 1;
+}
+
+/* Subtle halo — the reference clip DOES show a small glow (~6px, ~3% ambient
+   with a faint secondary bump), not a hard line and not a big bloom. ::after is
+   the SAME masked comet, blurred a few px and held at the low --ai-ring-glow
+   alpha, so the head gets a soft edge that recolours with the theme exactly like
+   the core. It shares the trigger opacity/rotation with ::before (below), so it
+   fades and spins in lockstep — never a static blob. */
+.ai-ring::after {
+    z-index: 0; /* sits just behind the crisp core */
+    filter: blur(3px);
+    opacity: 0; /* overridden to --ai-ring-glow by the trigger rules */
+}
+
+/* FAB modifier: the launcher sits on a saturated orange button where the accent
+   arc would disappear, so the comet is tinted WHITE for contrast. Everything
+   else — ring width, opacity/softness profile, gradient stops, rotation — is
+   INHERITED unchanged from the base `.ai-ring` so the FAB comet orbits EXACTLY
+   like the search comet. The only per-surface override is colour.
+
+   Parity contract (must match the base rule):
+     • --ai-ring-width  : inherited (2px)   → same ring thickness as search
+     • --ai-ring-opacity: inherited (0.85 / 0.95 dark) → same weight/contrast
+     • --ai-ring-speed  : inherited (2.2s)  → same measured revolution period
+     • gradient stops    : same 0/9/24/40/352/360 SHORT-comet ramp, white instead
+                           of accent (white reads on the saturated orange button)
+     • animation         : same `ai-ring-spin var(--ai-ring-speed) linear` */
+.ai-ring-fab {
+    /* colour only — do NOT override width/opacity/speed; parity depends on it */
+    --ai-ring-color: #ffffff;
+}
+/* Same SHORT-comet ramp as the search comet, expressed in white. Each stop
+   mirrors the base rule's alpha profile so the bright head, sharp cutoff and
+   tail falloff are identical to the reference; only the hue differs. The halo
+   (::after) shares the ramp and is blurred by the base rule. */
+.ai-ring-fab::before,
+.ai-ring-fab::after {
+    background: conic-gradient(
+        from var(--ai-ring-angle),
+        color-mix(in srgb, var(--ai-ring-color) calc(var(--ai-ring-strength) * 100%), transparent) 0deg,  /* bright head */
+        color-mix(in srgb, var(--ai-ring-color) calc(var(--ai-ring-strength) * 60%), transparent) 9deg,   /* end of bright core */
+        color-mix(in srgb, var(--ai-ring-color) 18%, transparent) 24deg,                                  /* short fading tail */
+        transparent 40deg,                                                                                /* sharp cutoff */
+        transparent 352deg,                                                                               /* dark track */
+        color-mix(in srgb, var(--ai-ring-color) calc(var(--ai-ring-strength) * 100%), transparent) 360deg /* seamless wrap */
+    );
+}
+
+/* ── FAB expanding "Need Help?" label ────────────────────────────────────────
+   On hover the circular FAB grows into a pill and reveals a text label, instead
+   of relying on a native title tooltip. The button stays `rounded-full`, so the
+   .ai-ring comet — a border-mask on the inherited border-radius — simply follows
+   the pill's rounded edge and keeps orbiting throughout the expansion.
+
+   The label animates `max-width` (0 → auto-ish via a generous cap) + opacity so
+   the collapse/expand is smooth and reserves no space when idle. Easing/durations
+   come from tokens (--duration-moderate + --ease-spring), matching the button's
+   TRANSITION_SPRING so the whole thing feels like one motion. Honoured under
+   prefers-reduced-motion below (no transition, instant reveal).
+
+   SPACING MODEL
+   ─────────────
+   Collapsed: the icon box is a full 3.5rem circle so the icon is perfectly
+   centred. Expanded: the icon box shrinks to a fixed left padding (icon no
+   longer needs the whole circle to stay centred once the pill grows), and the
+   label reveals with a single even gap on its left plus matching padding on its
+   right — so left-of-icon, icon-to-text, and text-to-edge all read balanced. */
+.fab-icon-box {
+    width: 3.5rem; /* h-14 — perfect circle while collapsed */
+    transition: width var(--duration-moderate) var(--ease-spring);
+}
+/* Expand on hover/focus AND while the shared `.ai-typing` poke state is active,
+   so the pill stays open through the comet's idle-settle window and collapses in
+   lockstep with the orbit fade-out — one coherent motion, no snap. */
+.group:hover .fab-icon-box,
+.group:focus-visible .fab-icon-box,
+.ai-typing .fab-icon-box {
+    width: 2.75rem; /* pl ~1rem before the icon once expanded (icon is 1.75rem) */
+}
+.fab-label {
+    display: inline-block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition:
+        max-width var(--duration-moderate) var(--ease-spring),
+        opacity var(--duration-moderate) var(--ease-standard),
+        margin var(--duration-moderate) var(--ease-spring),
+        padding var(--duration-moderate) var(--ease-spring);
+    /* collapsed: no gap and no trailing space so the pill is a clean circle */
+    margin-left: 0;
+    padding-right: 0;
+}
+.group:hover .fab-label,
+.group:focus-visible .fab-label,
+.ai-typing .fab-label {
+    max-width: 12rem; /* generous cap; content is short ("Need Help?") */
+    opacity: 1;
+    margin-left: 0.125rem; /* even gap after the shrunk icon box */
+    padding-right: 1.25rem; /* text-to-edge breathing room (pr-5 token) */
+}
+
+/* ── First-visit discoverability hint ────────────────────────────────────────
+   `.fab-hint` is applied by the launcher ONLY on a viewer's first ever visit
+   (see useHelpAssistant HINT_SEEN_KEY) and is retired the instant the user
+   hovers/focuses/opens it or after the hook's peek timeout. It does two things:
+
+     1. AUTO-PEEK — reveals the "Need Help?" label exactly as hover does, by
+        borrowing the same icon-box/label expansion targets. So a brand-new user
+        sees the pill announce itself, then it settles back to a clean circle.
+     2. ATTENTION PULSE — a soft expanding ring (::after) draws the eye to the
+        corner without the harshness of a bounce. Uses the accent-on-orange
+        white tint to match the FAB's comet, at low alpha so it stays editorial,
+        not loud.
+
+   Both are neutralised under prefers-reduced-motion (label peeks instantly with
+   no ring), honouring the platform's motion-safety contract. */
+.fab-hint .fab-icon-box {
+    width: 2.75rem; /* same shrink as the hover/expanded state */
+}
+.fab-hint .fab-label {
+    max-width: 12rem;
+    opacity: 1;
+    margin-left: 0.125rem;
+    padding-right: 1.25rem;
+}
+/* Soft attention ring behind the FAB. Masked to nothing on the button itself —
+   it is a separate expanding halo that fades as it grows, three gentle beats. */
+.fab-hint::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    /* white tint to match the FAB comet on the saturated orange surface */
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 0.45);
+    animation: fab-hint-pulse 1.8s var(--ease-standard) 3;
+    pointer-events: none;
+    z-index: -1;
+}
+@keyframes fab-hint-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgb(255 255 255 / 0.45);
+    }
+    70% {
+        box-shadow: 0 0 0 0.75rem rgb(255 255 255 / 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgb(255 255 255 / 0);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .fab-icon-box,
+    .fab-label {
+        transition: none;
+    }
+    /* No expanding ring for motion-sensitive users; the label still peeks so the
+       affordance is present, just static. */
+    .fab-hint::after {
+        animation: none;
+    }
+}
+
+/* Each trigger below only (a) fades the arc in via opacity and (b) resumes the
+   already-running rotation. Removing the trigger fades opacity back to 0 (smooth
+   stop) and re-pauses the rotation once invisible — no abrupt snap either way. */
+
+/* Always-on active state. */
+.ai-ring-active::before {
+    opacity: var(--ai-ring-opacity);
+    animation-play-state: running;
+}
+.ai-ring-active::after {
+    opacity: var(--ai-ring-glow);
+    animation-play-state: running;
+}
+
+/* Interaction-driven, idle-settling orbit (SHARED behaviour). Both the search
+   field and the FAB now run the comet the SAME way: the orbit runs ONLY while
+   the `.ai-typing` class is present, which JS adds on interaction and removes a
+   short idle moment later (see COMET_IDLE_MS).
+     • Search: `.ai-typing` added on each keystroke, removed ~900ms after the
+       last one — so it responds to typing and settles when you pause.
+     • FAB:    `.ai-typing` added on pointer enter/move + focus, removed ~900ms
+       after the pointer stops moving / leaves — so it responds to attention and
+       settles the same way, instead of snapping off the instant the mouse
+       leaves (the old pure-:hover behaviour).
+   On removal, opacity fades smoothly back to 0 and the rotation re-pauses once
+   invisible — identical smooth start/stop on both surfaces. */
+.ai-typing::before {
+    opacity: var(--ai-ring-opacity);
+    animation-play-state: running;
+}
+.ai-typing::after {
+    opacity: var(--ai-ring-glow);
+    animation-play-state: running;
+}
+
+/* The input carries its own orange focus ring/border (focus:ring + focus:border-
+   orange). That solid orange treatment competes with — and hides — the comet, and
+   looks heavy on plain focus. Neutralise ONLY the orange: keep the input's normal
+   grey border so the field still reads as a bordered box, but drop the orange
+   ring/border on focus. The comet then rides on top of a calm grey field. */
+.ai-ring-focus input:focus {
+    outline: none;
+    box-shadow: none;
+    /* fall back to the resting grey border (light + dark) instead of orange */
+    border-color: var(--color-grey-300, #d1d5db);
+}
+[data-theme="dark"] .ai-ring-focus input:focus {
+    border-color: var(--color-grey-700, #374151);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* Keep the orbit's opacity behaviour (still fades in/out) but never rotate. */
+    .ai-ring::before,
+    .ai-ring::after,
+    .ai-ring-active::before,
+    .ai-ring-active::after,
+    .ai-typing::before,
+    .ai-typing::after {
+        animation-play-state: paused; /* still fades, just doesn't rotate */
+    }
+}
+
+/* ── Suppress native <input type="search"> clear button ──────────────────────
+   Inputs with type="search" render a browser-native clear "✕" (WebKit/Blink's
+   ::-webkit-search-cancel-button and Edge/IE's ::-ms-clear). Our SearchInput
+   already renders its own styled, theme-aware, dark-mode-aware clear button, so
+   the native one produces a DUPLICATE, offset ✕. Hide the native affordance
+   everywhere so only the custom button shows. */
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+}
+input[type="search"]::-ms-clear,
+input[type="search"]::-ms-reveal {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 /* ── Attention seekers ───────────────────────────────────────────────────── */
@@ -1759,6 +2313,40 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
 .backface-hidden {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+}
+
+/* ── Global thin scrollbar ────────────────────────────────────────────────
+   Firefox: scrollbar-width: thin applies globally.
+   Webkit/Blink: custom pseudo-elements shrink the track to 6px and use
+   semi-transparent thumbs that blend with both light and dark surfaces.
+   The thumb only appears on hover/scroll — idle state is nearly invisible. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+[data-theme="dark"] * {
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+[data-theme="dark"] *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.22);
 }
 
 .hide-scrollbar {

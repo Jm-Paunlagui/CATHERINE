@@ -12,7 +12,7 @@ export function Text({ variant = "bold", color, className = "", children }) {
     if (variant === "code")
         return (
             <code
-                className={`font-mono text-[0.875em] px-1.5 py-0.5 rounded
+                className={`font-mono text-[0.875em] px-1.5 py-1 rounded
       bg-grey-100 dark:bg-(--bg-surface-3) text-(--accent-foreground)
       border border-grey-200 dark:border-grey-700 ${col} ${className}`}
             >

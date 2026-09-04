@@ -53,7 +53,7 @@ export function Stepper({ steps = [], current = 0, variant = "numbered", orienta
                             >
                                 {step.label}
                             </p>
-                            {step.description && <p className="text-xs text-grey-400 dark:text-grey-400 mt-0.5 line-clamp-2">{step.description}</p>}
+                            {step.description && <p className="text-xs text-grey-400 dark:text-grey-400 mt-1 line-clamp-2">{step.description}</p>}
                         </div>
                     </div>
                 );

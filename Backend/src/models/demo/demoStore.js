@@ -150,6 +150,98 @@ function auditInsert(record) {
     return { rowsAffected: 1 };
 }
 
+// ── FX rates (append-only, effective-dated) ───────────────────────────────────
+// Mirrors the T_FX_RATE_DEV reference shape (plan §3.7.9). Rates are stored as
+// fixed-scale STRINGS (never JS numbers) — a rate is NUMBER(19,8), higher scale
+// than a posted amount, and must never round-trip through a double. Rows are
+// append-only: a correction closes the current window and opens a new one, so
+// converting a historical figure reproduces the same rate forever.
+//
+// CURRENCY_CODE is the non-base side; the base currency is a system fact
+// (MONEY_BASE_CURRENCY), never a column. All rates here are quoted against a
+// PHP base for the demo (1 CODE = RATE PHP).
+const _fxRates = [
+    { ID: 1, CURRENCY_CODE: "USD", RATE: "56.25000000", EFFECTIVE_FROM: new Date("2026-01-01T00:00:00Z"), EFFECTIVE_TO: new Date("2026-06-30T23:59:59Z"), SOURCE: "MANUAL", RETRIEVED_AT: new Date("2026-01-01T08:00:00Z"), SET_BY: "demo-admin" },
+    { ID: 2, CURRENCY_CODE: "USD", RATE: "58.10000000", EFFECTIVE_FROM: new Date("2026-07-01T00:00:00Z"), EFFECTIVE_TO: null, SOURCE: "MANUAL", RETRIEVED_AT: new Date("2026-07-01T08:00:00Z"), SET_BY: "demo-admin" },
+    { ID: 3, CURRENCY_CODE: "EUR", RATE: "61.40000000", EFFECTIVE_FROM: new Date("2026-01-01T00:00:00Z"), EFFECTIVE_TO: null, SOURCE: "MANUAL", RETRIEVED_AT: new Date("2026-01-01T08:00:00Z"), SET_BY: "demo-admin" },
+    { ID: 4, CURRENCY_CODE: "JPY", RATE: "0.38500000", EFFECTIVE_FROM: new Date("2026-01-01T00:00:00Z"), EFFECTIVE_TO: null, SOURCE: "MANUAL", RETRIEVED_AT: new Date("2026-01-01T08:00:00Z"), SET_BY: "demo-admin" },
+];
+let _fxSeq = _fxRates.length;
+
+/** All demo FX rate rows (append-only). @returns {object[]} */
+function fxRates() {
+    return _fxRates;
+}
+
+/**
+ * Append a new rate row (never mutate an existing one — §3.7.9).
+ * @param {object} record
+ * @returns {{rowsAffected: number, insertedId: number}}
+ */
+function fxRateInsert(record) {
+    const id = ++_fxSeq;
+    _fxRates.push({ ID: id, ...record });
+    return { rowsAffected: 1, insertedId: id };
+}
+
+// ── Money ledger (single-entry demo — DIRECTION + AMOUNT) ─────────────────────
+// A single-entry ledger (§3.7.5): it yields a correct running balance but cannot
+// produce a trial balance or detect a missing counter-posting. That limitation is
+// documented, not hidden. AMOUNT is a fixed-scale STRING (Money.toStorage(), scale
+// 4). Rows are APPEND-ONLY (§3.7.4): a mistake is corrected with a reversing entry
+// (equal-and-opposite), never an UPDATE — see reverseEntry below.
+const _ledger = [
+    { ID: 1, DIRECTION: "CREDIT", AMOUNT: "10000.0000", MEMO: "Opening balance", REVERSES_ID: null, CREATED_AT: new Date("2026-07-01T09:00:00Z") },
+    { ID: 2, DIRECTION: "DEBIT", AMOUNT: "2500.0000", MEMO: "Supplier payment", REVERSES_ID: null, CREATED_AT: new Date("2026-07-02T10:30:00Z") },
+    { ID: 3, DIRECTION: "CREDIT", AMOUNT: "750.5000", MEMO: "Refund received", REVERSES_ID: null, CREATED_AT: new Date("2026-07-03T14:15:00Z") },
+];
+let _ledgerSeq = _ledger.length;
+
+/** All demo ledger rows (append-only). @returns {object[]} */
+function ledger() {
+    return _ledger;
+}
+
+/**
+ * Append a ledger posting. Never updates an existing row (§3.7.4).
+ * @param {{DIRECTION: string, AMOUNT: string, MEMO?: string, REVERSES_ID?: number}} record
+ * @returns {{rowsAffected: number, insertedId: number}}
+ */
+function ledgerInsert(record) {
+    const id = ++_ledgerSeq;
+    _ledger.push({
+        ID: id,
+        DIRECTION: record.DIRECTION,
+        AMOUNT: record.AMOUNT,
+        MEMO: record.MEMO ?? null,
+        REVERSES_ID: record.REVERSES_ID ?? null,
+        CREATED_AT: new Date(),
+    });
+    return { rowsAffected: 1, insertedId: id };
+}
+
+/**
+ * Post the equal-and-opposite of an existing row (the reversing-entry pattern,
+ * §3.7.4) — the only correct way to "undo" a posting in an append-only ledger.
+ * Both the original and the reversal stay visible.
+ * @param {number} originalId
+ * @param {string} [memo]
+ * @returns {{rowsAffected: number, insertedId: number}}
+ */
+function reverseEntry(originalId, memo) {
+    const original = _ledger.find((r) => r.ID === originalId);
+    if (!original) {
+        throw new Error(`Cannot reverse ledger row ${originalId}: not found.`);
+    }
+    const flipped = original.DIRECTION === "CREDIT" ? "DEBIT" : "CREDIT";
+    return ledgerInsert({
+        DIRECTION: flipped,
+        AMOUNT: original.AMOUNT,
+        MEMO: memo ?? `Reversal of #${originalId}`,
+        REVERSES_ID: originalId,
+    });
+}
+
 // ── Minimal oracle-mongo-wrapper-style filter matcher ─────────────────────────
 // Supports the operators the audit/admin queries actually use so the same filter
 // objects work against the in-memory arrays.
@@ -239,5 +331,10 @@ module.exports = {
     accounts,
     auditLogs,
     auditInsert,
+    fxRates,
+    fxRateInsert,
+    ledger,
+    ledgerInsert,
+    reverseEntry,
     match,
 };

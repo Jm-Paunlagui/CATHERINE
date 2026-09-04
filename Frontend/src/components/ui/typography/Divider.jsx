@@ -28,7 +28,7 @@ export function Divider({ label, variant = "solid", spacing = "md" }) {
 
     if (variant === "dot")
         return (
-            <div className={`${SP[spacing] ?? SP.md} flex items-center justify-center gap-1.5`}>
+            <div className={`${SP[spacing] ?? SP.md} flex items-center justify-center gap-2`}>
                 {[0, 1, 2].map((i) => (
                     <span key={i} className="w-1 h-1 rounded-full bg-grey-300 dark:bg-grey-500" />
                 ))}

@@ -7,8 +7,8 @@
  * Returns:
  *   user          — decoded user object (null when unauthenticated or loading)
  *   isLoading     — true while the auth check is in flight
- *   navGroups     — role-based nav groups from nav.config (PUBLIC_GROUPS when unauthenticated, [] while loading)
- *   profileItems  — profile + logout items (shape usable by both renderers)
+ *   navGroups     — role-based nav groups from nav.config ([] when unauthenticated)
+ *   profileItems  — profile + logout items (shape usable by both renderers).
  *   authFlatLinks — top-level authenticated links (e.g. Dashboard)
  *   publicLinks   — unauthenticated links (Home, Help, Sign In)
  *   logout        — fire-and-forget logout handler
@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { AuthMiddleware } from "../../../middleware/authentication/AuthMiddleware";
-import { AUTH_FLAT_LINKS, NAV_GROUPS, PUBLIC_GROUPS, PUBLIC_LINKS } from "./nav.config";
+import { AUTH_FLAT_LINKS, NAV_GROUPS, PUBLIC_LINKS } from "./nav.config";
 
 export function useNav() {
     const [user, setUser] = useState(null);
@@ -48,12 +48,10 @@ export function useNav() {
     const openProfile = useCallback(() => setProfileOpen(true), []);
     const closeProfile = useCallback(() => setProfileOpen(false), []);
 
-    // Role-based groups from config. Loading → empty (avoids a nav flash before
-    // the auth check resolves). Unauthenticated → PUBLIC_GROUPS (Getting Started
-    // docs remain browsable while logged out) instead of an empty array.
+    // Role-based groups from config — empty array when unauthenticated or loading
     const navGroups = useMemo(() => {
-        if (isLoading) return [];
-        return user ? (NAV_GROUPS[user.role] ?? NAV_GROUPS.USER ?? []) : PUBLIC_GROUPS;
+        if (isLoading || !user) return [];
+        return NAV_GROUPS[user.role] ?? NAV_GROUPS.USER ?? [];
     }, [isLoading, user]);
 
     // Profile + sign-out items — icon is a component ref so NavIcon can apply className

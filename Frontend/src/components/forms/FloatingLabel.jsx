@@ -20,7 +20,7 @@ export function FloatingLabel({ label, name, type = "text", value = "", onChange
                 disabled={disabled}
                 required={required}
                 placeholder=" "
-                className={`peer w-full px-3.5 pt-5 pb-2 text-sm rounded-xl border
+                className={`peer w-full px-4 pt-5 pb-2 text-sm rounded-xl border
           bg-white dark:bg-(--bg-surface-2) text-black/85 dark:text-(--text-primary)
           focus:outline-none focus:ring-2 focus:shadow-md ${TRANSITION_COLORS}
           disabled:opacity-50 disabled:cursor-not-allowed placeholder-transparent
@@ -36,7 +36,7 @@ export function FloatingLabel({ label, name, type = "text", value = "", onChange
                 {label}
                 {required && <span className="text-danger-400 ml-0.5">*</span>}
             </label>
-            {error && <p className="mt-1.5 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
+            {error && <p className="mt-2 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
         </div>
     );
 }

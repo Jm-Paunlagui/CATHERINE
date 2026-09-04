@@ -15,9 +15,128 @@ const {
     VALIDATION_ERRORS,
 } = require("../../constants/errors");
 const { logger } = require("../../utils/logger");
+const { authMessages } = require("../../constants/messages");
 const AuthService = require("../../services/auth.service");
 
 class AuthMiddleware {
+    /**
+     * Describe the credential a request arrived with, WITHOUT revealing it.
+     *
+     * ⚠ SECURITY BOUNDARY — READ BEFORE EXTENDING.
+     * The access token is a bearer credential. It must never reach a log file:
+     * the Logs UI renders those lines to any ADMIN, `Export Trace` writes them
+     * into a downloadable workbook, and the retention export ships them in a ZIP.
+     * A JWT logged once is a replayable session for as long as it is valid
+     * (CWE-522 Insufficiently Protected Credentials / CWE-532 Information
+     * Exposure Through Log Files). So this returns only DERIVED facts —
+     * presence, cookie NAMES, and verification outcome. It never returns a
+     * cookie value, a token, a fragment of one, or its length (a length leak
+     * still fingerprints payload contents).
+     *
+     * What it DOES surface is what a trace actually needs: which credential
+     * source was used, whether the signed cookie survived its HMAC check, and
+     * which cookies the browser sent at all — the three things that distinguish
+     * "user never logged in" from "cookie was dropped by the browser" from
+     * "cookie was tampered with", all of which currently look identical.
+     *
+     * @param {import('express').Request} req
+     * @returns {{ source: string, cookieNames: string[], signed: string }}
+     * @private
+     */
+    static _describeCredential(req) {
+        const hasHeaderToken = Boolean(
+            req.headers?.["authorization"]?.split(" ")[1],
+        );
+        const accessName = AuthService.COOKIE_NAMES.ACCESS;
+
+        // cookie-parser puts a signed cookie in `signedCookies` ONLY when its
+        // HMAC verifies; a tampered one lands in `cookies` as `false`. That
+        // difference is the single most useful auth signal in a trace and is
+        // invisible from the response status alone.
+        const inSigned = Boolean(req.signedCookies?.[accessName]);
+        const presentUnsigned = Object.hasOwn(req.cookies ?? {}, accessName);
+
+        let signed = "absent";
+        if (inSigned) signed = "ok";
+        else if (presentUnsigned) signed = "bad-signature";
+
+        // Names only — a cookie name is not a secret, its value always is.
+        const cookieNames = [
+            ...new Set([
+                ...Object.keys(req.cookies ?? {}),
+                ...Object.keys(req.signedCookies ?? {}),
+            ]),
+        ].sort();
+
+        const source = hasHeaderToken
+            ? "header"
+            : inSigned
+              ? "cookie"
+              : presentUnsigned
+                ? "cookie(unverified)"
+                : "none";
+
+        return { source, cookieNames, signed };
+    }
+
+    /**
+     * Emit the `[AUTH @ …]` trace line for one authentication attempt.
+     *
+     * Success is INFO (a routine mid-flow checkpoint) and failure is WARNING (an
+     * expected bad path), per the level decision table in Backend/CLAUDE.md —
+     * a failed token check is not an application error.
+     *
+     * @param {import('express').Request} req
+     * @param {object} outcome
+     * @param {string} outcome.result - verified | expired | not-before | missing | tampered | invalid
+     * @param {number} outcome.status - HTTP status this outcome maps to.
+     * @param {object} [outcome.user]  - Decoded payload (success only).
+     * @param {object} [outcome.err]   - jsonwebtoken error (failure only).
+     * @private
+     */
+    static _traceAuth(req, { result, status, user, err }) {
+        const { source, cookieNames, signed } =
+            AuthMiddleware._describeCredential(req);
+
+        const parts = [
+            `result=${result}`,
+            `status=${status}`,
+            `source=${source}`,
+            `signature=${signed}`,
+            `cookies=${cookieNames.length > 0 ? cookieNames.join("|") : "none"}`,
+        ];
+
+        if (user) {
+            // Non-secret registered/identity claims only. Deliberately NOT the
+            // whole payload — a future claim could carry PII and this would leak
+            // it by default. `iat`/`exp` are timestamps, not credentials, and are
+            // what tell you whether a 440 was a genuine timeout or a clock skew.
+            if (user.userId != null) parts.push(`user=${user.userId}`);
+            if (user.role != null) parts.push(`role=${user.role}`);
+            if (user.gid != null) parts.push(`gid=${user.gid}`);
+            if (user.iat != null)
+                parts.push(`iat=${new Date(user.iat * 1000).toISOString()}`);
+            if (user.exp != null)
+                parts.push(`exp=${new Date(user.exp * 1000).toISOString()}`);
+        }
+
+        if (err?.expiredAt) {
+            const expiredAt = new Date(err.expiredAt);
+            parts.push(`expiredAt=${expiredAt.toISOString()}`);
+            parts.push(
+                `expiredForSec=${Math.max(0, Math.round((Date.now() - expiredAt.getTime()) / 1000))}`,
+            );
+        }
+        // err.message is jsonwebtoken's own fixed vocabulary ("jwt expired",
+        // "invalid signature", "jwt malformed") — never user input, never the
+        // token itself.
+        if (err?.message) parts.push(`reason=${err.message}`);
+
+        const message = authMessages.AUTH_TRACE(parts.join(" "));
+        if (result === "verified") logger.info(message);
+        else logger.warning(message);
+    }
+
     /**
      * Middleware that authenticates JWT tokens from cookies or Authorization header.
      * Attaches decoded user payload to `req.user`.
@@ -99,6 +218,24 @@ class AuthMiddleware {
                     else if (isTampered) statusCode = 403;
                     else statusCode = 401; // unknown JsonWebTokenError sub-type defaults to 401
 
+                    // Trace the rejection BEFORE branching on isFileDownload —
+                    // the download path returns HTML and never reaches the
+                    // AppError below, so a trace emitted after the branch would
+                    // silently miss every export/download auth failure.
+                    AuthMiddleware._traceAuth(req, {
+                        result: isExpired
+                            ? "expired"
+                            : isNotBefore
+                              ? "not-before"
+                              : isMissingToken
+                                ? "missing"
+                                : isTampered
+                                  ? "tampered"
+                                  : "invalid",
+                        status: statusCode,
+                        err,
+                    });
+
                     if (isFileDownload) {
                         const title = isMissing
                             ? "Authentication Required"
@@ -158,6 +295,16 @@ class AuthMiddleware {
                         }),
                     );
                 }
+                // Success previously logged NOTHING, so a trace for an
+                // authenticated request had no evidence auth had happened at
+                // all — you could not tell "token verified" from "route is
+                // public" from reading the timeline.
+                AuthMiddleware._traceAuth(req, {
+                    result: "verified",
+                    status: 200,
+                    user,
+                });
+
                 req.user = user;
                 next();
             },

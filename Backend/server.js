@@ -43,6 +43,7 @@ const fs = require("fs");
 const { logger } = require("./src/utils/logger");
 const { consoleManager } = require("./src/utils/consoleManager");
 const { ClusterRole } = require("./src/utils/clusterRole");
+const { middlewareMessages } = require("./src/constants/messages");
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -68,22 +69,121 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // ── Cron leader election ────────────────────────────────────────────────
     // Exactly ONE worker runs the scheduled jobs. Without this, every worker
     // would fire the same cron job concurrently — N redundant sweeps against
-    // the database. The jobs should be idempotent, so a duplicate run is
-    // wasteful rather than corrupting, but at N workers the waste is substantial.
-    // The primary passes CRON_LEADER via the fork environment and re-elects a
-    // replacement when the leader dies.
+    // the database.
+    //
+    // ClusterRole.isCronLeader FAILS CLOSED (see src/utils/clusterRole.js's
+    // file header for the full rationale): a worker is leader ONLY when
+    // explicitly stamped CRON_LEADER="true". Any job that mutates state
+    // unconditionally per tick is not safe to run N times, so a stray
+    // duplicate leader is worse than a stray zero-leader gap — but a
+    // zero-leader gap is also unacceptable (scheduled jobs would silently
+    // never run). Fail-closed alone only trades one silent failure for
+    // another; this election is what makes it safe:
+    //
+    //   - Exactly one live worker is stamped CRON_LEADER="true" at fork.
+    //   - `_workerLeaderEnv` tracks the CRON_LEADER value of every LIVE
+    //     worker so the "exactly one leader" invariant can be VERIFIED after
+    //     every fork/exit, not merely assumed from the code shape.
+    //   - The instant the leader worker dies, its replacement inherits
+    //     leadership (see the "exit" handler below) — the cluster is never
+    //     left leaderless while it can still fork a replacement.
+    //   - ClusterRole.electionHealth() (pure) classifies the invariant on
+    //     every check; a "critical" verdict (zero OR more than one leader)
+    //     is logged via logger.crit so the failure is loud, never silent.
+    const _workerLeaderEnv = new Map(); // worker.id -> "true" | "false"
     let cronLeaderId = null;
 
     const forkWorker = (isCronLeader) => {
-        const worker = cluster.fork({
-            CRON_LEADER: ClusterRole.cronLeaderEnv(isCronLeader),
-        });
+        const env = ClusterRole.cronLeaderEnv(isCronLeader);
+        const worker = cluster.fork({ CRON_LEADER: env });
+        _workerLeaderEnv.set(worker.id, env);
         if (isCronLeader) cronLeaderId = worker.id;
         return worker;
     };
 
+    /**
+     * Notifies (out-of-band) of a cron-leader invariant breach immediately.
+     *
+     * WHY THIS EXISTS — `logger.crit` alone is NOT enough here.
+     * `AlertNotifierService.start()` (which subscribes the critical-log tap
+     * that turns crit records into notifications) is only called in the
+     * WORKER / single-process branch, and only on the cron leader. The
+     * primary process never starts it. So a `logger.crit` raised HERE, in the
+     * primary, lands in the log file and nowhere else — and "zero cron
+     * leaders" is precisely the condition where nobody is watching log files,
+     * because the scheduled jobs have silently stopped running.
+     *
+     * That would defeat the point of failing closed: ClusterRole.isCronLeader
+     * now refuses to guess, which trades "duplicate jobs" for "no jobs", and
+     * the whole safety of that trade rests on the failure being LOUD.
+     *
+     * `notifyCriticalNow` is used rather than `start()` on purpose: `start()`
+     * also spins up the metrics poller, and running that in the primary as
+     * well as the leader worker would duplicate every digest notification.
+     * This sends one message and touches nothing else.
+     *
+     * Fire-and-forget with a swallowed rejection — a failed notification must
+     * never crash the primary or block forking. The crit log is already
+     * written by the time this runs.
+     *
+     * @param {string} message
+     */
+    const _notifyLeaderInvariantBreach = (message) => {
+        try {
+            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            Promise.resolve(
+                AlertNotifierService.notifyCriticalNow({
+                    level: "CRITICAL",
+                    message,
+                }),
+            ).catch(() => {});
+        } catch (_) {
+            // Notification subsystem unavailable — the crit log still stands.
+        }
+    };
+
+    // Verifies the "exactly one cron leader" invariant against the CURRENT
+    // set of live workers. The classification itself is pure
+    // (ClusterRole.electionHealth) — this wrapper only decides what to DO
+    // with the verdict (log / notify).
+    const _verifyLeaderInvariant = (context) => {
+        const { leaderCount, severity } = ClusterRole.electionHealth([
+            ..._workerLeaderEnv.values(),
+        ]);
+        if (severity !== "critical") {
+            const leaderPid = cluster.workers[cronLeaderId]?.process?.pid;
+            logger.notice(
+                middlewareMessages.CRON_LEADER_ELECTED(
+                    cronLeaderId,
+                    leaderPid,
+                    context,
+                ),
+            );
+        } else if (leaderCount === 0) {
+            logger.crit(middlewareMessages.CRON_LEADER_NONE_ELECTED(context));
+            _notifyLeaderInvariantBreach(
+                middlewareMessages.CRON_LEADER_NONE_ELECTED(context),
+            );
+        } else {
+            logger.crit(
+                middlewareMessages.CRON_LEADER_MULTIPLE_ELECTED(
+                    context,
+                    leaderCount,
+                ),
+            );
+            _notifyLeaderInvariantBreach(
+                middlewareMessages.CRON_LEADER_MULTIPLE_ELECTED(
+                    context,
+                    leaderCount,
+                ),
+            );
+        }
+        return leaderCount;
+    };
+
     forkWorker(true); // worker 1 carries the cron schedule
     for (let i = 1; i < NUM_WORKERS; i++) forkWorker(false);
+    _verifyLeaderInvariant("initial-fork");
 
     // ── Cross-worker cache invalidation relay ───────────────────────────────
     // A write handled on one worker must invalidate the in-memory caches of
@@ -93,15 +193,47 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     } = require("./src/middleware/cache/ClusterCacheSync");
     ClusterCacheSync.initPrimary();
 
+    // Fires when a worker's IPC channel disconnects — normally just BEFORE
+    // its "exit" event. Logged only for visibility into an unresponsive
+    // worker; the actual respawn always happens on "exit" below, so a normal
+    // disconnect-then-exit sequence never double-forks a replacement.
+    cluster.on("disconnect", (worker) => {
+        logger.warning(
+            middlewareMessages.CRON_WORKER_DISCONNECTED(
+                worker.process.pid,
+                worker.id,
+            ),
+        );
+    });
+
     cluster.on("exit", (worker, code, signal) => {
         const wasCronLeader = worker.id === cronLeaderId;
+        _workerLeaderEnv.delete(worker.id);
+        if (wasCronLeader) cronLeaderId = null;
+
         logger.warning(
-            `Worker ${worker.process.pid} died (code=${code}, signal=${signal}) — replacing…` +
-                (wasCronLeader
-                    ? " (was cron leader — replacement takes over)"
-                    : ""),
+            middlewareMessages.CRON_WORKER_EXITED(
+                worker.process.pid,
+                code,
+                signal,
+                wasCronLeader,
+            ),
         );
-        forkWorker(wasCronLeader);
+
+        try {
+            forkWorker(wasCronLeader);
+        } catch (err) {
+            // The dead worker's slot could not be replaced at all. If it was
+            // the cron leader, the cluster now genuinely has zero leaders
+            // until the next exit/retry — never let that fail silently.
+            logger.crit(
+                middlewareMessages.CRON_LEADER_REFORK_FAILED(
+                    worker.id,
+                    err.message,
+                ),
+            );
+        }
+        _verifyLeaderInvariant(`exit:${worker.id}`);
     });
 } else {
     // ── Worker / single-process boot ──────────────────────────────────────
@@ -111,6 +243,25 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
 
     const app = require("./src/app");
     const db = require("./src/config");
+
+    // ── Native-module preflight (pkg builds) ──────────────────────────────
+    // argon2 loads its prebuilt .node via node-gyp-build, which resolves
+    // OUTSIDE the pkg snapshot — a missing/mislocated
+    // node_modules\argon2\prebuilds\win32-x64 copy next to the exe would
+    // otherwise only surface at the FIRST password verify. Surface it at boot
+    // instead. Alert-not-exit: the rest of the API still works; only
+    // argon2-hashed credential paths would fail.
+    try {
+        require("argon2");
+        logger.info("Native-module preflight: argon2 loaded successfully.");
+    } catch (err) {
+        logger.alert(
+            "Native-module preflight FAILED: argon2 could not be loaded — " +
+                "argon2-hashed credential verification WILL fail. " +
+                "Ensure node_modules\\argon2\\prebuilds\\win32-x64 sits next " +
+                `to the executable (postbuild-copy-natives). ${err.message}`,
+        );
+    }
 
     // ─── Server creation ──────────────────────────────────────────────────
 
@@ -290,6 +441,20 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
                 // audit persistence holds up to FLUSH_INTERVAL_MS of records in memory.
                 const AuditLogService = require("./src/services/AuditLogService");
                 await AuditLogService.flushPending();
+
+                // Close the shared SMTP transporter — the pooled singleton
+                // (EMAIL_POOL default true) holds sockets open that keep the
+                // Node event loop alive, so without this the process hangs
+                // until the forced-exit timer fires below.
+                try {
+                    const SharedTransporter = require("./src/services/email/SharedTransporter");
+                    SharedTransporter.closeTransporter();
+                } catch (err) {
+                    logger.warning(
+                        "SharedTransporter close failed during shutdown",
+                        { error: err.message },
+                    );
+                }
 
                 if (typeof db.shutdown === "function") {
                     await db.shutdown();

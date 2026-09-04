@@ -6,8 +6,7 @@
  */
 
 import { LockClosedIcon, UserIcon } from "@heroicons/react/24/outline";
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import ApiErrorAlert from "../../components/feedback/ApiErrorAlert";
 import { ErrorBoundary } from "../../components/feedback/ErrorBoundary";
 
@@ -34,30 +33,39 @@ function formatCountdown(secs) {
 
 export default function LoginView() {
     const { loading, error, integrityError, login, rateLimitSeconds, clearRateLimit, accountLocked } = useAuth();
-    const navigate = useNavigate();
     const [form, setForm] = useState({ username: "", password: "" });
     const [errorEffect, setErrorEffect] = useState(false);
     const [localError, setLocalError] = useState("");
     const [countdown, setCountdown] = useState(0);
-    const intervalRef = useRef(null);
 
+    // Seed `countdown` from `rateLimitSeconds` whenever the hook reports a new
+    // value (including going back to falsy after a successful clear). Adjusted
+    // during render — not in a useEffect — per React's documented "adjusting
+    // state when a prop changes" pattern: it lands in the same commit as the
+    // change instead of a synchronous setState-in-effect that triggers a second
+    // render (react-hooks/set-state-in-effect).
+    const [prevRateLimitSeconds, setPrevRateLimitSeconds] = useState(rateLimitSeconds);
+    if (rateLimitSeconds !== prevRateLimitSeconds) {
+        setPrevRateLimitSeconds(rateLimitSeconds);
+        setCountdown(rateLimitSeconds || 0);
+    }
+
+    // Effect owns ONLY the interval subscription — no synchronous setState in
+    // its body. The per-tick decrement runs inside the setInterval callback
+    // (deferred), so it does not trip react-hooks/set-state-in-effect.
     useEffect(() => {
-        if (!rateLimitSeconds) {
-            setCountdown(0);
-            return;
-        }
-        setCountdown(rateLimitSeconds);
-        intervalRef.current = setInterval(() => {
+        if (!rateLimitSeconds) return;
+        const id = setInterval(() => {
             setCountdown((prev) => {
                 if (prev <= 1) {
-                    clearInterval(intervalRef.current);
+                    clearInterval(id);
                     clearRateLimit();
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
-        return () => clearInterval(intervalRef.current);
+        return () => clearInterval(id);
     }, [rateLimitSeconds, clearRateLimit]);
 
     const handleChange = (e) => {

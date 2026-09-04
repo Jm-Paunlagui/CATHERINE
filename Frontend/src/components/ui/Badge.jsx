@@ -9,6 +9,7 @@
  *   removable — boolean (× button)
  *   onRemove — () => void
  *   pill     — boolean (rounded-full instead of rounded-lg)
+ *   title    — string (native hover tooltip, forwarded onto the outer <span>)
  *   children
  */
 const V = {
@@ -60,17 +61,18 @@ const V = {
 };
 
 const SZ = {
-    xs: "px-1.5 py-0.5 text-xs gap-1",
-    sm: "px-2   py-0.5 text-xs gap-1",
-    md: "px-2.5 py-1   text-xs gap-1.5",
+    xs: "px-1.5 py-1 text-xs gap-1",
+    sm: "px-2   py-1 text-xs gap-1",
+    md: "px-3 py-1   text-xs gap-2",
 };
 
-export function Badge({ variant = "grey", size = "md", dot = false, outline = false, removable = false, onRemove, pill = false, children }) {
+export function Badge({ variant = "grey", size = "md", dot = false, outline = false, removable = false, onRemove, pill = false, title, children }) {
     const cfg = V[variant] ?? V.grey;
     const style = outline ? cfg.outline : cfg.solid;
 
     return (
         <span
+            title={title}
             className={`inline-flex items-center font-aumovio-bold tracking-wide
       border shadow-sm ${pill ? "rounded-full" : "rounded-lg"}
       ${style} ${SZ[size] ?? SZ.md}`}

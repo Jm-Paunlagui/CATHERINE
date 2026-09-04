@@ -19,6 +19,7 @@
  */
 
 const { logger } = require("../utils/logger");
+const { isValidCurrency, CURRENCY_CODES } = require("../constants/currencies");
 
 // ─── Known placeholder values (shipped in .env.example) ───────────────────────
 
@@ -62,6 +63,65 @@ const SECRET_RULES = [
         label: "Changelog encryption key",
     },
 ];
+
+/**
+ * Validates the money layer's system-level facts (plan §3.0 rule 1, §3.7.10).
+ *
+ * Rules enforced:
+ *   1. `MONEY_BASE_CURRENCY`, if set, must be a registered ISO 4217 code
+ *      (`constants/currencies.js`). An unknown code is fatal — every money
+ *      column would be interpreted against a currency the system cannot format
+ *      or convert.
+ *   2. The base-currency CHANGE guard is ARMED only when the copier lists ledger
+ *      tables in `MONEY_LEDGER_TABLES`. When armed and a prior base is recorded
+ *      in `MONEY_BASE_CURRENCY_PREVIOUS`, an in-place change (new != previous)
+ *      is refused UNLESS `MONEY_BASE_CURRENCY_MIGRATION=true` is set
+ *      deliberately — because a functional-currency change must be a new
+ *      prospective epoch, not an in-place edit that restates history (§3.7.10).
+ *
+ * Adds any problems to `violations`; does not exit itself.
+ *
+ * @param {string[]} violations
+ * @param {boolean} isProduction
+ * @returns {void}
+ */
+function validateMoneyConfig(violations, isProduction) {
+    const base = (process.env.MONEY_BASE_CURRENCY || "").trim();
+
+    // Not configuring money is fine on the bare template. Only validate if set.
+    if (base === "") return;
+
+    if (!isValidCurrency(base)) {
+        violations.push(
+            `MONEY_BASE_CURRENCY "${base}" is not a registered ISO 4217 code. ` +
+                `Registered: ${CURRENCY_CODES.join(", ")}. Add it to constants/currencies.js or fix the value.`,
+        );
+        return;
+    }
+
+    // Change-refusal guard — armed only once the copier declares ledger tables.
+    const ledgerTables = (process.env.MONEY_LEDGER_TABLES || "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+    const armed = ledgerTables.length > 0;
+    if (!armed) return;
+
+    const previous = (process.env.MONEY_BASE_CURRENCY_PREVIOUS || "").trim();
+    const migrationApproved =
+        String(process.env.MONEY_BASE_CURRENCY_MIGRATION).toLowerCase() === "true";
+
+    if (previous !== "" && previous !== base && !migrationApproved) {
+        violations.push(
+            `MONEY_BASE_CURRENCY changed in place (${previous} → ${base}) while ledger tables ` +
+                `(${ledgerTables.join(", ")}) exist. Under prospective treatment (IAS 21) a base-currency ` +
+                `change must be a NEW time-keyed epoch, not an edit that restates history. Express it as a ` +
+                `new epoch, or set MONEY_BASE_CURRENCY_MIGRATION=true to acknowledge a deliberate migration.`,
+        );
+    }
+
+    void isProduction; // Money config is fatal in every environment when armed.
+}
 
 /**
  * Validates all security-critical secrets at boot time.
@@ -114,6 +174,55 @@ function validateSecrets() {
         );
     }
 
+    // ── CORS_ORIGINS + production guard ───────────────────────────────────────
+    // In production CorsMiddleware disables every broad wildcard pattern and
+    // honours ONLY the explicit CORS_ORIGINS allow-list plus loopback (CWE-942).
+    // The deployed SPA is served by IIS at https://SERVER/ while this API runs
+    // at https://SERVER:3000 — a DIFFERENT PORT is a different origin, so every
+    // browser request is cross-origin and needs that allow-list. With
+    // CORS_ORIGINS unset, the server starts perfectly, passes its own health
+    // checks, and serves curl fine, while every request from the real frontend
+    // is blocked with an opaque browser-side CORS error and no server-side
+    // signal — the app looks completely dead with no obvious cause.
+    //
+    // Same reasoning as the frontend's vite.config.js build guard for
+    // VITE_API_BASE_URL: fail loudly at boot rather than ship a silently dead
+    // deployment. CORS_ALLOW_BROAD_PATTERNS=true is the documented opt-in for a
+    // non-standard environment that trusts network topology instead, so it
+    // satisfies this guard.
+    if (isProduction) {
+        const hasExplicitOrigins = (process.env.CORS_ORIGINS || "")
+            .split(",")
+            .map((o) => o.trim())
+            .filter(Boolean).length > 0;
+        const allowsBroadPatterns =
+            process.env.CORS_ALLOW_BROAD_PATTERNS === "true";
+
+        if (!hasExplicitOrigins && !allowsBroadPatterns) {
+            violations.push(
+                "CORS_ORIGINS is not set, but NODE_ENV=production restricts CORS to that explicit " +
+                    "allow-list — every browser request from the deployed frontend would be blocked. " +
+                    "Set CORS_ORIGINS to the frontend origin (e.g. https://<SERVER>), or set " +
+                    "CORS_ALLOW_BROAD_PATTERNS=true to deliberately trust private-network patterns instead",
+            );
+        }
+    }
+
+    // ── Money base-currency guard (plan §3.0 rule 1, §3.7.10) ─────────────────
+    // The currency of the whole system is a SYSTEM FACT — an env var — never a
+    // column on a transaction row (§3.0 rule 1). Every money column holds the
+    // base currency, always. This guard validates that fact at boot.
+    //
+    // ARMED BUT INERT. On the bare template there is no ledger table, so the
+    // base currency can be set freely. A copier ARMS the change-refusal guard by
+    // naming their ledger tables in MONEY_LEDGER_TABLES. Once armed, the guard
+    // refuses an in-place change to the base currency: under IAS 21 a functional-
+    // currency change is applied PROSPECTIVELY as a NEW time-keyed epoch, never
+    // by editing the current base in place, because that would silently restate
+    // every closed period (§3.7.10). Migrating requires setting
+    // MONEY_BASE_CURRENCY_MIGRATION=true deliberately.
+    validateMoneyConfig(violations, isProduction);
+
     if (violations.length === 0) return; // all clear
 
     const header = `\n${"═".repeat(72)}\n  BOOT GUARD — ${violations.length} security violation(s) detected\n${"═".repeat(72)}`;
@@ -139,4 +248,4 @@ function validateSecrets() {
     }
 }
 
-module.exports = { validateSecrets };
+module.exports = { validateSecrets, validateMoneyConfig };

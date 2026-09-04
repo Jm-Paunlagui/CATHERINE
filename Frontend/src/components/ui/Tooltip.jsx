@@ -85,7 +85,7 @@ export function Tooltip({ children, content, placement = "top", delay = 300, siz
                     <div
                         style={{ position: "fixed", top: coords.top, left: coords.left, transform: coords.transform }}
                         className={`z-9999 pointer-events-none ${ANIMATE_FADE_IN} ${wrap ? "whitespace-normal max-w-56" : "whitespace-nowrap"}
-          ${size === "sm" ? "px-2.5 py-1 text-xs rounded-lg" : "px-3 py-1.5 text-sm rounded-xl"}
+          ${size === "sm" ? "px-3 py-1 text-xs rounded-lg" : "px-3 py-2 text-sm rounded-xl"}
           bg-grey-900 dark:bg-(--bg-surface-3) dark:border dark:border-white/10 text-white font-aumovio shadow-xl dark:shadow-black/50`}
                     >
                         {content}

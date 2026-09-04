@@ -11,6 +11,14 @@
 import { ClockIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef, useState } from "react";
 
+// Matches the SZ scale used by Input.jsx / SearchInput.jsx / ButtonGroup.jsx
+// so a Timepicker dropped next to those components lines up visually.
+const SZ = {
+    sm: "px-3 py-2 text-xs rounded-lg",
+    md: "px-3 py-2 text-sm rounded-xl",
+    lg: "px-4 py-3 text-base rounded-xl",
+};
+
 export function Timepicker({ value = "", onChange, label, error, disabled = false, size = "md", use12Hour = false, minuteStep = 5 }) {
     const [open, setOpen] = useState(false);
     const [h, m, ampm] = (() => {
@@ -48,8 +56,9 @@ export function Timepicker({ value = "", onChange, label, error, disabled = fals
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen((o) => !o)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border text-sm text-left
+                className={`w-full flex items-center gap-2 border text-left
           bg-white dark:bg-(--bg-surface-2) text-black/80 dark:text-white/80 transition-all duration-200
+          ${SZ[size] ?? SZ.md}
           ${open ? "border-orange-400 ring-2 ring-orange-400/30" : "border-grey-300 dark:border-grey-700"}
           ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
             >
@@ -109,7 +118,7 @@ export function Timepicker({ value = "", onChange, label, error, disabled = fals
                     </div>
                 </div>
             )}
-            {error && <p className="mt-1.5 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
+            {error && <p className="mt-2 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
         </div>
     );
 }

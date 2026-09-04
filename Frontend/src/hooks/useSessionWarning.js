@@ -42,12 +42,38 @@ export function useSessionWarning() {
         clearInterval(countdownTimerRef.current);
     }, []);
 
+    // Guards against the expiry path running more than once. React 19 StrictMode
+    // double-invokes state updaters and effects; a background tab may also fire
+    // several throttled ticks in a burst. Without this latch, signout/navigate
+    // would run twice, racing the modal's own unmount and leaving it frozen
+    // on screen (CWE-362 — race condition).
+    const expiredRef = useRef(false);
+
     const expireSession = useCallback(() => {
+        if (expiredRef.current) return;
+        expiredRef.current = true;
+
         clearTimers();
         setVisible(false);
         AuthMiddleware.signout();
         CsrfMiddleware.clearToken();
+
+        // Primary path: SPA navigation. In a backgrounded / throttled tab,
+        // react-router's navigate() can be deferred and occasionally no-ops,
+        // leaving the modal stuck. Schedule a hard-navigation fallback that
+        // mirrors the proven HttpClient 440 path so the user is ALWAYS moved
+        // off the app shell. If SPA nav already unmounted us, the location has
+        // changed and the fallback is a harmless same-target replace.
         navigate("/login-timeout", { replace: true });
+
+        if (typeof window !== "undefined" && window.location) {
+            const target = "/login-timeout";
+            setTimeout(() => {
+                if (window.location.pathname !== target) {
+                    window.location.replace(target);
+                }
+            }, 0);
+        }
     }, [clearTimers, navigate]);
 
     // ── show modal + start countdown ───────────────────────────────────────────
@@ -57,14 +83,22 @@ export function useSessionWarning() {
         setCountdown(WARNING_SECS);
 
         countdownTimerRef.current = setInterval(() => {
-            setCountdown((prev) => {
-                if (prev <= 1) {
-                    clearInterval(countdownTimerRef.current);
-                    expireSession();
-                    return 0;
-                }
-                return prev - 1;
-            });
+            // Drive the countdown off an ABSOLUTE wall-clock deadline rather
+            // than counting ticks. Background tabs throttle setInterval (ticks
+            // may be dropped or coalesced), so tick-counting drifts and can
+            // stall before reaching zero — the exact "modal never redirects"
+            // symptom. Wall-clock math is immune to throttling.
+            const raw = localStorage.getItem("session_exp");
+            const expiresAt = raw ? parseInt(raw, 10) : NaN;
+            const remaining = Number.isFinite(expiresAt) ? Math.ceil((expiresAt - Date.now()) / 1000) : 0;
+
+            if (remaining <= 0) {
+                clearInterval(countdownTimerRef.current);
+                setCountdown(0);
+                expireSession();
+                return;
+            }
+            setCountdown(remaining);
         }, 1000);
     }, [expireSession]);
 
@@ -73,6 +107,9 @@ export function useSessionWarning() {
     const schedule = useCallback(() => {
         clearTimers();
         setVisible(false);
+        // A fresh (or extended) session is being scheduled — re-arm the expiry
+        // latch so a later genuine expiry can fire exactly once.
+        expiredRef.current = false;
 
         // Read the numeric ms expiry timestamp stored as a non-PII string (CWE-312).
         // The full user payload is never written to localStorage.
@@ -119,10 +156,31 @@ export function useSessionWarning() {
     useEffect(() => {
         // Check for the non-PII session expiry hint (CWE-312 — no user object in storage).
         const raw = localStorage.getItem("session_exp");
-        if (!raw) return;
+        if (raw) schedule();
 
-        schedule();
-        return clearTimers;
+        // Cross-tab synchronisation. The user commonly keeps several tabs open.
+        // Without this, each tab runs an isolated timer: extending in one tab
+        // leaves the others counting down on a stale deadline, and an expiry in
+        // one tab leaves the others frozen on "Session Expiring Soon".
+        //
+        // The `storage` event fires in EVERY OTHER tab of the same origin when
+        // localStorage changes (never in the tab that made the change).
+        //   • session_exp cleared/removed  → that session ended → expire here too.
+        //   • session_exp rewritten         → extended elsewhere → reschedule here.
+        const onStorage = (event) => {
+            if (event.key !== "session_exp") return;
+            if (event.newValue === null) {
+                expireSession();
+            } else {
+                schedule();
+            }
+        };
+        window.addEventListener("storage", onStorage);
+
+        return () => {
+            clearTimers();
+            window.removeEventListener("storage", onStorage);
+        };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     return {

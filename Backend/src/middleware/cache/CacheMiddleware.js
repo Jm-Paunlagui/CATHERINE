@@ -239,6 +239,66 @@ class CacheMiddleware {
     };
   }
 
+  /**
+   * Like `invalidate()` but fires on the response **`finish`** event instead of
+   * wrapping `res.json`. Use this for routes whose success response is NOT JSON
+   * — file/streamed downloads (`workbook.xlsx.write(res)` + `res.end()`),
+   * `res.send(buffer)`, `res.sendFile`, etc. The `res.json` override used by
+   * `invalidate()` never runs for those responses, so a binary export would
+   * silently skip cache invalidation and keep serving stale read-cache entries
+   * (e.g. an export-once status flag that never flips after the file is served).
+   *
+   * `finish` fires once the last response byte is handed to the OS with the final
+   * `res.statusCode` set, so the 2xx guard is reliable. It fires for BOTH JSON
+   * and streamed responses, making this safe to use anywhere `invalidate()` is.
+   *
+   * `keyFn` may return a single key/pattern, an array of them, or null (no-op).
+   * In pattern mode every returned value is passed to `delByPattern` in turn.
+   *
+   * Placement: register this middleware BEFORE the controller in the route chain
+   * (same position as `invalidate()`), so the `finish` listener is attached
+   * before the controller starts streaming.
+   *
+   * @param {import('./CacheStore').CacheStore | import('./CacheStore').CacheStore[]} store
+   * @param {(req: import('express').Request, res: import('express').Response) => string | string[] | null} keyFn
+   * @param {Object}  [options={}]
+   * @param {boolean} [options.usePattern=false]
+   * @returns {import('express').RequestHandler}
+   */
+  static invalidateOnFinish(store, keyFn, options = {}) {
+    const stores = Array.isArray(store) ? store : [store];
+    const usePattern = options.usePattern === true;
+
+    return (req, res, next) => {
+      res.once("finish", () => {
+        // Only invalidate on a successful (2xx) response.
+        if (res.statusCode < 200 || res.statusCode >= 300) return;
+        try {
+          const target = keyFn(req, res);
+          if (target == null) return;
+          const targets = Array.isArray(target) ? target : [target];
+          if (targets.length === 0) return;
+
+          for (const s of stores) {
+            if (usePattern) {
+              for (const pattern of targets) {
+                const count = s.delByPattern(String(pattern));
+                logger.info(cacheMessages.CACHE_INVALIDATE_PATTERN(s.name, String(pattern), count));
+              }
+            } else {
+              const count = s.del(targets);
+              logger.info(cacheMessages.CACHE_INVALIDATE(s.name, targets.join(", "), count));
+            }
+          }
+        } catch (err) {
+          logger.error(cacheMessages.CACHE_ERROR(err.message));
+        }
+      });
+
+      next();
+    };
+  }
+
   // ─── Convenience: invalidate by predicate ────────────────────────────────
 
   /**

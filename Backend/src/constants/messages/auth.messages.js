@@ -42,6 +42,7 @@ const authMessages = {
         `USER ${userId} changed their password successfully.`,
     DEFAULT_PASSWORD_REJECTED: (userId) =>
         `USER ${userId} attempted to set the system default password as their new password — rejected.`,
+    AUTH_TRACE: (summary) => `[AUTH @ ${summary}]`,
 };
 
 module.exports = { authMessages };

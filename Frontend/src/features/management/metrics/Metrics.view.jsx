@@ -56,7 +56,7 @@ function MetricsView() {
   ];
 
   return (
-    <div className={`space-y-6 ${ANIMATE_PAGE_ENTER}`}>
+    <div className={`p-6 flex flex-col gap-6 h-full ${ANIMATE_PAGE_ENTER}`}>
       {/* Page header */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold text-black/85 dark:text-white/85">

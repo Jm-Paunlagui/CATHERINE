@@ -2,9 +2,9 @@
  * VerifyStatusBadge.jsx — Canonical badge for the row classification status
  * returned by an upload wizard's POST /verify step.
  *
- * SINGLE SOURCE OF TRUTH. Every Excel Upload Stepper renders the verify-stage
- * status pill through this one component. Receives all data via props — never
- * imports a feature hook or API.
+ * SINGLE SOURCE OF TRUTH. Every Excel Upload Stepper in the app renders the
+ * verify-stage status pill through this one component, whatever the feature.
+ * Receives all data via props — never imports a feature hook or API.
  *
  * Standard status vocabulary — these are the ONLY pills shown:
  *   - Create   → green  / plus     (new row, will be inserted)
@@ -16,17 +16,19 @@
  * Conflict types — every feature-specific blocker is a KIND of Conflict. It renders
  * the red "Conflict" pill PLUS a visible reason label naming the subtype, so the
  * status column stays on the 5-status standard while the cause is still on screen:
- *   - Conflict       → reason text = conflictReason (file-vs-DB diff)
- *   - DuplicateRow   → "Duplicate Row"
- *   - Invalid        → "Invalid"
- *   - Duplicate      → "Duplicate"
- *   - NotFound       → "Not Found"
- *   - NoPeriod       → "No Period"
- *   - Stale          → "Stale"
- *   - IntraFileDupe  → "File Dupe"
- *   Apps register additional subtypes via registerConflictSubtypes() in
- *   verifyStatus.js. The verbose row.reason (when present) is kept as the
- *   hover tooltip.
+ *   - Conflict      → reason text = conflictReason (file-vs-DB diff)
+ *   - DuplicateRow  → "Duplicate Row"
+ *   - Duplicate     → "Duplicate"
+ *   - IntraFileDupe → "File Dupe"
+ *   - Invalid       → "Invalid"
+ *   - NotInMaster   → "Not in Master List"
+ *   - OutOfPeriod   → "Out of Period"
+ *   - Omitted       → "Omitted" (a master-list record absent from the
+ *                      uploaded file — additive, not a blocker)
+ *   The verbose row.reason (when present) is kept as the hover tooltip.
+ *
+ *   This subtype list is a starter vocabulary — see `verifyStatus.js`, which
+ *   owns it. Add or rename entries there to match your backend classifier.
  *
  * Override + fallback:
  *   - excluded=true → grey "Excluded" pill (wins over any status)
@@ -45,11 +47,11 @@ import { CONFLICT_SUBTYPE_LABELS } from "./verifyStatus";
 /**
  * @component VerifyStatusBadge
  * @param {Object} props
- * @param {'Create'|'Update'|'Conflict'|'Retain'|'Pending'|'DuplicateRow'|'Invalid'|'Duplicate'|'NotFound'|'NoPeriod'|'Stale'|'IntraFileDupe'|string|null} props.status
- *   Classification status from the /verify API response (any registered Conflict subtype is accepted).
+ * @param {'Create'|'Update'|'Conflict'|'Retain'|'Pending'|'DuplicateRow'|'Duplicate'|'IntraFileDupe'|'Invalid'|'NotInMaster'|'OutOfPeriod'|'Omitted'|null} props.status
+ *   Classification status from the /verify API response.
  * @param {boolean} [props.excluded]       - When true, overrides status with the grey "Excluded" badge.
- * @param {string}  [props.conflictReason] - Conflict detail from uploaders that report a file-vs-DB diff.
- * @param {string}  [props.reason]         - Conflict detail from uploaders that report verbose text; becomes the tooltip.
+ * @param {string}  [props.conflictReason] - Short conflict detail (file-vs-DB diff), rendered as the reason label.
+ * @param {string}  [props.reason]         - Verbose conflict detail; becomes the hover tooltip.
  */
 export function VerifyStatusBadge({ status, excluded, conflictReason, reason }) {
     if (excluded) {
@@ -102,7 +104,7 @@ export function VerifyStatusBadge({ status, excluded, conflictReason, reason }) 
         const detail = CONFLICT_SUBTYPE_LABELS[status] ?? conflictReason ?? reason ?? null;
         const tooltip = reason ?? conflictReason ?? detail ?? undefined;
         return (
-            <span className="inline-flex items-center gap-1.5 min-w-0">
+            <span className="inline-flex items-center gap-2 min-w-0">
                 <Badge variant="red" size="sm" pill title={tooltip}>
                     <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
                     Conflict

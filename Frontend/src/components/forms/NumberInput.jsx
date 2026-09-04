@@ -2,11 +2,18 @@
  * NumberInput — Incrementable/decrementable numeric field.
  *
  * Props:
- *   value, onChange, min, max, step, label, error, disabled, size
+ *   value, onChange, min, max, step, label, error, disabled, size, id, name
+ *
+ * Label/control association mirrors Input.jsx's `id ?? name` pattern, with a
+ * `useId()` fallback so the <label htmlFor> / <input id> pair is always wired
+ * up even when a call site passes neither `id` nor `name`.
  */
+import { useId } from "react";
 import { MinusIcon, PlusIcon } from "@heroicons/react/24/outline";
 
-export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infinity, step = 1, label, error, disabled = false, size = "md" }) {
+export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infinity, step = 1, label, error, disabled = false, size = "md", id, name }) {
+    const autoId = useId();
+    const inputId = id ?? name ?? autoId;
     const dec = () => {
         const n = Number(value) - step;
         if (n >= min) onChange?.(n);
@@ -25,7 +32,11 @@ export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infini
 
     return (
         <div className="font-aumovio">
-            {label && <label className="block text-xs font-aumovio-bold text-black/70 dark:text-white/70 mb-1.5">{label}</label>}
+            {label && (
+                <label htmlFor={inputId} className="block text-xs font-aumovio-bold text-black/70 dark:text-white/70 mb-1.5">
+                    {label}
+                </label>
+            )}
             <div
                 className={`inline-flex items-center border rounded-xl overflow-hidden
         ${error ? "border-danger-400" : "border-grey-300 dark:border-grey-700"}
@@ -42,6 +53,8 @@ export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infini
                     <MinusIcon className="w-3.5 h-3.5" />
                 </button>
                 <input
+                    id={inputId}
+                    name={name}
                     type="number"
                     value={value}
                     onChange={handle}
@@ -65,7 +78,7 @@ export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infini
                     <PlusIcon className="w-3.5 h-3.5" />
                 </button>
             </div>
-            {error && <p className="mt-1.5 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
+            {error && <p className="mt-2 text-xs text-danger-400 font-aumovio-bold">{error}</p>}
         </div>
     );
 }

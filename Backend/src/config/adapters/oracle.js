@@ -24,6 +24,7 @@
 const fs = require("fs");
 const path = require("path");
 const { getConnectionConfig, getConnectionNames } = require("../database");
+const { RetryPolicy } = require("../../utils/resilience/RetryPolicy");
 const { logger } = require("../../utils/logger");
 const { oracleMessages } = require("../../constants/messages");
 // Leaf-level metrics store (depends only on perf_hooks/v8/os) — cycle-safe to
@@ -193,10 +194,44 @@ const POOL_DEFAULTS = {
     events: false,
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MONEY-SAFE FETCH (plan §3.0 rule 3b)
+// ─────────────────────────────────────────────────────────────────────────────
+// node-oracledb returns a NUMBER as a JavaScript double by default. A
+// NUMBER(19,4) money value or a NUMBER(19,8) rate is therefore ALREADY ROUNDED
+// before any application code — or the exact-decimal `utils/money.js` type — can
+// see it. This handler intercepts every scaled NUMBER column at fetch time and
+// asks the driver to hand it back as a STRING, which `Money.from(string)` then
+// parses without loss.
+//
+// SELECTION IS ON `scale > 0`, DERIVED FROM THE SCHEMA — NOT A COLUMN LIST.
+//   - money  → NUMBER(19,4) → scale 4 → returned as string ✓
+//   - rate   → NUMBER(19,8) → scale 8 → returned as string ✓
+//   - IDs, counts, STATUS_CODE → NUMBER (scale 0) → left as JS numbers ✓
+// So integer keys and flags keep their ergonomic numeric type; only values that
+// actually carry decimals are protected.
+//
+// BLAST RADIUS IS ZERO ON TODAY'S SCHEMA. CATHERINE declares no scaled NUMBER
+// column yet, so this handler is inert until a copier creates a money/rate
+// column — at which point it activates automatically. That is exactly why it
+// ships now (a dormant guard) rather than later (a behavioural change to live
+// code). See the MBA note in plan §3.7.10.
+//
+// It also means the legacy `convertTypes`/`rowToDoc` helpers in
+// `utils/oracle-mongo-wrapper/utils.js` must NOT re-coerce these strings back to
+// numbers — they are fenced off there (they would undo this protection).
+function moneySafeFetchTypeHandler(metaData) {
+    if (metaData.dbType === oracledb.DB_TYPE_NUMBER && metaData.scale > 0) {
+        return { type: oracledb.STRING };
+    }
+    return undefined; // default handling for everything else
+}
+
 const EXECUTE_OPTIONS = Object.freeze({
     outFormat: OUT_FORMAT_OBJECT,
     autoCommit: true,
     fetchArraySize: 1000,
+    fetchTypeHandler: moneySafeFetchTypeHandler,
 });
 
 const poolRegistry = new Map(); // name → Promise<Pool>
@@ -479,6 +514,98 @@ async function initializePools() {
 
 // ── Connection helpers ────────────────────────────────────────────────────────
 
+/** Acquire attempts before a transient connect failure is surfaced to the caller. */
+const ACQUIRE_MAX_ATTEMPTS = 3;
+/** Base backoff between acquire attempts; doubles per attempt (150ms, 300ms). */
+const ACQUIRE_BASE_DELAY_MS = 150;
+
+/**
+ * Gets a connection from `pool`, retrying transient CONNECT-time failures.
+ *
+ * Scope is deliberately the acquire ONLY — never the caller's callback.
+ * `withTransaction` routes through `withConnection`, so re-running a callback
+ * could replay a partially-applied write; a failed `getConnection()` has by
+ * definition executed nothing.
+ *
+ * This exists because ORA-12516 / ORA-12537 arrive in bursts from the listener
+ * (no ready handler, or the server process dies mid-handshake) and clear within
+ * milliseconds. One immediate retry on a fresh connection turns those into a
+ * served request instead of a 500.
+ *
+ * The orphan guard matters as much as the retry: `Promise.race` does not cancel
+ * the losing promise, so a `getConnection()` that resolves AFTER the timeout
+ * fired hands back a connection nobody holds a reference to. It is checked out
+ * of the pool and never closed — and `poolTimeout` only reaps IDLE connections,
+ * so it is leaked for the process's lifetime. Under exactly the conditions that
+ * cause the timeout, that leak compounds until the pool is exhausted.
+ *
+ * @param {string} connectionName Key from database.js registry (for logs)
+ * @param {object} pool           oracledb pool
+ * @returns {Promise<object>} An open connection the caller must close.
+ */
+async function _acquireConnection(connectionName, pool) {
+    let lastErr;
+
+    for (let attempt = 1; attempt <= ACQUIRE_MAX_ATTEMPTS; attempt++) {
+        const pending = pool.getConnection();
+        let timer = null;
+
+        try {
+            return await Promise.race([
+                pending,
+                new Promise((_, reject) => {
+                    timer = setTimeout(
+                        () =>
+                            reject(
+                                new Error(
+                                    `Timed out getting connection from "${connectionName}"`,
+                                ),
+                            ),
+                        POOL_DEFAULTS.connectTimeout,
+                    );
+                }),
+            ]);
+        } catch (err) {
+            // Orphan guard — see the note above. Both handlers are attached so
+            // a later rejection cannot become an unhandled rejection either.
+            pending.then(
+                async (conn) => {
+                    try {
+                        await conn.close();
+                        logger.warning(
+                            oracleMessages.ACQUIRE_ORPHAN_CLOSED(connectionName),
+                        );
+                    } catch (e) {
+                        logger.warning(
+                            oracleMessages.CLOSE_FAILED(connectionName, e.message),
+                        );
+                    }
+                },
+                () => {},
+            );
+
+            lastErr = err;
+
+            const isLastAttempt = attempt >= ACQUIRE_MAX_ATTEMPTS;
+            if (isLastAttempt || !RetryPolicy.isTransientDbError(err)) throw err;
+
+            logger.warning(
+                oracleMessages.ACQUIRE_RETRY(
+                    connectionName,
+                    attempt,
+                    ACQUIRE_MAX_ATTEMPTS,
+                    err.message,
+                ),
+            );
+            await _sleep(ACQUIRE_BASE_DELAY_MS * 2 ** (attempt - 1));
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
+    }
+
+    throw lastErr;
+}
+
 /**
  * Acquire a connection → run callback → release.
  * @param {string}   connectionName  Key from database.js registry
@@ -498,13 +625,7 @@ async function withConnection(connectionName, callback) {
     let conn;
 
     try {
-        conn = await Promise.race([
-            pool.getConnection(),
-            _timeout(
-                POOL_DEFAULTS.connectTimeout,
-                `Timed out getting connection from "${connectionName}"`,
-            ),
-        ]);
+        conn = await _acquireConnection(connectionName, pool);
 
         const result = await callback(conn);
         const elapsed = Date.now() - start;
@@ -512,6 +633,31 @@ async function withConnection(connectionName, callback) {
             logger.warning(oracleMessages.SLOW_OP(connectionName, elapsed));
         return result;
     } catch (err) {
+        // An AppError raised deliberately by the callback's own business
+        // logic (e.g. a service throwing a 409 inside a withTransaction
+        // callback) is NOT an infrastructure failure — it is already fully
+        // classified (statusCode/type/details) and ErrorHandlerMiddleware's
+        // `if (err.isOperational)` branch (priority 1 in its classifier)
+        // exists specifically to short-circuit straight to that shape.
+        //
+        // Wrapping it in a generic `new Error(DB_OP_FAILED(...))` — as this
+        // catch block did for every error, no exception — DISCARDS
+        // `isOperational`/`statusCode`/`type`/`details`: the wrapper Error
+        // carries none of them (only `originalError`, which nothing upstream
+        // unwraps — ErrorHandlerMiddleware classifies the OUTER error object
+        // it receives). `_classify` then falls through the AppError branch,
+        // finds no ORA-/NJS- code in the message, and returns the generic
+        // 500 fallback — turning a deliberate 409 rejection into an opaque
+        // server error. This is a general adapter defect: ANY AppError
+        // thrown inside a withConnection/withTransaction callback anywhere in
+        // the app was silently downgraded to 500 the same way.
+        //
+        // Genuine infrastructure errors (Oracle driver / ORA-XXXXX / NJS-XXX
+        // / pool-acquire timeouts) never carry `isOperational` and are
+        // unaffected — they still get wrapped + logged critical exactly as
+        // before.
+        if (err.isOperational) throw err;
+
         logger.critical(
             oracleMessages.OP_FAILED(
                 connectionName,
@@ -718,4 +864,7 @@ module.exports = {
     OUT_FORMAT_OBJECT,
     SYSDBA_PRIVILEGE,
     EXECUTE_OPTIONS,
+
+    // Exported for unit testing — the money-safe read fence (scale > 0 → STRING).
+    moneySafeFetchTypeHandler,
 };

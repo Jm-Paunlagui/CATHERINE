@@ -121,11 +121,11 @@ function GroupDropdown({ group, isBar }) {
                         const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
                         return (
                             <NavLink key={item.name} to={item.href}>
-                                <div className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-aumovio ${TRANSITION_COLORS} hover:bg-(--side-hover-bg) ${active ? "text-(--text-accent) font-aumovio-bold" : "text-grey-700 dark:text-grey-300 hover:text-(--text-accent)"}`}>
+                                <div className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-aumovio ${TRANSITION_COLORS} hover:bg-(--side-hover-bg) ${active ? "text-(--text-accent) font-aumovio-bold" : "text-grey-700 dark:text-grey-300 hover:text-(--text-accent)"}`}>
                                     {item.icon && <span className="shrink-0 flex items-center justify-center">{item.icon}</span>}
                                     <div className="min-w-0">
                                         <p className="truncate">{item.name}</p>
-                                        {item.description && <p className="text-xs text-grey-400 mt-0.5 truncate">{item.description}</p>}
+                                        {item.description && <p className="text-xs text-grey-400 mt-1 truncate">{item.description}</p>}
                                     </div>
                                 </div>
                             </NavLink>
@@ -142,25 +142,28 @@ export function Breadcrumb({ items, auto = false, separator = "chevron", size = 
     const { layout, sidebarOpen, toggleSidebar } = useLayout();
     const { navGroups } = useNav();
 
-    const resolvedItems = auto ? buildAutoItems(location.pathname, navGroups, labels, exclude) : (items ?? []);
-
     const textSz = size === "sm" ? "text-sm" : "text-base";
     const isBar = variant === "bar";
     const isSidebar = layout === "sidebar";
 
-    // Skip "Home" segment for sidebar breadcrumb — sidebar already has Dashboard
+    // Skip "Home" segment for sidebar breadcrumb — sidebar already has Dashboard.
+    // The auto-mode item list is computed INSIDE this useMemo (not hoisted to
+    // its own `resolvedItems` variable) because buildAutoItems() returns a
+    // brand-new array every render; as an external dependency its changing
+    // reference would defeat the memoization entirely.
     const displayItems = useMemo(() => {
-        if (isSidebar && resolvedItems.length > 1) {
-            return resolvedItems.slice(1); // drop Home
+        const resolved = auto ? buildAutoItems(location.pathname, navGroups, labels, exclude) : (items ?? []);
+        if (isSidebar && resolved.length > 1) {
+            return resolved.slice(1); // drop Home
         }
-        return resolvedItems;
-    }, [isSidebar, resolvedItems]);
+        return resolved;
+    }, [auto, location.pathname, navGroups, labels, exclude, items, isSidebar]);
 
     const crumbs = (
-        <nav aria-label="Breadcrumb" className={`flex items-center gap-1.5 flex-wrap font-aumovio ${textSz}`}>
+        <nav aria-label="Breadcrumb" className={`flex items-center gap-2 flex-wrap font-aumovio ${textSz}`}>
             {/* Sidebar toggle — only shown in sidebar layout (tablet/mobile) */}
             {isSidebar && (
-                <button onClick={toggleSidebar} aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"} className={`p-1.5 -ml-1 mr-1 rounded-lg shrink-0 ${TRANSITION_COLORS} ${isBar ? "text-(--chrome-from-text-muted) hover:text-(--chrome-from-text) hover:bg-(--chrome-from-hover-bg)" : "text-grey-500 hover:text-(--text-accent) hover:bg-(--side-hover-bg)"}`}>
+                <button onClick={toggleSidebar} aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"} className={`p-2 -ml-1 mr-1 rounded-lg shrink-0 ${TRANSITION_COLORS} ${isBar ? "text-(--chrome-from-text-muted) hover:text-(--chrome-from-text) hover:bg-(--chrome-from-hover-bg)" : "text-grey-500 hover:text-(--text-accent) hover:bg-(--side-hover-bg)"}`}>
                     {sidebarOpen ? <XMarkIcon className="w-4 h-4" /> : <Bars3Icon className="w-4 h-4" />}
                 </button>
             )}
@@ -170,14 +173,14 @@ export function Breadcrumb({ items, auto = false, separator = "chevron", size = 
                 const seps = isBar ? BAR_SEPARATORS : SEPARATORS;
 
                 return (
-                    <div key={`${item.label}-${i}`} className="flex items-center gap-1.5">
+                    <div key={`${item.label}-${i}`} className="flex items-center gap-2">
                         {i > 0 && (seps[separator] ?? seps.chevron)}
 
                         {/* Group segment → hover dropdown */}
                         {item.group ? (
                             <GroupDropdown group={item.group} isBar={isBar} />
                         ) : isLast ? (
-                            <span className={`flex items-center gap-1 font-aumovio-bold ${isBar ? "text-(--chrome-from-text) drop-shadow-md rounded px-2 py-0.5" : "text-(--text-accent)"}`} aria-current="page">
+                            <span className={`flex items-center gap-1 font-aumovio-bold ${isBar ? "text-(--chrome-from-text) drop-shadow-md rounded px-2 py-1" : "text-(--text-accent)"}`} aria-current="page">
                                 {item.icon && <item.icon className="w-3.5 h-3.5" />}
                                 {item.label}
                             </span>
