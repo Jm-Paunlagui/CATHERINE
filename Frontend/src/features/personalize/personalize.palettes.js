@@ -99,10 +99,20 @@ function relativeLuminance(hex) {
 
 /**
  * Zone-adaptive foreground bundle for any solid colour zone.
- * Flip decision is WCAG-correct: compare contrast of white vs near-black
- * candidates and pick the winner, with a 15% bias toward white because
- * light-on-dark reads perceptually stronger at equal ratios.
- * (Correct flip point is zone luminance ≈ 0.18, NOT 0.5.)
+ *
+ * Flip decision (revised): a zone is treated as "dark" — i.e. gets WHITE
+ * foregrounds — whenever white text clears the WCAG AA large/UI threshold
+ * (≥ 3:1) AND the zone's relative luminance sits below ~0.42.
+ *
+ * The previous heuristic (`cWhite >= cBlack * 0.85`) compared white-vs-black
+ * contrast directly. For vivid mid-tone brand hues (e.g. the default orange
+ * #ff4208 at L≈0.25, Ruby Punch #ff466e at L≈0.27), near-black technically
+ * wins the raw ratio, so it picked BLACK text on saturated chrome — which
+ * reads wrong on a coloured brand bar and contradicted the intended aesthetic
+ * (white-on-brand). A luminance flip at ≈0.42 gives white on every saturated
+ * or dark palette primary/secondary while still returning black on genuinely
+ * pale/pastel zones (where white fails AA anyway). The `cWhite >= 3` guard
+ * keeps us WCAG-safe: we never hand out white text that can't reach 3:1.
  *
  * @param {string} zoneHex
  * @returns {{ tone:'light'|'dark', text:string, textMuted:string, textFaint:string,
@@ -112,8 +122,9 @@ function relativeLuminance(hex) {
  */
 export function pickOnColor(zoneHex) {
     const cWhite = getContrastRatio("#ffffff", zoneHex);
-    const cBlack = getContrastRatio("#1a1a1a", zoneHex);
-    const zoneIsDark = cWhite >= cBlack * 0.85;
+    const zoneLum = relativeLuminance(zoneHex);
+    // White wins when it's contrast-safe (≥ AA 3:1) and the zone is not pale.
+    const zoneIsDark = cWhite >= 3 && zoneLum <= 0.42;
     if (zoneIsDark) {
         return {
             tone: "dark",
@@ -786,7 +797,7 @@ export function applyPaletteVars(colors, isDark = false, paletteId = null) {
     // The sidebar gives each nav group its own hue (Finance=yellow, Records=blue,
     // Management=purple/secondary, …). Those GROUP_COLOR_MAP entries previously
     // used the raw -400 anchor for dots and active text, which is invisible in
-    // dark mode when a palette's family anchor is near-black (e.g. The Divine
+    // dark mode when a palette's family anchor is near-black (e.g. Toasted Copper
     // yellow #3a2824, secondary #42342f → invisible Finance/Management dots and
     // an unreadable active item). Compute contrast-safe per-family colours against
     // the sidebar surface, mirroring the primary (--side-active-*). Palette-agnostic.
@@ -1035,7 +1046,7 @@ export const PALETTES = [
     },
     {
         id: "the-divine",
-        name: "The Divine",
+        name: "Toasted Copper",
         colors: {
             primary: "#7b5235",
             secondary: "#42342f",
@@ -1049,7 +1060,7 @@ export const PALETTES = [
     },
     {
         id: "too-much",
-        name: "Too Much",
+        name: "Crimson Orchid",
         colors: {
             primary: "#ab648f",
             secondary: "#e41144",
@@ -1063,7 +1074,7 @@ export const PALETTES = [
     },
     {
         id: "through-the-window",
-        name: "Through the Window",
+        name: "Slate Harbour",
         colors: {
             primary: "#171f24",
             secondary: "#466271",
@@ -1077,7 +1088,7 @@ export const PALETTES = [
     },
     {
         id: "bloodlust",
-        name: "Bloodlust",
+        name: "Deep Garnet",
         colors: {
             primary: "#3b080f",
             secondary: "#7c121c",
@@ -1091,7 +1102,7 @@ export const PALETTES = [
     },
     {
         id: "muted",
-        name: "Muted",
+        name: "Dusty Rosewood",
         colors: {
             primary: "#985a5f",
             secondary: "#ae9fa3",
@@ -1105,7 +1116,7 @@ export const PALETTES = [
     },
     {
         id: "not-enough",
-        name: "Not Enough",
+        name: "Olive Field",
         colors: {
             primary: "#4a5435",
             secondary: "#263138",
@@ -1119,7 +1130,7 @@ export const PALETTES = [
     },
     {
         id: "desperate-touch",
-        name: "Desperate Touch",
+        name: "Rose Quartz",
         colors: {
             primary: "#ca92a6",
             secondary: "#ec86a3",
@@ -1147,7 +1158,7 @@ export const PALETTES = [
     },
     {
         id: "fade-away",
-        name: "Fade Away",
+        name: "Storm Slate",
         colors: {
             primary: "#323e48",
             secondary: "#5f6067",
@@ -1175,7 +1186,7 @@ export const PALETTES = [
     },
     {
         id: "cigarette-smoke",
-        name: "Cigarette Smoke",
+        name: "Steel Blue",
         colors: {
             primary: "#435061",
             secondary: "#2a3a50",
@@ -1203,7 +1214,7 @@ export const PALETTES = [
     },
     {
         id: "never-again",
-        name: "Never Again",
+        name: "Sage Mist",
         colors: {
             primary: "#ccdcc4",
             secondary: "#979a78",
@@ -1231,7 +1242,7 @@ export const PALETTES = [
     },
     {
         id: "just-leave",
-        name: "Just Leave",
+        name: "Amber Sun",
         colors: {
             primary: "#ffc525",
             secondary: "#ff8a27",
@@ -1245,7 +1256,7 @@ export const PALETTES = [
     },
     {
         id: "i-see-you",
-        name: "I See You",
+        name: "Warm Sandstone",
         colors: {
             primary: "#d8aa8d",
             secondary: "#6b403d",
@@ -1259,7 +1270,7 @@ export const PALETTES = [
     },
     {
         id: "past-times",
-        name: "Past Times",
+        name: "Golden Ochre",
         colors: {
             primary: "#dab123",
             secondary: "#5a3f1b",
@@ -1273,7 +1284,7 @@ export const PALETTES = [
     },
     {
         id: "rough-sex",
-        name: "Rough Sex",
+        name: "Blush Petal",
         colors: {
             primary: "#ffc0cb",
             secondary: "#ccc1b5",
@@ -1287,7 +1298,7 @@ export const PALETTES = [
     },
     {
         id: "cheap-motel",
-        name: "Cheap Motel",
+        name: "Neon Fuchsia",
         colors: {
             primary: "#ff0066",
             secondary: "#6a2141",
@@ -1301,7 +1312,7 @@ export const PALETTES = [
     },
     {
         id: "crybaby",
-        name: "Crybaby",
+        name: "Powder Sky",
         colors: {
             primary: "#ade4eb",
             secondary: "#59a5cb",
@@ -1329,7 +1340,7 @@ export const PALETTES = [
     },
     {
         id: "set-me-free",
-        name: "Set Me Free",
+        name: "Periwinkle Frost",
         colors: {
             primary: "#e0e3ff",
             secondary: "#3c4774",
@@ -1343,7 +1354,7 @@ export const PALETTES = [
     },
     {
         id: "choking",
-        name: "Choking",
+        name: "Spring Meadow",
         colors: {
             primary: "#a1ee9e",
             secondary: "#b4cfc5",
@@ -1357,7 +1368,7 @@ export const PALETTES = [
     },
     {
         id: "overboard",
-        name: "Overboard",
+        name: "Coral Blush",
         colors: {
             primary: "#e7d5d8",
             secondary: "#ff4171",
@@ -1371,7 +1382,7 @@ export const PALETTES = [
     },
     {
         id: "bruised",
-        name: "Bruised",
+        name: "Indigo Depths",
         colors: {
             primary: "#3b5866",
             secondary: "#4a1c5d",
@@ -1385,7 +1396,7 @@ export const PALETTES = [
     },
     {
         id: "broken",
-        name: "Broken",
+        name: "Arctic Ice",
         colors: {
             primary: "#f0faff",
             secondary: "#a7efff",
@@ -1427,7 +1438,7 @@ export const PALETTES = [
     },
     {
         id: "always",
-        name: "Always",
+        name: "Ruby Punch",
         colors: {
             primary: "#ff466e",
             secondary: "#e04675",
@@ -1441,7 +1452,7 @@ export const PALETTES = [
     },
     {
         id: "fighting-on",
-        name: "Fighting On",
+        name: "Iris Violet",
         colors: {
             primary: "#5d52e6",
             secondary: "#998ee6",
@@ -1455,7 +1466,7 @@ export const PALETTES = [
     },
     {
         id: "heartache",
-        name: "Heartache",
+        name: "Rose Petal",
         colors: {
             primary: "#ffc2cc",
             secondary: "#cd8492",
@@ -1483,7 +1494,7 @@ export const PALETTES = [
     },
     {
         id: "never",
-        name: "Never",
+        name: "Terracotta",
         colors: {
             primary: "#cb624f",
             secondary: "#bfe4af",
@@ -1511,7 +1522,7 @@ export const PALETTES = [
     },
     {
         id: "soft-boy",
-        name: "Soft Boy",
+        name: "Denim Dusk",
         colors: {
             primary: "#335e7d",
             secondary: "#6c5c8f",

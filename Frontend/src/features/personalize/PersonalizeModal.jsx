@@ -104,7 +104,7 @@ function ColorStrip({ colors, active, isDark, children }) {
     const list = [colors.primary, colors.secondary, colors.blue, colors.turquoise, colors.yellow];
     const showDarkPreview = isDark && colors.darkSurface;
     return (
-        <div className={["relative w-14 h-9 rounded-lg overflow-hidden flex shadow-md shrink-0 flex-col", active ? "ring-2 ring-offset-1 ring-(--accent) ring-offset-(--bg-surface-2)" : ""].join(" ")}>
+        <div className={["relative w-14 h-9 rounded-lg overflow-hidden flex shadow-md shrink-0 flex-col", active ? "ring-2 ring-offset-2 ring-(--accent) ring-offset-(--bg-surface-2)" : ""].join(" ")}>
             <div className="flex flex-1">
                 {list.map((c, i) => (
                     <div key={i} className="flex-1" style={{ background: c }} />
@@ -129,7 +129,7 @@ const CHECK_OVERLAY = (
 function PaletteSwatch({ palette, active, isDark, onSelect }) {
     const { id, name, colors } = palette;
     return (
-        <button type="button" onClick={() => onSelect(id)} title={name} aria-label={name} aria-pressed={active} className={["flex flex-col items-center gap-1.5 p-1 rounded-xl", TRANSITION_COLORS].join(" ")}>
+        <button type="button" onClick={() => onSelect(id)} title={name} aria-label={name} aria-pressed={active} className={["flex flex-col items-center gap-2 p-1.5 rounded-xl", TRANSITION_COLORS].join(" ")}>
             <ColorStrip colors={colors} active={active} isDark={isDark}>
                 {active && CHECK_OVERLAY}
             </ColorStrip>
@@ -144,7 +144,7 @@ function CustomSwatch({ active, isDark, customColor, onSelect }) {
     const derivedColors = customColor ? generateCustomColors(customColor) : CUSTOM_FALLBACK;
 
     return (
-        <button type="button" onClick={onSelect} aria-label="Custom colour" aria-pressed={active} className={["flex flex-col items-center gap-1.5 p-1 rounded-xl", TRANSITION_COLORS].join(" ")}>
+        <button type="button" onClick={onSelect} aria-label="Custom colour" aria-pressed={active} className={["flex flex-col items-center gap-2 p-1.5 rounded-xl", TRANSITION_COLORS].join(" ")}>
             <ColorStrip colors={derivedColors} active={active} isDark={isDark}>
                 {active ? (
                     CHECK_OVERLAY
@@ -170,7 +170,7 @@ function PaletteGrid({ activePalette, customColor, isDark, onSelect, onCustomCol
     return (
         <div className="relative">
             <div className="max-h-64 overflow-y-auto hide-scrollbar -mr-1 pr-1">
-                <div className="grid grid-cols-4 gap-x-1 gap-y-2">
+                <div className="grid grid-cols-4 gap-x-2.5 gap-y-3 p-1">
                     {predefined.map((palette) => (
                         <PaletteSwatch key={palette.id} palette={palette} active={activePalette === palette.id} isDark={isDark} onSelect={onSelect} />
                     ))}
@@ -207,13 +207,13 @@ function ActivePaletteInfo({ activePalette, customColor, isDark }) {
 
     return (
         <div className="flex items-center gap-2 mt-3 px-1 flex-wrap">
-            <div className="flex gap-0.5">
+            <div className="flex gap-1">
                 {[colors.primary, colors.secondary, colors.blue, colors.turquoise, colors.yellow].map((c, i) => (
                     <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
                 ))}
                 {hasDarkColors && (
                     <>
-                        <div className="w-px h-2.5 bg-grey-300 dark:bg-grey-600 mx-0.5 self-center" />
+                        <div className="w-px h-2.5 bg-grey-300 dark:bg-grey-600 mx-1 self-center" />
                         <div className="w-2.5 h-2.5 rounded-full ring-1 ring-grey-400/30" style={{ background: colors.darkSurface }} title={`Dark surface: ${colors.darkSurface}`} />
                         <div className="w-2.5 h-2.5 rounded-full ring-1 ring-grey-400/30" style={{ background: colors.darkText }} title={`Dark text: ${colors.darkText}`} />
                         <div className="w-2.5 h-2.5 rounded-full ring-1 ring-grey-400/30" style={{ background: colors.darkMuted }} title={`Dark muted: ${colors.darkMuted}`} />
@@ -240,8 +240,8 @@ export default function PersonalizeModal({ open, onClose }) {
     return (
         <Modal open={open} onClose={onClose} size="xl">
             {/* Custom header — negative margins break out of Modal's px-6 py-5 body wrapper */}
-            <div className="-mx-6 -mt-5 px-6 py-4 border-b border-grey-200 dark:border-grey-700">
-                <div className="flex items-center gap-2.5">
+            <div className="-mx-6 -mt-5 p-4 border-b border-grey-200 dark:border-grey-700">
+                <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-(--accent-subtle) flex items-center justify-center">
                         <PaintBrushIcon className="w-4 h-4 text-(--nav-active-text)" />
                     </div>
@@ -273,14 +273,14 @@ export default function PersonalizeModal({ open, onClose }) {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-aumovio text-black/80 dark:text-white/80">Transparency effects</p>
-                            <p className="text-xs text-grey-400 dark:text-grey-500 mt-0.5">Blur and frosted glass on surfaces</p>
+                            <p className="text-xs text-grey-400 dark:text-grey-500 mt-1">Blur and frosted glass on surfaces</p>
                         </div>
                         <Toggle checked={transparency} onChange={setTransparency} size="md" color="accent" />
                     </div>
                 </div>
 
                 {/* Right column: accent palette */}
-                <div className="w-72 shrink-0 px-5 py-5 border-l border-grey-200 dark:border-grey-700 bg-grey-50/50 dark:bg-white/2">
+                <div className="w-80 shrink-0 px-5 py-5 border-l border-grey-200 dark:border-grey-700 bg-grey-50/50 dark:bg-white/2">
                     <SectionLabel>Accent colour</SectionLabel>
                     <PaletteGrid activePalette={palette} customColor={customColor} isDark={isDark} onSelect={setPalette} onCustomColor={setCustomColor} />
                     <ActivePaletteInfo activePalette={palette} customColor={customColor} isDark={isDark} />
@@ -288,7 +288,7 @@ export default function PersonalizeModal({ open, onClose }) {
                     {palette === "custom" && (
                         <div className="mt-4 pt-4 border-t border-grey-200 dark:border-grey-700">
                             <ColorPicker value={customColor || "#ff4208"} onChange={setCustomColor} presets={CUSTOM_PRESETS} label="Pick your colour" />
-                            <p className="mt-2.5 text-[11px] leading-snug text-grey-400 dark:text-grey-500">The full 5-colour scheme and a matching dark theme are generated automatically from your colour.</p>
+                            <p className="mt-3 text-[11px] leading-snug text-grey-400 dark:text-grey-500">The full 5-colour scheme and a matching dark theme are generated automatically from your colour.</p>
                         </div>
                     )}
                 </div>

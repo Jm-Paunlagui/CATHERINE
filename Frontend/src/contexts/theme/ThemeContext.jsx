@@ -22,7 +22,9 @@ function loadPrefs() {
             };
         }
     } catch {
-        /* corrupt or unavailable localStorage — fall through to legacy/env default */
+        // Malformed JSON or a localStorage read failure (private mode, quota,
+        // blocked storage) — fall through to the legacy-key / system-default
+        // read below rather than let a bad stored value break theming.
     }
     const legacy = localStorage.getItem(LEGACY_KEY);
     return {
@@ -45,20 +47,23 @@ export function ThemeProvider({ children }) {
 
     // Re-resolve `resolved` synchronously during render when `mode` changes
     // (React's documented "adjusting state when a prop changes" pattern),
-    // instead of in the effect below — the old effect called setResolved(...)
-    // synchronously on every mode change, which trips
-    // react-hooks/set-state-in-effect and flashes the previous theme before a
-    // post-render effect would correct it. Covers both branches (non-system ->
-    // mode itself; system -> current OS preference).
+    // instead of in the effect below — fixing the useMemo call above (see
+    // the fix earlier in this file) let the React Compiler-backed lint fully
+    // analyse this component for the first time and it surfaced this exact
+    // shape too: the old effect called setResolved(...) synchronously on
+    // every mode change. Deriving here avoids a flash of the previous
+    // resolved theme before a post-render effect would have corrected it,
+    // and covers both original branches (mode !== "system" -> mode itself;
+    // mode === "system" -> current OS preference).
     const [prevMode, setPrevMode] = useState(mode);
     if (mode !== prevMode) {
         setPrevMode(mode);
         setResolved(mode === "system" ? getSystemTheme() : mode);
     }
 
-    // OS dark-mode listener — purely a subscription to matchMedia, with the
-    // resulting setResolved() called from the "change" handler, not
-    // synchronously within the effect body.
+    // OS dark-mode listener — purely a subscription to an external source
+    // (matchMedia), with the resulting setResolved() called from the
+    // "change" event handler, not synchronously within the effect body.
     useEffect(() => {
         if (mode !== "system") return;
         const mql = window.matchMedia("(prefers-color-scheme: dark)");
@@ -74,7 +79,9 @@ export function ThemeProvider({ children }) {
             localStorage.setItem(PERSONALIZE_KEY, JSON.stringify({ mode, transparency, palette, customColor }));
             localStorage.setItem(LEGACY_KEY, mode);
         } catch {
-            /* localStorage unavailable (private mode / SSR) — preferences not persisted */
+            // Quota exceeded or blocked (private mode) — theming for THIS
+            // session still applies via the DOM attribute set above; only the
+            // cross-reload persistence is lost.
         }
     }, [mode, resolved, transparency, palette, customColor]);
 
@@ -125,7 +132,3 @@ export function ThemeProvider({ children }) {
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
-
-// The `ThemeContext` object and the `useTheme` consumer hook live in
-// ./useTheme.js so this file exports only the `ThemeProvider` component
-// (react-refresh/only-export-components).
