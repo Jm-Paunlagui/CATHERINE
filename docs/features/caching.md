@@ -169,7 +169,7 @@ Registered once in `app.js`:
 
 | Store | `ttl` | `checkPeriod` | `maxKeys` | Purpose (from the `app.js` comments) |
 | --- | --- | --- | --- | --- |
-| `adminList` | 600 s | 120 s | 50 | Small admin roster; mutates only on admin CRUD; hard 50-key ceiling. |
+| `adminList` | 600 s | 120 s | 50 | Small admin list; mutates only on admin CRUD; hard 50-key ceiling. |
 | `auditLog` | 120 s | 30 s | 200 | Continuously-growing security telemetry; short TTL avoids stale telemetry while cutting Oracle pressure from admin polling. |
 | `authProfile` | 30 s | 15 s | 10000 | Per-user `/auth/me` profile; fires on every page focus; 30 s staleness is harmless (role/active changes apply on next refresh). |
 

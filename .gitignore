@@ -1,0 +1,3 @@
+# Runtime logs written when a tool runs from the repo root
+/logs/
+node_modules/

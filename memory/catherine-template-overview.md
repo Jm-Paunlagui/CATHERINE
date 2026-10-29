@@ -7,7 +7,7 @@ metadata:
 
 CATHERINE is a full-stack **boilerplate/template** monorepo at `C:\Users\johnm\WebRepo\CATHERINE`. Two halves:
 
-- `Backend/` — Node.js + Express v5, class-based OOP, OracleDB. Internal package name `backend` (description "MEAL Backend API"). Origin repo: `github.com/Jm-Paunlagui/NodeExpress-Template`.
+- `Backend/` — Node.js + Express v5, class-based OOP, OracleDB. Internal package name `backend`. Origin repo: `github.com/Jm-Paunlagui/NodeExpress-Template`.
 - `Frontend/` — React 19 + Tailwind v4, the **Aumovio Design System v3.1**. Internal package name `frontend`, version 1.18.1.
 
 Key orientation facts (not obvious from a casual look):

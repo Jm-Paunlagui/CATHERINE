@@ -11,7 +11,7 @@ The point is not that Claude gets smarter. It is that work gets **routed to a sp
 **You do not need to name an agent.** Describe the task; Claude matches it to one from the agent descriptions.
 
 ```
-Add a route to list active kiosk terminals
+Add a route to list active API clients
         → senior-nodejs-engineer
 
 Why is this form not showing the validation shake?

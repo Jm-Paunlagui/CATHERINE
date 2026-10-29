@@ -1,11 +1,11 @@
 ---
 name: senior-nodejs-engineer
-description: Senior Node.js Engineer discipline for the Aumovio MEAL backend — Node.js + Express v5, class-based OOP. Use this skill whenever writing, reviewing, or refactoring backend routes, controllers, services, or middleware; enforcing the class-vs-function decision table; the three-bucket constants rule (errors/responses/messages); the immutable 13-step middleware chain; AppError + catchAsync patterns; logger-not-console; auth predicates; the cache system; or PKG compilation. Trigger on "add a route", "write a controller/service", "new middleware", "why is the middleware ordered this way", "throw an AppError", "cache this endpoint".
+description: Senior Node.js Engineer discipline for the CATHERINE template backend — Node.js + Express v5, class-based OOP. Use this skill whenever writing, reviewing, or refactoring backend routes, controllers, services, or middleware; enforcing the class-vs-function decision table; the three-bucket constants rule (errors/responses/messages); the immutable 13-step middleware chain; AppError + catchAsync patterns; logger-not-console; auth predicates; the cache system; or PKG compilation. Trigger on "add a route", "write a controller/service", "new middleware", "why is the middleware ordered this way", "throw an AppError", "cache this endpoint".
 ---
 
-# Senior Node.js Engineer (Express v5 + MEAL Backend)
+# Senior Node.js Engineer (Express v5 + CATHERINE Backend)
 
-You are a **Senior Node.js Engineer** for the Aumovio MEAL backend. Class-based OOP without exception.
+You are a **Senior Node.js Engineer** for the CATHERINE template backend. Class-based OOP without exception.
 
 ## Class vs Function decision table
 
@@ -29,27 +29,28 @@ You are a **Senior Node.js Engineer** for the Aumovio MEAL backend. Class-based 
 
 ## Middleware Stack Order
 
-**This is a snapshot, not a specification.** It was verified against `MEAL-BE/src/app.js`, which is numbered in comments and is the authority. Read the numbers from the file before reporting an ordering defect — a step added or renumbered since this was written makes the list below wrong, not the code.
+**This is a snapshot, not a specification.** It was verified against `Backend/src/app.js`, which is numbered in comments and is the authority. Read the numbers from the file before reporting an ordering defect — a step added or renumbered since this was written makes the list below wrong, not the code.
 
 What is durable is the *rationale*: the three positions below that break something specific when moved. Those invariants hold in any Express application; the step numbers do not.
 
-At the time of writing: thirteen numbered steps plus three lettered sub-steps. The sub-steps are not decoration — each sits where it does for a stated reason, and moving one breaks something specific.
+At the time of writing: thirteen numbered steps plus four lettered sub-steps (3a, 3b, 4a, 5a). The sub-steps are not decoration — each sits where it does for a stated reason, and moving one breaks something specific.
 
 1. **HelmetMiddleware** — HTTP security headers
 2. **SecurityFilterMiddleware** — block scanners/traversal EARLY, before body parsing
 3. **TraceabilityMiddleware.handle** — request id + ALS context + the `[Request Complete]` line. Deliberately **above** the body parsers: a malformed-JSON 400 is raised by the parser itself, and that request still needs an id, a context, and an audit row.
    - **3a. AuditLogMiddleware** — DB persistence, fires after `res.end` via `setImmediate`
-4. **BodyParserMiddleware** — `jsonHandler` then `urlencodedHandler` (one step, two handlers)
+   - **3b. ShutdownGateMiddleware** — rejects new work while the process drains; health paths (`HEALTH_PATH_RE`) stay reachable
+4. **BodyParserMiddleware** — `jsonHandler`, `urlencodedHandler`, then `defaultBodyHandler` (one step, three handlers; the last keeps `req.body` an object under Express 5)
    - **4a. TraceabilityMiddleware.logIncoming** — the `[Incoming Request]` line. MUST stay directly below the body parsers; above them `req.body` does not exist yet, which is why this line once logged `undefined` on every POST.
 5. **ResponseTimeMiddleware** — `X-Response-Time` header
    - **5a. MetricsMiddleware** — must run after ResponseTime so both measure from the same request-start origin. Maintains per-route ring buffers for p50/p95/p99, which ResponseTime does not provide.
 6. **CompressionMiddleware** — gzip
 7. **CorsMiddleware**
 8. **CookieParserMiddleware**
-9. **CsrfMiddleware** — must come after cookie-parser so the secret cookie is readable. `/api/v1/csrf/*` is excluded to avoid the catch-22 of needing a token to get a token; `POST /api/v1/metrics/frontend` is excluded because it is an unauthenticated `sendBeacon` telemetry sink that cannot attach the header (CWE-352 risk explicitly accepted, bounded by its own 30 req/min limiter). `doubleCsrf` only enforces on POST/PUT/PATCH/DELETE.
+9. **CsrfMiddleware** — must come after cookie-parser so the secret cookie is readable. `/api/v1/csrf/*` is excluded to avoid the catch-22 of needing a token to get a token; `POST /api/v1/metrics/frontend` is excluded because it is an unauthenticated `fetch(..., { keepalive: true })` telemetry sink that cannot attach the header (CWE-352 risk explicitly accepted, bounded by its own 30 req/min limiter). `doubleCsrf` only enforces on POST/PUT/PATCH/DELETE.
 10. **ErrorHandlerMiddleware.captureResponseBody** — capture response body for downstream logging
 11. **IpFilterMiddleware** — enabled via `ENABLE_IP_FILTER`
-12. **RateLimiterMiddleware** — custom Sliding Window Counter backed by NodeCache
+12. **RateLimiterMiddleware** — custom Sliding Window Counter backed by NodeCache; `OPTIONS` and health paths (`HEALTH_PATH_RE`) are exempt
 13. **PreventRedirectsMiddleware** — mounted on `/api` only
 
 After the chain: routes at `/api/v1`, then `notFoundHandler`, then `ErrorHandlerMiddleware.handle` as the terminal error handler.

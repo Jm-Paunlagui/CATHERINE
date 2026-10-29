@@ -523,7 +523,7 @@ Body `{ currentPassword, newPassword }`. On success it re-signs the admin row, p
 
 | Status | `error.type` | Cause |
 | --- | --- | --- |
-| `400` | `ValidationError` | Missing field, or `newPassword === ADMIN_DEFAULT_PASSWORD` |
+| `400` | `ValidationError` | Missing field, or `newPassword === ADMIN_DEFAULT_PASSWORD` (only while that retired variable is still set) |
 | `401` | `AuthenticationError` | `currentPassword` wrong (hint: "The current password you entered is incorrect.") |
 | `404` | `NotFoundError` | No account for the authenticated username |
 | `422` | `DataIntegrityError` | `SYSSIGNATURE` broken — refuses to touch credentials on a tampered row |
@@ -608,6 +608,8 @@ The re-signing is the subtle part: `PASSWORD` is inside `buildSignedFields`, so 
 
 ### 6.7 Forced rotation off the default password
 
+> **Status (2026-10-28):** `ADMIN_DEFAULT_PASSWORD` is **retired** in `Backend/.env.example` (leave it unset). Admin Management now issues per-account temporary passwords with a 72-hour expiry, emailed to the holder; see [`admin-management-and-rbac.md`](./admin-management-and-rbac.md) §7.3. The check below is legacy and only runs while the variable is set.
+
 `_checkIsDefaultPassword` verifies the stored hash against `ADMIN_DEFAULT_PASSWORD`. A match sets both `isDefaultPassword` and `requiresPasswordChange` on the claim object; `auth.hook.js:62` reads the latter and routes to `/auth/change-password` instead of the landing route. `changePassword` then refuses the default value as a new password with a `400 ValidationError`. Unset `ADMIN_DEFAULT_PASSWORD` and the check returns `false` — the feature disables itself rather than failing.
 
 ### 6.8 Lockout is per-process and in-memory
@@ -640,7 +642,7 @@ The allow-list is correct in spirit — it is deliberately not "retry any 403", 
 | `PASSWORD_HASH_MODE` | no | `argon2` | `argon2` \| `bcrypt` \| `plain` \| `tripledes`. `plain` throws in production. |
 | `PASSWORD_ENCRYPTION_MODE` | conditionally | — | Required only when `PASSWORD_HASH_MODE` is weak; forces admin passwords to a strong mode. |
 | `ARGON2_MEMORY_COST` / `_TIME_COST` / `_PARALLELISM` / `_HASH_LENGTH` | no | 19456 / 2 / 1 / 32 | Range-validated; out-of-range throws `RangeError`. |
-| `ADMIN_DEFAULT_PASSWORD` | no | — | Enables the forced-rotation check. |
+| `ADMIN_DEFAULT_PASSWORD` | no — **retired**, leave unset | — | Legacy: while set, enables the forced-rotation check for rows still holding that value. |
 | `LOGIN_MAX_ATTEMPTS` / `_LOCKOUT_MODE` / `_LOCKOUT_DURATION_MS` / `_LOCKOUT_MULTIPLIER` / `LOGIN_MAX_LOCKOUT_CYCLES` / `LOGIN_RETRY_DECREMENT` | no | 3 / incremental / 30000 / 2 / 3 / 1 | Lockout policy. |
 | `USE_HTTPS`, `NODE_ENV` | no | `false`, — | Together decide the cookie `Secure` flag. |
 | `TRUST_PROXY` | no | `false` | Without it `req.ip` is the proxy's — which silently breaks rate limiting, IP filtering **and** the CSRF session identifier. |
@@ -697,8 +699,8 @@ The code is the authority. These are places where prose currently disagrees with
 4. **`T_USERS_DEV` rows are not signed.** Only admin rows carry a `SYSSIGNATURE`. Direct database write access to `T_USERS_DEV` is undetected — acceptable because those accounts are always `userLevel: 1`, but it is an asymmetry worth stating.
 5. **`PASSWORD_HASH_MODE=plain` and `tripledes` exist.** `plain` is blocked in production by `resolveMode`; `tripledes` is not, and it is reversible encryption, not hashing. `hashAdminPassword` routes admin passwords around it via `PASSWORD_ENCRYPTION_MODE`, but `AuthService` calls the generic `CryptoVault.hashPassword`/`verifyPassword`, not the `*AdminPassword` variants — so in `tripledes` mode admin passwords written by the change-password flow are encrypted, not hashed.
 6. **`AuthMiddleware.signout()` is skipped in development** on the 440 and 498 error pages: `import.meta.env.VITE_ENV === "development" ? "" : AuthMiddleware.signout()` (`ClientErrorResponses.jsx:3028` and `:3120`). The CSRF token is cleared in both cases. This is a deliberate dev convenience; be sure `VITE_ENV` is not `development` in any deployed build.
-7. **`ADMIN_DEFAULT_PASSWORD` sits in `.env`.** The example value is `Change@Me123`. `.env.example` already says to inject it from a secrets manager in production; the forced-rotation flow exists precisely because a shared default is a known-credential risk (CWE-1392).
-8. **Stale copy on the sign-in screen.** `Login.view.jsx:158` and `:175` still instruct users to "contact HR" and to "Use your HRIS or eFeedback credentials" — text inherited from an earlier host system. It is cosmetic, but it misdirects a locked-out user of a standalone deployment.
+7. **`ADMIN_DEFAULT_PASSWORD` is retired.** `.env.example` ships it commented out. Keep it unset; a shared default is a known-credential risk (CWE-1392). Temporary passwords replace it.
+8. *(Resolved 2026-10-28)* The sign-in screen no longer carries host-system wording (no "contact HR" / "HRIS" text in `Frontend/src`).
 
 ---
 

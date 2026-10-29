@@ -30,14 +30,14 @@ An agent that reports a defect on the strength of this file, without opening the
 
 | | |
 | - | - |
-| **Project** | CATHERINE — Express + Oracle backend with a React web client, built from the same platform template as MEAL |
+| **Project** | CATHERINE — generic full-stack template: Express + Oracle backend with a React web client |
 | **Repo root** | `D:\LocalWeb\CATHERINE` |
 | **Surfaces** | `Backend`, `Frontend` — two surfaces, one fleet copy at the repo root |
-| **Version** | `1.0.0-dev.45`, kept in lockstep across both surfaces |
-| **VCS** | Git. Branch at profiling time: `feat/meal-parity-money-capability` |
+| **Version** | `1.0.0-dev.46`, kept in lockstep across both surfaces |
+| **VCS** | Git. Check the current branch with `git branch --show-current`; do not trust a recorded name |
 | **Fleet config** | `.claude/` at the repo root, covering both surfaces |
 
-**Relationship to MEAL.** CATHERINE is built from the same template and is being brought to parity with it — see `plans/meal-parity-and-money.md` (Phases 2-4 substantially landed as of 2026-09-03). The conventions are near-identical, which makes assuming parity tempting and dangerous: **verify against CATHERINE's own files**, never against remembered MEAL facts. The two repos have already diverged in test-tree coverage and in frontend tooling.
+**Relationship to downstream apps.** CATHERINE is the generic template; product apps are built from it and periodically re-synced back into it (see `plans/template-reimport-handover.md`). Conventions are near-identical across those repos, which makes assuming parity tempting and dangerous: **verify against CATHERINE's own files**, never against remembered facts from another app. Roles are `SUPER_ADMIN`, `ADMIN`, `USER` only; pools are `appDb` and `appDbBulk`.
 
 ---
 
@@ -53,9 +53,9 @@ An agent that reports a defect on the strength of this file, without opening the
 | App assembly | `Backend/src/app.js` — the middleware chain, numbered in comments |
 | Authority doc | `Backend/CLAUDE.md` |
 | Source layout | `src/{app.js, config, constants, controllers, middleware, models, routes, services, utils}` |
-| Tests | Vitest + Supertest under `Backend/test/{server, unit, encryption, oracle-mongo-wrapper}`. Main server suites sit under `test/server/{unit,integration,security,performance}` — check which tree a suite belongs in before adding to it. |
-| Test command | `npm test` (`vitest run`); category scripts `test:unit`, `test:integration`, `test:security`, `test:performance`, `test:coverage` |
-| Build | PKG via `@yao-pkg/pkg` into `dist`, target `node18-win-x64`, then `scripts/postbuild-copy-natives.js`. Native Oracle binaries are copied post-build; a compiled artefact that cannot find them is a build-step failure, not a code defect. |
+| Tests | Vitest + Supertest under `Backend/test/{server, unit, encryption, oracle-mongo-wrapper}`. Main server suites sit under `test/server/{unit,integration,security,performance,reliability}` — check which tree a suite belongs in before adding to it. |
+| Test command | `npm test` (`vitest run`); category scripts `test:unit`, `test:integration`, `test:security`, `test:performance`, `test:reliability`, `test:resilience`, `test:chaos`, `test:purge`, `test:metrics`, `test:money` |
+| Build | `scripts/build-devdocs-freshness.js`, then PKG via `@yao-pkg/pkg` into `dist`, target `node24-win-x64`, then `scripts/postbuild-copy-natives.js`. Native Oracle binaries are copied post-build; a compiled artefact that cannot find them is a build-step failure, not a code defect. |
 | Validation | `express-validator` is a direct dependency here |
 | Security | `helmet`, `csrf-csrf`, `argon2`, `jsonwebtoken`. Suppressions live in `Backend/audit-suppressions.md`. |
 
@@ -69,14 +69,14 @@ An agent that reports a defect on the strength of this file, without opening the
 | Entry point | `Frontend/src/main.jsx`, mounting `src/App.jsx` |
 | Source layout | `src/{App.jsx, main.jsx, assets, components, config, constants, contexts, features, hooks, middleware, utils, views}` |
 | Feature architecture | Three layers per feature: `<feature>.api.js`, `<feature>.hook.js`, `<Feature>.view.jsx` — confirmed in `src/features/auth` |
-| Features | `src/features/{auth, dashboard, home, management, other, personalize, support}` |
+| Features | `src/features/{auth, dashboard, home, other, personalize, support, systemadmin}` |
 | Component tiers | `src/components/{ui, shared, charts, feedback, forms, layout, routing}` |
 | Charts | ApexCharts through `react-apexcharts` |
-| Tests | Vitest + Testing Library under `Frontend/test/` — **only `unit/` and `helpers/` exist**. See section 5. |
+| Tests | Vitest + Testing Library + MSW under `Frontend/test/{unit, integration, security, performance, reliability, chaos, helpers}`. |
 | Test command | `npm test` (`vitest run`) |
 | Security | `jose`, `js-cookie`. Suppressions live in `Frontend/audit-suppressions.md`. |
 
-**React Compiler is enabled.** `Frontend/vite.config.js:195` applies `reactCompilerPreset()` through `@rolldown/plugin-babel`. Memoisation is largely automatic — do **not** reflexively add `useMemo` or `useCallback`, and do not report their absence as a performance defect. Reach for manual memoisation only with a profile showing it is needed. This is a real divergence from ordinary React advice and from MEAL.
+**React Compiler is enabled.** `Frontend/vite.config.js:195` applies `reactCompilerPreset()` through `@rolldown/plugin-babel`. Memoisation is largely automatic — do **not** reflexively add `useMemo` or `useCallback`, and do not report their absence as a performance defect. Reach for manual memoisation only with a profile showing it is needed. This is a real divergence from ordinary React advice.
 
 ### Not present in this repo
 
@@ -101,7 +101,7 @@ Skills must not restate these. Read them from the authority when they matter.
 | Stack versions across both surfaces | `memory/catherine-stack-versions.md` |
 | Monorepo layout | `memory/catherine-template-overview.md` |
 | Dependency suppressions | `Backend/audit-suppressions.md`, `Frontend/audit-suppressions.md` |
-| Parity and money roadmap | `plans/meal-parity-and-money.md` |
+| Template re-sync status and open items | `plans/template-reimport-handover.md`, `plans/template-hardening.md` |
 
 The `memory/` directory has its own index at `memory/MEMORY.md`. Those files are **summaries of the two CLAUDE.md files**, so they sit *below* them in authority — useful for orientation, never for adjudicating a defect.
 
@@ -112,8 +112,8 @@ The `memory/` directory has its own index at `memory/MEMORY.md`. Those files are
 Facts agents need in order to *find* things. Verify before reporting on any of them.
 
 - Backend boot order: `server.js` requires `./src/utils/encodingPolyfill` first, then sizes the libuv thread pool, before any async I/O.
-- The middleware chain in `Backend/src/app.js` is numbered in comments — 13 numbered steps plus `3a`, `4a`, `5a` at profiling time. **Read the numbers from the file**; do not assume a count.
-- **Frontend test scripts point at directories that do not exist.** `Frontend/package.json` defines `test:integration`, `test:security`, `test:performance`, `test:reliability`, and `test:chaos`, but `Frontend/test/` contains only `unit/` and `helpers/`. Five of the six category scripts match no files. Treat this as a known coverage gap, not a broken script — and when adding a category, create the directory the existing script already expects rather than inventing a new path.
+- The middleware chain in `Backend/src/app.js` is numbered in comments — 13 numbered steps plus `3a`, `3b`, `4a`, `5a` at profiling time. **Read the numbers from the file**; do not assume a count.
+- **Frontend test categories** (`test:integration`, `test:security`, `test:performance`, `test:reliability`, `test:chaos`) each have a matching directory under `Frontend/test/`. When adding a category, create the directory the existing script already expects rather than inventing a new path.
 - The root `ReadMe.md` is not a technical authority. The two CLAUDE.md files are.
 
 ---
@@ -123,7 +123,7 @@ Facts agents need in order to *find* things. Verify before reporting on any of t
 | Applies here | Agents |
 | ------------ | ------ |
 | **Yes** | `senior-nodejs-engineer` (+ planner), `senior-oracle-engineer` (+ planner), `senior-nodejs-qa-engineer`, `senior-react-engineer` (+ planner), `senior-react-qa-engineer`, `senior-uiux-designer`, `senior-test-engineer`, `code-reviewer-cwe-cve`, `senior-cybersecurity-engineer`, `senior-performance-engineer`, `senior-anti-pattern-auditor`, `senior-code-documentation-engineer`, `senior-chaos-resilience-engineer`, `project-manager-architect` |
-| **Conditionally** | `senior-accountant-mba` — there is **no money code in `Backend/src/services/` yet**. The money capability is inbound work under `plans/meal-parity-and-money.md`. Route it for design review, and for billing, wallet, or settlement code as it lands. Do not dispatch it to audit money logic that does not exist. |
+| **Conditionally** | `senior-accountant-mba` — the template ships a generic money capability (`Backend/src/utils/money.js`, `Backend/src/services/FxRateService.js`, `Frontend/src/components/shared/money.js`) but no product finance logic. Route it for money-arithmetic review; do not dispatch it to audit business finance flows that do not exist. |
 | **Not here** | Next.js and its QA agent, C# and its QA agent, MongoDB, Docker/Kubernetes, data-analytics, ML, DL, LLM, AI, Python, Go, Rust (+ their planners) |
 
 "Not here" means **no target exists in this repo**, not that the agent is broken. Do not dispatch an inapplicable agent to "check anyway" — it has nothing to read and will invent findings.

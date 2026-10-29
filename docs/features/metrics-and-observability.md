@@ -206,7 +206,7 @@ Four `CHECK` constraints pin the enums (`:215-218`), including `CK_SAL_DETAILS_J
 
 | File | Responsibility |
 | --- | --- |
-| `Frontend/src/features/management/metrics/Metrics.view.jsx` | The standalone Observability Dashboard at `system/metrics`. Five tabs: Overview, RED Metrics, System, Alerts (with a live count in the label), Health. Presentation only; one `const hook = useMetrics()` and no destructuring at view level. |
+| `Frontend/src/features/systemadmin/metrics/Metrics.view.jsx` | The standalone Observability Dashboard at `system/metrics`. Five tabs: Overview, RED Metrics, System, Alerts (with a live count in the label), Health. Presentation only; one `const hook = useMetrics()` and no destructuring at view level. |
 | `…/metrics.hook.js` | All state and every fetch. Six `useRequest` calls at `staleTime: 30_000` (snapshot, summary, alerts, health/live, health/ready, notification status), plus the alert-history sub-fetch gated behind `{ enabled: alertsView === "history" }`, plus the acknowledge/unacknowledge/test-send mutations. Also exports seven pure formatters. |
 | `…/metrics.api.js` | Eleven thin `httpClient` calls. No state, no React. `healthReady` uses `validateStatus: s === 200 \|\| s === 503` so a 503 renders the per-dependency breakdown instead of throwing. |
 | `…/components/RedMetricsTab.jsx` | The per-route table: Route, Requests, Error Rate, p50, p95, p99, Avg. Rows arrive pre-sorted by p95 descending from the hook. |
@@ -216,7 +216,7 @@ Four `CHECK` constraints pin the enums (`:215-218`), including `CK_SAL_DETAILS_J
 | `Frontend/src/utils/webVitals.js` | Native `PerformanceObserver` collection for LCP/CLS/FID/INP with Google's 2024 thresholds. Zero npm dependencies. |
 | `Frontend/src/utils/frontendMetrics.js` | The buffer + `keepalive` fetch flusher. Deliberately does **not** use `httpClient`. |
 | `Frontend/src/main.jsx` | Bootstraps both at lines 32-35, before every provider. |
-| `Frontend/src/features/management/logsmanagement/components/MetricsPageTab.jsx` etc. | The *other* consumer of the same hook — the Logging & Observability page's Metrics tab. See [`logging-and-audit.md`](./logging-and-audit.md). |
+| `Frontend/src/features/systemadmin/logsmanagement/components/MetricsPageTab.jsx` etc. | The *other* consumer of the same hook — the Logging & Observability page's Metrics tab. See [`logging-and-audit.md`](./logging-and-audit.md). |
 
 ### 3.2 `metricsStyles.js` — the colour contract
 
@@ -619,7 +619,7 @@ The code is the authority. These are places where prose currently disagrees with
 
 | # | Location | Says | Code actually does |
 | --- | --- | --- | --- |
-| 1 | `Frontend/src/features/management/metrics/Metrics.view.jsx:6-12` | five tabs: "Overview, RED, System, Alerts, Health" | Accurate for *this* view, but the same `useMetrics()` hook also drives the Logging & Observability page's Metrics tab, which adds **Dependencies** and **Frontend Vitals** sub-tabs (`MetricsPageTab.jsx:3-4`). The hook's return surface is a superset of what this view renders. |
+| 1 | `Frontend/src/features/systemadmin/metrics/Metrics.view.jsx:6-12` | five tabs: "Overview, RED, System, Alerts, Health" | Accurate for *this* view, but the same `useMetrics()` hook also drives the Logging & Observability page's Metrics tab, which adds **Dependencies** and **Frontend Vitals** sub-tabs (`MetricsPageTab.jsx:3-4`). The hook's return surface is a superset of what this view renders. |
 | 2 | `MetricsService.js:176`, `:227`, `:271`, `:336`, `:366` | `logger[isCritical ? "crit" : "warning"]` | `crit` is a `@deprecated` alias for `critical()` (`logger.js:786-792`). Functionally correct, stylistically stale — the same drift recorded in [`logging-and-audit.md`](./logging-and-audit.md) §6.12 #3. |
 | 3 | `MetricsStore.js:749` (the `getSnapshot` `@returns` JSDoc) | `red` values are `{ count, clientErrorCount, serverErrorCount, errorRate, clientErrorRate, availability, p50, p95, p99, avgMs }`; `totals` are `{ requestsTotal, clientErrorsTotal, serverErrorsTotal, errorRate, clientErrorRate, availability }` | Both are stale. `red` also returns `redirectCount` and `notModifiedCount` (`:787-788`); `totals` also returns `successTotal`, `redirectsTotal`, `notModifiedTotal`, `errorsTotal` and `apdex` (`:899-908`). The typedef also omits `dependencies.smtp`, `system.memoryTrend`, `system.gc.recent` and the top-level `notifications` key, all of which are returned. |
 | 4 | `MetricsStore.js:680` (`recordFrontendVital` `@param`) | `name` is `"LCP" \| "CLS" \| "FID" \| "INP"` | The service accepts any string, clamped to 200 chars (`MetricsService.js:428`), and defaults to `"UNKNOWN"`. The union is the *frontend's* contract, not the endpoint's. |

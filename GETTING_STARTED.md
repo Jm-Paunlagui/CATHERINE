@@ -13,11 +13,11 @@ an observability dashboard, admin management, and a version-history (changelog) 
 ## 0. First thing to do
 
 ```
-1. Install prerequisites (Node 18+, Oracle Instant Client, an Oracle DB)
+1. Install prerequisites (Node 24, Oracle Instant Client, an Oracle DB)
    — OR just use Demo Mode (DEMO_MODE=true) to skip the database entirely.
 2. Backend:  copy .env.example → .env  and generate the secrets
 3. Frontend: copy .env.example → .env
-4. Create the database (Backend/sql/01_schema.sql) — skip if using Demo Mode
+4. Create the database (Backend/sql/01_schema.sql), then npm run db:seed:template — skip if using Demo Mode
 5. npm install  in BOTH Backend/ and Frontend/
 6. Start the backend, then the frontend
 ```
@@ -31,7 +31,7 @@ Each step is detailed below. If you only want to look around the UI, set
 
 | Requirement               | Version / Notes                                                                 |
 | ------------------------- | ------------------------------------------------------------------------------- |
-| **Node.js**               | **18.x** (the backend builds a `node18` pkg target; 18 LTS is the safe choice). |
+| **Node.js**               | **24.x** (the backend builds a `node24-win-x64` pkg target).                    |
 | **npm**                   | Ships with Node.                                                                |
 | **Oracle Database**       | 12c+ for the sample schema. **Oracle XE 21c** is ideal for local dev.           |
 | **Oracle Instant Client** | Required — `node-oracledb` runs in **Thick mode**. Set `ORACLE_INSTANT_CLIENT`. |
@@ -52,9 +52,11 @@ CATHERINE/
 ├── Backend/                  # Express 5 API (OracleDB, JWT, audit, metrics)
 │   ├── server.js             # Entry point — `npm start`
 │   ├── .env.example          # Documented env vars (copy → .env)
-│   ├── sql/                  # ← Sample standalone auth + audit schema (THIS KIT)
-│   │   ├── 01_schema.sql
-│   │   ├── 02_seed_demo.sql
+│   ├── sql/                  # ← Platform schema (auth, RBAC, audit, alerts, refresh tokens, backups, config)
+│   │   ├── 01_schema.sql                          # fresh install (drops + creates 9 tables)
+│   │   ├── 02_seed_demo.sql                       # optional sample audit rows
+│   │   ├── 03_alter_admins_notification_columns.sql  # existing DB upgrade
+│   │   ├── 04_platform_tables.sql                 # existing DB upgrade (additive)
 │   │   └── README.md
 │   └── src/                  # app.js, routes, controllers, services, models, …
 └── Frontend/                 # React 19 + Vite + Tailwind v4
@@ -97,10 +99,10 @@ Set these in `Backend/.env` (each one its own freshly-generated value):
 | `ARGON2_PEPPER`            | Server-side pepper mixed into every password hash (≥32 chars). |
 | `DATA_SIGNING_SECRET`      | HMAC key for tamper-evident `SYSSIGNATURE` on admin rows.      |
 | `CHANGELOG_ENCRYPTION_KEY` | AES-256-GCM key for the encrypted changelog file (64-hex).     |
-| `BILLING_HMAC_SECRET`      | Only if you keep the billing/export feature (≥32 chars).       |
 
 > Rotating `ARGON2_PEPPER` invalidates all password hashes; rotating
-> `DATA_SIGNING_SECRET` invalidates all admin row signatures. Treat them like keys.
+> `DATA_SIGNING_SECRET` invalidates all admin row signatures and `ROW_HASH`
+> values. Treat them like keys. Weak or missing secrets stop the server at boot.
 
 ### 3.4 Configure the database connection
 
@@ -110,6 +112,9 @@ In `Backend/.env`:
 DB_TYPE=oracle
 DB_HOST=localhost
 DB_PORT=1521
+DB_APP_SERVICE_NAME=XEPDB1        # used as the SID in the connect string
+APP_DB_USERNAME=app_user           # schema owner; both pools (appDb, appDbBulk) use it
+APP_DB_PASSWORD=change_me
 ORACLE_INSTANT_CLIENT=C:\oracle\instantclient_23_8
 
 # Password hashing — keep argon2 (OWASP #1)
@@ -120,8 +125,8 @@ PORT=2108
 HOST=0.0.0.0
 ```
 
-Set the Oracle service name + credentials for your schema. Only the `APP_*`
-connection variables are required for the standalone schema.
+Pool sizing (`APP_POOL_*` for `appDb`, `APP_BULK_*` for `appDbBulk`) has working
+defaults in `.env.example`; tune it later.
 
 ### 3.5 Start the backend
 
@@ -145,20 +150,30 @@ sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1 @01_schema.sql
 sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1 @02_seed_demo.sql   # optional sample audit rows
 ```
 
-This creates `T_USERS_DEV`, `T_ADMINS_DEV`, and `T_AUDIT_LOGS_DEV`. The optional second script
+`01_schema.sql` drops and recreates nine tables: `T_USERS_DEV`, `T_ADMINS_DEV`,
+`T_AUDIT_LOGS_DEV`, `T_SERVER_ALERT_LOG_DEV`, `T_SERVER_ALERT_ACK_DEV`,
+`T_AUTH_REFRESH_TOKEN_DEV`, `T_SERVER_BACKUP_TOKEN_CONSUMED_DEV`,
+`T_SERVER_BACKUP_DELETE_VOTE_DEV` and `T_SYSTEM_CONFIG_DEV`. The optional second script
 fills the audit table with ~200 synthetic rows so the **Logging & Observability**
 dashboard renders immediately.
+
+**Already have a database from an older template?** Do not run `01_schema.sql` (it drops
+tables). Run the additive scripts instead:
+
+```bash
+sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1 @03_alter_admins_notification_columns.sql
+sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1 @04_platform_tables.sql
+```
 
 **Seed demo accounts (Argon2id):**
 
 ```bash
 cd Backend
-npm run db:seed:template     # creates admin / user with password Demo@123
+npm run db:seed:template     # creates admin / manager / user with password Demo@123
 ```
 
 > The seed must run through the app (not raw SQL) because Argon2id hashes are
-> peppered and admin rows are HMAC-signed. This command lands together with the
-> standalone-auth wiring noted in the [status box](#0-first-thing-to-do).
+> peppered and admin rows are HMAC-signed.
 
 ---
 
@@ -209,14 +224,15 @@ After running `npm run db:seed:template` (or in Demo Mode — `DEMO_MODE=true`):
 
 | Username | Password   | Role          | Sees                                              |
 | -------- | ---------- | ------------- | ------------------------------------------------- |
-| `admin`  | `Demo@123` | `SUPER_ADMIN` | Everything: observability, admin mgmt, changelog. |
-| `user`   | `Demo@123` | `USER`        | Standard user views.                              |
+| `admin`   | `Demo@123` | `SUPER_ADMIN` | Everything: System pages, Architecture, Runtime, Dev Docs. |
+| `manager` | `Demo@123` | `ADMIN`       | Dashboard, Dev Docs; may create and reset `USER` accounts via the API. |
+| `user`    | `Demo@123` | `USER`        | Dashboard and public Reference pages.             |
 
 Features to explore as `admin`:
 
 - **Logging & Observability** — golden-signal charts powered by `T_AUDIT_LOGS_DEV`
   (seed `02_seed_demo.sql` for instant data).
-- **Admin Management** — RBAC user/admin CRUD.
+- **Admin Management** — create accounts (temporary password emailed, valid 72 h), change roles, reset passwords, revoke.
 - **Version History (Changelog)** — encrypted file store; seed with the changelog
   script (`node scripts/seed-changelog.js`).
 
@@ -229,10 +245,11 @@ Features to explore as `admin`:
 | Command                    | What it does                                  |
 | -------------------------- | --------------------------------------------- |
 | `npm start`                | Start the API (`node server.js`).             |
-| `npm test`                 | Run the Mocha test suite.                     |
-| `npm run test:unit`        | Unit tests only.                              |
-| `npm run db:seed:template` | Seed demo `admin`/`user` accounts (Argon2id). |
-| `npm run build`            | Compile a standalone `.exe` with `pkg`.       |
+| `npm test`                 | Run the Vitest suite.                         |
+| `npm run test:unit`        | Unit tests only (also `test:integration`, `test:security`, …). |
+| `npm run lint`             | ESLint.                                       |
+| `npm run db:seed:template` | Seed demo `admin`/`manager`/`user` accounts (Argon2id). |
+| `npm run build`            | Compile `dist/catherine-backend.exe` with `@yao-pkg/pkg`. |
 
 ### Frontend (`Frontend/`)
 
@@ -242,6 +259,7 @@ Features to explore as `admin`:
 | `npm run build`   | Production build.             |
 | `npm run lint`    | ESLint.                       |
 | `npm run preview` | Preview the production build. |
+| `npm test`        | Run the Vitest suite.         |
 
 ---
 
@@ -263,5 +281,5 @@ Features to explore as `admin`:
 
 - `Backend/sql/README.md` — the sample database in detail.
 - `Backend/CLAUDE.md` — backend architecture, conventions, and the testing guide.
-- `Frontend/CLAUDE.md` — UI component library, design tokens, and feature workflow.
+- `Frontend/Claude.md` — UI component library, design tokens, and feature workflow (note the casing).
 - `Backend/src/utils/oracle-mongo-wrapper/README.md` — the MongoDB-style Oracle API.

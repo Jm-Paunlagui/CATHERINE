@@ -200,7 +200,7 @@ stateDiagram-v2
 
 | File | Responsibility |
 | --- | --- |
-| `Frontend/src/features/management/logsmanagement/LogsManagement.view.jsx` | Page shell. Five top-level tabs (Overview, Metrics, Audit Logs, Health, Log Retention), a controlled `activeTab` so an alert can pivot into a pre-filtered log view, and the trace modal mounted at the root so it overlays any tab. |
+| `Frontend/src/features/systemadmin/logsmanagement/LogsManagement.view.jsx` | Page shell. Five top-level tabs (Overview, Metrics, Audit Logs, Health, Log Retention), a controlled `activeTab` so an alert can pivot into a pre-filtered log view, and the trace modal mounted at the root so it overlays any tab. |
 | `…/logmanagement.hook.js` | Every piece of state and every fetch for the page: stats range, table filters, pagination, the trace modal, the delete stepper, the System sub-tab's browse state, and **both** SSE lifecycles. 684 lines; the view is presentation-only. |
 | `…/logsmanagement.api.js` | Two namespaces. `auditLogApi` (list/stats/requestLogs/exports/delete + the traffic `EventSource`) and `systemLogApi` (browse + the tail `EventSource`). |
 | `…/components/AuditLogsPageTab.jsx` | The `Audit Logs` tab. Hosts the nested `User Traffic | System` sub-tabs and the 1D…ALL date-range presets. |

@@ -13,11 +13,11 @@ Powered by **Mira** — a MongoDB-style query wrapper that compiles to safe, bin
 
 ## Why CATHERINE
 
-Most templates give you a folder layout and a "hello world" route. CATHERINE ships the hard parts already solved: a 14-layer security middleware chain, cache-stampede protection, a dual-pool Oracle layer with health monitoring, in-process RED metrics, progressive login lockout, a 50+ component design system, and a personalization engine with 40 curated themes plus unlimited custom colours. Every layer is class-based, documented, and tested across six suites.
+Most templates give you a folder layout and a "hello world" route. CATHERINE ships the hard parts already solved: a 13-step ordered middleware chain, cache-stampede protection, a dual-pool Oracle layer with health monitoring, in-process RED metrics, progressive login lockout, a 50+ component design system, and a personalization engine with 40 curated themes plus unlimited custom colours. Every layer is class-based, documented, and tested across six suites.
 
 | Pillar | What you get |
 | --- | --- |
-| 🔒 **Secure** | 14-stage middleware chain · CSRF · CSP · Helmet · CIDR IP filter · scanner/traversal blocking · progressive login lockout · 100% bind-variable SQL |
+| 🔒 **Secure** | 13-step middleware chain · CSRF · CSP · Helmet · CIDR IP filter · scanner/traversal blocking · progressive login lockout · 100% bind-variable SQL |
 | ⚡ **Fast** | Single-flight stampede protection · cache-aside layer · gzip · keyset pagination · per-route p50/p95/p99 metrics · response-time budgets |
 | 🧱 **Architected** | Class-based OOP backend · three-layer frontend features · zero raw `oracledb`/`axios` leakage · constants firewall |
 | 🗃️ **Mira** | Write MongoDB JS, get Oracle SQL — filters, aggregation, window functions, CTEs, joins, transactions, upserts, all injection-safe |
@@ -33,25 +33,31 @@ Most templates give you a folder layout and a "hello world" route. CATHERINE shi
 Security is layered so that an attacker has to beat every stage, not one. The request middleware chain is **immutable and ordered for a reason** — scanners and path traversal are rejected at position 2, *before* the body is even parsed.
 
 ```
-1  Helmet            → security headers (HSTS, nosniff, frame-deny, CSP frame-ancestors 'none')
-2  SecurityFilter    → block scanners / path traversal / script injection  ← BEFORE body parse
-3  Traceability      → inject X-Request-Id
-4  BodyParser (JSON) → size-capped, malformed → 400, oversized → 413
-6  RequestLogger     → structured incoming + completed logs
-7  ResponseTime      → X-Response-Time + slow-response detection
-8  Compression       → gzip
-9  CORS              → network-aware (VPN / WFH / corporate / local) pattern matching
-10 CookieParser      → signed cookies
-11 ErrorHandler      → generic messages in prod, no stack leakage
-12 IpFilter          → CIDR-aware allowlist
-13 RateLimiter       → sliding-window counter (no Redis); auth routes get a stricter limiter
-14 PreventRedirects  → API routes only
+1   Helmet            → security headers (HSTS, nosniff, frame-deny, CSP frame-ancestors 'none')
+2   SecurityFilter    → block scanners / path traversal / script injection  ← BEFORE body parse
+3   Traceability      → X-Request-Id + request context + completion log
+3a  AuditLog          → audit row persisted after the response
+3b  ShutdownGate      → refuse new work while draining (health probes stay reachable)
+4   BodyParser        → JSON + urlencoded (size-capped, malformed → 400, oversized → 413) + default {} body
+4a  logIncoming       → incoming-request log line (after parsing, so req.body exists)
+5   ResponseTime      → X-Response-Time + slow-response detection
+5a  Metrics           → per-route p50/p95/p99
+6   Compression       → gzip
+7   CORS              → network-aware (VPN / WFH / corporate / local) pattern matching
+8   CookieParser      → signed cookies
+9   CSRF              → double-submit token on POST/PUT/PATCH/DELETE
+10  captureResponseBody → body capture for error logging
+11  IpFilter          → CIDR-aware allowlist
+12  RateLimiter       → sliding-window counter (no Redis); OPTIONS + health exempt
+13  PreventRedirects  → API routes only
 ```
+
+`Backend/src/app.js` is the authority for this order; the global error handler runs after the routes.
 
 **Beyond the chain:**
 
-- **Authentication & authorization** — JWT in HTTP-only cookies (never `localStorage`). Authorization is **data-driven** via `requireAccess(predicate)` — no hardcoded roles in the template. Forged, expired, tampered, and structurally invalid tokens are all rejected.
-- **Progressive login lockout** — `LoginLockoutMiddleware` tracks failures per user, shrinks the allowed-attempt window each cycle, multiplies lockout duration in incremental mode, and after the final cycle escalates to a `423` HR-reset state. Brute-force gets exponentially more expensive.
+- **Authentication & authorization** — JWT in HTTP-only cookies (never `localStorage`). Authorization is **data-driven** via `requireAccess(predicate)`; the template's own screens use three roles (`SUPER_ADMIN`, `ADMIN`, `USER`) and projects add their own predicates. Access tokens carry type/issuer/audience claims; refresh tokens rotate with reuse detection. Forged, expired, tampered, wrong-type and structurally invalid tokens are all rejected. Login, refresh and change-password each have their own rate limiter.
+- **Progressive login lockout** — `LoginLockoutMiddleware` tracks failures per user, shrinks the allowed-attempt window each cycle, multiplies lockout duration in incremental mode, and after the final cycle escalates to a `423` locked state that needs an administrator reset. Brute-force gets exponentially more expensive.
 - **CSRF** — double-submit cookie (`csrf-csrf`) on every POST/PUT/PATCH/DELETE; the frontend `HttpClient` auto-injects the token and transparently retries once on rotation.
 - **SQL injection — structurally impossible.** Every Mira query routes user values through per-call bind-variable counters. Raw interpolation is forbidden; the single documented exception (`PIVOT IN`) is escape-sanitised.
 - **Password hashing** — `argon2` (and `bcryptjs`) available; plaintext mode exists only as a guarded dev convenience.
@@ -81,8 +87,8 @@ Mira is the centrepiece. It gives the developer ergonomics of MongoDB on top of 
 
 ```js
 const { createDb, OracleCollection } = require("./utils/oracle-mongo-wrapper");
-const db = createDb("userAccount");
-const users = new OracleCollection("T_OPITS_USERS", db);
+const db = createDb("appDb");
+const users = new OracleCollection("T_USERS_DEV", db);
 
 // FIND — lazy cursor, nothing executes until a terminal method
 await users.find({ status: "active", age: { $gt: 18 } })
@@ -126,7 +132,7 @@ await employees.merge({ id: 10, name: "Ana", salary: 60000 },
 
 - **100% bind variables** via per-call counters — concurrent requests never collide on bind names.
 - **Lazy cursors** — `.find()` builds; SQL fires only on `.toArray()/.next()/.count()/.forEach()/.explain()`.
-- **Dual-pool architecture** — isolate workloads (auth vs. reporting) so one starving pool can't take down the other. Adding a pool = one `.env` entry + one `database.js` key. Nothing else changes.
+- **Dual-pool architecture** — `appDb` (interactive) and `appDbBulk` (bulk/long-running) isolate workloads so one starving pool can't take down the other. Adding a pool = one `.env` entry + one `database.js` key. Nothing else changes.
 - **`PoolHealthMonitor`** — 30 s interval, 3-strike unhealthy marking, exponential backoff on init (`min(1000·2ⁿ, 10000) ms`).
 
 ---
@@ -135,7 +141,7 @@ await employees.merge({ id: 10, name: "Ana", salary: 60000 },
 
 - **Request traceability** — every request gets a unique `X-Request-Id`, threaded through structured logs (machine identifier + microsecond timestamps, daily-rotated `logs/YYYY/MM/DD/level.log`, **never truncated**).
 - **RFC 5424 logging** — 8 severity levels (`emerg`…`debug`); `console.*` is banned in production code.
-- **Audit log** — `AuditLogMiddleware` + `/api/v1/audit-log` for an immutable trail of significant actions.
+- **Audit log** — `AuditLogMiddleware` + `/api/v1/audit-logs` for an immutable trail of significant actions.
 - **Graceful shutdown** — pool cleanup on signal; unhandled rejections and uncaught exceptions are funneled, not fatal.
 - **Reliability-tested** — malformed JSON → 400, oversized body → 413, single bad request never crashes the process.
 - **Changelog / release surface** — built-in changelog and release services to ship version notes to the UI.
@@ -184,9 +190,9 @@ Coverage targets: middleware 90% branch · services 85% branch · utils 95% line
 
 ## 🧰 Tech Stack
 
-**Backend** — Node.js · Express 5 · OracleDB 6 (Thick mode) · `node-cache` · `csrf-csrf` · Helmet 8 · `jsonwebtoken` · `argon2`/`bcryptjs` · `nanoid` · ExcelJS · PDFKit · Nodemailer · Mocha/Chai/Sinon/Supertest · packaged with `pkg` → standalone `.exe`
+**Backend** — Node.js · Express 5 · OracleDB 6 (Thick mode) · `node-cache` · `csrf-csrf` · Helmet 8 · `jsonwebtoken` · `argon2`/`bcryptjs` · `nanoid` · ExcelJS · PDFKit · Nodemailer · Vitest/Supertest · packaged with `@yao-pkg/pkg` (Node 24) → standalone `.exe`
 
-**Frontend** — React 19 · Vite 8 · Tailwind CSS v4 · React Compiler · React Router 7 · ApexCharts · FontAwesome 7 · `react-dropzone` · `jose` · ExcelJS
+**Frontend** — React 19 · Vite 8 · Tailwind CSS v4 · React Compiler · React Router 7 · ApexCharts · FontAwesome 7 · `react-dropzone` · `jose` · ExcelJS · Mermaid · Vitest/Testing Library/MSW · Playwright
 
 ---
 
@@ -196,14 +202,17 @@ Coverage targets: middleware 90% branch · services 85% branch · utils 95% line
 # Backend
 cd Backend
 npm install
-cp .env.example .env        # fill in Oracle creds + JWT/CSRF secrets
-npm start                   # or: npm run build  → dist/*.exe
+cp .env.example .env        # fill in Oracle creds + secrets, or set DEMO_MODE=true
+npm start                   # http://localhost:2108/api/v1/health; npm run build → dist/catherine-backend.exe
 
 # Frontend
 cd Frontend
 npm install
+cp .env.example .env        # set VITE_API_BASE_URL=http://localhost:2108/api/v1/
 npm run dev
 ```
+
+Step-by-step setup (database scripts, seeding, secrets) is in **`GETTING_STARTED.md`**.
 
 Full architecture rules, the complete component map, the animation system, and the Mira operator reference live in **`Backend/CLAUDE.md`**, **`Frontend/Claude.md`**, and **`Backend/src/utils/oracle-mongo-wrapper/README.md`**.
 

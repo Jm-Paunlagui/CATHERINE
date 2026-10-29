@@ -131,7 +131,7 @@ Runs **after** `dotenv.config()` but **before** any `app`/`db` require, so the p
 ### 3.4 Runtime configuration read from env
 
 ```js
-const PORT = parseInt(process.env.PORT || "2106", 10);
+const PORT = parseInt(process.env.PORT || "2108", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const USE_HTTPS = process.env.USE_HTTPS === "true";
 const ENABLE_CLUSTERING = process.env.ENABLE_CLUSTERING === "true";
@@ -140,7 +140,7 @@ const NUM_WORKERS = parseInt(process.env.NUM_WORKERS || String(Math.max(1, os.cp
 
 | Var | Default | Meaning |
 | --- | ------- | ------- |
-| `PORT` | `2106` | listen port |
+| `PORT` | `2108` | listen port |
 | `HOST` | `0.0.0.0` | bind address (`0.0.0.0` = accessible on the LAN) |
 | `USE_HTTPS` | `false` | HTTPS via PFX when `"true"` |
 | `ENABLE_CLUSTERING` | `false` | fork a worker cluster when `"true"` |
@@ -274,7 +274,7 @@ Grounded in the code read for this document. See `.env.example` for the full cat
 | Var | Read in | Effect |
 | --- | ------- | ------ |
 | `UV_THREADPOOL_SIZE` | `server.js` | libuv worker threads; defaults to `48` if unset (OS env var overrides) |
-| `PORT` / `HOST` | `server.js` | listen port / bind address (defaults `2106` / `0.0.0.0`) |
+| `PORT` / `HOST` | `server.js` | listen port / bind address (defaults `2108` / `0.0.0.0`) |
 | `USE_HTTPS`, `PFX_FILENAME`, `PFX_PASSPHRASE` | `server.js` | HTTPS via PFX from `certs/` |
 | `SERVER_REQUEST_TIMEOUT_MS` | `server.js` | request-timeout ceiling (default `330000`) |
 | `ENABLE_CLUSTERING`, `NUM_WORKERS`, `CRON_LEADER` | `server.js` | clustering + cron-leader election |

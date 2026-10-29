@@ -1,6 +1,6 @@
 ---
 name: "senior-nodejs-engineer-planner"
-description: "OPUS planner for the Aumovio MEAL backend (Express v5, class-based OOP). Use BEFORE senior-nodejs-engineer whenever the task adds or reshapes a route, controller, service, or middleware — anything touching the middleware chain, the constants buckets, auth predicates, or the cache layer. Produces a file-by-file plan with the class/function split and constants routing already decided. Writes no code."
+description: "OPUS planner for the CATHERINE template backend (Express v5, class-based OOP). Use BEFORE senior-nodejs-engineer whenever the task adds or reshapes a route, controller, service, or middleware — anything touching the middleware chain, the constants buckets, auth predicates, or the cache layer. Produces a file-by-file plan with the class/function split and constants routing already decided. Writes no code."
 tools: Read, Glob, Grep, Bash, PowerShell, Skill, WebFetch, WebSearch, mcp__ide__getDiagnostics
 model: opus
 color: green

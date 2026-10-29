@@ -1,6 +1,6 @@
 # Money & Currency — Technical Documentation
 
-> **Scope:** the template's money *capability* — the exact-decimal `Money` value type, the ISO 4217 currency registry, the fixed storage/display scales, the config-driven base currency, the string wire format, the money-safe fetch fence, effective-dated FX rates, and money-aware presentation on both surfaces. This is a **capability, not a product**: there is no wallet, no ledger, no finance screen — only the parts a downstream project builds a money domain on top of.
+> **Scope:** the template's money *capability* — the exact-decimal `Money` value type, the ISO 4217 currency registry, the fixed storage/display scales, the config-driven base currency, the string wire format, the money-safe fetch fence, effective-dated FX rates, and money-aware presentation on both surfaces. This is a **capability, not a product**: there is no stored-balance account, no ledger, no finance screen — only the parts a downstream project builds a money domain on top of.
 > **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/utils/money.js`, `Backend/src/constants/currencies.js`, `Backend/src/services/FxRateService.js`, `Backend/src/config/adapters/oracle.js`; the presentation mirror is `Frontend/src/constants/currencies.js` and `Frontend/src/components/shared/money.js`.
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block, a source comment or a reference-view claim disagrees with the code, the code wins and the disagreement is recorded in [§7.5](#75-known-documentation-drift).
 > **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
@@ -257,7 +257,7 @@ Every money value on the API is a fixed-scale-4 **string** (`toJSON() === toStor
 
 ### 7.4 What is *not* shipped (deliberately)
 
-No wallet, no ledger table, no finance UI group, no FX provider integration, no scheduled rate pull, no scaled `NUMBER` column in the template schema. `Backend/sql/README.md` carries commented reference DDL (an FX-rate table, a base-currency epoch table, a single-entry ledger) for a copier to adopt when they build a money domain — not before.
+No stored-balance account, no ledger table, no finance UI group, no FX provider integration, no scheduled rate pull, no scaled `NUMBER` column in the template schema. `Backend/sql/README.md` carries commented reference DDL (an FX-rate table, a base-currency epoch table, a single-entry ledger) for a copier to adopt when they build a money domain — not before.
 
 ### 7.5 Known documentation drift
 
