@@ -18,7 +18,7 @@ const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url)))
  * There is no runtime configuration — the value is baked into the bundle at
  * build time, so a bad value cannot be corrected after the fact:
  *
- *   - Unset → src/config/apiBase.js falls back to http://localhost:3000/api/v1/,
+ *   - Unset → src/config/apiBase.js falls back to http://localhost:2108/api/v1/,
  *     which points every API call, the CSRF bootstrap, and all SSE streams at
  *     the CLIENT's own machine. The app appears to load and then fails whole.
  *   - Plain http:// → an HTTPS-served page cannot call an HTTP API at all
@@ -39,8 +39,8 @@ function assertApiBaseUrl(mode) {
     if (!url) {
         throw new Error(
             "VITE_API_BASE_URL is not set. A production build would fall back to " +
-                "http://localhost:3000/api/v1/ and target the client's own machine. " +
-                "Set it in Frontend/.env.production, e.g. https://SERVER:3000/api/v1/",
+                "http://localhost:2108/api/v1/ and target the client's own machine. " +
+                "Set it in Frontend/.env.production, e.g. https://SERVER:2108/api/v1/",
         );
     }
     if (/^http:\/\//i.test(url) && !allowInsecure && !/^https?:\/\/(localhost|127\.0\.0\.1)/.test(url)) {
@@ -70,7 +70,7 @@ function assertApiBaseUrl(mode) {
  * SSE streams — the same silent-brick failure the VITE_API_BASE_URL guard above
  * exists to prevent.
  *
- * @param {string} apiOrigin e.g. "https://SERVER:3000"
+ * @param {string} apiOrigin e.g. "https://SERVER:2108"
  */
 const cspWebConfigPlugin = (apiOrigin) => ({
     name: "csp-web-config",
@@ -180,7 +180,7 @@ export default defineConfig(({ command, mode }) => {
             throw new Error(
                 `VITE_API_BASE_URL="${apiBase}" is not a parseable absolute URL, so the CSP's ` +
                     "connect-src origin cannot be derived. Use a full origin, e.g. " +
-                    "https://<SERVER>:3000/api/v1/",
+                    "https://<SERVER>:2108/api/v1/",
             );
         }
     }
@@ -196,9 +196,11 @@ export default defineConfig(({ command, mode }) => {
             exceljsNoEvalPlugin(),
             ...(apiOrigin ? [cspWebConfigPlugin(apiOrigin)] : []),
         ],
+        // Loopback only: `host: true` exposed /__open-in-editor (launch-editor)
+        // to the LAN. Use `npm run dev -- --host` to test from another device.
         server: {
-            host: true,
-            port: 5174,
+            host: "localhost",
+            port: 5173,
         },
         base: "/", // Important for IIS deployment
         build: {
@@ -210,35 +212,40 @@ export default defineConfig(({ command, mode }) => {
                     main: "index.html",
                 },
                 output: {
-                    manualChunks(id) {
-                        const p = id.replace(/\\/g, "/");
-                        if (!p.includes("/node_modules/")) return;
-
-                        if (p.includes("/node_modules/react-router")) {
-                            return "vendor-router";
-                        }
-                        if (p.includes("/node_modules/react/") || p.includes("/node_modules/react-dom/") || p.includes("/node_modules/scheduler")) {
-                            return "vendor-react";
-                        }
-                        if (p.includes("/node_modules/react-toastify") || p.includes("/node_modules/@headlessui") || p.includes("/node_modules/@heroicons") || p.includes("/node_modules/@fortawesome")) {
-                            return "vendor-ui";
-                        }
-                        // jsPDF is only reached via a dynamic import() (src/utils/qrStubPdf.js,
-                        // the EmailFailureModal PDF-export fallback) and — together with its
-                        // jspdf-exclusive transitive deps (fflate, fast-png, canvg) — adds
-                        // ~640 kB raw / ~150 kB gzip. Giving the group its own chunk keeps it
-                        // out of the catch-all "vendor" bucket below, which IS reached eagerly
-                        // from the entry — merging jsPDF into it would force every user to
-                        // download it on first load for a feature almost nobody hits.
-                        // NOTE: deliberately NOT bucketing "@babel/runtime" here even though
-                        // jspdf/canvg depend on it — the React Compiler babel preset injects
-                        // @babel/runtime helper imports into virtually every compiled app
-                        // chunk (main, vendor-react, feature views, …), so grouping it with
-                        // jsPDF would drag this whole chunk back into the eager load path.
-                        if (p.includes("/node_modules/jspdf") || p.includes("/node_modules/fflate") || p.includes("/node_modules/fast-png") || p.includes("/node_modules/canvg")) {
-                            return "vendor-jspdf";
-                        }
-                        return "vendor";
+                    // rolldown-native codeSplitting groups (the successor of the
+                    // deprecated `advancedChunks`, same group semantics), NOT rollup's
+                    // manualChunks: manualChunks is never consulted for `\0` virtual
+                    // modules, so vite's preload helper landed in an arbitrary group
+                    // and pinned that whole group into the eager modulepreload set.
+                    // codeSplitting groups match the raw module id (virtual ids included).
+                    //
+                    // Verify after ANY change here:
+                    //   grep modulepreload dist/index.html
+                    // vendor-excel / vendor-zip / vendor-mermaid* / vendor-markdown must NOT appear.
+                    //   grep -E 'from"\./vendor-mermaid' dist/assets/vendor-*.js
+                    // must find nothing (a static import pulls the chunk even without a preload).
+                    codeSplitting: {
+                        groups: [
+                            // Must be FIRST — most specific wins.
+                            { name: "vendor-preload", test: /vite[\\/]preload-helper/ },
+                            { name: "vendor-router", test: /node_modules[\\/]react-router/ },
+                            { name: "vendor-react", test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+                            { name: "vendor-ui", test: /node_modules[\\/](react-toastify|@headlessui|@heroicons|@fortawesome)/ },
+                            // Heaviest libs, reachable only from lazily-loaded feature views.
+                            { name: "vendor-excel", test: /node_modules[\\/]exceljs/ },
+                            { name: "vendor-charts", test: /node_modules[\\/](react-)?apexcharts/ },
+                            { name: "vendor-zip", test: /node_modules[\\/]jszip/ },
+                            // Dev-docs viewer stack — MUST precede the catch-all `vendor`
+                            // rule or mermaid rides into the eager bundle. @mermaid-js/parser
+                            // gets its own group: shared with eager code, it otherwise pins
+                            // all of vendor-mermaid (~4.7 MB) into every first load.
+                            { name: "vendor-mermaid-parser", test: /node_modules\/@mermaid-js\// },
+                            { name: "vendor-mermaid", test: /node_modules\/(mermaid|dagre-d3-es|khroma|cytoscape[a-z-]*|@braintree|roughjs|points-on-[a-z]+|path-data-parser)\// },
+                            // Bare `d3` / `d3-*` deliberately NOT above: apexcharts imports
+                            // d3 eagerly, so capturing it would make vendor-mermaid eager.
+                            { name: "vendor-markdown", test: /node_modules\/(react-markdown|remark-[a-z-]+|rehype-[a-z-]+|mdast-[a-z-]+|micromark[a-z-]*|unified|unist-[a-z-]+|hast-[a-z-]+|vfile[a-z-]*|lowlight|highlight\.js|devlop|bail|trough|zwitch|comma-separated-tokens|space-separated-tokens|property-information|html-void-elements|character-entities[a-z-]*|decode-named-character-reference|ccount|markdown-table|longest-streak|stringify-entities|trim-lines|html-url-attributes|estree-[a-z-]+|style-to-[a-z-]+|parse-entities|is-plain-obj)\// },
+                            { name: "vendor", test: /node_modules/ },
+                        ],
                     },
                 },
             },

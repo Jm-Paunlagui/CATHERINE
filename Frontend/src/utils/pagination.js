@@ -2,15 +2,24 @@
  * pagination.js — Shared page-size constants + adaptive option builder.
  *
  * Every paginated table in the app renders the same `Pagination` component and
- * must offer the same per-page vocabulary. Centralising the option list here
- * keeps tables consistent instead of each feature growing its own divergent set
- * (some offering [25,50,100,200], some a magnitude-tier list, some none at all).
+ * must offer the same per-page vocabulary. Before this module each feature grew
+ * its own option list (magnitude tiers + divisors, a shorter fixed set,
+ * Integrity hardcoded [25,50,100,200], and
+ * most tables offered no selector at all) — the divergence users noticed as
+ * "some tables let me change rows per page and some don't".
  *
  * Usage — server-paged table (hook owns page + pageSize):
  *   const pageSizeOptions = useMemo(() => buildPageSizeOptions(total), [total]);
  *   <Pagination page={page} totalPages={totalPages} onChange={setPage}
  *               pageSize={pageSize} pageSizeOptions={pageSizeOptions}
  *               onPageSizeChange={setPageSize} />
+ *
+ * Usage — client-paged table (all rows already in memory):
+ *   const p = usePagination({ items: rows, defaultPageSize: DEFAULT_PAGE_SIZE });
+ *   <Pagination page={p.page} totalPages={p.totalPages} onChange={p.goToPage}
+ *               pageSize={p.pageSize}
+ *               pageSizeOptions={buildPageSizeOptions(p.totalItems)}
+ *               onPageSizeChange={p.setPageSize} />
  */
 
 /** Default rows-per-page for any newly paginated table. */

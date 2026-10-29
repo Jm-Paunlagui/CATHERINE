@@ -24,6 +24,19 @@ const COLORS = {
 
 const HEIGHTS = { xs: "h-1", sm: "h-1.5", md: "h-2.5", lg: "h-4" };
 
+/**
+ * the circular variant rendered no progressbar semantics at all —
+ * no role, no aria-value* — so a screen reader got no indication it was a
+ * progress indicator, while the linear variant a few lines below did. The SVG
+ * is decorative once the wrapper carries the semantics, hence aria-hidden.
+ *
+ * both variants published `aria-valuenow={value}`, the RAW prop.
+ * The visible bar clamps to 0-100% via `pct`, so a value outside [0, max] put
+ * aria-valuenow outside [aria-valuemin, aria-valuemax] while the bar looked
+ * correct — the assistive-technology reading and the visual disagreed. Both
+ * now publish the clamped value, and aria-valuemin is stated explicitly rather
+ * than left to the implicit default.
+ */
 export function Progress({ value = 0, max = 100, variant = "primary", size = "md", label = false, animated = false, circular = false, radius = 36 }) {
     const pct = Math.min(100, Math.max(0, (value / max) * 100));
 
@@ -32,8 +45,14 @@ export function Progress({ value = 0, max = 100, variant = "primary", size = "md
         const dash = circ - (pct / 100) * circ;
         const sz = radius * 2 + 20;
         return (
-            <div className="relative inline-flex items-center justify-center font-aumovio">
-                <svg width={sz} height={sz} className="-rotate-90">
+            <div
+                className="relative inline-flex items-center justify-center font-aumovio"
+                role="progressbar"
+                aria-valuenow={Math.min(max, Math.max(0, value))}
+                aria-valuemin={0}
+                aria-valuemax={max}
+            >
+                <svg width={sz} height={sz} className="-rotate-90" aria-hidden="true">
                     <circle cx={sz / 2} cy={sz / 2} r={radius} fill="none" stroke="var(--ring-track)" strokeWidth="8" />
                     <circle cx={sz / 2} cy={sz / 2} r={radius} fill="none" stroke="#FF4208" strokeWidth="8" strokeDasharray={circ} strokeDashoffset={dash} strokeLinecap="round" style={{ transition: `stroke-dashoffset var(--duration-lazy) var(--ease-decelerate)` }} />
                 </svg>
@@ -57,7 +76,8 @@ export function Progress({ value = 0, max = 100, variant = "primary", size = "md
             ${animated ? "bg-stripes animate-stripes" : ""}`}
                     style={{ width: `${pct}%` }}
                     role="progressbar"
-                    aria-valuenow={value}
+                    aria-valuenow={Math.min(max, Math.max(0, value))}
+                    aria-valuemin={0}
                     aria-valuemax={max}
                 />
             </div>

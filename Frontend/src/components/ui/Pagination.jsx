@@ -22,26 +22,37 @@ function buildRange(start, end) {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
 }
 
+// Two distinct gap markers: the page list is de-duplicated with a Set (page 1
+// or the last page can also fall inside the sibling window), and one shared
+// "..." string collapsed BOTH gaps into one — mid-range the list read
+// "1 … 999 1000 1001 2279" with no marker before the last page.
+const ELLIPSIS_START = "ellipsis-start";
+const ELLIPSIS_END = "ellipsis-end";
+const isEllipsis = (p) => p === ELLIPSIS_START || p === ELLIPSIS_END;
+
 function getPages(current, total, sibling = 1) {
     const range = sibling + 5;
     if (total <= range) return buildRange(1, total);
     const left = Math.max(current - sibling, 1);
     const right = Math.min(current + sibling, total);
     const pages = [1];
-    if (left > 2) pages.push("...");
+    if (left > 2) pages.push(ELLIPSIS_START);
     pages.push(...buildRange(left, right));
-    if (right < total - 1) pages.push("...");
+    if (right < total - 1) pages.push(ELLIPSIS_END);
     pages.push(total);
     return [...new Set(pages)];
 }
 
+// min-w, not w: a fixed square clipped any page number past 3 digits. The
+// minimum keeps 1–2 digit pages and the chevrons square; the padding lets a
+// long number (e.g. 1,000,000,000) widen its own button instead of overflowing.
 const SZ = {
-    sm: { btn: "w-7 h-7 text-xs", sel: "h-7 text-xs" },
-    md: { btn: "w-8 h-8 text-sm", sel: "h-8 text-sm" },
-    lg: { btn: "w-10 h-10 text-base", sel: "h-10 text-base" },
+    sm: { btn: "min-w-7 h-7 px-1.5 text-xs", sel: "h-7 text-xs" },
+    md: { btn: "min-w-8 h-8 px-2 text-sm", sel: "h-8 text-sm" },
+    lg: { btn: "min-w-10 h-10 px-2.5 text-base", sel: "h-10 text-base" },
 };
 
-const DEFAULT_CLS = "bg-(--bg-surface) dark:bg-(--bg-surface-2) border-grey-200 dark:border-grey-700 text-black/70 dark:text-white/70 hover:border-orange-400 hover:text-(--accent-foreground) dark:hover:border-orange-400";
+const DEFAULT_CLS = "bg-(--bg-surface) dark:bg-(--bg-surface-2) border-(--btn-neutral-border) text-black/70 dark:text-white/70 hover:border-orange-400 hover:text-(--accent-foreground) dark:hover:border-orange-400";
 const ACTIVE_CLS = "bg-orange-400 text-(--on-accent-text) border-orange-400 shadow-lg shadow-orange-400/30";
 const GHOST_CLS = "bg-transparent border-transparent text-grey-400 cursor-default pointer-events-none";
 
@@ -118,13 +129,13 @@ export function Pagination({ page, totalPages, onChange, siblingCount = 1, showE
             key={String(label)}
             onClick={() => !disabled && onChange?.(target)}
             disabled={disabled}
-            aria-label={typeof label === "string" ? label : undefined}
+            aria-label={typeof label === "string" && !isEllipsis(label) ? label : undefined}
             aria-current={label === page ? "page" : undefined}
-            className={`flex items-center justify-center ${shared} ${btnSz}
+            className={`flex items-center justify-center whitespace-nowrap tabular-nums ${shared} ${btnSz}
                 ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-                ${label === page ? ACTIVE_CLS : label === "..." ? GHOST_CLS : DEFAULT_CLS}`}
+                ${label === page ? ACTIVE_CLS : isEllipsis(label) ? GHOST_CLS : DEFAULT_CLS}`}
         >
-            {icon ?? label}
+            {icon ?? (isEllipsis(label) ? "..." : typeof label === "number" ? label.toLocaleString() : label)}
         </button>
     );
 
@@ -139,7 +150,7 @@ export function Pagination({ page, totalPages, onChange, siblingCount = 1, showE
             {hasNav && (
                 <>
                     {btn("Prev", page - 1, page <= 1, <ChevronLeftIcon className="w-4 h-4" />)}
-                    {showEnds && pages.map((p) => btn(p, typeof p === "number" ? p : page, p === "...", null))}
+                    {showEnds && pages.map((p) => btn(p, typeof p === "number" ? p : page, isEllipsis(p), null))}
                     {btn("Next", page + 1, page >= totalPages, <ChevronRightIcon className="w-4 h-4" />)}
                 </>
             )}

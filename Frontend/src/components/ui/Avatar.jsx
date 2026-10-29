@@ -57,7 +57,7 @@ const STATUS_DOT = {
  *
  * ACCESSIBILITY — the badge is never colour-only. `indicator.label` is required
  * and is rendered as the badge's `aria-label`, so a red circle that means
- * "wallet not seeded" is announced as those words. WCAG 1.4.1 (Use of Colour):
+ * "account locked" is announced as those words. WCAG 1.4.1 (Use of Colour):
  * a colour difference on its own is not an accessible way to convey meaning,
  * and this badge is small enough that hue is easy to miss even sighted.
  */

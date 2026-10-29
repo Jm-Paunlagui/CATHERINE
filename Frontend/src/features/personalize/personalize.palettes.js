@@ -7,9 +7,9 @@
  * Tailwind utility (bg-orange-400, text-purple-400, …) picks up the new colour
  * without touching a single component.
  *
- * generateCustomColors(hex) derives 5 complementary colours from a single
- * user-picked hex using HSL rotation — deterministic so the same hex always
- * produces the same palette.
+ * generateCustomColors(hex) derives 5 colours from a single user-picked hex
+ * using HSL rotation (secondary is analogous) — deterministic so the same hex
+ * always produces the same palette.
  */
 
 // ── Colour math helpers ────────────────────────────────────────────────────────
@@ -500,7 +500,7 @@ function getTintSource(paletteId, colors) {
  * @param {{ primary, secondary, blue, turquoise, yellow, darkSurface?, darkText?, darkMuted? }} colors
  * @param {boolean} isDark
  * @param {string|null} [paletteId=null]
- * @returns {string} hex surface colour ("#ffffff" in light mode, an elevation-2 dark hex in dark mode)
+ * @returns {string} worst-case (darkest light / lightest dark) surface hex — see worstCaseSurface()
  */
 export function computeSurfaceForContrast(colors, isDark, paletteId = null) {
     const { darkSurface } = colors;
@@ -516,7 +516,21 @@ export function computeSurfaceForContrast(colors, isDark, paletteId = null) {
     }
 
     const levels = surfaceLevels ?? (isDark ? BRAND_DARK : BRAND_LIGHT);
-    return isDark ? levels[2] : "#ffffff";
+    return worstCaseSurface(levels, isDark);
+}
+
+/**
+ * Worst-case reference surface for text/icon contrast: the surface level a
+ * foreground can sit on that gives it the LEAST contrast (lightest level in dark
+ * mode, darkest in light mode). Solving against it guarantees the ratio on every
+ * elevation level the palette actually renders.
+ * @param {string[]} levels five surface hexes (elevation 0..4)
+ * @param {boolean} isDark
+ * @returns {string}
+ */
+export function worstCaseSurface(levels, isDark) {
+    const byLum = [...levels].sort((a, b) => relativeLuminance(a) - relativeLuminance(b));
+    return isDark ? byLum[byLum.length - 1] : byLum[0];
 }
 
 // ── Scale generation ──────────────────────────────────────────────────────────
@@ -568,9 +582,12 @@ export function generateCustomColors(primaryHex) {
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
     const sat = clamp(s, 35, 90);
     const lit = clamp(l, 30, 62);
+    // Greys/near-blacks have no hue to stay analogous to, so their secondary stays grey too.
+    const secondarySat = s < 10 ? s : clamp(sat * 1.05, 35, 90);
     return {
         primary: primaryHex.toLowerCase(),
-        secondary: hslToHex((h + 240) % 360, clamp(sat * 1.05, 35, 90), clamp(lit * 0.88, 25, 55)),
+        // Analogous (+25°), slightly deeper: keeps primary→secondary gradients in one colour family.
+        secondary: hslToHex((h + 25) % 360, secondarySat, clamp(lit * 0.85, 25, 55)),
         blue: hslToHex((h + 205) % 360, clamp(sat * 0.95, 35, 85), clamp(lit * 0.95, 28, 58)),
         turquoise: hslToHex((h + 170) % 360, clamp(sat * 0.9, 30, 80), clamp(lit * 1.05, 30, 62)),
         yellow: hslToHex((h + 50) % 360, clamp(sat * 0.8, 30, 75), clamp(lit * 1.15, 35, 68)),
@@ -739,7 +756,10 @@ export function applyPaletteVars(colors, isDark = false, paletteId = null) {
     // Fix 2+4 (QA): Foreground accent guaranteed ≥ 4.5:1 contrast on the surface.
     // Use text-(--accent-foreground) for breadcrumbs, icons, inline accent text
     // instead of text-orange-400 which is the raw palette anchor (may be too light).
-    const surfaceForContrast = isDark ? levels[2] : "#ffffff";
+    // GAP FIX: solve against the WORST-CASE surface the foreground can sit on
+    // (darkest light surface / lightest dark surface), not white / elevation 2.
+    // Tinted light palettes (L 0.80-0.90) dropped --accent-foreground to ~4.0.
+    const surfaceForContrast = worstCaseSurface(levels, isDark);
     const accentForeground = isDark ? lightenToContrast(primary, surfaceForContrast, 4.5) : darkenToContrast(primary, surfaceForContrast, 4.5);
 
     // Fix 4 (QA): Icon-specific accent with relaxed 3:1 threshold (WCAG non-text minimum).
@@ -765,10 +785,68 @@ export function applyPaletteVars(colors, isDark = false, paletteId = null) {
     // independently of the raw primary anchor.
     root.style.setProperty("--on-accent-icon-text", pickOnColor(accentIcon).text);
 
+    // Shared resting border: dark mode keeps grey-500 but lightens it on lighter dark surfaces so it stays >=3:1;
+    // light mode uses the owner's soft grey-300 from index.css.
+    if (isDark) root.style.setProperty("--field-border", lightenToContrast("#787878", surfaceForContrast, 3.1));
+    else root.style.removeProperty("--field-border");
+
+    // ── Button tokens ──────────────────────────────────────────────────────────
+    // Brand buttons are TINTED (modelled on the role badge): a light tint of the
+    // palette colour + dark accent label in light mode, a dark tint + light label
+    // in dark mode; the BORDER carries WCAG 1.4.11 (>=3:1 vs the worst-case surface,
+    // darker than the surface in light / lighter in dark = owner direction).
+    // Labels are solved against the DEEPEST (hover) tint composited on the
+    // worst-case surface, so rest and hover both clear 4.5:1.
+    const BTN_TARGET_TEXT = 4.6; // 4.5 + headroom for 8-bit rounding
+    const BTN_TARGET_BORDER = 3.3; // 3.0 + headroom
+    const tintAlpha = isDark ? 0.18 : 0.12;
+    const tintAlphaHover = isDark ? 0.3 : 0.22;
+    for (const [name, anchor, rgb] of [
+        ["primary", primary, pRgb],
+        ["accent", secondary, sRgb],
+    ]) {
+        const deepest = mix(surfaceForContrast, anchor, tintAlphaHover);
+        root.style.setProperty(`--btn-${name}-tint`, `rgba(${rgb.r},${rgb.g},${rgb.b},${tintAlpha})`);
+        root.style.setProperty(`--btn-${name}-tint-hover`, `rgba(${rgb.r},${rgb.g},${rgb.b},${tintAlphaHover})`);
+        root.style.setProperty(`--btn-${name}-fg`, isDark ? lightenToContrast(anchor, deepest, BTN_TARGET_TEXT) : darkenToContrast(anchor, deepest, BTN_TARGET_TEXT));
+        root.style.setProperty(`--btn-${name}-border`, isDark ? lightenToContrast(anchor, surfaceForContrast, BTN_TARGET_BORDER) : darkenToContrast(anchor, surfaceForContrast, BTN_TARGET_BORDER));
+    }
+    // Solid fills (gradient button stops, outline hover). Label follows the app-wide text-on-fill
+    // rule (pickOnColor: strong/dark fill -> white, light fill -> ink), then the stops are solved
+    // so that label is >=4.5:1. Light mode: white on a darkened anchor.
+    const BTN_INK = "#1a1a1a";
+    let solidOn = "#ffffff";
+    let solidPrimary = darkenToContrast(primary, "#ffffff", BTN_TARGET_TEXT);
+    let solidAccent = darkenToContrast(secondary, "#ffffff", BTN_TARGET_TEXT);
+    if (isDark) {
+        // Dark mode: lift too-dark anchors until the fill is visible (>=3:1) on the card surface first.
+        const btnSurface = levels[2];
+        const visible = (hex) => (getContrastRatio(hex, btnSurface) >= 3 ? hex : lightenToContrast(hex, btnSurface, 3.0));
+        const vPrimary = visible(primary);
+        const vAccent = visible(secondary);
+        const wPrimary = darkenToContrast(vPrimary, "#ffffff", BTN_TARGET_TEXT);
+        const wAccent = darkenToContrast(vAccent, "#ffffff", BTN_TARGET_TEXT);
+        const whiteKeepsVisible = getContrastRatio(wPrimary, btnSurface) >= 3 && getContrastRatio(wAccent, btnSurface) >= 3;
+        if (pickOnColor(vPrimary).text === "#ffffff" && whiteKeepsVisible) {
+            solidPrimary = wPrimary;
+            solidAccent = wAccent;
+        } else {
+            solidOn = BTN_INK;
+            solidPrimary = lightenToContrast(vPrimary, BTN_INK, BTN_TARGET_TEXT);
+            solidAccent = lightenToContrast(vAccent, BTN_INK, BTN_TARGET_TEXT);
+        }
+    }
+    root.style.setProperty("--btn-primary-bg", solidPrimary);
+    root.style.setProperty("--btn-primary-on", solidOn);
+    root.style.setProperty("--btn-accent-bg", solidAccent);
+    root.style.setProperty("--btn-accent-on", solidOn);
+    // Hover moves the fill away from its label so contrast never drops (darken under white, lighten under ink).
+    root.style.setProperty("--btn-solid-hover-brightness", solidOn === "#ffffff" ? "0.92" : "1.08");
+
     // ── Gradient clip-text stops (display headings) ───────────────────────────
     // Both stops guaranteed ≥ 3:1 (WCAG large/bold text) against the content surface,
     // otherwise pastel palettes render invisible gradient headings on white.
-    const headingSurface = isDark ? levels[0] : "#ffffff";
+    const headingSurface = isDark ? levels[0] : surfaceForContrast;
     const gradTextFrom = isDark ? lightenToContrast(primary, headingSurface, 3.0) : darkenToContrast(primary, headingSurface, 3.0);
     const gradTextTo = isDark ? lightenToContrast(secondary, headingSurface, 3.0) : darkenToContrast(secondary, headingSurface, 3.0);
     root.style.setProperty("--gradient-text-from", gradTextFrom);
@@ -928,6 +1006,9 @@ export function clearPaletteVars() {
     root.style.removeProperty("--on-accent-text");
     root.style.removeProperty("--on-secondary-text");
     root.style.removeProperty("--on-accent-icon-text");
+    root.style.removeProperty("--field-border");
+    root.style.removeProperty("--btn-solid-hover-brightness");
+    for (const n of ["primary", "accent"]) for (const t of ["tint", "tint-hover", "fg", "border", "bg", "on"]) root.style.removeProperty(`--btn-${n}-${t}`);
     root.style.removeProperty("--gradient-text-from");
     root.style.removeProperty("--gradient-text-to");
     root.style.removeProperty("--secondary-foreground");

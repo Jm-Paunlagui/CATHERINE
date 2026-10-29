@@ -18,9 +18,7 @@
  *    content is explicitly "rewritten for end-user consumption" per the file
  *    header, so any leak is a regression.
  *
- * PORT NOTE (MEAL → CATHERINE): rewritten for CATHERINE's corpus. All MEAL
- * domain tokens (excess-fund, RFID, vendor, station/terminal, ₱) are dropped;
- * the banned-token list targets CATHERINE's own internal vocabulary instead.
+ * The banned-token list targets CATHERINE's own internal vocabulary.
  */
 
 import { describe, expect, it } from "vitest";

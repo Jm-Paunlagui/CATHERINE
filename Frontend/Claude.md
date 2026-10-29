@@ -167,7 +167,7 @@ These variables are computed per palette by `applyPaletteVars()` in `personalize
 
 ### Per-group nav family tokens
 
-`--side-{purple,blue,yellow,turquoise}-text` / `-bg` — contrast-safe colours for each sidebar nav group (Management=purple, Records=blue, Finance=yellow, …). Computed per palette by `applyPaletteVars()` against the sidebar surface so a group's dot and active item stay visible in dark mode even when the palette's raw family anchor is near-black (e.g. _The Divine_ yellow `#3a2824`). The orange group continues to use `--side-active-*`. Consumed by `GROUP_COLOR_MAP` in `Sidebar.jsx`; brand defaults live in `index.css`. **Never** put a raw `dark:text-yellow-400` / `bg-blue-400` style on a sidebar group — it is not contrast-checked against dark palette surfaces.
+`--side-{purple,blue,yellow,turquoise}-text` / `-bg` — contrast-safe colours for each sidebar nav group (`color` in `nav.config.jsx`; current groups: Reference=blue, System=purple, Support=grey; yellow and turquoise are available for project groups). Computed per palette by `applyPaletteVars()` against the sidebar surface so a group's dot and active item stay visible in dark mode even when the palette's raw family anchor is near-black (e.g. _The Divine_ yellow `#3a2824`). The orange group continues to use `--side-active-*`. Consumed by `GROUP_COLOR_MAP` in `Sidebar.jsx`; brand defaults live in `index.css`. **Never** put a raw `dark:text-yellow-400` / `bg-blue-400` style on a sidebar group — it is not contrast-checked against dark palette surfaces.
 
 ---
 
@@ -219,7 +219,7 @@ export const useWidget = () => {
 
 Presentation only. Imports hook + components. Never imports API directly.
 
-**Billing hook pattern (mandatory):** Call the hook in one line with no destructuring. Pass the whole hook object to every first-level sub-component as `hook={hook}`. Sub-components receive `{ hook }` and access properties directly (`hook.loading`, `hook.rows`, etc.). Never assemble prop bundles (e.g. `uploadProps`, `listProps`) to spread into children.
+**Hook-object pattern (mandatory):** Call the hook in one line with no destructuring. Pass the whole hook object to every first-level sub-component as `hook={hook}`. Sub-components receive `{ hook }` and access properties directly (`hook.loading`, `hook.rows`, etc.). Never assemble prop bundles (e.g. `uploadProps`, `listProps`) to spread into children.
 
 ```jsx
 import { useWidget } from "./widget.hook";
@@ -263,7 +263,7 @@ const listProps = { rows: hook.rows, loading: hook.loading };
 <WidgetListTab {...listProps} />;
 ```
 
-> **Second-level rule:** Sub-components that in turn render step/wizard children (e.g. `StepVerify`, `StepComplete`) pass individual props down to those children — the billing pattern applies only to the view → first-level interface. Do not cascade `hook={hook}` beyond the first level unless the second-level component is also written to accept it.
+> **Second-level rule:** Sub-components that in turn render step/wizard children (e.g. `StepVerify`, `StepComplete`) pass individual props down to those children — the hook-object pattern applies only to the view → first-level interface. Do not cascade `hook={hook}` beyond the first level unless the second-level component is also written to accept it.
 
 > **View-local state exception:** UI-only concerns that do not belong in the hook (e.g. a transient `refreshing` flag that drives a local spinner) may remain as `useState` in the view. Pass them as named props alongside `hook` when sub-components need them.
 
@@ -495,9 +495,9 @@ export function UploadTab(props) {
 import { makeUploadSteps } from "../../../../components/shared/ExcelUploadStepper";
 
 // Pass only the step-3 description — steps 1 and 2 are identical across all features
-const STEPS = makeUploadSteps("RFID records updated");
-const STEPS = makeUploadSteps("Pay periods updated");
-const STEPS = makeUploadSteps("Subsidy records saved");
+const STEPS = makeUploadSteps("Records updated");
+const STEPS = makeUploadSteps("Accounts imported");
+const STEPS = makeUploadSteps("Settings saved");
 ```
 
 ### Exclude / Restore Pattern
@@ -547,13 +547,15 @@ import { ExcludeRestoreButton, rowTintClass, sortAndIndexRows } from "../../../.
 
 #### Feature matrix
 
-| Feature    | Excludable statuses                                            | Notes                                                           |
-| ---------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| Pay Period | `Create`, `Update`, `Conflict` (default)                       | All three actionable statuses                                   |
-| RFID       | `Create`, `Update`, `Conflict` (default)                       | Conflict rows also show an Edit button alongside                |
-| Subsidy    | `Create` (default applies — no Update/Conflict statuses exist) | Only Create rows reach this component with an excludable status |
+No template feature mounts the stepper yet; it ships as shared infrastructure for project upload features. Typical shapes:
 
-All three features use `<ExcludeRestoreButton>` without a `excludableStatuses` override — the default `["Create", "Update", "Conflict"]` is correct for all of them. Only pass `excludableStatuses` explicitly when a future feature has a genuinely different status vocabulary.
+| Upload shape            | Excludable statuses                                            | Notes                                                           |
+| ----------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
+| Upsert (create/update)  | `Create`, `Update`, `Conflict` (default)                       | All three actionable statuses                                   |
+| Upsert with inline edit | `Create`, `Update`, `Conflict` (default)                       | Conflict rows also show an Edit button alongside                |
+| Insert-only             | `Create` (default applies — no Update/Conflict statuses exist) | Only Create rows reach this component with an excludable status |
+
+All three use `<ExcludeRestoreButton>` without an `excludableStatuses` override — the default `["Create", "Update", "Conflict"]` covers them. Only pass `excludableStatuses` explicitly when a feature has a genuinely different status vocabulary.
 
 #### Rules
 
@@ -704,9 +706,6 @@ const ROLES = {
     SADMIN: "SUPER_ADMIN",
     ADMIN: "ADMIN",
     USER: "USER",
-    APPROVER: "APPROVER",
-    VIEWER: "VIEWER",
-    ROBOT: "ROBOT",
 };
 
 // Role-only guard
@@ -720,12 +719,24 @@ const ROLES = {
 <Route element={
   <ProtectedRoute
     role={[ROLES.ADMIN, ROLES.SADMIN]}
-    check={(user) => user.permissions?.includes('FINANCE')}
+    check={(user) => user.permissions?.includes('REPORTS')}
   />
 }>
-  <Route path="finance" element={<FinanceView />} />
+  <Route path="reports" element={<ReportsView />} />
 </Route>
 ```
+
+Canonical role source: `ROLES` and `ALL_ROLES` in `src/App.jsx` (mirrored by `VALID_ROLES` in `features/systemadmin/adminmanagement/adminmanagement.hook.js`). Current route gates:
+
+| Routes | Access |
+| --- | --- |
+| `/home`, `/auth`, `/user/logout`, `/about/{getting-started,database-connection,mira-orm,money,cors-setup,changelog,help}` | public |
+| `/dashboard`, `/auth/change-password` | `ALL_ROLES` |
+| `/system/{admin-management,logging-and-observability,metrics,data-integrity,data-purge}` | `SUPER_ADMIN` |
+| `/support/dev-docs` | `ADMIN`, `SUPER_ADMIN` |
+| `/support/{architecture,runtime}` | `SUPER_ADMIN` |
+
+`HelpAssistant`, `ServerStatusBanner` and `ServerStatusWatch` are mounted globally. The fixed-height shell scrolls inside `#app-main-scroll`; `BARE_ROUTES` render without chrome and `NAVBAR_ONLY_ROUTES` is currently empty. Sidebar groups (`nav.config.jsx`): Reference, System, Support.
 
 `ProtectedRoute` props: `role` (array of role strings), `check` (`(user) => boolean`),
 `redirectTo` (default `/unauthorized`).
@@ -812,7 +823,7 @@ useEffect(() => {
 ### Code splitting — lazy-load views only
 
 ```jsx
-const FinanceView = lazy(() => import("./features/finance/Finance.view"));
+const LogsManagementView = lazy(() => import("./features/systemadmin/logsmanagement/LogsManagement.view"));
 // ⚠ Never lazy-load shared UI components
 ```
 
@@ -851,18 +862,32 @@ const filtered = useMemo(() => rows.filter((r) => r.active), [rows]);
 src/
 ├── assets/styles/
 │   ├── index.css           # @theme tokens, @font-face, animations
-│   └── pre-set-styles.jsx  # Tailwind class constants + animation system
+│   ├── pre-set-styles.js   # Tailwind class constants + animation system
+│   └── pre-set-styles.components.jsx  # component exports split out for Fast Refresh
 ├── components/
 │   ├── charts/             # ApexCharts wrappers
 │   ├── feedback/           # ErrorBoundary, LoadingSpinner
 │   ├── forms/              # Input, Select, Toggle, FileInput, …
 │   ├── layout/             # Navbar, Sidebar, Footer, BottomNav, LoadingScreen
 │   ├── routing/            # ProtectedRoute
+│   ├── shared/             # Cross-feature pieces:
+│   │                       #   ExcelUploadStepper/ (index, ExcelStepDropzone, ExcludeRestoreButton,
+│   │                       #     StepUploadComplete, excelStepperHelpers, uploadOutcome)
+│   │                       #   DocsPage/ (DocShell, WhereToGoNext, DefRow, CodeBlock, Callout)
+│   │                       #   serverStatus/, systemMap/, HelpAssistant
+│   │                       #   VerifyStatusSummary, VerifyStatusBadge, verifyStatus.js,
+│   │                       #   StatusFilterPills, ExportButtons, EmailFailureModal, money.js
 │   └── ui/
 │       ├── typography/     # Heading, Paragraph, List, Link, Divider, …
 │       └── *.jsx           # All other UI components
-├── contexts/               # LayoutContext, ThemeContext, CsrfContext
-├── features/               # Feature folders (auth, dashboard, …)
+├── contexts/               # layout/, theme/, security/ (Csrf), version/
+├── features/
+│   ├── auth/               # Login, Logout, ChangePassword
+│   ├── dashboard/  home/  personalize/
+│   ├── other/              # Reference pages: gettingstarted, databaseconnection, miraorm, money, corssetup
+│   ├── systemadmin/        # adminmanagement, logsmanagement (+ archiveReader.hook), metrics,
+│   │                       #   integrity, datapurge
+│   ├── support/            # architecture, changelog, devdocs, help, runtime
 │   └── <feature>/
 │       ├── <feature>.api.js
 │       ├── <feature>.hook.js
@@ -871,18 +896,19 @@ src/
 │           ├── <TabName>Tab.jsx         ← one file per tab / major section
 │           ├── <ModalName>Modal.jsx     ← one file per modal
 │           └── shared/                  ← sub-components + pure helpers used by 2+ components
-├── hooks/                  # useDebounce, useDocumentTitle, usePagination, useRequest
+├── hooks/                  # useDebounce, useDocumentTitle, usePagination, useRequest, useLiveStream,
+│                           #   useSessionWarning, useExportAccess, useScrollportHeightVar
 ├── middleware/
 │   ├── authentication/AuthMiddleware.js
 │   ├── security/CsrfMiddleware.js
 │   └── HttpClient.js
-└── utils/
-    ├── chartDefaults.js
-    ├── formatters.js
-    ├── storage.js
-    ├── tokens.js
-    └── validators.js
+└── utils/                  # chartDefaults, formatters, storage, tokens, validators, pagination,
+                            #   clientLogger, frontendMetrics, serverStatus, excelUtils, retryAfter, …
 ```
+
+### Docs pages — sticky rail offset
+
+`DocShell.jsx` pins its side rail with `RAIL_TOP = "lg:top-6"`; pass `railTop` to override. `DateJourneyNav`, `DocIndexNav` and `HelpCategoryNav` use the same `lg:top-6`. The offset is relative to `#app-main-scroll` (the scrolling element), not the viewport — do not add the navbar height.
 
 ---
 
@@ -956,13 +982,13 @@ import { Tabs } from "../../../components/ui/Tabs";
 </div>;
 ```
 
-**Live examples:** `LogsManagement.view.jsx` (Logging tab), `RFIDManagement.view.jsx` (RFID Masterfile tab).
+**Live example:** `LogsManagement.view.jsx` (Logging tab). The snippet above is illustrative (`masterfile` is a placeholder tab key).
 
 ---
 
 ## 12. Animation System
 
-All animation, transition, motion constants defined in `src/assets/styles/index.css` and exposed as named exports from `src/assets/styles/pre-set-styles.jsx`.
+All animation, transition, motion constants defined in `src/assets/styles/index.css` and exposed as named exports from `src/assets/styles/pre-set-styles.js`.
 
 > **Rule:** Always use named constant or animation class from `index.css`. Never hard-code `transition: all 300ms` inline — use design tokens.
 
@@ -1012,7 +1038,7 @@ Easing library lives in `:root` as CSS custom properties. Reference in `style={{
 
 ### 12.3 Transition Preset Classes
 
-Import from `pre-set-styles.jsx` or use class name directly.
+Import from `pre-set-styles.js` or use class name directly.
 
 ```jsx
 import { TRANSITION_SMOOTH, TRANSITION_SPRING, TRANSITION_BOUNCE, TRANSITION_SNAP, TRANSITION_LAZY } from "../../assets/styles/pre-set-styles";
@@ -1480,7 +1506,7 @@ export const useBalance = (accountId) => {
 };
 ```
 
-**Layer 3 — View (`Balance.view.jsx`):** presentation only, billing hook pattern.
+**Layer 3 — View (`Balance.view.jsx`):** presentation only, hook-object pattern.
 
 ```jsx
 import { useBalance } from "./balance.hook";

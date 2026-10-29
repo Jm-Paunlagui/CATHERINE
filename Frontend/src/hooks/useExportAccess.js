@@ -2,15 +2,17 @@
  * useExportAccess.js — resolves whether the signed-in user may bulk-export.
  *
  * Bulk export is an ADMIN / SUPER_ADMIN capability across every view that
- * offers it. A feature that is stricter still (SUPER_ADMIN-only) passes
- * `requireSuperAdmin` rather than relaxing its own boundary.
+ * offers it. Data
+ * Integrity is stricter still — that whole feature is SUPER_ADMIN-only — so it
+ * passes `requireSuperAdmin` rather than relaxing its own boundary.
  *
- * This is a UX gate, NOT the security boundary: every export endpoint re-checks
- * the caller's role server-side. Hiding a button the server would refuse anyway
- * just avoids showing an action that always 403s.
+ * This is a UX gate, NOT the security boundary: every export endpoint
+ * re-checks the caller's role server-side. Hiding a button the server would
+ * refuse anyway just avoids showing an action that always 403s.
  *
  * `AuthMiddleware.isAuth()` caches for 5 minutes and deduplicates concurrent
- * calls internally, so no `initFiredRef` guard is needed here.
+ * calls internally, so no `initFiredRef` guard is needed here (see the
+ * duplicate-request decision table in CLAUDE.md §7.1).
  */
 
 import { useEffect, useState } from "react";

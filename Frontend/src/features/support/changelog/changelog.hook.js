@@ -9,13 +9,21 @@
  * (promote / cut / open), both supplied as DRAFTS by the backend
  * `GET /changelog/release/current`. The backend owns the version + stage rules;
  * this hook just seeds the form and posts it.
+ *
+ * Reads are a DATE-WISE JOURNEY: entries are bucketed per displayDate and the
+ * view renders one date at a time, driven by `selectedDate` here. The
+ * selection is mirrored into the `?date=` query param so a day is linkable,
+ * and is reconciled against the available dates on every refetch (a delete
+ * that empties a date must not strand the page on it).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { extractApiError, toast } from "../../../components/ui/toast.utils";
 import { useVersion } from "../../../contexts/version/VersionContext";
 import { AuthMiddleware } from "../../../middleware/authentication/AuthMiddleware";
 import { changelogApi } from "./changelog.api";
+import { buildDateGroups, filterDateGroups } from "./components/shared/changelogMeta";
 
 const EMPTY_FORM = {
     displayDate: "",
@@ -110,6 +118,21 @@ export function useChangelog() {
     const { refresh: refreshVersionBadge } = useVersion();
     const [releaseState, setReleaseState] = useState(null);
 
+    // ── Date journey state ────────────────────────────────────────────────────
+    const [searchParams, setSearchParams] = useSearchParams();
+    const urlDate = searchParams.get("date");
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [dateQuery, setDateQuery] = useState("");
+    /** Mobile-only disclosure for the rail; the rail is always open on lg+. */
+    const [navOpen, setNavOpen] = useState(false);
+    /**
+     * A date the NEXT reconcile should jump to once it exists in the refetched
+     * list — set by create/update so the admin lands on the entry they just
+     * wrote. A ref, not state: the reconcile must see it regardless of whether
+     * React batched the refetch and the request together.
+     */
+    const pendingDateRef = useRef(null);
+
     // ── Auth ─────────────────────────────────────────────────────────────────
     useEffect(() => {
         let cancelled = false;
@@ -128,7 +151,30 @@ export function useChangelog() {
     const fetchEntries = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await changelogApi.list();
+            // Authenticated read first — it carries `authors`/`coAuthors`, which
+            // the public payload strips. Anonymous visitors 401 here and fall
+            // through to the public endpoint, so Version History is readable
+            // without a session (it is a public route).
+            //
+            // Ordered as try-then-fallback rather than branching on
+            // AuthMiddleware.isAuth() because this fetch fires from its own
+            // mount effect, which races the effect that resolves `user` —
+            // branching on that state would read `null` on first paint and
+            // serve authenticated users the stripped payload.
+            //
+            // The fallback is deliberately scoped to AUTH failures only. A
+            // blanket `catch` would retry the public endpoint after a genuine
+            // server fault and then report THAT request's error, masking the
+            // real one — the store-unavailable message would be replaced by
+            // whatever the second call happened to fail with.
+            let res;
+            try {
+                res = await changelogApi.list();
+            } catch (err) {
+                const status = err.response?.status;
+                if (status !== 401 && status !== 403) throw err;
+                res = await changelogApi.listPublic();
+            }
             setEntries(res.data?.data ?? []);
         } catch (err) {
             setApiError(extractApiError(err, "Failed to load version history."));
@@ -158,6 +204,69 @@ export function useChangelog() {
     useEffect(() => {
         if (isSuperAdmin) fetchReleaseState();
     }, [isSuperAdmin, fetchReleaseState]);
+
+    // ── Date journey derivation ───────────────────────────────────────────────
+
+    const dateGroups = useMemo(() => buildDateGroups(entries), [entries]);
+    const dateKeys = useMemo(() => dateGroups.map((g) => g.date), [dateGroups]);
+    const filteredDateGroups = useMemo(() => filterDateGroups(dateGroups, dateQuery), [dateGroups, dateQuery]);
+
+    // Reconcile the selection against whatever dates currently exist. Runs on
+    // every list change: first load, after a create/update/delete refetch, and
+    // whenever the URL's ?date= changes underneath the page.
+    useEffect(() => {
+        if (!dateKeys.length) {
+            setSelectedDate(null);
+            return;
+        }
+        // The queued jump is consumed HERE, in the effect body — never inside
+        // the setSelectedDate updater. Updaters must be pure: React may call
+        // one more than once (StrictMode always does, and a concurrent rebase
+        // can), and an updater that cleared this ref on its first call saw
+        // null on its second and dropped the jump.
+        const pending = pendingDateRef.current;
+        if (pending && dateKeys.includes(pending)) {
+            pendingDateRef.current = null;
+            setSelectedDate(pending);
+            return;
+        }
+        // A pending date that is NOT in the list yet is deliberately kept:
+        // this effect can run once on the pre-refetch render, and clearing
+        // it there would lose the jump when the new list lands.
+        setSelectedDate((cur) => {
+            if (cur && dateKeys.includes(cur)) return cur;
+            if (urlDate && dateKeys.includes(urlDate)) return urlDate;
+            return dateKeys[0];
+        });
+    }, [dateKeys, urlDate]);
+
+    /**
+     * Jumps the journey to a date. Writes `?date=` so the day is linkable —
+     * `replace` so walking the journey does not stack history entries.
+     * @param {string} date YYYY-MM-DD
+     */
+    const selectDate = useCallback(
+        (date) => {
+            pendingDateRef.current = null; // an explicit pick overrides a queued jump
+            setSelectedDate(date);
+            setNavOpen(false);
+            setSearchParams(
+                (prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set("date", date);
+                    return next;
+                },
+                { replace: true },
+            );
+        },
+        [setSearchParams],
+    );
+
+    const activeIndex = selectedDate ? dateKeys.indexOf(selectedDate) : -1;
+    const activeGroup = activeIndex >= 0 ? dateGroups[activeIndex] : null;
+    // dateGroups is newest-first, so the NEXT index is the OLDER date.
+    const olderDate = activeIndex >= 0 ? (dateKeys[activeIndex + 1] ?? null) : null;
+    const newerDate = activeIndex > 0 ? dateKeys[activeIndex - 1] : null;
 
     // ── Create (single write path for content + release markers) ────────────────
     const closeCreate = useCallback(() => {
@@ -203,6 +312,8 @@ export function useChangelog() {
             const payload = buildPayload(form);
             const res = await changelogApi.create(payload);
             toast.success(res.data?.message ?? "Entry created.");
+            // Land the journey on the day just written, not wherever it was.
+            pendingDateRef.current = payload.displayDate;
             await fetchEntries();
             await fetchReleaseState();
             refreshVersionBadge?.();
@@ -243,6 +354,8 @@ export function useChangelog() {
             const payload = buildPayload(form);
             const res = await changelogApi.update(editTarget.id, payload);
             toast.success(res.data?.message ?? "Entry updated.");
+            // Follow the entry if its displayDate was moved to another day.
+            pendingDateRef.current = payload.displayDate;
             await fetchEntries();
             await fetchReleaseState();
             refreshVersionBadge?.();
@@ -293,6 +406,20 @@ export function useChangelog() {
         loading,
         user,
         isSuperAdmin,
+
+        // Date journey
+        dateGroups,
+        filteredDateGroups,
+        totalReleases: entries.length,
+        selectedDate,
+        selectDate,
+        activeGroup,
+        olderDate,
+        newerDate,
+        dateQuery,
+        setDateQuery,
+        navOpen,
+        setNavOpen,
 
         createOpen,
         openCreate,

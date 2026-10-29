@@ -6,9 +6,9 @@
  * The endpoint POST client/help-miss is intercepted at the network boundary so
  * we can assert exactly what was sent and how many times.
  *
- * PORT NOTE (MEAL → CATHERINE): behaviour is identical; only the example query
+ * TEMPLATE NOTE: behaviour is identical; only the example query
  * vocabulary is retuned to CATHERINE topics (sessions, metrics, caching, oracle
- * — never MEAL's top-up/payslip/subsidy). The endpoint is `client/help-miss`.
+ * — never domain-specific terms). The endpoint is `client/help-miss`.
  *
  * Contract under test:
  *   - reports a settled miss to POST client/help-miss with { query, surface }

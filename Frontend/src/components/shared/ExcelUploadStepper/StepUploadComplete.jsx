@@ -1,6 +1,6 @@
 /**
  * StepUploadComplete.jsx — The single Step 3 ("Complete") screen for every
- * Excel upload stepper, whatever the feature.
+ * Excel upload stepper.
  *
  * SINGLE SOURCE OF TRUTH. Each feature's StepXComplete component is now a thin
  * wrapper that normalises its save response with `normalizeUploadOutcome` and
@@ -122,24 +122,36 @@ function DetailSection({ bucket, rows, columnLabels }) {
  * @param {Object} props
  * @param {ReturnType<import('./uploadOutcome').normalizeUploadOutcome>} props.outcome
  *   Normalised ledger. Build it with `normalizeUploadOutcome(result, { parsedRows, excludedRows, feature })`.
- * @param {string} props.title - What was uploaded, e.g. "Invoices", "Employee Records".
+ * @param {string} props.title - What was uploaded, e.g. "Users", "Products".
  * @param {Function} props.onReset - Restarts the wizard at Step 1.
  * @param {string} [props.resetLabel="Upload Another File"] - Reset button text.
  * @param {{ key: string, label: string }} [props.columnLabels] - Header text for the
- *   first two detail-table columns, e.g. `{ key: "EMP_ID", label: "Employee" }`.
+ *   first two detail-table columns, e.g. `{ key: "ID", label: "Name" }`.
  * @param {import('react').ReactNode} [props.children] - Feature-specific sections
- *   (an archived-records table, an email-delivery badge). Rendered after
+ *   (e.g. an archived-records table or an email-delivery badge). Rendered after
  *   the detail tables and before the machine-readable block.
  */
 export function StepUploadComplete({ outcome, title, onReset, resetLabel = "Upload Another File", columnLabels = { key: "Record", label: "Details" }, children }) {
     const [showJson, setShowJson] = useState(false);
 
-    const { counts, file, severity, balanced, fileBalanced } = outcome;
+    const { counts, file, severity, balanced, fileBalanced, written } = outcome;
     const style = SEVERITY_STYLE[severity] ?? SEVERITY_STYLE.warning;
     const json = useMemo(() => outcomeToJson(outcome), [outcome]);
     const sentence = summarySentence(outcome);
 
-    const headline = severity === "success" ? `${title} Saved Successfully` : counts.failed > 0 || !balanced ? `${title} — Completed With Errors` : `${title} — Completed With Nothing Written`;
+    // "Nothing Written" is decided by `written`, not by the absence of other
+    // problems. The earlier order asked "any failures or an unbalanced
+    // ledger?" first and fell through to "Nothing Written" otherwise, so a
+    // 14-inserted upload whose FILE tier did not reconcile was announced as
+    // "Completed With Nothing Written" — over a stats grid reading
+    // "Inserted 14". The three cases are now disjoint and read off the
+    // numbers on screen.
+    const headline =
+        severity === "success"
+            ? `${title} Saved Successfully`
+            : written === 0
+                ? `${title} — Completed With Nothing Written`
+                : `${title} — Completed With Errors`;
 
     return (
         <div className={`space-y-6 ${ANIMATE_FADE_IN_UP}`} data-upload-result="ready" data-upload-feature={outcome.feature} data-upload-severity={severity} data-upload-balanced={String(balanced && fileBalanced)}>
@@ -170,7 +182,17 @@ export function StepUploadComplete({ outcome, title, onReset, resetLabel = "Uplo
                     <p className="mt-1 text-xs text-black/60 dark:text-white/60">
                         {!balanced && `${Math.abs(counts.unaccounted)} submitted row${Math.abs(counts.unaccounted) !== 1 ? "s are" : " is"} not represented in any outcome bucket. `}
                         {!fileBalanced && `Parsed rows (${file.parsed}) do not equal excluded (${file.excluded}) plus submitted (${file.submitted}). `}
-                        Report this upload's Request ID to the development team before treating the result as final.
+                        {/* Escalation is warranted only by the SERVER tier: a
+                            row the server accepted and then accounted for
+                            nowhere. A file-tier mismatch alone means the two
+                            row counts were measured differently on the client,
+                            which the rows already written do not depend on —
+                            telling the operator to escalate that as if the
+                            data were suspect is what made a clean 14-of-14
+                            issuance look like a defect. */}
+                        {!balanced
+                            ? "Report this upload's Request ID to the development team before treating the result as final."
+                            : `The ${counts.inserted + counts.updated} row${counts.inserted + counts.updated !== 1 ? "s" : ""} written above ${counts.inserted + counts.updated !== 1 ? "are" : "is"} unaffected; the two row counts were measured differently before submission. Re-check the file's row count if this was unexpected.`}
                     </p>
                 </div>
             )}
@@ -217,7 +239,7 @@ export function StepUploadComplete({ outcome, title, onReset, resetLabel = "Uplo
                 <DetailSection key={bucket} bucket={bucket} rows={outcome.rows[bucket]} columnLabels={columnLabels} />
             ))}
 
-            {/* Feature-specific extras (archived rows, email delivery, …) */}
+            {/* Feature-specific extras */}
             {children}
 
             {/* Machine-readable ledger for the RPA tooling */}

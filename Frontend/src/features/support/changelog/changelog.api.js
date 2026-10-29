@@ -12,6 +12,26 @@ export const changelogApi = {
     list: () => httpClient.get("changelog"),
 
     /**
+     * Unauthenticated read. Same entries as `list`, minus `authors` /
+     * `coAuthors` (stripped server-side). Used by the public Version History
+     * page and by VersionContext, which must resolve the real version for
+     * anonymous visitors — `list` 401s for them, and the badge would otherwise
+     * fall back to the build-time package.json version.
+     *
+     * @returns {Promise<import("axios").AxiosResponse>}
+     */
+    listPublic: () => httpClient.get("changelog/public"),
+
+    /**
+     * Unauthenticated read of the NEWEST public entry only — `data` is exactly
+     * `listPublic`'s `data[0]` (or null when empty). What VersionContext reads:
+     * the full list is ~540 KB to resolve one field.
+     *
+     * @returns {Promise<import("axios").AxiosResponse>}
+     */
+    latestPublic: () => httpClient.get("changelog/public/latest"),
+
+    /**
      * @param {{ displayDate: string, version: string, title: string, message: string,
      *           whatChanged: Array<{ text: string, items?: string[] }>,
      *           type: string, authors: string[], coAuthors: string[] }} data

@@ -301,8 +301,8 @@ await new Transaction(db).withTransaction(async (session) => {
                                     <CodeBlock title="Org chart (tree traversal)" language="js">{`const { withRecursiveCTE } = require("../utils/oracle-mongo-wrapper");
 
 const orgChart = await withRecursiveCTE(db, "org", {
-  anchor: employees.find({ managerId: null }),  // roots
-  recursive: { collection: "employees", joinOn: { managerId: "$org.id" } },
+  anchor: users.find({ managerId: null }),  // roots
+  recursive: { collection: "users", joinOn: { managerId: "$org.id" } },
 })
   .sort({ LVL: 1, name: 1 })  // LVL is added automatically (1 = root)
   .toArray();`}</CodeBlock>
@@ -449,7 +449,7 @@ const plan = await perf.explainPlan(users.find({ status: "active" }));`}</CodeBl
                     Testing
                 </h2>
                 <p className={`mb-6 ${BASE_COLOR_TEXT} opacity-75`}>
-                    The backend test suite is <strong>Mocha + Chai + Sinon + Supertest</strong> (see <code className="font-mono text-xs">Backend/test/server/</code>). Two patterns for code that uses Mira:
+                    The backend test suite is <strong>Vitest + Supertest</strong> with Vitest globals (see <code className="font-mono text-xs">Backend/test/server/</code>). Two patterns for code that uses Mira (file names below are examples):
                 </p>
                 <Tabs
                     variant="pill"
@@ -460,18 +460,16 @@ const plan = await perf.explainPlan(users.find({ status: "active" }));`}</CodeBl
                             label: "Unit (stub the collection)",
                             content: (
                                 <div className="mt-4 space-y-3">
-                                    <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>Test service logic without a database by stubbing the collection with Sinon.</p>
-                                    <CodeBlock title="test/server/unit/services/userService.test.js" language="js">{`const sinon = require("sinon");
-const { expect } = require("chai");
-
+                                    <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>Test service logic without a database by stubbing the collection with <code className="font-mono text-xs">vi.fn()</code>.</p>
+                                    <CodeBlock title="test/server/unit/services/userService.test.js" language="js">{`// describe / it / expect / vi are Vitest globals (globals: true).
 it("findActive() filters by status", async () => {
   const collection = {
-    find: sinon.stub().returns({ toArray: async () => [{ ID: 1 }] }),
+    find: vi.fn().mockReturnValue({ toArray: async () => [{ ID: 1 }] }),
   };
   const rows = await collection.find({ STATUS: "active" }).toArray();
 
-  expect(collection.find.calledWith({ STATUS: "active" })).to.be.true;
-  expect(rows).to.have.length(1);
+  expect(collection.find).toHaveBeenCalledWith({ STATUS: "active" });
+  expect(rows).toHaveLength(1);
 });`}</CodeBlock>
                                 </div>
                             ),
@@ -490,7 +488,7 @@ it("inserts and reads back a user", async () => {
     const users = session.collection("T_USERS_DEV");
     await users.insertOne({ USERNAME: "tmp_test", IS_ACTIVE: "Y" });
     const found = await users.findOne({ USERNAME: "tmp_test" });
-    expect(found.IS_ACTIVE).to.equal("Y");
+    expect(found.IS_ACTIVE).toBe("Y");
     throw new Error("rollback");  // discard test data
   }).catch(() => {});
 });`}</CodeBlock>
@@ -512,7 +510,7 @@ it("inserts and reads back a user", async () => {
                         { label: "Database Connection", to: "/about/database-connection", desc: "Pools, the connection registry, and ORM-vs-pure-SQL." },
                         { label: "Getting Started", to: "/about/getting-started", desc: "Prerequisites, secrets, and running the app." },
                         { code: "Backend/src/utils/oracle-mongo-wrapper/README.md", desc: "The complete operator reference — every stage, builder, and helper." },
-                        { code: "Backend/test/server/", desc: "The Mocha + Chai + Sinon + Supertest suite to model your tests on." },
+                        { code: "Backend/test/server/", desc: "The Vitest + Supertest suite to model your tests on." },
                     ]}
                 />
             </section>

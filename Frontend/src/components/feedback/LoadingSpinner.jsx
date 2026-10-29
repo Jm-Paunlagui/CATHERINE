@@ -20,7 +20,7 @@ export function LoadingSpinner({ size = "md", fullPage = false, label }) {
         <div className="flex flex-col items-center gap-3">
             <div
                 className={`${SIZES[size] ?? SIZES.md} rounded-full
-                    border-orange-400 border-t-transparent animate-spin`}
+                    border-(--accent-foreground) border-t-transparent animate-spin`}
             />
             {label && <p className="text-sm font-aumovio text-grey-400 animate-pulse">{label}</p>}
         </div>

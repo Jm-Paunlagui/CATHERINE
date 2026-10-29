@@ -22,7 +22,7 @@
  * ───────────────
  * Identical model to the Help Center: a `roles` allow-list is authoritative
  * when present; otherwise the `minRole` tier ladder applies. On /auth the
- * viewer resolves to tier 0 (general articles only) — the intended behaviour.
+ * visitor resolves to tier 0 (general articles only) — the intended behaviour.
  *
  * SECURITY (Cybersecurity specialisation)
  * ───────────────────────────────────────
@@ -58,7 +58,7 @@ const RESULT_CAP = 8;
 const MISS_REPORT_DEBOUNCE_MS = 1200;
 
 /**
- * localStorage key recording that the viewer has already discovered the Help
+ * localStorage key recording that the user has already discovered the Help
  * Assistant (hovered it or opened the panel at least once). Persisted via the
  * SSR-safe `storage` wrapper so the one-time discoverability hint — a gentle
  * attention pulse plus a brief auto-peek of the "Need Help?" label — never
@@ -77,17 +77,6 @@ const HINT_SEEN_KEY = "help_assistant_hint_seen";
  * @type {number}
  */
 const HINT_PEEK_MS = 4200;
-
-/**
- * Roles for which the Help Assistant launcher is suppressed entirely. ROBOT is
- * an automation account with no human operator to read help articles, so the
- * floating launcher is noise. Matches the role string returned in the session
- * payload as `user.role` (see App.jsx ROLES). Defined here as a local constant
- * so the tier-2 shared hook stays decoupled from App.jsx. Exported so tests can
- * lock the suppression decision to a single source.
- * @type {Set<string>}
- */
-export const HIDDEN_ROLES = new Set(["ROBOT"]);
 
 /**
  * Routes on which the launcher is suppressed entirely.
@@ -178,7 +167,7 @@ export function useHelpAssistant() {
     const [expandedArticleId, setExpandedArticleId] = useState(null);
 
     // ── First-visit discoverability hint ─────────────────────────────────────────
-    // A one-time attention affordance: on a viewer's FIRST ever render of the
+    // A one-time attention affordance: on a user's FIRST ever render of the
     // launcher we briefly auto-peek the "Need Help?" label and pulse the button
     // so the FAB is noticed instead of blending into the corner. It is dismissed
     // PERMANENTLY the moment the user acknowledges it (hovers, focuses, or opens
@@ -190,23 +179,22 @@ export function useHelpAssistant() {
     const [showHint, setShowHint] = useState(() => storage.get(HINT_SEEN_KEY) !== true);
     const hintTimer = useRef(null);
 
-    // Resolved viewer role (null on /auth or when unauthenticated → tier 0).
+    // Resolved user role (null on /auth or when unauthenticated → tier 0).
     const [userRole, setUserRole] = useState(null);
     const [isReady, setIsReady] = useState(false);
 
     // ── Auth resolution ────────────────────────────────────────────────────────
-    // Resolved EAGERLY so the role is known before the launcher paints — this
-    // lets us HIDE the FAB for suppressed roles (e.g. ROBOT) with no flash of
-    // the button.
+    // Resolved EAGERLY so the role-gated article set is ready before the user
+    // opens the panel.
     //
     // RE-RESOLVED ON EVERY NAVIGATION (keyed on `pathname`), NOT once on mount.
     // <HelpAssistant /> is mounted once at the App root and PERSISTS across the
     // login → app navigation (it is never remounted). A one-shot mount effect
     // therefore resolved the role while still on /auth (logged-out → null) and
-    // NEVER re-ran after login, so a freshly-logged-in ROBOT stayed `userRole:
-    // null → hidden:false` and kept seeing the FAB. Re-running on pathname
-    // change catches the post-login role the moment the user lands on their
-    // first authenticated route.
+    // NEVER re-ran after login, so a freshly-logged-in ADMIN stayed `userRole:
+    // null` and only ever saw tier-0 articles. Re-running on pathname change
+    // catches the post-login role the moment the user lands on their first
+    // authenticated route.
     //
     // Cost (CWE-400 — no needless work): AuthMiddleware.isAuth() short-circuits
     // to `false` with NO network request when there is no session hint in
@@ -229,17 +217,11 @@ export function useHelpAssistant() {
 
     const userTier = ROLE_TIERS[userRole] ?? 0;
 
-    // Suppress the launcher entirely for automation roles (ROBOT). Until the
-    // role resolves (isReady === false) we do NOT hide, so human users never
-    // see the button flicker in on load; a ROBOT session flips this to true the
-    // moment auth resolves, removing the FAB.
-    // Two independent suppressions, OR'd:
-    //   • ROLE  — resolved async, so gated on isReady to avoid the FAB
-    //             flickering in for a human before auth answers.
-    //   • ROUTE — known synchronously from the router, so it needs no isReady
-    //             gate; waiting on auth would flash the button onto /about/help
-    //             for the one render before the role resolves.
-    const hidden = (isReady && userRole != null && HIDDEN_ROLES.has(userRole)) || isHiddenPath(pathname);
+    // Route suppression only — every template role (USER / ADMIN / SUPER_ADMIN)
+    // is a human operator and gets the launcher. Known synchronously from the
+    // router, so it needs no isReady gate; waiting on auth would flash the
+    // button onto /about/help for the one render before the role resolves.
+    const hidden = isHiddenPath(pathname);
 
     // ── Effective open state ────────────────────────────────────────────────────
     // DERIVED, not synced with an effect. `hidden` makes <HelpAssistant /> render
@@ -260,9 +242,8 @@ export function useHelpAssistant() {
     const effectiveOpen = open && !hidden;
 
     // ── Global keyboard shortcut: Ctrl/Cmd + K toggles the launcher ──────────────
-    // Also gated by `hidden`: a suppressed role (ROBOT) and a suppressed route
-    // (/about/help) get no shortcut either, so the (unrendered) panel can never
-    // be opened via keyboard.
+    // Also gated by `hidden`: a suppressed route (/about/help) gets no shortcut
+    // either, so the (unrendered) panel can never be opened via keyboard.
     useEffect(() => {
         if (hidden) return;
         const onKeyDown = (e) => {
@@ -431,8 +412,8 @@ export function useHelpAssistant() {
     // Auto-retire the first-visit hint after HINT_PEEK_MS even if the user never
     // interacts, so the peek/pulse is a brief nudge — not a permanent fixture.
     // Only armed while the hint is live AND the launcher will actually paint
-    // (isReady + not hidden), so a suppressed ROBOT session never persists the
-    // "seen" flag on the user's behalf. The timer is cleared on unmount and on
+    // (isReady + not hidden), so a suppressed route never persists the "seen"
+    // flag on the user's behalf. The timer is cleared on unmount and on
     // any earlier dismissal (showHint flips false → effect re-runs → cleanup).
     useEffect(() => {
         if (!showHint || !isReady || hidden) return;

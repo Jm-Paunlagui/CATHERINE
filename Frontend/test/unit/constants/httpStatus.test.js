@@ -311,7 +311,7 @@ describe("resolveStatusHandling — truth table", () => {
 
     it("returns the same six-key plan shape whatever the status", () => {
         for (const code of [400, 429, 440, 503, 999, undefined]) {
-            expect(Object.keys(resolveStatusHandling(code, { url: "health" })).sort()).toEqual(["endsSession", "mode", "route", "selfHandled", "severity", "title"]);
+            expect(Object.keys(resolveStatusHandling(code, { url: "health" })).sort()).toEqual(["endsSession", "mode", "outageCause", "route", "selfHandled", "severity", "title"]);
         }
     });
 });

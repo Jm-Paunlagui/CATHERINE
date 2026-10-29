@@ -377,7 +377,7 @@ cp .env.example .env`}</CodeBlock>
                             </div>
                             <div className={`mt-4 p-4 rounded-xl border border-blue-400/30 bg-blue-400/5`}>
                                 <p className={`text-sm ${BASE_COLOR_TEXT} opacity-75`}>
-                                    💡 The example file ships <code className="font-mono text-xs">http://localhost:3000/api/v1/</code> — change it to your machine's LAN IP and the backend port (default <code className="font-mono text-xs">2108</code>), e.g. <code className="font-mono text-xs">http://192.168.0.193:2108/api/v1/</code>. Also add your frontend origin (e.g. <code className="font-mono text-xs">http://192.168.0.193:5173</code>) to <code className="font-mono text-xs">CORS_ORIGINS</code> in the backend — see the <strong>CORS Setup</strong> guide.
+                                    💡 The example file ships <code className="font-mono text-xs">http://localhost:2108/api/v1/</code> (the backend's default port, plain http) — to reach it from other devices, change it to your machine's LAN IP, e.g. <code className="font-mono text-xs">http://192.168.0.193:2108/api/v1/</code>. Also add your frontend origin (e.g. <code className="font-mono text-xs">http://192.168.0.193:5173</code>) to <code className="font-mono text-xs">CORS_ORIGINS</code> in the backend — see the <strong>CORS Setup</strong> guide.
                                 </p>
                             </div>
                         </StepCard>

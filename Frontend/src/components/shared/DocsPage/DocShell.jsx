@@ -37,30 +37,23 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 
 import { BASE_COLOR_BG, BASE_COLOR_TEXT, STANDARD_BORDER, TRANSITION_COLORS } from "../../../assets/styles/pre-set-styles";
-import { useLayout } from "../../../contexts/layout/LayoutContext";
 import { useScrollSpy } from "./useScrollSpy";
 
 /**
- * Sticky offset for the rail, per layout mode. The correct value depends on
- * what the SCROLLPORT is, and that differs between the two shells:
+ * Sticky offset for the rail, measured from the top of the SCROLLPORT.
  *
- *   sidebar — the scrollport is `#app-main-scroll` (App.jsx applies
- *             `overflow-y-auto` only in this mode). SidebarHeader and Breadcrumb
- *             render OUTSIDE that element, so nothing can cover the rail and a
- *             small breathing gap is all that is needed.
+ * The scrollport is `#app-main-scroll` in BOTH layout modes: App.jsx renders
+ * every chrome route in the fixed-height shell (`h-screen overflow-hidden`),
+ * and the top bars — Navbar (top mode) or SidebarHeader (sidebar mode) plus
+ * the Breadcrumb — render ABOVE and OUTSIDE that element. Nothing can cover
+ * the rail in either mode, so it only needs the small breathing gap shared
+ * with DateJourneyNav and HelpCategoryNav.
  *
- *   top     — there is no bounded scrollport; the WINDOW scrolls. Navbar.jsx is
- *             `sticky top-0 z-50` over that same viewport and is `h-16` plus a
- *             1px bottom border = 65px tall. A rail pinned at 24px therefore
- *             spends its first 41px behind the navbar, hiding the "On This Page"
- *             heading. Clear the navbar, then add the same breathing gap.
- *
- * Keep `TOP` in step with Navbar.jsx's height if that ever changes.
+ * Do NOT add the navbar height here. A former top-mode value of `lg:top-22`
+ * (88px) assumed the WINDOW scrolled under a sticky Navbar; under the fixed
+ * shell it just left an 88px gap above the pinned rail.
  */
-const RAIL_TOP_BY_LAYOUT = {
-    sidebar: "lg:top-6", // 24px
-    top: "lg:top-22", // 88px = 64px navbar + 1px border + 23px gap
-};
+const RAIL_TOP = "lg:top-6"; // 24px
 
 /**
  * One jump target in the rail. Mirrors DateJourneyNav's DateRailItem: the dot
@@ -95,11 +88,9 @@ function SectionRailItem({ section, active, onJump }) {
  * @param {string} [props.title="On This Page"] - Rail heading; also the nav's
  *   accessible name.
  * @param {string} [props.railTop] - Tailwind sticky offset for the rail,
- *   measured from the top of the SCROLLPORT. Omit it: the default is chosen per
- *   layout mode by {@link RAIL_TOP_BY_LAYOUT}, because the scrollport is
- *   `#app-main-scroll` in sidebar mode but the WINDOW in top mode — and only in
- *   top mode does the sticky Navbar sit over that same viewport and need
- *   clearing. Pass a value only to override that for one page.
+ *   measured from the top of the SCROLLPORT (`#app-main-scroll` in both layout
+ *   modes). Omit it to use {@link RAIL_TOP}; pass a value only to override that
+ *   for one page.
  * @param {import('react').ReactNode} [props.header=null] - Optional content
  *   rendered full-width above the article/rail row, inside the same padded
  *   container the two columns share.
@@ -107,8 +98,7 @@ function SectionRailItem({ section, active, onJump }) {
  * @param {import('react').ReactNode} props.children - The article content.
  */
 export function DocShell({ sections = [], title = "On This Page", railTop, header = null, className = "", children }) {
-    const { layout } = useLayout();
-    const resolvedRailTop = railTop ?? RAIL_TOP_BY_LAYOUT[layout] ?? RAIL_TOP_BY_LAYOUT.top;
+    const resolvedRailTop = railTop ?? RAIL_TOP;
     const activeId = useScrollSpy(sections);
     // Mobile disclosure only — the `lg:block` below always reveals the list on
     // desktop regardless of this value, exactly as DateJourneyNav does.

@@ -2,7 +2,8 @@
  * main.jsx — Entry point.
  *
  * Provider chain (outermost → innermost):
- *   BrowserRouter → CsrfProvider → LayoutProvider → VersionProvider → App
+ *   BrowserRouter → ThemeProvider → CsrfProvider → CsrfGate → LayoutProvider
+ *   → VersionProvider → ErrorBoundary → App
  *
  * Rules:
  * - All providers live here, never in App.jsx
@@ -19,10 +20,12 @@ import { LayoutProvider } from "./contexts/layout/LayoutContext";
 import { CsrfProvider, useCsrf } from "./contexts/security/CsrfContext";
 import { ThemeProvider } from "./contexts/theme/ThemeContext";
 import { VersionProvider } from "./contexts/version/VersionContext";
-import { API_BASE_URL } from "./config/apiBase";
-import { ERROR_PAGE_ROUTES } from "./constants/httpStatus";
 import { frontendMetrics } from "./utils/frontendMetrics";
 import { initWebVitals } from "./utils/webVitals";
+import { API_BASE_URL } from "./config/apiBase";
+import { ERROR_PAGE_ROUTES } from "./constants/httpStatus";
+import { buildThrottlePayload } from "./utils/retryAfter";
+import { stashErrorPagePayload } from "./utils/storage";
 
 // ─── Frontend observability bootstrap ───────────────────────────────────────────
 // Start telemetry as early as possible — before auth/CSRF, even on the login page.
@@ -31,14 +34,18 @@ import { initWebVitals } from "./utils/webVitals";
 // uses keepalive fetch, so events survive page unloads.
 frontendMetrics.init(API_BASE_URL);
 initWebVitals(({ name, value, rating }) => frontendMetrics.recordVital(name, value, rating));
-window.addEventListener("error", (e) => frontendMetrics.recordError(e.error || e.message, { page: window.location.pathname, source: "window.error" }));
-window.addEventListener("unhandledrejection", (e) => frontendMetrics.recordError(e.reason || "Unhandled promise rejection", { page: window.location.pathname, source: "unhandledrejection" }));
+window.addEventListener("error", (e) =>
+    frontendMetrics.recordError(e.error || e.message, { page: window.location.pathname, source: "window.error" }),
+);
+window.addEventListener("unhandledrejection", (e) =>
+    frontendMetrics.recordError(e.reason || "Unhandled promise rejection", { page: window.location.pathname, source: "unhandledrejection" }),
+);
 
-// ─── Stale-chunk recovery (deployment-only failure mode) ───────────────
+// ─── Stale-chunk recovery (deployment-only failure mode) ───────────────────────
 // Every route in App.jsx is `lazy(() => import(...))`, and Vite emits one
 // content-hashed chunk per view. A redeploy replaces every hash, so a client
-// that still has the OLD index.html open (a tab left open overnight, a Windows
-// kiosk that never reloads) requests a chunk filename that no longer exists on
+// that still has the OLD index.html open (a tab left open overnight, a wall
+// display that never reloads) requests a chunk filename that no longer exists on
 // IIS. Web.config's SPA rewrite deliberately excludes /assets/, so that request
 // honestly 404s — React's `lazy()` then re-throws the rejected import() as a
 // render error. Without this handler that is an unrecoverable blank page: the
@@ -66,15 +73,18 @@ window.addEventListener("vite:preloadError", (event) => {
 const MIN_LOADING_MS = 0;
 
 // ─── CsrfGate ────────────────────────────────────────────────────────────────
-// Disabled rather than split into a sibling file: main.jsx's own header comment
-// states the deliberate rule "All providers live here, never in App.jsx".
-// CsrfGate exists solely to gate rendering on this file's own CsrfProvider until
-// CSRF init resolves, is used exactly once below, and is never imported. main.jsx
-// itself has zero exports (it is the entrypoint script), which is what actually
-// trips this rule — splitting the gate out would not change that.
+// Disabled rather than split into a sibling file: main.jsx's own header
+// comment states the deliberate rule "All providers live here, never in
+// App.jsx" — CsrfGate exists solely to gate rendering on this file's own
+// CsrfProvider until CSRF init resolves, and is used exactly once, right
+// below, as part of the one bootstrap render tree. It is never imported
+// elsewhere. main.jsx itself has zero exports (it is the entrypoint script,
+// not a module other files import from), which is what actually trips this
+// rule — splitting the gate out would not change that, and would separate
+// the gate's logic from the only place its behaviour is meaningful.
 // eslint-disable-next-line react-refresh/only-export-components
 function CsrfGate({ children }) {
-    const { error, isInitialized } = useCsrf();
+    const { error, errorDetail, isInitialized } = useCsrf();
     const [minElapsed, setMinElapsed] = useState(false);
 
     useEffect(() => {
@@ -97,7 +107,13 @@ function CsrfGate({ children }) {
         // invites a retry, and the backend limiter counts every request in its
         // window, so each retry extended the block the user was trying to
         // escape. The 429 view counts down instead and never auto-retries.
-        if (error?.response?.status === 429) {
+        if (errorDetail?.status === 429) {
+            // Hard navigation destroys router state, so hand the server's own
+            // wait (body detail first, then the Retry-After header) and Request
+            // ID to the countdown page — same payload HttpClient stashes.
+            // returnTo: the page the user opened, so "Try again" goes back there instead of
+            // reloading the 429 page itself.
+            stashErrorPagePayload(buildThrottlePayload(errorDetail, `${window.location.pathname}${window.location.search}`));
             window.location.replace(THROTTLED_ROUTE);
             return null;
         }
@@ -120,6 +136,13 @@ createRoot(document.getElementById("root")).render(
                     <CsrfGate>
                         <LayoutProvider>
                             <VersionProvider>
+                                {/* Root boundary — LAST line of defence. Every view wraps
+                                    itself in its own ErrorBoundary, but the app shell
+                                    (Navbar / Sidebar / Breadcrumb / Footer /
+                                    SessionWarningModal) sits OUTSIDE all of them, and a
+                                    failed lazy-chunk import throws before the view's own
+                                    boundary exists. Without this, either case unmounts the
+                                    whole React tree and leaves a blank page. */}
                                 <ErrorBoundary>
                                     <App />
                                 </ErrorBoundary>

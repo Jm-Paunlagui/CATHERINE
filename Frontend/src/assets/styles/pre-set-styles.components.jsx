@@ -1,12 +1,12 @@
 /**
  * pre-set-styles.components.jsx
  * ─────────────────────────────
- * React-component exports extracted from `pre-set-styles.jsx`.
+ * React-component exports extracted from `pre-set-styles.js`.
  *
  * Why this file exists:
  *   React Fast Refresh (`react-refresh/only-export-components`) requires that
  *   files export **either** React components **or** plain values — never both.
- *   `pre-set-styles.jsx` exports class-name string constants, so any component
+ *   `pre-set-styles.js` exports class-name string constants, so any component
  *   defined there must live in a sibling components file. Existing call sites
  *   continue to import `EMAIL_NOT_SET` from `./pre-set-styles` thanks to a
  *   re-export in that module — no consumer updates required.

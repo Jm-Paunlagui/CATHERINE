@@ -27,7 +27,7 @@ export function AreaChart({ series = [], categories = [], height = 300, title, g
             labels: {
                 style: { fontFamily: "Aumovio" },
                 // Same contract as BarChart/LineChart — formats the axis ticks
-                // AND the tooltip, so a money chart never renders a peso figure
+                // AND the tooltip, so a money chart never renders a money figure
                 // as a bare number.
                 ...(valueFormatter ? { formatter: valueFormatter } : {}),
             },
@@ -35,14 +35,7 @@ export function AreaChart({ series = [], categories = [], height = 300, title, g
         ...(valueFormatter ? { tooltip: { ...chartBase.tooltip, y: { formatter: valueFormatter } } } : {}),
         ...(legend ? { legend: { ...chartBase.legend, ...legend } } : {}),
         ...(annotations ? { annotations } : {}),
-        // OMIT the key entirely when there is no title — do NOT set it to
-        // `undefined`. ApexCharts reads `cnf.title.text` unconditionally while
-        // building the chart's accessible label, and an explicit `undefined`
-        // OVERRIDES its own `title: {}` default rather than falling back to it,
-        // so the read throws "Cannot read properties of undefined (reading
-        // 'text')" and the whole chart fails to mount. Latent until a caller
-        // omitted `title` — the Sales insight cards put their titles in the Card
-        // header instead (D-9), which is what surfaced it.
+        // Omit the key when there is no title: an explicit `undefined` overrides Apex's `title: {}` default and crashes mount.
         ...(title ? { title: { text: title, style: { fontFamily: "Aumovio", fontWeight: 700 } } } : {}),
         markers: { size: 0, hover: { size: 6 } },
     };

@@ -10,6 +10,7 @@
  */
 import { useId } from "react";
 import { MinusIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { FIELD_BORDER, FIELD_BORDER_ERROR, FIELD_FOCUS_WITHIN, FIELD_FOCUS_WITHIN_ERROR } from "../../assets/styles/pre-set-styles";
 
 export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infinity, step = 1, label, error, disabled = false, size = "md", id, name }) {
     const autoId = useId();
@@ -39,7 +40,7 @@ export function NumberInput({ value = 0, onChange, min = -Infinity, max = Infini
             )}
             <div
                 className={`inline-flex items-center border rounded-xl overflow-hidden
-        ${error ? "border-danger-400" : "border-grey-300 dark:border-grey-700"}
+        ${error ? `${FIELD_BORDER_ERROR} ${FIELD_FOCUS_WITHIN_ERROR}` : `${FIELD_BORDER} ${FIELD_FOCUS_WITHIN}`}
         bg-white dark:bg-(--bg-surface-2)`}
             >
                 <button

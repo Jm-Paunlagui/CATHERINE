@@ -98,8 +98,8 @@ export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicate
                 className={`border-2 border-dashed rounded-xl p-16 text-center cursor-pointer select-none
                     ${TRANSITION_COLORS}
                     ${shaking ? `${ANIMATE_SHAKE} border-danger-400 bg-danger-100/10 dark:bg-danger-400/5` : ""}
-                    ${isDragActive && !shaking ? "border-orange-400 bg-orange-50 dark:bg-orange-400/5 scale-[1.01] shadow-lg" : ""}
-                    ${!isDragActive && !shaking ? "border-orange-200 dark:border-orange-400/30 hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-400/5" : ""}`}
+                    ${isDragActive && !shaking ? "border-(--secondary-foreground) dark:border-orange-400 bg-orange-50 dark:bg-orange-400/5 scale-[1.01] shadow-lg" : ""}
+                    ${!isDragActive && !shaking ? "border-(--secondary-foreground) dark:border-orange-400/30 hover:border-(--secondary-foreground) dark:hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-400/5" : ""}`}
             >
                 <input {...getInputProps()} />
                 <div className="flex flex-col items-center gap-3">
@@ -207,7 +207,7 @@ export function ExcelStepDropzone({ uploadFile, parsedRows = [], parsedDuplicate
                             <p className="font-aumovio-bold text-warn-700 dark:text-warn-300 mb-1">
                                 {parsedDuplicates.length} duplicate value{parsedDuplicates.length !== 1 ? "s" : ""} found in file
                             </p>
-                            <p className="text-sm text-warn-600 dark:text-warn-400/80 mb-3">The rows below share the same value for a field that must be unique. Please have HR review and correct the file before uploading — you cannot proceed until all duplicates are resolved.</p>
+                            <p className="text-sm text-warn-600 dark:text-warn-400/80 mb-3">The rows below share the same value for a field that must be unique. Please review and correct the file before uploading — you cannot proceed until all duplicates are resolved.</p>
                             <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
                                 {parsedDuplicates.map(({ field, value, rowIndices }) => (
                                     <div key={`${field}-${value}`} className="flex items-start gap-2 text-sm text-warn-700 dark:text-warn-300">

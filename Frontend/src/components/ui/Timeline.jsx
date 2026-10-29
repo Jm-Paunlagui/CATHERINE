@@ -14,11 +14,11 @@ import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 const COLORS = {
     orange: { fill: "bg-orange-400  ring-orange-400/30 dark:ring-orange-400/40", text: "text-(--on-accent-text)", dot: "bg-(--on-accent-text)" },
     purple: { fill: "bg-purple-400  ring-purple-400/30 dark:ring-purple-300/40", text: "text-(--on-secondary-text)", dot: "bg-(--on-secondary-text)" },
-    success: { fill: "bg-success-400 ring-success-400/30 dark:ring-success-400/40", text: "text-white", dot: "bg-white" },
+    success: { fill: "bg-success-400 ring-success-400/30 dark:ring-success-400/40", text: "text-grey-900", dot: "bg-grey-900" },
     danger: { fill: "bg-danger-400  ring-danger-400/30 dark:ring-danger-400/40", text: "text-white", dot: "bg-white" },
-    warn: { fill: "bg-warn-400    ring-warn-400/30 dark:ring-warn-400/40", text: "text-white", dot: "bg-white" },
-    blue: { fill: "bg-blue-400    ring-blue-400/30 dark:ring-blue-400/40", text: "text-white", dot: "bg-white" },
-    grey: { fill: "bg-grey-400 dark:bg-grey-500 ring-grey-400/30 dark:ring-grey-500/40", text: "text-white", dot: "bg-white" },
+    warn: { fill: "bg-warn-400    ring-warn-400/30 dark:ring-warn-400/40", text: "text-grey-900", dot: "bg-grey-900" },
+    blue: { fill: "bg-blue-400    ring-blue-400/30 dark:ring-blue-400/40", text: "text-(--on-blue-text)", dot: "bg-(--on-blue-text)" },
+    grey: { fill: "bg-grey-400 dark:bg-grey-500 ring-grey-400/30 dark:ring-grey-500/40", text: "text-grey-900 dark:text-white", dot: "bg-grey-900 dark:bg-white" },
 };
 
 export function Timeline({ items = [], variant = "left", connect = true }) {

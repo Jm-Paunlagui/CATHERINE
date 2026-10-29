@@ -12,9 +12,13 @@
  *          LoginTimeOut, InvalidToken, ServiceUnavailable
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
+import { ANIMATE_BOUNCE_IN, ANIMATE_FADE_OUT, ANIMATE_PING, ANIMATE_PULSE, ANIMATE_SPIN, ANIMATE_SCALE_IN, ANIMATE_SCALE_SPRING, ANIM_DELAY_150, FOCUS_RING, staggerDelay } from "../../assets/styles/pre-set-styles";
+import { SERVICE_UNAVAILABLE_PAGE_CODES } from "../../constants/httpStatus";
 import Button from "../../components/ui/Button";
+import Link from "../../components/ui/typography/Link";
 import Divider from "../../components/ui/typography/Divider";
 import { H2 } from "../../components/ui/typography/Heading";
 import Paragraph from "../../components/ui/typography/Paragraph";
@@ -23,6 +27,11 @@ import { RequestIdTag } from "../../components/feedback/RequestIdTag";
 import { consumeErrorPagePayload } from "../../utils/storage";
 import AuthMiddleware from "../../middleware/authentication/AuthMiddleware";
 import CsrfMiddleware from "../../middleware/security/CsrfMiddleware";
+import { useServiceRecovery } from "../../components/shared/serverStatus/useServiceRecovery";
+import { returnToPathname } from "../../utils/returnTo";
+import { homeNavigation, hrefPath, resolveHomeHref } from "../../utils/smartHome";
+import { ServiceStatusPanel } from "./components/ServiceStatusPanel";
+import { SERVICE_PAGE_COPY, SERVICE_STATUS_COPY, SERVICE_STATUS_TEST_IDS } from "./serviceStatus.copy";
 
 /* ─── Shared keyframe injection ─────────────────────────────────────────────── */
 const KEYFRAMES = `
@@ -60,6 +69,20 @@ const KEYFRAMES = `
   @keyframes err-circuit  { 0%{stroke-dashoffset:200} 100%{stroke-dashoffset:0} }
   @keyframes err-corrupt  { 0%,100%{transform:scaleX(1) translateX(0)} 25%{transform:scaleX(1.08) translateX(2px)} 50%{transform:scaleX(0.96) translateX(-3px)} 75%{transform:scaleX(1.04) translateX(1px)} }
   @keyframes err-scaffold { 0%,100%{opacity:.7} 50%{opacity:1} }
+
+  /* Reduced motion for every error page. Decor and entrances animate through INLINE styles, which
+     class utilities (motion-reduce:*) cannot override; only !important here can. One near-instant
+     run rather than animation:none, so entrance wrappers that start at inline opacity:0 with
+     'both' fill still end visible, and loops stop on their final frame. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-client-error-page], [data-client-error-page] *, [data-client-error-page] *::before, [data-client-error-page] *::after {
+      animation-duration: 1ms !important;
+      animation-delay: 0s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0s !important;
+      transition-delay: 0s !important;
+    }
+  }
 `;
 
 let injected = false;
@@ -110,7 +133,10 @@ function injectKeyframes() {
  *     one page whose whole job is to survive a failure.
  *   • The stashed payload must NAME THIS PAGE'S CODE. Within one document a
  *     soft navigation between error screens would otherwise caption a 440 with
- *     a message stashed for a 503.
+ *     a message stashed for a 503. `pageCode` may also be a Set of codes: the
+ *     523 page renders for 502/503/504/523 alike, and HttpClient stashes the
+ *     REAL status, so a single-code match silently dropped the server's title,
+ *     message and Request ID for every 502/503/504.
  *   • The payload is read ONCE, in a lazy initialiser, because reading CLEARS
  *     it. Reading in the render body would consume it on the first render and
  *     lose it on every re-render after.
@@ -146,9 +172,9 @@ function firstUsable(...candidates) {
  * @param {string} defaultSubtitle Component's own lead paragraph.
  * @param {string} [titleProp]     Route-level override.
  * @param {string} [subtitleProp]  Route-level override.
- * @param {number|string} [pageCode] The status this screen renders for. Required
- *        to read the hard-navigation payload; omit it and only router state and
- *        props are consulted.
+ * @param {number|string|ReadonlySet<number>} [pageCode] The status (or set of statuses) this
+ *        screen renders for. Required to read the hard-navigation payload; omit it and only
+ *        router state and props are consulted.
  * @returns {{ title: string, subtitle: string, requestId: string|null, stored: object|null }}
  *
  * @example
@@ -162,7 +188,8 @@ function useErrorOverrides(defaultTitle, defaultSubtitle, titleProp, subtitlePro
     const [stored] = useState(consumeErrorPagePayload);
 
     // A payload stashed for a different screen is not this screen's message.
-    const payload = stored && pageCode != null && String(stored.code) === String(pageCode) ? stored : null;
+    const codeMatches = pageCode instanceof Set ? pageCode.has(Number(stored?.code)) : String(stored?.code) === String(pageCode);
+    const payload = stored && pageCode != null && codeMatches ? stored : null;
 
     const serverError = state?._serverError ?? null;
 
@@ -173,14 +200,39 @@ function useErrorOverrides(defaultTitle, defaultSubtitle, titleProp, subtitlePro
     return { title, subtitle, requestId, stored: payload };
 }
 
+/**
+ * Where this page's "home" / "Try again" leads — the page the user left off on, not a bare "/" that
+ * sent a still-signed-in user to the login form (see utils/smartHome.js for the 6-case matrix).
+ *
+ * @param {unknown} returnTo The stashed payload's returnTo (re-validated inside, CWE-601).
+ * @returns {{ home: string, homeHref: string }} `home` (path + search) is for navigation only;
+ *   `homeHref` is the PATH, the only part ever written into a DOM href (CWE-598).
+ */
+function useSmartHome(returnTo) {
+    return useMemo(() => {
+        const home = resolveHomeHref(returnTo);
+        return { home, homeHref: hrefPath(home) };
+    }, [returnTo]);
+}
+
 /* ─── Shared layout wrapper ──────────────────────────────────────────────────── */
-function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bgClass, illustration, leftDecor, rightDecor, requestId, children }) {
+/**
+ * Optional slots (523 only; the other seven pages pass none and render exactly as before):
+ *   codeLabel      replaces the small "Error" caption above the code (e.g. "Status")
+ *   codeClassName  extra classes on the <h1> code (animation)
+ *   codeKey        React key on the <h1>: a changed key remounts it so its enter animation replays
+ *   actions        replaces the default NavLink > Button block
+ *   statusRegion   a node rendered once in the content cell (the page's single live region)
+ *   contentWidth   max-width classes for the lead, divider and children (default `max-w-sm`); the 523
+ *                  page widens it so its status cards do not wrap into a narrow strip on a laptop
+ */
+function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bgClass, illustration, leftDecor, rightDecor, requestId, children, codeLabel, codeClassName = "", codeKey, actions, statusRegion, contentWidth = "max-w-sm" }) {
     useEffect(() => {
         injectKeyframes();
     }, []);
 
     return (
-        <div className={`relative flex items-center justify-center min-h-screen overflow-hidden font-aumovio px-6 py-16 ${bgClass}`}>
+        <div data-client-error-page className={`relative flex items-center justify-center min-h-screen overflow-hidden font-aumovio px-6 py-16 ${bgClass}`}>
             {/* Soft radial backdrop blob */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
                 <div
@@ -235,9 +287,9 @@ function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bg
                     {/* Error code — cinematic oversized display */}
                     <div style={{ animation: "err-slide-up .5s .1s ease both", opacity: 0 }}>
                         <Text variant="small" className="block mb-1 tracking-widest text-right uppercase opacity-50 lg:pr-1">
-                            Error
+                            {codeLabel ?? "Error"}
                         </Text>
-                        <h1 className={`font-aumovio-bold tracking-tight leading-none select-none text-right ${accentClass}`} style={{ fontSize: "clamp(5rem,12vw,9rem)" }}>
+                        <h1 key={codeKey} className={`font-aumovio-bold tracking-tight leading-none select-none text-right ${accentClass} ${codeClassName}`.trim()} style={{ fontSize: "clamp(5rem,12vw,9rem)" }}>
                             {code}
                         </h1>
                     </div>
@@ -245,6 +297,7 @@ function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bg
 
                 {/* ── RIGHT CELL — title, subtitle, children, cta ── */}
                 <div className="flex flex-col items-center justify-center gap-4 lg:items-start lg:pl-12 lg:max-w-10/12">
+                    {statusRegion}
                     {/* Title — gradient shimmer for that magical touch */}
                     <div style={{ animation: "err-slide-up .5s .2s ease both", opacity: 0 }}>
                         <H2 size="h3" gradient align="center" className="lg:text-left">
@@ -254,19 +307,19 @@ function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bg
 
                     {/* Subtitle — cinematic lead paragraph */}
                     <div style={{ animation: "err-slide-up .5s .3s ease both", opacity: 0 }}>
-                        <Paragraph lead className="max-w-sm text-center lg:text-left">
+                        <Paragraph lead className={`${contentWidth} text-center lg:text-left`}>
                             {subtitle}
                         </Paragraph>
                     </div>
 
                     {/* Gradient divider — visual breathing room */}
-                    <div className="w-full max-w-sm" style={{ animation: "err-slide-up .5s .33s ease both", opacity: 0 }}>
+                    <div className={`w-full ${contentWidth}`} style={{ animation: "err-slide-up .5s .33s ease both", opacity: 0 }}>
                         <Divider variant="gradient" spacing="sm" />
                     </div>
 
                     {children && (
                         <div
-                            className="w-full max-w-sm text-center lg:text-left"
+                            className={`w-full ${contentWidth} text-center lg:text-left`}
                             style={{
                                 animation: "err-slide-up .5s .35s ease both",
                                 opacity: 0,
@@ -282,11 +335,13 @@ function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bg
                             opacity: 0,
                         }}
                     >
-                        <NavLink to={linkTo}>
-                            <Button variant="primary" size="lg" rounded>
-                                {linkLabel}
-                            </Button>
-                        </NavLink>
+                        {actions ?? (
+                            <NavLink to={linkTo}>
+                                <Button variant="primary" size="lg" rounded>
+                                    {linkLabel}
+                                </Button>
+                            </NavLink>
+                        )}
                     </div>
 
                     {/* Correlation id — rendered whenever the server sent one.
@@ -297,7 +352,7 @@ function ErrorLayout({ code, title, subtitle, linkTo, linkLabel, accentClass, bg
                         a placeholder. */}
                     {requestId && (
                         <div style={{ animation: "err-slide-up .5s .45s ease both", opacity: 0 }}>
-                            <RequestIdTag requestId={requestId} className="block text-[10px] opacity-60 hover:opacity-100" />
+                            <RequestIdTag requestId={requestId} className="text-[10px] text-black/60 dark:text-white/60 hover:text-(--accent-foreground)" />
                         </div>
                     )}
                 </div>
@@ -2629,7 +2684,20 @@ function ServerLeftDecor() {
     );
 }
 
-function ServerRightDecor() {
+/**
+ * @param {{ recovered?: boolean }} props `recovered`: the service is back. The lightning and the rain fade
+ *   out, then unmount (no endless storm over a healthy server); the sign flips to "BACK ONLINE" and stops pulsing.
+ */
+function ServerRightDecor({ recovered = false }) {
+    // The storm fades for ANIMATE_FADE_OUT's duration, then leaves the DOM.
+    const [faded, setFaded] = useState(false);
+    useEffect(() => {
+        if (!recovered) return undefined;
+        const t = setTimeout(() => setFaded(true), 600);
+        return () => clearTimeout(t);
+    }, [recovered]);
+    const stormGone = recovered && faded;
+    const fade = recovered ? `${ANIMATE_FADE_OUT} motion-reduce:hidden` : undefined;
     return (
         <div className="absolute inset-0">
             {/* Storm cloud with lightning */}
@@ -2647,49 +2715,50 @@ function ServerRightDecor() {
                     <circle cx="45" cy="45" r="22" fill="var(--err-chrome-line-2)" opacity="0.8" />
                     <circle cx="80" cy="38" r="26" fill="var(--err-chrome-text)" opacity="0.8" />
                     <circle cx="110" cy="46" r="20" fill="var(--err-chrome-line-2)" opacity="0.8" />
-                    {/* Lightning bolts */}
-                    <path
-                        d="M65 65 L55 82 L62 82 L52 100"
-                        stroke="var(--err-warn-soft)"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{
-                            animation: "err-thunder 2s ease-in-out infinite",
-                        }}
-                    />
-                    <path
-                        d="M90 62 L82 76 L88 76 L80 92"
-                        stroke="var(--err-warn-soft)"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{
-                            animation: "err-thunder 2s 0.5s ease-in-out infinite",
-                        }}
-                    />
-                    {/* Rain drops */}
-                    {[
-                        [60, 96],
-                        [72, 102],
-                        [84, 98],
-                        [96, 104],
-                        [45, 100],
-                    ].map(([x, y], i) => (
-                        <line
-                            key={i}
-                            x1={x}
-                            y1={y}
-                            x2={x - 3}
-                            y2={y + 10}
-                            stroke="var(--err-blue-bright)"
-                            strokeWidth="1.5"
-                            opacity="0.5"
-                            style={{
-                                animation: `err-drop ${0.8 + i * 0.2}s ${i * 0.15}s ease-in-out infinite`,
-                            }}
-                        />
-                    ))}
+                    {/* Lightning bolts + rain: fade out on recovery, then unmount */}
+                    {!stormGone && (
+                        <>
+                            <path
+                                d="M65 65 L55 82 L62 82 L52 100"
+                                stroke="var(--err-warn-soft)"
+                                strokeWidth="3.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className={fade}
+                                style={recovered ? undefined : { animation: "err-thunder 2s ease-in-out infinite" }}
+                            />
+                            <path
+                                d="M90 62 L82 76 L88 76 L80 92"
+                                stroke="var(--err-warn-soft)"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className={fade}
+                                style={recovered ? undefined : { animation: "err-thunder 2s 0.5s ease-in-out infinite" }}
+                            />
+                            {/* Rain drops */}
+                            {[
+                                [60, 96],
+                                [72, 102],
+                                [84, 98],
+                                [96, 104],
+                                [45, 100],
+                            ].map(([x, y], i) => (
+                                <line
+                                    key={i}
+                                    x1={x}
+                                    y1={y}
+                                    x2={x - 3}
+                                    y2={y + 10}
+                                    stroke="var(--err-blue-bright)"
+                                    strokeWidth="1.5"
+                                    opacity="0.5"
+                                    className={fade}
+                                    style={recovered ? undefined : { animation: `err-drop ${0.8 + i * 0.2}s ${i * 0.15}s ease-in-out infinite` }}
+                                />
+                            ))}
+                        </>
+                    )}
                 </svg>
             </div>
 
@@ -2774,21 +2843,21 @@ function ServerRightDecor() {
                 </svg>
             </div>
 
-            {/* Under maintenance banner */}
+            {/* Under maintenance banner -> BACK ONLINE (static, green) once the service answers */}
             <div
                 className="absolute font-mono text-xs font-black border-2 rounded px-2 py-0.5"
                 style={{
                     right: 5,
                     top: "88%",
-                    borderColor: "var(--err-warn-bright)",
-                    color: "var(--err-warn-bright)",
-                    opacity: 0.5,
+                    borderColor: recovered ? "var(--err-green)" : "var(--err-warn-bright)",
+                    color: recovered ? "var(--err-green)" : "var(--err-warn-bright)",
+                    opacity: recovered ? 0.8 : 0.5,
                     transform: "rotate(-4deg)",
-                    animation: "err-pulse-op 2s ease-in-out infinite",
+                    animation: recovered ? "none" : "err-pulse-op 2s ease-in-out infinite",
                     whiteSpace: "nowrap",
                 }}
             >
-                UNDER MAINTENANCE
+                {recovered ? "BACK ONLINE" : "UNDER MAINTENANCE"}
             </div>
         </div>
     );
@@ -2798,13 +2867,14 @@ function ServerRightDecor() {
    400 — Bad Request
    ══════════════════════════════════════════════════════════════════════════════ */
 export function BadRequest({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle, requestId } = useErrorOverrides("You said what now?", "The request arrived garbled beyond comprehension. Even the server looked twice.", titleProp, subtitleProp, 400);
+    const { title, subtitle, requestId, stored } = useErrorOverrides("You said what now?", "The request arrived garbled beyond comprehension. Even the server looked twice.", titleProp, subtitleProp, 400);
+    const { homeHref } = useSmartHome(stored?.returnTo);
     return (
         <ErrorLayout
             code="400"
             title={title}
             subtitle={subtitle}
-            linkTo="/"
+            linkTo={homeHref}
             linkLabel="Start fresh"
             accentClass="text-warn-500 dark:text-warn-400"
             bgClass="bg-gradient-to-br from-white via-warn-50/30 to-yellow-50/20 dark:from-[var(--bg-surface)] dark:via-[var(--bg-surface-2)] dark:to-[var(--bg-surface)]"
@@ -2873,8 +2943,9 @@ function BadRequestIllustration() {
    401 — Unauthorized
    ══════════════════════════════════════════════════════════════════════════════ */
 export function Unauthorized({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle, requestId } = useErrorOverrides("Access denied.", "You don't have clearance for this zone. Credentials, please.", titleProp, subtitleProp, 401);
-    return <ErrorLayout code="401" title={title} subtitle={subtitle} linkTo="/" linkLabel="Return to safety" accentClass="text-(--secondary-foreground)" bgClass="bg-gradient-to-br from-white via-purple-50/20 to-white dark:from-[var(--bg-surface)] dark:via-purple-950/30 dark:to-[var(--bg-surface)]" requestId={requestId} illustration={<UnauthorizedIllustration />} leftDecor={<VaultLeftDecor />} rightDecor={<VaultRightDecor />} />;
+    const { title, subtitle, requestId, stored } = useErrorOverrides("Access denied.", "You don't have clearance for this zone. Credentials, please.", titleProp, subtitleProp, 401);
+    const { homeHref } = useSmartHome(stored?.returnTo);
+    return <ErrorLayout code="401" title={title} subtitle={subtitle} linkTo={homeHref}  linkLabel="Return to safety" accentClass="text-(--secondary-foreground)" bgClass="bg-gradient-to-br from-white via-purple-50/20 to-white dark:from-[var(--bg-surface)] dark:via-purple-950/30 dark:to-[var(--bg-surface)]" requestId={requestId} illustration={<UnauthorizedIllustration />} leftDecor={<VaultLeftDecor />} rightDecor={<VaultRightDecor />} />;
 }
 
 function UnauthorizedIllustration() {
@@ -2947,8 +3018,9 @@ function UnauthorizedIllustration() {
    404 — Page Not Found
    ══════════════════════════════════════════════════════════════════════════════ */
 export function PageNotFound({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle, requestId } = useErrorOverrides("Lost in the void.", "This page packed its bags and went exploring. We have no idea where it ended up.", titleProp, subtitleProp, 404);
-    return <ErrorLayout code="404" title={title} subtitle={subtitle} linkTo="/" linkLabel="Beam me home" accentClass="text-(--blue-foreground)" bgClass="bg-gradient-to-br from-white via-blue-50/20 to-white dark:from-[#06080F] dark:via-[#0a1020] dark:to-[#06080F]" requestId={requestId} illustration={<PageNotFoundIllustration />} leftDecor={<SpaceLeftDecor />} rightDecor={<SpaceRightDecor />} />;
+    const { title, subtitle, requestId, stored } = useErrorOverrides("Lost in the void.", "This page packed its bags and went exploring. We have no idea where it ended up.", titleProp, subtitleProp, 404);
+    const { homeHref } = useSmartHome(stored?.returnTo);
+    return <ErrorLayout code="404" title={title} subtitle={subtitle} linkTo={homeHref}  linkLabel="Beam me home" accentClass="text-(--blue-foreground)" bgClass="bg-gradient-to-br from-white via-blue-50/20 to-white dark:from-[#06080F] dark:via-[#0a1020] dark:to-[#06080F]" requestId={requestId} illustration={<PageNotFoundIllustration />} leftDecor={<SpaceLeftDecor />} rightDecor={<SpaceRightDecor />} />;
 }
 
 function PageNotFoundIllustration() {
@@ -3324,16 +3396,19 @@ export function TooManyRequests({ title: titleProp, subtitle: subtitleProp, retr
     }, [remaining]);
 
     const expired = remaining <= 0;
+    const { home, homeHref } = useSmartHome(stored?.returnTo);
+    // A hard navigation BACK to where the user was — never `reload()`: this document IS
+    // /too-many-requests, so reloading it only looped the user into the countdown again.
     const handleRetry = useCallback(() => {
-        if (expired) window.location.reload();
-    }, [expired]);
+        if (expired) homeNavigation.go(home);
+    }, [expired, home]);
 
     return (
         <ErrorLayout
             code="429"
             title={title}
             subtitle={subtitle}
-            linkTo="/"
+            linkTo={homeHref}
             linkLabel="Back to home"
             accentClass="text-(--turquoise-foreground)"
             bgClass="bg-gradient-to-br from-white via-turquoise-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#04161a] dark:to-[var(--bg-surface)]"
@@ -3450,105 +3525,203 @@ function QueueRightDecor() {
 /* ══════════════════════════════════════════════════════════════════════════════
    523 — Service Unavailable
    ══════════════════════════════════════════════════════════════════════════════ */
+/** Spinner icon for `Button leftIcon` (the button's own `loading` prop would natively disable it). */
+function CooldownSpinner({ className = "" }) {
+    return <span aria-hidden="true" className={`${className} border-2 border-current border-t-transparent rounded-full ${ANIMATE_SPIN} motion-reduce:animate-none!`} />;
+}
+
+/** 523 content column: wider than the other pages (two status cards + a cadence line) on laptop screens. */
+const SERVICE_CONTENT_WIDTH = "max-w-sm sm:max-w-lg xl:max-w-xl";
+
 export function ServiceUnavailable({ title: titleProp, subtitle: subtitleProp } = {}) {
-    const { title, subtitle, requestId } = useErrorOverrides("The server is napping.", "This is usually caused by a temporary network issue, server restart, or the application service being unavailable.", titleProp, subtitleProp, 523);
+    const { title, subtitle, requestId, stored } = useErrorOverrides(SERVICE_PAGE_COPY.defaultTitle, SERVICE_PAGE_COPY.defaultSubtitle, titleProp, subtitleProp, SERVICE_UNAVAILABLE_PAGE_CODES);
+    // Mounting this page IS the outage signal (a takeover hard-navigates, so the store starts idle):
+    // the hook reports it, joins the single probe loop and latches "available" on the first 200.
+    const { status, cause, meta, checkNow, checkCooldown, continueToApp, returnTo } = useServiceRecovery({ returnTo: stored?.returnTo });
+    const available = status === "available";
+    // The code the server actually answered with (502/503/504/523); anything else is the page's own 523.
+    // No stashed code (opened directly / from the sign-in banner): if the probe found the API up but its
+    // database down, that is a 503, not 523 "Origin Unreachable".
+    const fallbackCode = cause === "database" ? SERVICE_PAGE_COPY.databaseCode : SERVICE_PAGE_COPY.defaultCode;
+    const downCode = stored && SERVICE_UNAVAILABLE_PAGE_CODES.has(Number(stored.code)) ? String(Number(stored.code)) : fallbackCode;
+    // Cooldown / offline: the primary button stays a normal focusable button (a natively `disabled` one
+    // drops keyboard focus to <body>). It is marked aria-disabled, shows a spinner icon while a check is
+    // running, and its handler is a no-op.
+    const inactive = !available && (status === "offline" || checkCooldown);
+    const onPrimary = inactive ? undefined : available ? continueToApp : checkNow;
+    const helperPath = returnToPathname(returnTo); // PATH only: the query string may carry ids or tokens
+    const { homeHref } = useSmartHome(stored?.returnTo);
+
+    const actions = (
+        <div className="flex flex-col items-center gap-3 lg:items-start">
+            {/* ONE persistent primary node: its label and variant change, the DOM node (focus, ripple) does not. */}
+            <Button
+                key="service-cta"
+                data-testid={SERVICE_STATUS_TEST_IDS.cta}
+                variant={available ? "primary" : "outline"}
+                size="lg"
+                rounded
+                className={`${FOCUS_RING} aria-disabled:opacity-60 aria-disabled:cursor-not-allowed`}
+                leftIcon={!available && checkCooldown ? CooldownSpinner : undefined}
+                aria-disabled={inactive ? "true" : undefined}
+                onClick={onPrimary}
+            >
+                {available ? SERVICE_PAGE_COPY.continueLabel : SERVICE_PAGE_COPY.checkAgain}
+            </Button>
+            {available && helperPath && (
+                <Text variant="small" className="font-mono text-grey-600 dark:text-grey-400">
+                    {SERVICE_PAGE_COPY.returnsTo(helperPath)}
+                </Text>
+            )}
+            {/* A button, not a link: the full returnTo (query included) is never written into a DOM href. */}
+            {!available && returnTo ? (
+                <Button variant="link" size="sm" onClick={continueToApp}>
+                    {SERVICE_PAGE_COPY.tryAnyway}
+                </Button>
+            ) : (
+                <Link href={homeHref} variant="muted">
+                    {SERVICE_PAGE_COPY.goHome}
+                </Link>
+            )}
+        </div>
+    );
+
+    // The page's single live region: its text only changes when the status does.
+    const statusRegion = (
+        <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+            {SERVICE_STATUS_COPY[status === "danger" && cause === "database" ? "databaseDanger" : status].live}
+        </div>
+    );
+
     return (
         <ErrorLayout
-            code="523"
-            title={title}
-            subtitle={subtitle}
-            linkTo="/"
-            linkLabel="Try the home page"
-            accentClass="text-(--secondary-foreground)"
+            code={available ? SERVICE_PAGE_COPY.availableCode : downCode}
+            codeLabel={available ? SERVICE_PAGE_COPY.availableLabel : SERVICE_PAGE_COPY.downLabel}
+            codeKey={available ? "available" : "down"}
+            codeClassName={`${ANIMATE_SCALE_IN} motion-reduce:animate-none! motion-reduce:opacity-100! motion-reduce:transform-none!`}
+            title={available ? SERVICE_PAGE_COPY.availableTitle : title}
+            subtitle={available ? SERVICE_PAGE_COPY.availableLead : subtitle}
+            linkTo={homeHref}
+            linkLabel={SERVICE_PAGE_COPY.goHome}
+            accentClass={available ? "text-(--status-success-text)" : "text-(--secondary-foreground)"}
             bgClass="bg-gradient-to-br from-white via-purple-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#120a1e] dark:to-[var(--bg-surface)]"
-            requestId={requestId} illustration={<ServiceUnavailableIllustration />}
+            requestId={available ? null : requestId}
+            illustration={<ServiceUnavailableIllustration status={status} attempt={meta.attempt} />}
             leftDecor={<ServerLeftDecor />}
-            rightDecor={<ServerRightDecor />}
+            rightDecor={<ServerRightDecor recovered={available} />}
+            actions={actions}
+            statusRegion={statusRegion}
+            contentWidth={SERVICE_CONTENT_WIDTH}
         >
-            <div className="p-4 mt-4 text-sm text-left border bg-white/60 dark:bg-white/5 border-purple-400/20 rounded-xl text-grey-600 dark:text-grey-400 font-aumovio">
-                <p className="mb-2 font-aumovio-bold text-black/70 dark:text-white/70">If this keeps happening, note:</p>
-                <ul className="space-y-1 list-disc list-inside">
-                    <li>The time it occurred</li>
-                    <li>What you were doing when it happened</li>
-                    <li>Any error messages you saw</li>
-                </ul>
-            </div>
+            {!available && (
+                <p className="text-sm italic text-grey-600 dark:text-grey-400 font-aumovio">{SERVICE_PAGE_COPY.kicker}</p>
+            )}
+            <ServiceStatusPanel status={status} meta={meta} cause={cause} />
+            {!available && (
+                <div className="p-4 mt-4 text-sm text-left border bg-white/60 dark:bg-white/5 border-purple-400/20 rounded-xl text-grey-600 dark:text-grey-400 font-aumovio">
+                    <p className="mb-2 font-aumovio-bold text-black/70 dark:text-white/70">If this keeps happening, note:</p>
+                    <ul className="space-y-1 list-disc list-inside">
+                        <li>The time it occurred</li>
+                        <li>What you were doing when it happened</li>
+                        <li>Any error messages you saw</li>
+                    </ul>
+                </div>
+            )}
         </ErrorLayout>
     );
 }
 
-function ServiceUnavailableIllustration() {
+// Sparkle positions around the server (left/top in px inside the 220 x 220 illustration).
+const SPARKLES = [
+    [34, 40],
+    [176, 34],
+    [18, 118],
+    [196, 120],
+    [48, 186],
+    [168, 190],
+];
+const NO_MOTION_HIDDEN = "motion-reduce:animate-none! motion-reduce:opacity-100! motion-reduce:transform-none!";
+
+/**
+ * The sleeping server. `status` drives it: down = sleeping, one red LED, Zs; restarting = one eye open,
+ * accent LEDs pulsing in turn; available = open eyes + smile, green LEDs, a check sign and one celebration.
+ * Decorative only (aria-hidden): the page's live region and status card carry the meaning.
+ *
+ * @param {{ status: string, attempt?: number }} props `attempt` replays the "ping" ring once per probe.
+ */
+function ServiceUnavailableIllustration({ status = "checking", attempt = 0 }) {
+    const available = status === "available";
+    const restarting = status === "restarting";
+    const pinging = status === "checking" || status === "unavailable" || status === "database";
+    const led = (i) => {
+        if (available) return "bg-(--status-success-base)";
+        if (restarting) return `bg-(--accent) ${ANIMATE_PULSE} ${staggerDelay(i)} motion-reduce:animate-none!`;
+        return i === 1 ? "bg-(--status-danger-base)" : "bg-grey-400 dark:bg-grey-600";
+    };
+    const eye = <path d="M1 1 Q7 8 13 1" stroke="var(--err-chrome-text)" strokeWidth="2" fill="none" strokeLinecap="round" />;
+    const openEye = <circle cx="7" cy="4" r="3" fill="var(--err-chrome-text)" />;
+
     return (
-        <div className="relative flex items-center justify-center" style={{ width: 220, height: 220 }}>
+        <div data-service-illustration className="relative flex items-center justify-center" aria-hidden="true" style={{ width: 220, height: 220 }}>
+            {pinging && <div key={attempt} className={`absolute w-36 h-36 rounded-full border-2 border-(--accent-muted) ${ANIMATE_PING} [animation-iteration-count:1]! motion-reduce:hidden`} />}
             <div className="relative" style={{ animation: "err-float 4s ease-in-out infinite" }}>
                 <div className="relative overflow-hidden border-2 bg-grey-100 dark:bg-(--bg-surface-3) border-grey-300 dark:border-grey-600 rounded-xl" style={{ width: 110, height: 130 }}>
                     {[0, 1, 2, 3].map((i) => (
                         <div key={i} className="flex items-center gap-2 px-3 py-2 border-b border-grey-200 dark:border-grey-700">
-                            <div
-                                className={`w-2 h-2 rounded-full ${i === 1 ? "bg-danger-400" : "bg-grey-400 dark:bg-grey-600"}`}
-                                style={
-                                    i === 1
-                                        ? {
-                                              animation: "err-pulse-op 1.5s ease-in-out infinite",
-                                          }
-                                        : {}
-                                }
-                            />
+                            <div className={`w-2 h-2 rounded-full ${led(i)}`} style={!available && !restarting && i === 1 ? { animation: "err-pulse-op 1.5s ease-in-out infinite" } : undefined} />
                             <div className="flex-1 h-1.5 rounded-full bg-grey-200 dark:bg-grey-700" />
                         </div>
                     ))}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <div className="flex gap-4 mb-2">
                             <svg width="14" height="8" viewBox="0 0 14 8">
-                                <path d="M1 1 Q7 8 13 1" stroke="var(--err-chrome-text)" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                {available || restarting ? openEye : eye}
                             </svg>
                             <svg width="14" height="8" viewBox="0 0 14 8">
-                                <path d="M1 1 Q7 8 13 1" stroke="var(--err-chrome-text)" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                {available ? openEye : eye}
                             </svg>
                         </div>
                         <svg width="20" height="10" viewBox="0 0 20 10">
-                            <path d="M2 2 Q10 10 18 2" stroke="var(--err-chrome-text)" strokeWidth="2" fill="none" strokeLinecap="round" />
+                            <path d="M2 2 Q10 10 18 2" stroke={available ? "var(--accent-icon)" : "var(--err-chrome-text)"} strokeWidth="2" fill="none" strokeLinecap="round" />
                         </svg>
                     </div>
                 </div>
                 <div className="w-full h-4 border-b-2 rounded-b-lg bg-grey-200 dark:bg-grey-700 border-x-2 border-grey-300 dark:border-grey-600" />
             </div>
             {[
-                {
-                    text: "z",
-                    size: 16,
-                    style: { left: 140, top: 80, animationDelay: "0s" },
-                },
-                {
-                    text: "Z",
-                    size: 20,
-                    style: { left: 158, top: 55, animationDelay: ".5s" },
-                },
-                {
-                    text: "Z",
-                    size: 26,
-                    style: { left: 172, top: 24, animationDelay: "1s" },
-                },
+                { text: "z", size: 16, style: { left: 140, top: 80, animationDelay: "0s" } },
+                { text: "Z", size: 20, style: { left: 158, top: 55, animationDelay: ".5s" } },
+                { text: "Z", size: 26, style: { left: 172, top: 24, animationDelay: "1s" } },
             ].map(({ text, size, style }, i) => (
                 <div
                     key={i}
-                    className="absolute text-purple-400 font-aumovio-bold"
-                    style={{
-                        fontSize: size,
-                        animation: `err-zzz 2.5s ${style.animationDelay} ease-in-out infinite`,
-                        ...style,
-                    }}
+                    className={`absolute text-(--secondary-foreground) font-aumovio-bold ${available ? `${ANIMATE_FADE_OUT} motion-reduce:hidden` : "motion-reduce:animate-none!"}`}
+                    style={{ fontSize: size, ...(available ? { left: style.left, top: style.top } : { animation: `err-zzz 2.5s ${style.animationDelay} ease-in-out infinite`, ...style }) }}
                 >
                     {text}
                 </div>
             ))}
-            <div className="absolute bottom-4 left-8" style={{ animation: "err-shake 2s ease-in-out infinite" }}>
-                <svg width="28" height="32" viewBox="0 0 28 32" fill="none">
-                    <path d="M14 2L26 30H2L14 2Z" fill="var(--err-warn-soft)" stroke="var(--err-wood-dark)" strokeWidth="1.5" />
-                    <rect x="2" y="24" width="24" height="4" rx="2" fill="var(--err-warn-soft)" stroke="var(--err-wood-dark)" strokeWidth="1" />
-                    <path d="M13 10V18M13 22V23" stroke="var(--err-wood-dark)" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-            </div>
+            {available ? (
+                <>
+                    <div className={`absolute flex items-center justify-center w-8 h-8 rounded-full bottom-4 left-8 bg-(--status-success-bg) text-(--status-success-text) ${ANIMATE_BOUNCE_IN} ${ANIM_DELAY_150} ${NO_MOTION_HIDDEN}`}>
+                        <CheckCircleIcon className="w-6 h-6" />
+                    </div>
+                    {/* One-shot celebration: the wrapper bounces in, each dot springs in turn and settles at 60 % */}
+                    <div className={`absolute inset-0 pointer-events-none motion-reduce:hidden ${ANIMATE_BOUNCE_IN}`}>
+                        {SPARKLES.map(([left, top], i) => (
+                            <span key={i} className={`absolute w-2 h-2 rounded-full opacity-60 ${i % 2 === 0 ? "bg-(--color-gradient-from)" : "bg-(--color-gradient-to)"} ${ANIMATE_SCALE_SPRING} ${staggerDelay(i)}`} style={{ left, top }} />
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className="absolute bottom-4 left-8 motion-reduce:animate-none!" style={{ animation: "err-shake 2s ease-in-out infinite" }}>
+                    <svg width="28" height="32" viewBox="0 0 28 32" fill="none">
+                        <path d="M14 2L26 30H2L14 2Z" fill="var(--err-warn-soft)" stroke="var(--err-wood-dark)" strokeWidth="1.5" />
+                        <rect x="2" y="24" width="24" height="4" rx="2" fill="var(--err-warn-soft)" stroke="var(--err-wood-dark)" strokeWidth="1" />
+                        <path d="M13 10V18M13 22V23" stroke="var(--err-wood-dark)" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                </div>
+            )}
         </div>
     );
 }
@@ -3777,20 +3950,21 @@ export function SignatureMismatch({ title: titleProp, subtitle: subtitleProp } =
     // Brought onto the shared resolver so all eight screens behave identically.
     // It was the only page that hardcoded its copy outright, which meant a
     // server that explained WHICH signature failed had no way to say so.
-    const { title, subtitle, requestId } = useErrorOverrides(
+    const { title, subtitle, requestId, stored } = useErrorOverrides(
         "The seal has been broken.",
         "Your request arrived intact — but the signature doesn't match. The payload may have been altered in transit, or the wrong signing key was used.",
         titleProp,
         subtitleProp,
         422,
     );
+    const { homeHref } = useSmartHome(stored?.returnTo);
 
     return (
         <ErrorLayout
             code="422"
             title={title}
             subtitle={subtitle}
-            linkTo="/"
+            linkTo={homeHref}
             linkLabel="Start over"
             accentClass="text-(--accent-foreground)"
             bgClass="bg-gradient-to-br from-white via-orange-50/20 to-white dark:from-[var(--bg-surface)] dark:via-[#180a00] dark:to-[var(--bg-surface)]"

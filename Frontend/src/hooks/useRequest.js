@@ -109,8 +109,8 @@ function _notifySubscribers(key) {
     // (`afterEach(() => invalidateCache())`) a clean slate is the whole point;
     // notifying there fires a real request while the previous test's tree is
     // still mounted, and its response lands in CACHE *after* the harness has
-    // swapped mock handlers — poisoning the NEXT test. In MEAL, notifying on the
-    // bare form turned 1203 passing tests into 40 failures from cross-test
+    // swapped mock handlers — poisoning the NEXT test. Notifying on the bare
+    // form once turned 1203 passing tests into 40 failures from cross-test
     // cache bleed. Keep this distinction.
     if (key === undefined) return;
 

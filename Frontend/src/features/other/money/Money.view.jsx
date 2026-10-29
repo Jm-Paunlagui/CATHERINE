@@ -196,7 +196,7 @@ const ledgerSig = makeSignedFields({
 const sig = await ledgerSig.sign(row);      // canonical, deterministic
 const ok  = await ledgerSig.verify(row, sig);`}</CodeBlock>
                 <Callout tone="warn" icon={faSignature} title="One builder, never four">
-                    MEAL's projection drifted into four copies — two used <code className="font-mono text-xs">parseFloat</code>, two used <code className="font-mono text-xs">Number()</code> — so a corrected row read TAMPERED forever. There must be exactly one projection function. Row hashes are defence in depth; <strong>append-only</strong> is the primary control.
+                    One earlier project's projection drifted into four copies — two used <code className="font-mono text-xs">parseFloat</code>, two used <code className="font-mono text-xs">Number()</code> — so a corrected row read TAMPERED forever. There must be exactly one projection function. Row hashes are defence in depth; <strong>append-only</strong> is the primary control.
                 </Callout>
             </section>
 
@@ -270,7 +270,7 @@ sheet.addRow([exportCurrencyBasis({
                         { icon: faTableCells, title: "Single-entry is a stated limit", body: "The demo ledger records DIRECTION + AMOUNT: a correct balance, but no trial balance and no missing-counter-posting detection. Double-entry would add paired zero-sum postings." },
                         { icon: faArrowRightArrowLeft, title: "Rates are append-only too", body: "A rate is never edited; a correction closes the window and opens a new one. Converting a historical row reproduces the same figure forever (rule 4)." },
                         { icon: faCoins, title: "Base currency is an epoch", body: "Under IAS 21 a base change is prospective — never restated. The base is a time-keyed epoch; a row uses the base in force at its own CREATED_AT. bootGuard refuses an in-place change." },
-                        { icon: faShieldHalved, title: "Segregation of duties", body: "A money-moving route supports maker/checker via requireAccess(predicate): the initiator is not the approver." },
+                        { icon: faShieldHalved, title: "Segregation of duties", body: "A money-moving route supports maker/checker via requireAccess(predicate): the initiator cannot also be the checker." },
                         { icon: faBolt, title: "Period close & cut-off", body: "Once a period closes, no posting lands inside it. Retro-posting into a closed period is the most common money defect and is invisible until reconciliation." },
                         { icon: faDatabase, title: "Retention", body: "Money records: BIR RR 17-2013 = 10 years, SOX = 7 years. Set retention deliberately; do not inherit a default." },
                     ].map((c, i) => (

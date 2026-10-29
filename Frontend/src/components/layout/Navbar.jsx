@@ -1,10 +1,10 @@
-﻿/**
- * Navbar.jsx â€” Responsive top navigation bar (Aumovio Design System v3.0)
+/**
+ * Navbar.jsx — Responsive top navigation bar (Aumovio Design System v3.0)
  *
  * CUSTOMISATION
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * ─────────────
  * Edit nav.config.jsx to change links, groups, and role assignments.
- * This file is the renderer only â€” no link or auth logic lives here.
+ * This file is the renderer only — no link or auth logic lives here.
  *
  * Layout: sticky top bar with centred desktop links + right-rail (theme toggle, avatar).
  * Mobile: slide-down drawer with grouped links and Account section.
@@ -29,28 +29,24 @@ import { useNav } from "./config/useNav";
 
 const APP_DISPLAY_NAME = import.meta.env.VITE_APP_NAME || null;
 
-// â”€â”€ Role helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Role helpers ──────────────────────────────────────────────────────────────
 function resolveRoleLabel(role) {
     if (role === "SUPER_ADMIN") return "Super ADMIN";
     if (role === "ADMIN") return "ADMIN";
-    if (role === "VENDOR") return "Vendor";
-    if (role === "ROBOT") return "Automation";
     return "USER";
 }
 
 function resolveRoleBadgeVariant(role) {
     if (role === "SUPER_ADMIN") return "purple";
     if (role === "ADMIN") return "orange";
-    if (role === "VENDOR") return "cyan";
-    if (role === "ROBOT") return "green";
     return "grey";
 }
 
-// â”€â”€ NavItem â€” flat link pill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── NavItem — flat link pill ──────────────────────────────────────────────────
 function NavItem({ item }) {
     return (
         // The NavLink (the <a>) is the focusable element, so the focus ring must
-        // live here â€” putting styling only on an inner <div> leaves the browser's
+        // live here — putting styling only on an inner <div> leaves the browser's
         // default outline on the anchor, which lingers as a box after a mouse
         // click. `focus:outline-none` kills that; `focus-visible:ring-*` restores
         // a proper ring for keyboard users only. Padding/rounding also move here
@@ -68,7 +64,7 @@ function NavItem({ item }) {
     );
 }
 
-// â”€â”€ DropdownGroup â€” hover mega-menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── DropdownGroup — hover mega-menu ───────────────────────────────────────────
 // Computes its own active state from the current pathname so the hook can stay
 // data-only and the renderer decides what "active" means.
 function DropdownGroup({ group, isLoading }) {
@@ -89,7 +85,7 @@ function DropdownGroup({ group, isLoading }) {
             {group.items.length > 0 && (
                 // Outer wrapper is the full hover target. `pt-2` is a transparent
                 // bridge spanning the visual gap so the cursor never leaves the
-                // `group` while travelling from the trigger down to the menu card â€”
+                // `group` while travelling from the trigger down to the menu card —
                 // this is what stops the dropdown vanishing mid-navigation.
                 <div
                     className={`
@@ -124,7 +120,7 @@ function DropdownGroup({ group, isLoading }) {
                                                     <p className="text-sm font-aumovio">{item.name}</p>
                                                     {item.description && <p className="text-xs text-grey-400 mt-1">{item.description}</p>}
                                                 </div>
-                                                <span className="text-grey-300 dark:text-grey-600 text-sm">â†’</span>
+                                                <span className="text-grey-300 dark:text-grey-600 text-sm">→</span>
                                             </div>
                                         </NavLink>
                                     );
@@ -138,7 +134,7 @@ function DropdownGroup({ group, isLoading }) {
     );
 }
 
-// â”€â”€ Main Navbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main Navbar ───────────────────────────────────────────────────────────────
 export default function Navbar() {
     const { user, isLoading, navGroups, profileItems, authFlatLinks, publicLinks, profileOpen, closeProfile } = useNav();
     const { version, stage } = useVersion();
@@ -146,12 +142,17 @@ export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
     const { pathname } = useLocation();
 
-    // Scroll shadow
+    // Scroll shadow: listen on both the app scrollport and the window (top mode scrolls the window).
     useEffect(() => {
-        const onScroll = () => setIsScrolled(window.scrollY > 10);
-        window.addEventListener("scroll", onScroll);
+        const scroller = document.getElementById("app-main-scroll");
+        const onScroll = () => setIsScrolled((scroller?.scrollTop ?? 0) > 10 || window.scrollY > 10);
+        scroller?.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("scroll", onScroll, { passive: true });
         onScroll();
-        return () => window.removeEventListener("scroll", onScroll);
+        return () => {
+            scroller?.removeEventListener("scroll", onScroll);
+            window.removeEventListener("scroll", onScroll);
+        };
     }, []);
 
     // Active check by full path, not first segment. Links that share a prefix
@@ -170,7 +171,7 @@ export default function Navbar() {
 
     // Flat link bar: loading skeleton | authenticated flat links | public links
     const navigationLinks = useMemo(() => {
-        if (isLoading) return [{ name: "Loadingâ€¦", href: "#", isLoading: true }];
+        if (isLoading) return [{ name: "Loading…", href: "#", isLoading: true }];
         if (user) return authFlatLinks.map((item) => ({ ...item, current: isActive(item.href) }));
         return publicLinks.map((item) => ({ ...item, current: isActive(item.href) }));
     }, [isLoading, user, authFlatLinks, publicLinks, isActive]);
@@ -196,19 +197,19 @@ export default function Navbar() {
                                 <div className="flex items-center gap-3 min-w-0">
                                     <NavLink to="/" className="flex items-center gap-2">
                                         <Logo className="h-8 md:h-10 lg:h-12 w-auto" />
-                                        {/* App name from `sm` up, not `md` â€” the centred link bar
-                                            only appears at `lg`, so the whole 640â€“1024px band is
+                                        {/* App name from `sm` up, not `md` — the centred link bar
+                                            only appears at `lg`, so the whole 640–1024px band is
                                             empty space between the logo and the right rail.
                                             `whitespace-nowrap` keeps it on one line in the tight
-                                            640â€“768px part of that band; `min-w-0` on the wrapper
+                                            640–768px part of that band; `min-w-0` on the wrapper
                                             stops it from ever shoving the right rail off-screen. */}
                                         {APP_DISPLAY_NAME && <span className={`hidden sm:block whitespace-nowrap tracking-widest text-sm md:text-base ${BASE_COLOR_TEXT}`}>{APP_DISPLAY_NAME}</span>}
                                     </NavLink>
-                                    {/* Version + release-stage badge â†’ links to Version History.
-                                        Visibility owned by the wrapper span â€” VersionBadge's own
+                                    {/* Version + release-stage badge → links to Version History.
+                                        Visibility owned by the wrapper span — VersionBadge's own
                                         `inline-flex` base class fights a `hidden` passed via className.
                                         Two spans because `short` is a prop, not a responsive class:
-                                        compact stage label ("Î²") in the narrow 640â€“768px band, full
+                                        compact stage label ("β") in the narrow 640–768px band, full
                                         label ("Beta") from `md` up where there is room. */}
                                     {canSeeVersion(userRole) && (
                                         <>
@@ -228,7 +229,7 @@ export default function Navbar() {
                                         {navigationLinks.map((item, i) =>
                                             item.isLoading ? (
                                                 <div key={`loading-${i}`} className={`${SECONDARY_COLOR_TEXT} animate-pulse ${MAIN_PULSE_COLOR_BG} px-3 py-2 rounded-lg text-sm`}>
-                                                    <span className={`inline-block w-20 bg-(--accent-subtle) rounded animate-pulse text-transparent ${DELAY_1}`}>Loadingâ€¦</span>
+                                                    <span className={`inline-block w-20 bg-(--accent-subtle) rounded animate-pulse text-transparent ${DELAY_1}`}>Loading…</span>
                                                 </div>
                                             ) : (
                                                 <NavItem key={item.name} item={item} />
@@ -376,7 +377,7 @@ export default function Navbar() {
                                             ${item.isLoading ? `${SECONDARY_COLOR_TEXT} animate-pulse bg-(--accent-subtle) cursor-default` : item.current ? `${MAIN_FOREGROUND_COLOR_TEXT} bg-(--nav-active-bg) border border-(--nav-active-border)/25` : `${TITLE_COLOR_TEXT} hover:bg-(--nav-hover-bg) hover:text-(--nav-active-text)`}
                                         `}
                                         >
-                                            {item.isLoading ? <span className="w-20 bg-(--accent-subtle) rounded animate-pulse text-transparent">â€¦</span> : item.name}
+                                            {item.isLoading ? <span className="w-20 bg-(--accent-subtle) rounded animate-pulse text-transparent">…</span> : item.name}
                                         </div>
                                     </NavLink>
                                 ))}
@@ -446,7 +447,7 @@ export default function Navbar() {
                                     </button>
                                 </div>
 
-                                {/* Mobile version + release-stage badge â†’ Version History.
+                                {/* Mobile version + release-stage badge → Version History.
                                     Gated: ADMIN / SUPER_ADMIN only (see canSeeVersion). */}
                                 {canSeeVersion(userRole) && (
                                     <div className="pt-3 mt-1 border-t border-grey-100 dark:border-grey-800 flex justify-center">
@@ -459,10 +460,10 @@ export default function Navbar() {
                 )}
             </Menu>
 
-            {/* Profile modal â€” portalled to body */}
+            {/* Profile modal — portalled to body */}
             <ProfileModal open={profileOpen} onClose={closeProfile} user={user} />
 
-            {/* Personalize modal â€” portalled to body */}
+            {/* Personalize modal — portalled to body */}
             <PersonalizeModal open={personalizeOpen} onClose={() => setPersonalizeOpen(false)} />
         </>
     );

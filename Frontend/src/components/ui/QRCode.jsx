@@ -1,14 +1,14 @@
 /**
  * @fileoverview QRCode — soft-edged ("modern") QR renderer with a centre logo.
  *
- * Two renderers, ONE geometry source (`./qr/qrGeometry.js`), so a stub's code
+ * Two renderers, ONE geometry source (`./qr/qrGeometry.js`), so a code
  * looks identical wherever it appears:
  *
  *   <QRCode>    — SVG. Resolution independent; used for on-screen QR (gallery
  *                 thumbnail, zoom modal) and the "Download SVG" action.
  *   <QrCanvas>  — <canvas> with the same paths. Needed only where a caller must
- *                 call `.toDataURL()` on the DOM node (the EmailFailureModal PDF
- *                 export captures the canvas element by ref).
+ *                 call `.toDataURL()` on the DOM node (e.g. a PDF export that
+ *                 captures the canvas element by ref).
  *
  * WHAT CHANGED vs. the old implementation
  *   Previously this wrapped `qrcode.react`'s <QRCodeSVG>, which renders hard
@@ -22,7 +22,7 @@
  * mud).
  *
  * @example
- *   <QRCode value={stub.qrCode} size={260} />          // logo, level H
+ *   <QRCode value={url} size={260} />                  // logo, level H
  *   <QRCode value={token} size={64} logo={null} />     // bare, caller's level
  */
 
@@ -194,7 +194,7 @@ export function QRCode({
 
 /**
  * QrCanvas — same code, drawn into a `<canvas>` so callers can capture it with
- * `.toDataURL()`. Used by the EmailFailureModal PDF export; prefer `<QRCode>`
+ * `.toDataURL()` (e.g. for a PDF export); prefer `<QRCode>`
  * anywhere a canvas is not strictly required.
  *
  * The element is rendered at devicePixelRatio so the captured PNG stays crisp

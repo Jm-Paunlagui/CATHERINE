@@ -28,8 +28,8 @@ export function Stepper({ steps = [], current = 0, variant = "numbered", orienta
                             <div
                                 className={`flex items-center justify-center rounded-full font-aumovio-bold shrink-0
                 ${TRANSITION_COLORS} ${ANIMATE_ENTER_UP} ${staggerDelay(i)} z-10
-                ${done ? "w-8 h-8 bg-orange-400 text-(--on-accent-text) shadow-lg shadow-orange-400/30" : ""}
-                ${active ? "w-8 h-8 bg-orange-400 text-(--on-accent-text) ring-4 ring-orange-400/30 shadow-lg shadow-orange-400/30" : ""}
+                ${done ? "w-8 h-8 bg-(--accent-foreground) text-white dark:bg-orange-400 dark:text-(--on-accent-text) shadow-lg shadow-orange-400/30" : ""}
+                ${active ? "w-8 h-8 bg-(--accent-foreground) text-white dark:bg-orange-400 dark:text-(--on-accent-text) ring-4 ring-(--accent-foreground)/20 dark:ring-orange-400/30 shadow-lg shadow-orange-400/30" : ""}
                 ${pending ? "w-8 h-8 bg-grey-100 dark:bg-(--bg-surface-3) text-grey-400 border-2 border-grey-300 dark:border-grey-600" : ""}`}
                             >
                                 {done ? <CheckIcon className="w-4 h-4" /> : step.icon && variant === "icon" ? <step.icon className="w-4 h-4" /> : <span className="text-xs">{i + 1}</span>}
@@ -40,7 +40,7 @@ export function Stepper({ steps = [], current = 0, variant = "numbered", orienta
                                 <div
                                     className={`flex-1 ${TRANSITION_COLORS}
                   ${isV ? "w-0.5 h-8 mx-auto my-1" : "h-0.5 mx-2"}
-                  ${done || active ? "bg-orange-400" : "bg-grey-200 dark:bg-(--bg-surface-3)"}`}
+                  ${done || active ? "bg-(--accent-foreground) dark:bg-orange-400" : "bg-grey-200 dark:bg-(--bg-surface-3)"}`}
                                 />
                             )}
                         </div>

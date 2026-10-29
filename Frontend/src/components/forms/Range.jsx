@@ -35,6 +35,7 @@ export function Range({ value = 0, onChange, min = 0, max = 100, step = 1, label
                     onChange={(e) => onChange?.(parseFloat(e.target.value))}
                     disabled={disabled}
                     className={`w-full h-2 rounded-full appearance-none cursor-pointer
+            focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--field-focus-border)
             bg-grey-200 dark:bg-(--bg-surface-3)
             [&::-webkit-slider-thumb]:appearance-none
             [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4

@@ -39,9 +39,15 @@ export function useDocumentTitle(title, suffix, keepOnUnmount = false) {
 
     useEffect(() => {
         if (!title) return;
+        // Copy the ref value into a local at effect-setup time so the cleanup
+        // below reads a value that was frozen when this effect ran, not
+        // whatever `prevTitle.current` happens to hold by the time cleanup
+        // actually fires (react-hooks/exhaustive-deps: "ref value will likely
+        // have changed by the time this effect cleanup function runs").
+        const titleToRestore = prevTitle.current;
         document.title = appName ? `${title} — ${appName}` : title;
         return () => {
-            if (!keepOnUnmount) document.title = prevTitle.current;
+            if (!keepOnUnmount) document.title = titleToRestore;
         };
     }, [title, appName, keepOnUnmount]);
 }

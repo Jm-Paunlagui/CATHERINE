@@ -238,7 +238,7 @@ export default function PersonalizeModal({ open, onClose }) {
     const { mode, setMode, isDark, transparency, setTransparency, palette, setPalette, customColor, setCustomColor, layout, setLayout } = usePersonalize();
 
     return (
-        <Modal open={open} onClose={onClose} size="xl">
+        <Modal open={open} onClose={onClose} size="xl" ariaLabel="Personalize appearance">
             {/* Custom header — negative margins break out of Modal's px-6 py-5 body wrapper */}
             <div className="-mx-6 -mt-5 p-4 border-b border-grey-200 dark:border-grey-700">
                 <div className="flex items-center gap-3">

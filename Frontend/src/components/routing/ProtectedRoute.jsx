@@ -29,13 +29,23 @@
  */
 
 import { useEffect, useState } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import LoadingScreen from "../layout/LoadingScreen";
 import AuthMiddleware from "../../middleware/authentication/AuthMiddleware";
+import { recordLastLocation } from "../../utils/lastLocation";
 
 export default function ProtectedRoute({ role = null, check = null, redirectTo = "/unauthorized" }) {
     const [status, setStatus] = useState("checking"); // 'checking' | 'allowed' | 'denied'
     const [serverError, setServerError] = useState(null);
+    const [verifiedUserId, setVerifiedUserId] = useState(null);
+    const { pathname, search } = useLocation();
+
+    // Remember the last page this user was ALLOWED onto, so "home" from an error page and a
+    // signed-in visit to "/" or "/auth" return them here (utils/lastLocation.js). Re-runs on every
+    // child-route change: the guard itself does not remount between sibling routes.
+    useEffect(() => {
+        if (status === "allowed" && verifiedUserId != null) recordLastLocation(`${pathname}${search}`, verifiedUserId);
+    }, [status, verifiedUserId, pathname, search]);
 
     useEffect(() => {
         let cancelled = false;
@@ -63,6 +73,7 @@ export default function ProtectedRoute({ role = null, check = null, redirectTo =
                 return;
             }
 
+            setVerifiedUserId(user.userId ?? null);
             setStatus("allowed");
         };
 

@@ -198,8 +198,8 @@ export function HelpAssistant() {
         };
     }, [open, closeAssistant]);
 
-    // Suppress the launcher entirely for automation roles (e.g. ROBOT) and on
-    // routes that already ARE the help surface (/about/help). Placed AFTER all
+    // Suppress the launcher entirely on routes that already ARE the help
+    // surface (/about/help). Placed AFTER all
     // hooks so the Rules of Hooks are honoured (hooks run every render; only the
     // render OUTPUT is gated). Renders nothing — no FAB and no Ctrl+K-triggered
     // panel. The hook force-closes `open` alongside this, because returning
@@ -218,7 +218,7 @@ export function HelpAssistant() {
                 inset so it clears the home indicator on notched phones, and the
                 extra gap keeps it clear of bottom-right toasts which stack above.
 
-                DISCOVERABILITY: on a viewer's first ever visit `showHint` drives a
+                DISCOVERABILITY: on a user's first ever visit `showHint` drives a
                 one-time auto-peek of the label plus a soft attention pulse
                 (.fab-hint — see index.css), retired permanently the instant the
                 user hovers/focuses/opens it or after the hook's peek timeout. */}

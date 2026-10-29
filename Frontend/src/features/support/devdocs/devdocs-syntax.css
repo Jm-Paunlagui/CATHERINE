@@ -1,0 +1,193 @@
+/**
+ * devdocs-syntax.css — syntax colours for rendered code blocks.
+ *
+ * WHY NOT A HIGHLIGHT.JS THEME. The usual approach is to import one of
+ * highlight.js's ~200 prebuilt stylesheets. Two problems here. They are
+ * theme-FIXED: importing `github.css` leaves code unreadable in dark mode and
+ * importing `github-dark.css` leaves it unreadable in light, and swapping a
+ * stylesheet at runtime means shipping both and toggling a <link>. And none of
+ * them know the Aumovio palette, so code blocks would be the one surface on
+ * the page that visibly comes from somewhere else.
+ *
+ * This maps highlight.js's token classes onto the design tokens instead. It is
+ * a fraction of the size, it follows `[data-theme]` like every other surface,
+ * and it needs no runtime swap — the cascade does it.
+ *
+ * Scoped to `.devdocs-markdown` so nothing here can leak into a code sample
+ * rendered by another feature.
+ *
+ * Contrast: every colour below was chosen against the code-block background
+ * defined immediately below in its own theme, not against the page. A token
+ * that passes on the page and fails on the block is the failure mode this note
+ * exists to prevent.
+ */
+
+/* ── Code surfaces ───────────────────────────────────────────────────────
+   Owned here rather than by Tailwind classes on the component, because the
+   background, the border and the token colours have to be picked together —
+   contrast is a property of the pair, and splitting them across two files is
+   how a readable token in one theme becomes an unreadable one in the other.
+
+   The dark surface is a NEUTRAL near-black, not `--bg-surface-3`. That token
+   carries the app's purple tint, which is right for panels and wrong behind
+   syntax colouring: it shifts every hue sitting on it and makes green strings
+   and blue identifiers read as muddy variants of the background. */
+.devdocs-markdown pre {
+    background: #f6f6f7;
+    border: 1px solid rgb(0 0 0 / 0.08);
+    /* Explicit, not inherited. The article body is deliberately dimmed
+       (opacity-80) for reading comfort; inheriting that put code at the same
+       low contrast as prose, where it has to be scanned character by
+       character. */
+    color: #27272a;
+}
+
+.devdocs-markdown :not(pre) > code {
+    background: rgb(0 0 0 / 0.05);
+    color: #3f3f46;
+}
+
+[data-theme="dark"] .devdocs-markdown pre {
+    background: #16161a;
+    border-color: rgb(255 255 255 / 0.08);
+    color: #d4d4d8;
+}
+
+[data-theme="dark"] .devdocs-markdown :not(pre) > code {
+    background: rgb(255 255 255 / 0.08);
+    color: #e4e4e7;
+}
+
+.devdocs-markdown .hljs {
+    color: inherit;
+    background: transparent;
+}
+
+/* Comments and deletions — deliberately the lowest contrast on the block.
+   They are the one token class a reader is meant to skip. */
+.devdocs-markdown .hljs-comment,
+.devdocs-markdown .hljs-quote {
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Keywords, operators, control flow. */
+.devdocs-markdown .hljs-keyword,
+.devdocs-markdown .hljs-selector-tag,
+.devdocs-markdown .hljs-literal,
+.devdocs-markdown .hljs-section,
+.devdocs-markdown .hljs-doctag,
+.devdocs-markdown .hljs-type,
+.devdocs-markdown .hljs-name,
+.devdocs-markdown .hljs-strong {
+    color: #b45309;
+}
+
+/* Strings, regex, added lines. */
+.devdocs-markdown .hljs-string,
+.devdocs-markdown .hljs-regexp,
+.devdocs-markdown .hljs-addition,
+.devdocs-markdown .hljs-attribute,
+.devdocs-markdown .hljs-meta .hljs-string {
+    color: #15803d;
+}
+
+/* Numbers, constants, symbols. */
+.devdocs-markdown .hljs-number,
+.devdocs-markdown .hljs-symbol,
+.devdocs-markdown .hljs-bullet,
+.devdocs-markdown .hljs-link,
+.devdocs-markdown .hljs-selector-attr,
+.devdocs-markdown .hljs-selector-pseudo {
+    color: #7c3aed;
+}
+
+/* Identifiers: function names, classes, object keys. */
+.devdocs-markdown .hljs-title,
+.devdocs-markdown .hljs-title.class_,
+.devdocs-markdown .hljs-title.function_,
+.devdocs-markdown .hljs-built_in,
+.devdocs-markdown .hljs-class .hljs-title {
+    color: #1d4ed8;
+}
+
+/* Attributes, properties, variables, template placeholders. */
+.devdocs-markdown .hljs-attr,
+.devdocs-markdown .hljs-variable,
+.devdocs-markdown .hljs-template-variable,
+.devdocs-markdown .hljs-selector-class,
+.devdocs-markdown .hljs-selector-id,
+.devdocs-markdown .hljs-property {
+    color: #0e7490;
+}
+
+.devdocs-markdown .hljs-meta,
+.devdocs-markdown .hljs-punctuation {
+    color: #52525b;
+}
+
+.devdocs-markdown .hljs-emphasis {
+    font-style: italic;
+}
+.devdocs-markdown .hljs-strong {
+    font-weight: 600;
+}
+
+/* ── Dark ────────────────────────────────────────────────────────────────
+   Not the light values lightened. Saturated hues that read well on white go
+   muddy on a dark surface, so each is re-picked for contrast against the
+   near-black code surface rather than derived from its light twin. */
+[data-theme="dark"] .devdocs-markdown .hljs-comment,
+[data-theme="dark"] .devdocs-markdown .hljs-quote {
+    color: #8b8b96;
+}
+
+[data-theme="dark"] .devdocs-markdown .hljs-keyword,
+[data-theme="dark"] .devdocs-markdown .hljs-selector-tag,
+[data-theme="dark"] .devdocs-markdown .hljs-literal,
+[data-theme="dark"] .devdocs-markdown .hljs-section,
+[data-theme="dark"] .devdocs-markdown .hljs-doctag,
+[data-theme="dark"] .devdocs-markdown .hljs-type,
+[data-theme="dark"] .devdocs-markdown .hljs-name,
+[data-theme="dark"] .devdocs-markdown .hljs-strong {
+    color: #f0a868;
+}
+
+[data-theme="dark"] .devdocs-markdown .hljs-string,
+[data-theme="dark"] .devdocs-markdown .hljs-regexp,
+[data-theme="dark"] .devdocs-markdown .hljs-addition,
+[data-theme="dark"] .devdocs-markdown .hljs-attribute,
+[data-theme="dark"] .devdocs-markdown .hljs-meta .hljs-string {
+    color: #86e0a8;
+}
+
+[data-theme="dark"] .devdocs-markdown .hljs-number,
+[data-theme="dark"] .devdocs-markdown .hljs-symbol,
+[data-theme="dark"] .devdocs-markdown .hljs-bullet,
+[data-theme="dark"] .devdocs-markdown .hljs-link,
+[data-theme="dark"] .devdocs-markdown .hljs-selector-attr,
+[data-theme="dark"] .devdocs-markdown .hljs-selector-pseudo {
+    color: #c4a6f5;
+}
+
+[data-theme="dark"] .devdocs-markdown .hljs-title,
+[data-theme="dark"] .devdocs-markdown .hljs-title.class_,
+[data-theme="dark"] .devdocs-markdown .hljs-title.function_,
+[data-theme="dark"] .devdocs-markdown .hljs-built_in,
+[data-theme="dark"] .devdocs-markdown .hljs-class .hljs-title {
+    color: #8fbcff;
+}
+
+[data-theme="dark"] .devdocs-markdown .hljs-attr,
+[data-theme="dark"] .devdocs-markdown .hljs-variable,
+[data-theme="dark"] .devdocs-markdown .hljs-template-variable,
+[data-theme="dark"] .devdocs-markdown .hljs-selector-class,
+[data-theme="dark"] .devdocs-markdown .hljs-selector-id,
+[data-theme="dark"] .devdocs-markdown .hljs-property {
+    color: #79d5e8;
+}
+
+[data-theme="dark"] .devdocs-markdown .hljs-meta,
+[data-theme="dark"] .devdocs-markdown .hljs-punctuation {
+    color: #a1a1aa;
+}

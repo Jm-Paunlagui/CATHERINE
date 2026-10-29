@@ -5,8 +5,9 @@
  *   `formatMoney` — multi-currency, registry-driven money formatter (the money
  *                   capability's presentation seam). Renders any ISO 4217 code
  *                   at its own display scale via `Intl.NumberFormat`.
- *   `formatPeso`  — legacy single-currency peso formatter, kept for callers not
- *                   yet migrated. Prefer `formatMoney(value, "PHP")`.
+ *   `formatPeso`  — fixed-currency PHP shorthand kept for API compatibility;
+ *                   nothing in the template calls it. Prefer
+ *                   `formatMoney(value, code)`.
  *
  * WHY A STRING-FIRST CONTRACT
  *   Money crosses the wire as a fixed-scale STRING ("1500.5000"), never a JS
@@ -35,8 +36,8 @@ import { getCurrency } from "../../constants/currencies";
  *   `"NaN"` — so an unguarded formatter renders `₱NaN` where an amount
  *   belongs. `Infinity` renders as `"∞"`, which reads as a real (and alarming)
  *   figure. Neither is hypothetical: this function is fed straight off wire
- *   payloads, and a chaos test driving a hostile `provisional*` figure through
- *   the real Transaction History page produced `₱NaN` on screen.
+ *   payloads, so a malformed or hostile figure would otherwise reach the screen
+ *   as `₱NaN`.
  *
  *   Every non-finite value therefore returns `nullText`, exactly as `null`
  *   does — the caller's own placeholder ("₱0.00", "—", …). A missing figure

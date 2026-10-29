@@ -58,7 +58,7 @@ export function Toggle({ checked = false, onChange, label, description, disabled
             disabled={disabled}
             className={`relative inline-flex items-center rounded-full shrink-0
         ${TRANSITION_COLORS} focus-visible:outline-none
-        focus-visible:ring-2 focus-visible:ring-(--accent)/50 focus-visible:ring-offset-2
+        focus-visible:ring-2 focus-visible:ring-(--field-focus-border) focus-visible:ring-offset-2 focus-visible:ring-offset-(color:--bg-surface) dark:focus-visible:ring-offset-(color:--bg-surface-2)
         ${sz.track}
         ${checked ? col : "bg-grey-300 dark:bg-grey-600"}
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}

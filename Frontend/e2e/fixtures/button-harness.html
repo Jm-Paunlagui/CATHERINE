@@ -1,0 +1,29 @@
+<!doctype html>
+<!--
+  button-harness.html — TEST-ONLY Vite entry for e2e/button-contrast.spec.js.
+
+  Served by the normal dev server at /e2e/fixtures/button-harness.html (Vite
+  serves any .html under the project root). It is NOT referenced by
+  index.html, src/App.jsx or the router, and `vite build` only bundles
+  index.html, so it never reaches production.
+
+  Query params:
+    ?mode=button&v=<variant>   mount the real src/components/ui/Button.jsx in
+                               every size + a disabled and a loading instance
+    ?mode=tiles                mount every icon-tile variant (page-header tile
+                               + every METRIC_COLOR chip)
+  Theme + palette are driven exactly like the real app: the spec writes the
+  `aumovio-personalize` localStorage key before load and the real
+  ThemeProvider applies data-theme + palette CSS vars.
+-->
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>button-harness</title>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="./button-harness.jsx"></script>
+    </body>
+</html>

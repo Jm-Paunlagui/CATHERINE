@@ -1,6 +1,6 @@
 /**
- * pre-set-styles.jsx
- * ──────────────────
+ * pre-set-styles.js
+ * ─────────────────
  * Centralised Tailwind class constants following the Aumovio brand guide.
  *
  * COLOR HIERARCHY
@@ -58,11 +58,14 @@ export const BASE_COLOR_TEXT = "text-(--text-primary) font-normal leading-relaxe
 export const BASE_COLOR_TEXT_LIGHT = "text-white font-normal leading-relaxed drop-shadow-sm";
 export const MAIN_COLOR_TEXT = "text-black/80 dark:text-(--text-primary) font-aumovio";
 export const MAIN_FOREGROUND_COLOR_TEXT = "text-(--nav-active-text) font-aumovio";
-export const MAIN_STRONG_COLOR_TEXT = "text-orange-400 drop-shadow-sm";
+export const MAIN_STRONG_COLOR_TEXT = "text-(--accent-foreground) drop-shadow-sm";
 export const MAIN_OVERLAY_COLOR_TEXT = "text-white drop-shadow-md";
-export const GRADIENT_COLOR_TEXT = "text-(--text-accent) font-aumovio-bold tracking-wide drop-shadow-sm";
+// Palette-adaptive gradient clip-text (mirrors Heading.jsx). Both stops are the
+// contrast-safe --gradient-text-* tokens (≥3:1 on the content surface in both
+// modes), so headings never render the raw un-checked palette anchor.
+export const GRADIENT_COLOR_TEXT = "bg-linear-to-r from-(--gradient-text-from) to-(--gradient-text-to) bg-clip-text text-transparent font-aumovio-bold tracking-wide";
 export const SECONDARY_COLOR_TEXT = "text-white font-aumovio drop-shadow-sm";
-export const ACCENT_COLOR_TEXT = "text-purple-400 font-aumovio-bold";
+export const ACCENT_COLOR_TEXT = "text-(--secondary-foreground) font-aumovio-bold";
 export const OPTIONS_COLOR_TEXT = "text-white font-aumovio";
 export const WARNING_COLOR_TEXT = "text-danger-400 font-aumovio-bold";
 
@@ -96,10 +99,24 @@ export const ICON_PLACE_SELF_CENTER_1 = "place-self-center drop-shadow-sm";
 // ============================================================================
 // FORM FIELDS
 // ============================================================================
+// Resting border shared by every control (fields, ghost buttons, tiles, date picker).
+// Light is a soft grey-300 by owner decision; dark stays >=3:1.
+export const FIELD_BORDER = "border-(--field-border)";
+export const FIELD_BORDER_ERROR = "border-danger-400 dark:border-danger-300";
+
+// Focus indicators for form controls (WCAG 1.4.11 / 2.4.7). Border = --field-focus-border
+// (palette accent, solved per theme) + solid 1px ring so the change is >=3:1 vs the resting grey.
+export const FIELD_FOCUS = "focus:outline-none focus:border-(--field-focus-border) focus:ring-1 focus:ring-(--field-focus-border) focus:shadow-md";
+export const FIELD_FOCUS_ERROR = "focus:outline-none focus:border-(--field-error-focus-border) focus:ring-2 focus:ring-danger-400/30 focus:shadow-md";
+export const FIELD_FOCUS_WITHIN = "focus-within:border-(--field-focus-border) focus-within:ring-1 focus-within:ring-(--field-focus-border)";
+export const FIELD_FOCUS_WITHIN_ERROR = "focus-within:border-(--field-error-focus-border) focus-within:ring-2 focus-within:ring-danger-400/30";
+export const FIELD_FOCUS_VISIBLE = "focus-visible:outline-none focus-visible:border-(--field-focus-border) focus-visible:ring-1 focus-visible:ring-(--field-focus-border)";
+export const FIELD_OPEN = "border-(--field-focus-border) ring-1 ring-(--field-focus-border) shadow-md";
+export const FIELD_OPEN_ERROR = "border-(--field-error-focus-border) ring-2 ring-danger-400/30 shadow-md";
+
 export const TEXT_FIELD = `w-full p-2 font-aumovio-bold tracking-wider rounded-lg shadow-sm
   bg-white/95 dark:bg-(--bg-surface-2) dark:text-(--text-primary) backdrop-blur-sm
-  focus:outline-none focus:ring-2 focus:ring-orange-400/40
-  focus:border-orange-400/50 focus:shadow-md focus:shadow-orange-400/10
+  ${FIELD_FOCUS}
   transition-all duration-300`;
 
 // ============================================================================
@@ -116,14 +133,14 @@ export const DEFAULT_BUTTON_TRANSITION = `border border-transparent rounded-lg
 /** Primary orange button */
 export const MAIN_BUTTON = `font-aumovio-bold tracking-wide
   text-orange-400 bg-orange-400/10 dark:bg-orange-400/20 border border-orange-400/25 dark:border-orange-400/40
-  hover:bg-orange-400 hover:text-white hover:border-transparent
+  hover:bg-orange-400 hover:text-(--on-accent-text) hover:border-transparent
   hover:shadow-xl hover:shadow-orange-400/30 dark:hover:shadow-orange-400/50
   ${DEFAULT_BUTTON_TRANSITION}`;
 
 /** Secondary purple button */
 export const ACCENT_BUTTON = `font-aumovio-bold tracking-wide
   text-purple-400 bg-purple-400/10 dark:bg-purple-400/20 border border-purple-400/20 dark:border-purple-400/35
-  hover:bg-purple-400 hover:text-white hover:border-transparent
+  hover:bg-purple-400 hover:text-(--on-secondary-text) hover:border-transparent
   hover:shadow-xl hover:shadow-purple-400/30 dark:hover:shadow-purple-400/50
   ${DEFAULT_BUTTON_TRANSITION}`;
 
@@ -137,7 +154,7 @@ export const DANGER_BUTTON = `font-aumovio-bold tracking-wide
 /** Ghost / options button */
 export const OPTIONS_BUTTON = `font-aumovio-bold tracking-wide
   text-black/80 dark:text-white/80 bg-orange-400/8 dark:bg-orange-400/15 border border-orange-400/20
-  hover:bg-orange-400 hover:text-white hover:border-transparent
+  hover:bg-orange-400 hover:text-(--on-accent-text) hover:border-transparent
   hover:shadow-xl hover:shadow-orange-400/30
   ${DEFAULT_BUTTON_TRANSITION}`;
 
@@ -149,7 +166,44 @@ export const WARNING_BUTTON = `font-aumovio-bold tracking-wide
   ${DEFAULT_BUTTON_TRANSITION}`;
 
 export const DEFAULT_BUTTON = `font-aumovio-bold tracking-wide text-white drop-shadow-sm ${DEFAULT_BUTTON_TRANSITION}`;
-export const CONTRAST = `font-aumovio-bold tracking-wide text-orange-400 drop-shadow-sm ${DEFAULT_BUTTON_TRANSITION}`;
+export const CONTRAST = `font-aumovio-bold tracking-wide text-(--accent-foreground) drop-shadow-sm ${DEFAULT_BUTTON_TRANSITION}`;
+
+// ============================================================================
+// BUTTONS (WCAG 1.4.3 / 1.4.11 / 2.4.7) — token-driven, theme-directional
+// ============================================================================
+// Border / outline lightness follows the THEME, never the palette: light theme
+// -> dark borders, dark theme -> light borders (>=3:1 vs the surface). Solid
+// fills come from --btn-primary-bg / --btn-accent-bg (palette-solved >=4.5:1 vs
+// their label); neutral/ghost tokens are theme-fixed greys. Hovers sit under
+// `enabled:` so a disabled / busy button never reacts.
+
+/** One keyboard focus ring for every button variant (colour = --btn-focus-ring). */
+export const BTN_FOCUS = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--btn-focus-ring) focus-visible:ring-offset-2 focus-visible:ring-offset-(color:--bg-surface)";
+/** Disabled look for outline/tinted variants: faded + not-allowed cursor. */
+export const BTN_DISABLED = "disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none";
+/** Disabled look for SOLID fills (gradient). Tinted variants fade with opacity instead. */
+export const BTN_DISABLED_SOLID = "disabled:cursor-not-allowed disabled:shadow-none disabled:bg-(--btn-disabled-bg) disabled:bg-none disabled:text-(--btn-disabled-fg) disabled:border-transparent";
+/** Busy (loading) look: keeps full colour, only the cursor changes. */
+export const BTN_BUSY = "cursor-progress";
+export const BTN_MOTION = "enabled:hover:-translate-y-0.5 enabled:hover:scale-[1.02] enabled:active:scale-[0.98]";
+
+// Brand variants are TINTED (like the role badge), never solid: tint fill + accent label + accent border.
+export const BTN_PRIMARY = "bg-(--btn-primary-tint) text-(--btn-primary-fg) border-(--btn-primary-border) enabled:hover:bg-(--btn-primary-tint-hover) enabled:hover:shadow-md enabled:active:bg-(--btn-primary-tint-hover)";
+export const BTN_ACCENT = "bg-(--btn-accent-tint) text-(--btn-accent-fg) border-(--btn-accent-border) enabled:hover:bg-(--btn-accent-tint-hover) enabled:hover:shadow-md enabled:active:bg-(--btn-accent-tint-hover)";
+export const BTN_OUTLINE = "bg-transparent text-(--accent-foreground) border-(--accent-icon) enabled:hover:bg-(--btn-primary-bg) enabled:hover:text-(--btn-primary-on) enabled:hover:border-transparent enabled:hover:shadow-md";
+export const BTN_NEUTRAL = "bg-transparent text-(--btn-neutral-fg) border-(--btn-neutral-border) enabled:hover:bg-(--btn-neutral-bg-hover) enabled:hover:border-(--btn-neutral-border-hover) enabled:active:bg-(--btn-neutral-bg-active)";
+export const BTN_LINK = "bg-transparent border-transparent text-(--accent-foreground) underline underline-offset-2 enabled:hover:decoration-2 enabled:hover:translate-y-0 enabled:hover:scale-100";
+export const BTN_DANGER = "bg-danger-100/60 text-danger-600 border-danger-400 enabled:hover:bg-danger-500 enabled:hover:text-white enabled:hover:border-transparent enabled:active:bg-danger-600 enabled:hover:shadow-md dark:bg-danger-400/15 dark:text-danger-300 dark:border-danger-300 dark:enabled:hover:bg-danger-300 dark:enabled:hover:text-grey-900";
+export const BTN_SUCCESS = "bg-success-100/50 text-success-700 border-success-600 enabled:hover:bg-success-700 enabled:hover:text-white enabled:hover:border-transparent enabled:hover:shadow-md dark:bg-success-400/15 dark:text-success-300 dark:border-success-400 dark:enabled:hover:bg-success-400 dark:enabled:hover:text-grey-900";
+export const BTN_WARNING = "bg-warn-100 text-grey-900 border-warn-700 enabled:hover:bg-warn-400 enabled:hover:border-transparent enabled:hover:shadow-md dark:bg-warn-400/15 dark:text-warn-300 dark:border-warn-400 dark:enabled:hover:bg-warn-400 dark:enabled:hover:text-grey-900";
+/** Gradient stops are the contrast-solved button fills, so the label clears 4.5:1 at BOTH ends. */
+export const BTN_GRADIENT = "bg-linear-to-r from-(--btn-primary-bg) to-(--btn-accent-bg) text-(--btn-primary-on) border-transparent enabled:hover:shadow-xl enabled:hover:brightness-(--btn-solid-hover-brightness)";
+
+// ============================================================================
+// ICON TILES (WCAG 1.4.11) — boundary follows the theme, not the palette
+// ============================================================================
+export const ICON_TILE = "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border";
+export const ICON_TILE_NEUTRAL = "bg-(--tile-bg) border-(--tile-border)";
 
 // ============================================================================
 // STATUS BADGES
@@ -158,9 +212,9 @@ export const STATUS_GREEN = "font-aumovio-bold tracking-wide text-[var(--status-
 export const STATUS_RED = "font-aumovio-bold tracking-wide text-[var(--status-danger-text)] bg-[var(--status-danger-bg)] border border-[var(--status-danger-base)]/20 rounded-lg shadow-sm";
 export const STATUS_WARNING = "font-aumovio-bold tracking-wide text-[var(--status-warning-text)] bg-[var(--status-warning-bg)] border border-[var(--status-warning-base)]/20 rounded-lg shadow-sm";
 export const STATUS_BLUE = "font-aumovio-bold tracking-wide text-[var(--status-info-text)] bg-[var(--status-info-bg)] border border-[var(--status-info-base)]/20 rounded-lg shadow-sm";
-export const STATUS_PURPLE = "font-aumovio-bold tracking-wide text-purple-400 dark:text-purple-300 bg-purple-100/28 dark:bg-purple-400/15 border border-purple-400/35 dark:border-purple-400/25 rounded-lg shadow-sm";
-export const STATUS_CYAN = "font-aumovio-bold tracking-wide text-turquoise-500 dark:text-turquoise-300 bg-turquoise-100/22 dark:bg-turquoise-400/15 border border-turquoise-400/25 dark:border-turquoise-400/20 rounded-lg shadow-sm";
-export const STATUS_AMBER = "font-aumovio-bold tracking-wide text-yellow-600 dark:text-warn-300 bg-yellow-100 dark:bg-yellow-400/15 border border-yellow-400/30 dark:border-yellow-400/25 rounded-lg shadow-sm";
+export const STATUS_PURPLE = "font-aumovio-bold tracking-wide text-(--secondary-foreground) bg-purple-100/28 dark:bg-purple-400/15 border border-purple-400/35 dark:border-purple-400/25 rounded-lg shadow-sm";
+export const STATUS_CYAN = "font-aumovio-bold tracking-wide text-(--turquoise-foreground) bg-turquoise-100/22 dark:bg-turquoise-400/15 border border-turquoise-400/25 dark:border-turquoise-400/20 rounded-lg shadow-sm";
+export const STATUS_AMBER = "font-aumovio-bold tracking-wide text-(--yellow-foreground) bg-yellow-100 dark:bg-yellow-400/15 border border-yellow-400/30 dark:border-yellow-400/25 rounded-lg shadow-sm";
 
 // ============================================================================
 // HEALTH INDICATOR DOTS
@@ -177,13 +231,13 @@ export const STATUS_TEXT_COLORS = {
     green: "text-success-400 dark:text-success-300     font-aumovio-bold",
     red: "text-danger-400 dark:text-danger-300       font-aumovio-bold",
     warning: "text-warn-500 dark:text-warn-300         font-aumovio-bold",
-    blue: "text-blue-500 dark:text-blue-300          font-aumovio-bold",
-    purple: "text-purple-400 dark:text-purple-300      font-aumovio-bold",
-    cyan: "text-turquoise-500 dark:text-turquoise-300 font-aumovio-bold",
-    turquoise: "text-turquoise-500 dark:text-turquoise-300 font-aumovio-bold",
-    amber: "text-yellow-600 dark:text-warn-300         font-aumovio-bold",
+    blue: "text-(--blue-foreground)                  font-aumovio-bold",
+    purple: "text-(--secondary-foreground)             font-aumovio-bold",
+    cyan: "text-(--turquoise-foreground)             font-aumovio-bold",
+    turquoise: "text-(--turquoise-foreground)             font-aumovio-bold",
+    amber: "text-(--yellow-foreground)                font-aumovio-bold",
     grey: "text-grey-500 dark:text-grey-400           font-aumovio-bold",
-    orange: "text-orange-400 dark:text-orange-300     font-aumovio-bold",
+    orange: "text-(--accent-foreground)                font-aumovio-bold",
 };
 
 export const STATUS_BG_COLORS = {
@@ -228,7 +282,7 @@ export const HEALTH_STATUS_COLORS = {
 export const ALERT_ERROR = "bg-danger-100 dark:bg-danger-400/15 border border-danger-400/30 text-danger-400 px-6 py-2 rounded-lg shadow-lg backdrop-blur-sm";
 export const ALERT_SUCCESS = "bg-success-100 dark:bg-success-400/15 border border-success-400/30 text-success-400 px-6 py-2 rounded-lg shadow-lg backdrop-blur-sm";
 export const ALERT_WARNING = "bg-warn-100/20 dark:bg-warn-400/15 border border-warn-400/30 text-warn-400 px-6 py-2 rounded-lg shadow-lg backdrop-blur-sm";
-export const ALERT_INFO = "bg-purple-100/15 dark:bg-purple-400/10 border border-purple-400/25 text-purple-400 px-6 py-2 rounded-lg shadow-lg backdrop-blur-sm";
+export const ALERT_INFO = "bg-purple-100/15 dark:bg-purple-400/10 border border-purple-400/25 text-(--secondary-foreground) px-6 py-2 rounded-lg shadow-lg backdrop-blur-sm";
 
 // ============================================================================
 // CARD STYLES
@@ -246,7 +300,7 @@ export const INPUT_ERROR = "outline-danger-400 placeholder-danger-400/70 text-da
 export const ERROR_MESSAGE = "font-aumovio-bold text-danger-400  bg-danger-100 dark:bg-danger-400/15 border border-danger-400/30  rounded-lg p-4 wrap-break-word shadow-sm";
 export const SUCCESS_MESSAGE = "font-aumovio-bold text-success-400 bg-success-100 dark:bg-success-400/15 border border-success-400/30 rounded-lg shadow-sm";
 export const WARNING_MESSAGE = "font-aumovio-bold text-warn-400    bg-warn-100/20 dark:bg-warn-400/15 border border-warn-400/30    rounded-lg shadow-sm";
-export const INFO_MESSAGE = "font-aumovio-bold text-purple-400  bg-purple-100/15 dark:bg-purple-400/10 border border-purple-400/25 rounded-lg shadow-sm";
+export const INFO_MESSAGE = "font-aumovio-bold text-(--secondary-foreground)  bg-purple-100/15 dark:bg-purple-400/10 border border-purple-400/25 rounded-lg shadow-sm";
 
 // ============================================================================
 // RADIO / CHECKBOX

@@ -5,6 +5,8 @@
  *   open     — boolean
  *   onClose  — () => void
  *   title    — string
+ *   ariaLabel - optional string. Accessible name for title-less modals; ignored
+ *               when `title` is set, which names the dialog via aria-labelledby (WCAG 4.1.2).
  *   size     — 'sm'|'md'|'lg'|'xl'|'2xl'|'full'
  *   variant  — 'default'|'danger'|'success'|'warning'
  *   footer   — ReactNode
@@ -17,7 +19,7 @@
  * will-change applied (common with animation classes).
  */
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { ANIMATE_FADE_IN, ANIMATE_SCALE_IN, TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 
@@ -38,7 +40,8 @@ const VARIANTS = {
     warning: "border-t-4 border-warn-400",
 };
 
-export function Modal({ open, onClose, title, size = "md", variant = "default", footer, bodyClassName = "", children }) {
+export function Modal({ open, onClose, title, size = "md", variant = "default", footer, bodyClassName = "", ariaLabel, children }) {
+    const titleId = useId();
     useEffect(() => {
         if (!open) return;
 
@@ -61,7 +64,7 @@ export function Modal({ open, onClose, title, size = "md", variant = "default", 
     if (!open) return null;
 
     return createPortal(
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 ${ANIMATE_FADE_IN}`} role="dialog" aria-modal="true" onClick={onClose}>
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 ${ANIMATE_FADE_IN}`} role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined} aria-label={!title && ariaLabel ? ariaLabel : undefined} onClick={onClose}>
             <div
                 className={`relative w-full ${SIZES[size] ?? SIZES.md}
                     bg-(--bg-surface) dark:bg-(--bg-surface-2) rounded-2xl shadow-2xl
@@ -71,7 +74,7 @@ export function Modal({ open, onClose, title, size = "md", variant = "default", 
                 {/* Header */}
                 {title && (
                     <div className="flex items-center justify-between px-6 py-4 border-b border-grey-200 dark:border-grey-700">
-                        <h2 className="text-base font-aumovio-bold text-black/85 dark:text-white/90">{title}</h2>
+                        <h2 id={titleId} className="text-base font-aumovio-bold text-black/85 dark:text-white/90">{title}</h2>
                         <button onClick={onClose} aria-label="Close" className={`flex items-center justify-center ${TRANSITION_COLORS} rounded-lg w-7 h-7 text-grey-400 hover:text-grey-600 dark:hover:text-grey-300 hover:bg-grey-100 dark:hover:bg-(--bg-surface-3)`}>
                             <XMarkIcon className="w-4 h-4" />
                         </button>

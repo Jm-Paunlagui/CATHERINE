@@ -32,16 +32,12 @@ const CHANGELOG_HREF = "/about/changelog";
 function resolveRoleLabel(role) {
     if (role === "SUPER_ADMIN") return "Super ADMIN";
     if (role === "ADMIN") return "ADMIN";
-    if (role === "VENDOR") return "Vendor";
-    if (role === "ROBOT") return "Automation";
     return "USER";
 }
 
 function resolveRoleBadgeVariant(role) {
     if (role === "SUPER_ADMIN") return "purple";
     if (role === "ADMIN") return "orange";
-    if (role === "VENDOR") return "cyan";
-    if (role === "ROBOT") return "green";
     return "grey";
 }
 

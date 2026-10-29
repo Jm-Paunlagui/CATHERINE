@@ -26,7 +26,7 @@
  */
 import { useCallback, useId, useRef, useState } from "react";
 
-import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
+import { FIELD_BORDER, FIELD_FOCUS, TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 
 // ── Colour maths (self-contained — no external palette deps) ───────────────────
 
@@ -326,8 +326,8 @@ export function ColorPicker({ value, onChange, presets = [], label, className = 
                         aria-label="Hex colour value"
                         className={`w-full pl-6 pr-2.5 py-2 rounded-lg text-sm font-mono uppercase
                             bg-white dark:bg-white/5 text-black/85 dark:text-white/85
-                            border border-grey-200 dark:border-grey-700 ${TRANSITION_COLORS}
-                            focus:outline-none focus:border-(--accent) focus:ring-2 focus:ring-(--accent)/30`}
+                            border ${FIELD_BORDER} ${TRANSITION_COLORS}
+                            ${FIELD_FOCUS}`}
                     />
                 </div>
             </div>

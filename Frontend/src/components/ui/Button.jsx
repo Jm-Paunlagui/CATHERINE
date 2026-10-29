@@ -7,33 +7,58 @@
  *   loading  — boolean
  *   disabled — boolean
  *   fullWidth — boolean
- *   leftIcon  — icon component
- *   rightIcon — icon component
+ *   leftIcon  — icon COMPONENT (e.g. `leftIcon={ArrowDownTrayIcon}`), rendered with a w-4 h-4 class
+ *   rightIcon — icon COMPONENT, same contract
+ *   icon      — icon ELEMENT (e.g. `icon={<FontAwesomeIcon icon={faCheck} />}`), rendered as-is on the left
  *   rounded  — boolean (pill shape)
  *   onClick, type, className, children
  *   ...rest  — any other prop (aria-*, title, data-*, etc.) is forwarded onto the rendered <button>
+ *
+ * WHY BOTH `leftIcon` AND `icon`: the two icon systems in this codebase have
+ * incompatible call shapes. Heroicons are passed as bare components and need a
+ * size class applied by the button (`leftIcon`). FontAwesome is used via
+ * `<FontAwesomeIcon icon={…} />`, which is already an element and already
+ * sized, so it cannot go through `leftIcon` — `<LeftIcon />` on an element
+ * throws. Callers reached for the natural `icon={<FontAwesomeIcon …/>}`, which
+ * this component did not accept: it fell into `...rest`, React stringified it
+ * onto the DOM as `icon="[object Object]"`, and no icon rendered at all. Eight
+ * call sites were silently iconless. Accepting the element form is the smaller,
+ * safer fix — the alternative was rewriting those sites to a render-prop shape
+ * FontAwesome does not naturally produce.
  */
-import { RIPPLE_HOST, TRANSITION_BUTTON } from "../../assets/styles/pre-set-styles";
+import { BTN_ACCENT, BTN_BUSY, BTN_DANGER, BTN_DISABLED, BTN_DISABLED_SOLID, BTN_FOCUS, BTN_GRADIENT, BTN_LINK, BTN_MOTION, BTN_NEUTRAL, BTN_OUTLINE, BTN_PRIMARY, BTN_SUCCESS, BTN_WARNING, RIPPLE_HOST, TRANSITION_BUTTON } from "../../assets/styles/pre-set-styles";
 
-const BASE = [
-    "inline-flex items-center justify-center gap-2 font-aumovio-bold tracking-wide",
-    TRANSITION_BUTTON,
-    "hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.98]",
-    "backface-hidden border",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[var(--bg-surface)]",
-    "disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none",
-].join(" ");
+// Every colour / border / focus / disabled decision lives in the BTN_* constants
+// (token-driven, WCAG 1.4.3 + 1.4.11, border lightness follows the THEME).
+const BASE = ["inline-flex items-center justify-center gap-2 font-aumovio-bold tracking-wide", TRANSITION_BUTTON, BTN_MOTION, "backface-hidden border", BTN_FOCUS].join(" ");
 
 const VARIANTS = {
-    primary: "text-(--accent-foreground) bg-orange-400/10 dark:bg-orange-400/20 border-orange-400/25 dark:border-orange-400/40 hover:bg-orange-400 hover:text-(--on-accent-text) hover:border-transparent hover:shadow-xl hover:shadow-orange-400/30 dark:hover:shadow-orange-400/50 focus-visible:ring-orange-400",
-    accent: "text-(--secondary-foreground) bg-purple-400/10 dark:bg-purple-400/20 border-purple-400/20 dark:border-purple-400/35 hover:bg-purple-400 hover:text-(--on-secondary-text) hover:border-transparent hover:shadow-xl hover:shadow-purple-400/30 dark:hover:shadow-purple-400/50 focus-visible:ring-purple-400",
-    danger: "text-danger-400 dark:text-danger-300 bg-danger-100 dark:bg-danger-400/15 border-danger-400/20 dark:border-danger-400/35 hover:bg-danger-400 hover:text-white hover:border-transparent hover:shadow-xl hover:shadow-danger-400/30 dark:hover:shadow-danger-400/50 focus-visible:ring-danger-400",
-    warning: "text-warn-600 dark:text-warn-400 bg-warn-100/30 dark:bg-warn-400/15 border-warn-400/30 hover:bg-warn-400 hover:text-black hover:border-transparent hover:shadow-xl hover:shadow-warn-400/30 dark:hover:shadow-warn-400/50 focus-visible:ring-warn-400",
-    ghost: "text-grey-600 dark:text-grey-300 bg-transparent border-grey-200 dark:border-grey-700 hover:bg-grey-100 dark:hover:bg-(--bg-surface-3) hover:text-black dark:hover:text-white focus-visible:ring-grey-400",
-    outline: "text-(--accent-foreground) bg-transparent border-orange-400 hover:bg-orange-400 hover:text-(--on-accent-text) hover:shadow-lg hover:shadow-orange-400/30 dark:hover:shadow-orange-400/50 focus-visible:ring-orange-400",
-    link: "text-(--accent-foreground) bg-transparent border-transparent hover:underline underline-offset-2 hover:translate-y-0 hover:scale-100 focus-visible:ring-orange-400",
-    gradient: "text-[var(--color-gradient-text)] bg-linear-to-r from-(--color-gradient-from) to-(--color-gradient-to) border-0 hover:shadow-xl hover:shadow-orange-400/40 dark:hover:shadow-orange-400/60 hover:brightness-110 dark:hover:brightness-125 disabled:grayscale focus-visible:ring-orange-400",
+    primary: BTN_PRIMARY,
+    accent: BTN_ACCENT,
+    danger: BTN_DANGER,
+    // Mirrors `danger` in the success family. Added because 11 call sites across
+    // 8 files were already passing variant="success" for the affirmative half of
+    // an approve/reject pair — and silently getting the orange `primary` fallback.
+    success: BTN_SUCCESS,
+    warning: BTN_WARNING,
+    ghost: BTN_NEUTRAL,
+    outline: BTN_OUTLINE,
+    link: BTN_LINK,
+    gradient: BTN_GRADIENT,
 };
+
+// Variants whose fill is a solid gradient: a faded (opacity-only) disabled state would
+// leave a white label on a white surface, so they get a flat grey disabled look instead.
+const SOLID_VARIANTS = new Set(["gradient"]);
+
+// `warn` is an accepted alias for `warning` — the same failure the `success`
+// variant above was added to fix, one variant over. The tokens `warning` is built
+// from are all named warn-*, so variant="warn" is the natural slip, and the
+// `?? VARIANTS.primary` fallback makes it silent: a secondary warning action
+// would otherwise render as the page's primary CTA.
+VARIANTS.warn = VARIANTS.warning;
+// `secondary` is an alias of the neutral (ghost) look.
+VARIANTS.secondary = VARIANTS.ghost;
 
 const SIZES = {
     xs: "px-3 py-1    text-xs rounded-md",
@@ -43,7 +68,7 @@ const SIZES = {
     xl: "px-7   py-3.5  text-base rounded-xl",
 };
 
-export default function Button({ variant = "primary", size = "md", loading = false, disabled = false, fullWidth = false, leftIcon: LeftIcon, rightIcon: RightIcon, rounded = false, onClick, type = "button", className = "", children, ...rest }) {
+export default function Button({ variant = "primary", size = "md", loading = false, disabled = false, fullWidth = false, leftIcon: LeftIcon, rightIcon: RightIcon, icon, rounded = false, onClick, type = "button", className = "", children, ...rest }) {
     const handleClick = (e) => {
         onClick?.(e);
         const btn = e.currentTarget;
@@ -57,19 +82,26 @@ export default function Button({ variant = "primary", size = "md", loading = fal
         btn.appendChild(circle);
     };
 
+    // Loading keeps full colour (spinner + aria-busy + progress cursor) so it never
+    // reads as disabled; only an explicit `disabled` prop gets the disabled look.
+    // The native attribute is still set while loading so the click cannot re-fire.
+    const key = VARIANTS[variant] ? variant : "primary";
+    const stateClass = disabled ? (SOLID_VARIANTS.has(key) ? BTN_DISABLED_SOLID : BTN_DISABLED) : loading ? BTN_BUSY : "";
+
     return (
         <button
             type={type}
             onClick={handleClick}
             disabled={disabled || loading}
-            className={`${BASE} ${RIPPLE_HOST} ${VARIANTS[variant] ?? VARIANTS.primary}
+            aria-busy={loading || undefined}
+            className={`${BASE} ${RIPPLE_HOST} ${VARIANTS[key]} ${stateClass}
         ${SIZES[size] ?? SIZES.md}
         ${fullWidth ? "w-full" : ""}
         ${rounded ? "rounded-full!" : ""}
         ${className}`}
             {...rest}
         >
-            {loading ? <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" /> : LeftIcon && <LeftIcon className="w-4 h-4 shrink-0" />}
+            {loading ? <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" /> : (LeftIcon && <LeftIcon className="w-4 h-4 shrink-0" />) || icon}
             {children}
             {!loading && RightIcon && <RightIcon className="w-4 h-4 shrink-0" />}
         </button>

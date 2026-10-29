@@ -1,7 +1,7 @@
 /**
  * helpRoleGating.test.jsx — the Help Center's article visibility must exactly
- * track the platform's role model, and the global launcher must vanish entirely
- * for automation roles.
+ * track the platform's role model, and the global launcher must render for
+ * every template role.
  *
  * WHY THESE TESTS EXIST
  * ─────────────────────
@@ -17,30 +17,28 @@
  * This suite pins two independent guarantees:
  *   A. `canSee(category, role)` — a faithful re-implementation of the hook's
  *      visibility predicate — mirrors help.data.jsx for EVERY category and EVERY
- *      human role, and every category is accounted for (no unmapped category).
- *   B. HIDDEN_ROLES suppresses the global launcher for ROBOT, and a real
- *      <HelpAssistant /> renders no FAB for a ROBOT session but does for a human.
+ *      template role, and every category is accounted for (no unmapped category).
+ *   B. ROLE_TIERS knows exactly the template roles, and a real <HelpAssistant />
+ *      renders its FAB for every one of them.
  *
- * PORT NOTE (MEAL → CATHERINE):
- *   - VENDOR is DROPPED — CATHERINE has no vendor role. Human roles are
- *     USER, VIEWER, APPROVER, ADMIN, SUPER_ADMIN.
+ * TEMPLATE NOTE:
+ *   - CATHERINE's only roles are USER, ADMIN, SUPER_ADMIN.
  *   - System categories are logging-audit, metrics-observability, admin-management
  *     (SUPER_ADMIN allow-list). Tier-1 = database/mira/caching/cors/request-lifecycle.
- *   - No peso, no MEAL-specific categories.
+ *   - No currency-specific or domain categories.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import HelpAssistant from "../../../src/components/shared/HelpAssistant/HelpAssistant";
-import { HIDDEN_ROLES } from "../../../src/components/shared/HelpAssistant/useHelpAssistant";
 import { HELP_CATEGORIES, ROLE_TIERS } from "../../../src/features/support/help/help.data";
 import { loginAs } from "../../helpers/auth.js";
 import { invalidateCache } from "../../../src/hooks/useRequest";
 
-/** Every human role in CATHERINE (ROBOT is automation, tested separately). */
-const HUMAN_ROLES = ["USER", "VIEWER", "APPROVER", "ADMIN", "SUPER_ADMIN"];
+/** Every role in CATHERINE, lowest to highest. */
+const TEMPLATE_ROLES = ["USER", "ADMIN", "SUPER_ADMIN"];
 
 /**
  * Faithful re-implementation of help.hook.js's `visibleCategories` predicate
@@ -63,7 +61,7 @@ describe("Help Center category visibility — canSee mirrors the role model", ()
         }
     });
 
-    it("shows every tier-0 (minRole:null) category to an unauthenticated viewer", () => {
+    it("shows every tier-0 (minRole:null) category to an unauthenticated visitor", () => {
         const tier0 = HELP_CATEGORIES.filter((c) => !Array.isArray(c.roles) && (c.minRole ?? null) === null);
         expect(tier0.length).toBeGreaterThan(0);
         for (const cat of tier0) {
@@ -76,8 +74,6 @@ describe("Help Center category visibility — canSee mirrors the role model", ()
         expect(tier1.length).toBeGreaterThan(0);
         for (const cat of tier1) {
             expect(canSee(cat, "USER")).toBe(false);
-            expect(canSee(cat, "VIEWER")).toBe(false);
-            expect(canSee(cat, "APPROVER")).toBe(false);
             expect(canSee(cat, "ADMIN")).toBe(true);
             expect(canSee(cat, "SUPER_ADMIN")).toBe(true);
         }
@@ -106,9 +102,9 @@ describe("Help Center category visibility — canSee mirrors the role model", ()
 
     it("never grants a lower role more than a higher role for any category (monotonic)", () => {
         for (const cat of HELP_CATEGORIES) {
-            // Walk the human ladder; once visible it must stay visible upward.
+            // Walk the role ladder; once visible it must stay visible upward.
             let seenVisible = false;
-            for (const role of HUMAN_ROLES) {
+            for (const role of TEMPLATE_ROLES) {
                 const visible = canSee(cat, role);
                 if (seenVisible) expect(visible).toBe(true);
                 if (visible) seenVisible = true;
@@ -117,7 +113,7 @@ describe("Help Center category visibility — canSee mirrors the role model", ()
     });
 });
 
-describe("Help Assistant launcher — automation-role suppression", () => {
+describe("Help Assistant launcher — rendered for every template role", () => {
     beforeEach(() => {
         invalidateCache();
     });
@@ -127,26 +123,16 @@ describe("Help Assistant launcher — automation-role suppression", () => {
         document.getElementById("root")?.classList.remove("blur-sm");
     });
 
-    it("lists ROBOT as a hidden role", () => {
-        expect(HIDDEN_ROLES.has("ROBOT")).toBe(true);
-        expect(HIDDEN_ROLES.has("USER")).toBe(false);
-        expect(HIDDEN_ROLES.has("SUPER_ADMIN")).toBe(false);
+    it("maps exactly the template roles onto the tier ladder", () => {
+        const named = Object.keys(ROLE_TIERS).filter((k) => k !== "null" && k !== "undefined");
+        expect(named.sort()).toEqual([...TEMPLATE_ROLES].sort());
+        expect(ROLE_TIERS.USER).toBe(0);
+        expect(ROLE_TIERS.ADMIN).toBe(1);
+        expect(ROLE_TIERS.SUPER_ADMIN).toBe(2);
     });
 
-    it("renders NO FAB for a ROBOT session on an ordinary route", async () => {
-        loginAs("ROBOT");
-        render(
-            <MemoryRouter initialEntries={["/home"]}>
-                <div id="root"><HelpAssistant /></div>
-            </MemoryRouter>,
-        );
-        // Wait for the role to resolve; the FAB must never appear for ROBOT.
-        await waitFor(() => expect(true).toBe(true));
-        expect(screen.queryByRole("button", { name: FAB_LABEL })).toBeNull();
-    });
-
-    it("renders the FAB for a human (USER) session on the same route", async () => {
-        loginAs("USER");
+    it.each(TEMPLATE_ROLES)("renders the FAB for a %s session on an ordinary route", async (role) => {
+        loginAs(role);
         render(
             <MemoryRouter initialEntries={["/home"]}>
                 <div id="root"><HelpAssistant /></div>

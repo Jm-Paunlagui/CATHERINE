@@ -15,6 +15,7 @@ import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, XMarkIcon } from "
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isAfter, isBefore, isSameDay, isSameMonth, isToday, startOfMonth, startOfWeek, subMonths } from "date-fns";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { FIELD_BORDER, FIELD_BORDER_ERROR, FIELD_FOCUS_VISIBLE, FIELD_OPEN } from "../../assets/styles/pre-set-styles";
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -85,7 +86,8 @@ export function Datepicker({ value = null, onChange, placeholder = "Select date"
                     "group w-full flex items-center gap-3 px-4 py-2 rounded-lg border text-sm text-left",
                     "bg-white dark:bg-(--bg-surface-2)",
                     "transition-all duration-200",
-                    open ? "border-orange-400 ring-2 ring-orange-400/30 shadow-md" : error ? "border-danger-400 ring-2 ring-danger-400/30" : "border-grey-300 dark:border-grey-700 hover:border-orange-400/60",
+                    FIELD_FOCUS_VISIBLE,
+                    open ? FIELD_OPEN : error ? `${FIELD_BORDER_ERROR} ring-2 ring-danger-400/30` : `${FIELD_BORDER} hover:border-(--field-focus-border)`,
                     disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
                 ].join(" ")}
             >

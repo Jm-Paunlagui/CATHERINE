@@ -1,36 +1,36 @@
-﻿/**
- * nav.config.jsx â€” Single source of truth for all navigation.
+/**
+ * nav.config.jsx — Single source of truth for all navigation.
  *
  * To configure this for a new project:
  *   1. Update PUBLIC_LINKS with unauthenticated routes.
  *   2. Update AUTH_FLAT_LINKS with top-level authenticated routes (e.g. Dashboard).
  *   3. Update NAV_GROUPS per role with feature routes.
- *      â€¢ color        â†’ sidebar group accent  (orange|purple|blue|turquoise|yellow|success|danger|warn|grey)
+ *      • color        → sidebar group accent  (orange|purple|blue|turquoise|yellow|success|danger|warn|grey)
  *                     Palette-responsive: orange, purple, blue, turquoise, yellow
  *                     Semantic (fixed):   success, danger, warn, grey
- *      â€¢ icon         â†’ JSX element           (shown in Sidebar; ignored by Navbar)
- *      â€¢ description  â†’ subtitle string       (shown in Navbar dropdown; ignored by Sidebar)
+ *      • icon         → JSX element           (shown in Sidebar; ignored by Navbar)
+ *      • description  → subtitle string       (shown in Navbar dropdown; ignored by Sidebar)
  *
- * Both Navbar and Sidebar import from here â€” change once, both update.
+ * Both Navbar and Sidebar import from here — change once, both update.
  *
- * Icon library: Lucide (react-icons/lu) â€” single thin, rounded outline set for a
+ * Icon library: Lucide (react-icons/lu) — single thin, rounded outline set for a
  * consistent look. SIZE + STROKE keep every glyph visually uniform; never mix in
  * filled sets (react-icons/md, react-icons/fa) here or the sidebar looks uneven.
  *
  * NOTE: This is the TEMPLATE information architecture. Every href below resolves
- * to a mounted route in App.jsx. Keep it that way â€” a nav entry with no route is
+ * to a mounted route in App.jsx. Keep it that way — a nav entry with no route is
  * a broken link in a boilerplate whose whole job is to be copied cleanly.
  */
 
-import { LuChartBar, LuCircleHelp, LuCoins, LuDatabase, LuGitBranch, LuHistory, LuHouse, LuLayoutDashboard, LuLogIn, LuNetwork, LuRocket, LuScrollText, LuUserCog } from "react-icons/lu";
+import { LuBookOpen, LuCircleHelp, LuCoins, LuDatabase, LuDatabaseBackup, LuGitBranch, LuHistory, LuHouse, LuLayoutDashboard, LuLogIn, LuNetwork, LuRocket, LuScrollText, LuServerCog, LuShieldCheck, LuUserCog } from "react-icons/lu";
 
 const SIZE = 18;
 const STROKE = 1.75;
 
-// Single factory so every icon shares size + stroke â€” guarantees a uniform set.
+// Single factory so every icon shares size + stroke — guarantees a uniform set.
 const icon = (Glyph) => <Glyph size={SIZE} strokeWidth={STROKE} />;
 
-// â”€â”€ Unauthenticated flat links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Unauthenticated flat links ────────────────────────────────────────────────
 export const PUBLIC_LINKS = [
     { name: "Home", href: "/home", icon: icon(LuHouse) },
     { name: "Getting Started", href: "/about/getting-started", icon: icon(LuRocket) },
@@ -38,15 +38,15 @@ export const PUBLIC_LINKS = [
     { name: "Sign In", href: "/auth", icon: icon(LuLogIn) },
 ];
 
-// â”€â”€ Authenticated flat links (shown above groups in both layouts) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Authenticated flat links (shown above groups in both layouts) ──────────────
 export const AUTH_FLAT_LINKS = [{ name: "Dashboard", href: "/dashboard", icon: icon(LuLayoutDashboard) }];
 
-// â”€â”€ Version-disclosure policy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Version-disclosure policy ─────────────────────────────────────────────────
 // Single source of truth for who may SEE the app version in the chrome
-// (nav item + VersionBadge). Cybersecurity (CWE-200 Information Exposure â€” a
-// visible version string helps an attacker match known CVEs) and HR (employees
-// don't need it) asked for it hidden. The /about/changelog route stays public
-// and link-reachable regardless â€” this only controls surfaced visibility.
+// (nav item + VersionBadge). Cybersecurity (CWE-200 Information Exposure — a
+// visible version string helps an attacker match known CVEs) asks for it hidden
+// from non-admins. The /about/changelog route stays public
+// and link-reachable regardless — this only controls surfaced visibility.
 const VERSION_VISIBLE_ROLES = new Set(["ADMIN", "SUPER_ADMIN"]);
 
 /**
@@ -88,9 +88,10 @@ const SYSTEM_GROUP = {
     label: "System",
     color: "purple",
     items: [
-        { name: "Admin Management", href: "/system/admin-management", icon: icon(LuUserCog), description: "Provision administrators and automation/robot service accounts" },
+        { name: "Admin Management", href: "/system/admin-management", icon: icon(LuUserCog), description: "Provision administrator accounts and assign their roles" },
         { name: "Logging and Observability", href: "/system/logging-and-observability", icon: icon(LuScrollText), description: "Four Golden Signals, deep trace inspection, and log retention" },
-        { name: "Metrics", href: "/system/metrics", icon: icon(LuChartBar), description: "Runtime metrics dashboard across the API surface" },
+        { name: "Data Integrity", href: "/system/data-integrity", icon: icon(LuShieldCheck), description: "Per-table HMAC tamper monitoring with live change streams" },
+        { name: "Data Management", href: "/system/data-purge", icon: icon(LuDatabaseBackup), description: "Scheduled backups, backup-gated purge, and archive restore" },
     ],
 };
 
@@ -104,17 +105,26 @@ const SUPPORT_GROUP = {
     ],
 };
 
+// Omission from other roles is discoverability only; the API gates are requireAdminAccess (/dev-docs) and requireSuperAdmin (/architecture).
+const DEV_DOCS_ITEM = { name: "Dev Docs", href: "/support/dev-docs", icon: icon(LuBookOpen), description: "Internal architecture reference" };
+const SUPPORT_GROUP_ADMIN = { ...SUPPORT_GROUP, items: [...SUPPORT_GROUP.items, DEV_DOCS_ITEM] };
+const SUPPORT_GROUP_SUPER_ADMIN = {
+    ...SUPPORT_GROUP,
+    items: [
+        ...SUPPORT_GROUP.items,
+        DEV_DOCS_ITEM,
+        { name: "Architecture", href: "/support/architecture", icon: icon(LuNetwork), description: "Interactive system map and request flows" },
+        { name: "Runtime", href: "/support/runtime", icon: icon(LuServerCog), description: "Scheduling, backup, resilience and shutdown — as the server simulation runs them" },
+    ],
+};
+
 // ── Role-based nav groups ─────────────────────────────────────────────────────
 // Add or remove roles here to match your backend's role strings.
 export const NAV_GROUPS = {
     USER: [REFERENCE_GROUP_NO_VERSION, SUPPORT_GROUP],
 
-    APPROVER: [REFERENCE_GROUP_NO_VERSION, SUPPORT_GROUP],
+    ADMIN: [REFERENCE_GROUP, SUPPORT_GROUP_ADMIN],
 
-    VIEWER: [REFERENCE_GROUP_NO_VERSION, SUPPORT_GROUP],
-
-    ADMIN: [REFERENCE_GROUP, SUPPORT_GROUP],
-
-    SUPER_ADMIN: [REFERENCE_GROUP, SYSTEM_GROUP, SUPPORT_GROUP],
+    SUPER_ADMIN: [REFERENCE_GROUP, SYSTEM_GROUP, SUPPORT_GROUP_SUPER_ADMIN],
 };
 

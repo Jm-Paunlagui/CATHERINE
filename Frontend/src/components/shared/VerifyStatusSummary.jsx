@@ -37,7 +37,7 @@ const CHIP_COLORS = {
  * @param {Array<{status?: string, excluded?: boolean}>} props.rows - Classified verify rows.
  * @param {string[]} [props.statuses] - Which standard statuses to always display
  *   (count 0 included), e.g. ["Create","Update","Retain","Conflict"]. Rendered in
- *   the canonical ORDER. Defaults to the full standard set.
+ *   the canonical ORDER. Defaults to Create / Update / Retain / Conflict.
  */
 export function VerifyStatusSummary({ rows = [], statuses = ["Create", "Update", "Retain", "Conflict"] }) {
     const { counts, excluded } = useMemo(() => {

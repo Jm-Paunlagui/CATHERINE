@@ -7,13 +7,14 @@
  * stage is then inferred from that version's semver pre-release tag (so the number
  * and the stage badge always agree — e.g. "1.17.12" → Stable, "1.18.0-beta.1" → Beta).
  *
- * The changelog GET /api/v1/changelog endpoint is PUBLIC (no auth required), so
- * the version resolves immediately on any page — including the home page and
- * login screen — without waiting for the user to authenticate.
+ * Resolution uses the PUBLIC changelog endpoint (`changelog/public/latest`, falling
+ * back to `changelog/public` on an older API), not the authenticated one, so the
+ * badge is correct on every page — including anonymous ones — without waiting
+ * for the user to sign in.
  *
- * Fallback: if the request fails (network error, backend down), it falls back to
- * the build-time config values from src/config/appVersion.js (VITE_APP_VERSION /
- * package.json + VITE_APP_STAGE).
+ * Fallback: if the request fails, it falls back to the build-time config values
+ * from src/config/appVersion.js (VITE_APP_VERSION / package.json + VITE_APP_STAGE),
+ * and is retried on navigation until it resolves.
  */
 
 /* eslint-disable react-refresh/only-export-components */
@@ -51,6 +52,28 @@ function writeStoredVersion(v) {
     }
 }
 
+/**
+ * Version of the newest public changelog entry, or undefined when there is none.
+ *
+ * Reads `changelog/public/latest` (one entry, ~1 KB) instead of the whole public
+ * list (~540 KB) — the server guarantees its `data` equals the list's `data[0]`.
+ * A 404 means the API predates that route, so it falls back to the full list:
+ * deploying this UI before the API changes nothing. Any other failure throws,
+ * exactly as the single list read did.
+ *
+ * @returns {Promise<string|undefined>}
+ */
+async function fetchLatestVersion() {
+    try {
+        const res = await changelogApi.latestPublic();
+        return res.data?.data?.version;
+    } catch (err) {
+        if (err?.response?.status !== 404) throw err;
+        const res = await changelogApi.listPublic();
+        return res.data?.data?.[0]?.version;
+    }
+}
+
 // Module-scoped cache: initialised from sessionStorage so page refreshes see
 // the real version immediately. Shared across navigations; cleared on tab close.
 let cachedVersion = readStoredVersion();
@@ -72,8 +95,7 @@ export function VersionProvider({ children }) {
         // the home page and login screen, without waiting for authentication.
         (async () => {
             try {
-                const res = await changelogApi.list();
-                const latest = res.data?.data?.[0]?.version;
+                const latest = await fetchLatestVersion();
                 if (latest) {
                     const v = String(latest).trim();
                     cachedVersion = v;
@@ -93,8 +115,7 @@ export function VersionProvider({ children }) {
     // instead of waiting for the tab to close.
     const refresh = useCallback(async () => {
         try {
-            const res = await changelogApi.list();
-            const latest = res.data?.data?.[0]?.version;
+            const latest = await fetchLatestVersion();
             if (latest) {
                 const v = String(latest).trim();
                 cachedVersion = v;

@@ -18,7 +18,7 @@ import { chartBase } from "../../utils/chartDefaults";
  * @param {string[]} [props.colors]
  * @param {(value: number) => string} [props.valueFormatter] - formats the
  *   y-axis ticks AND the tooltip value (same contract as BarChart). Without it
- *   a money axis renders `226.3155` instead of `₱226.32`.
+ *   a money axis renders `226.3155` instead of `$226.32`.
  * @param {Array}    [props.yAxes] - passed straight to Apex's `yaxis` when
  *   present, overriding the single-axis default. This is the dual-axis escape
  *   hatch: `[{ seriesName, labels: { formatter } },
@@ -75,14 +75,7 @@ export function LineChart({
         ...(legend ? { legend: { ...chartBase.legend, ...legend } } : {}),
         ...(annotations ? { annotations } : {}),
         ...(plotOptions ? { plotOptions } : {}),
-        // OMIT the key entirely when there is no title — do NOT set it to
-        // `undefined`. ApexCharts reads `cnf.title.text` unconditionally while
-        // building the chart's accessible label, and an explicit `undefined`
-        // OVERRIDES its own `title: {}` default rather than falling back to it,
-        // so the read throws "Cannot read properties of undefined (reading
-        // 'text')" and the whole chart fails to mount. Latent until a caller
-        // omitted `title` — the Sales insight cards put their titles in the Card
-        // header instead (D-9), which is what surfaced it.
+        // Omit the key when there is no title: an explicit `undefined` overrides Apex's `title: {}` default and crashes mount.
         ...(title ? { title: { text: title, style: { fontFamily: "Aumovio", fontWeight: 700 } } } : {}),
         markers: { size: markerSize, hover: { size: markerSize > 0 ? markerSize + 3 : 6 } },
     };

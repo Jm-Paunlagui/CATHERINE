@@ -1,7 +1,8 @@
 /**
  * ExportButtons.jsx — the single "Export Excel / Export CSV" control pair.
  *
- * Every table view that offers an export renders THIS component. The pattern was
+ * Every table view that offers an export (e.g. Data Integrity) renders THIS
+ * component. The pattern was
  * previously copy-pasted per feature, which is how the two formats drift: one
  * view gains a loading state, another keeps a stale CSV tooltip, a third forgets
  * the role gate entirely.

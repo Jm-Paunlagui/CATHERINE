@@ -17,8 +17,8 @@ const SZ = {
     lg: "px-5 py-3 text-sm",
 };
 
-// Icon size follows the button size. `xs` (compact inline toggles — e.g. the
-// Transaction History header's view toggle) gets a smaller icon so it
+// Icon size follows the button size. `xs` (compact inline toggles — e.g. a
+// table header's view toggle) gets a smaller icon so it
 // doesn't overpower the shrunken label text. Every other size keeps the
 // ORIGINAL hardcoded `w-4 h-4` exactly as before this change (falls through
 // to DEFAULT_ICON_SZ below) — additive, no existing caller shifts.
@@ -37,8 +37,8 @@ export function ButtonGroup({ items = [], active, onChange, variant = "primary",
             className={`inline-flex font-aumovio-bold
         ${isH ? "flex-row" : "flex-col"}
         ${isH ? "divide-x" : "divide-y"}
-        divide-grey-200 dark:divide-grey-700
-        border border-grey-200 dark:border-grey-700
+        divide-(--btn-neutral-border)
+        border border-(--btn-neutral-border)
         ${isH ? "rounded-lg overflow-hidden" : "rounded-lg overflow-hidden"}`}
         >
             {items.map((item) => {

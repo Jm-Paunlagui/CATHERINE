@@ -8,7 +8,8 @@
  *   - Form state (currentPassword, newPassword, confirmPassword)
  *   - Client-side validation: non-empty, passwords match, new ≠ current
  *   - Calls PATCH auth/change-password
- *   - On success: refreshes stored user, clears auth cache, navigates to /dashboard
+ *   - On success: refreshes stored user, clears auth cache, navigates to the
+ *     role's landing page (see roleRedirect.js)
  *   - Shake animation trigger (shaking / setShaking)
  */
 
@@ -17,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { extractApiError, toast } from "../../components/ui/toast.utils";
 import AuthMiddleware from "../../middleware/authentication/AuthMiddleware";
 import { changePasswordApi } from "./changePassword.api";
+import { getLandingPath } from "./roleRedirect";
 
 const EMPTY_FORM = {
     currentPassword: "",
@@ -37,15 +39,21 @@ export const useChangePassword = () => {
     const [isPasswordValid, setIsPasswordValid] = useState(false);
     const [shaking, setShaking] = useState(false);
     const [isDefaultPassword, setIsDefaultPassword] = useState(false);
+    // Emailed temporary password (admin onboarding): the session can only
+    // change it, and it stops working at this instant.
+    const [isTemporaryPassword, setIsTemporaryPassword] = useState(false);
+    const [temporaryPasswordExpiresAt, setTemporaryPasswordExpiresAt] = useState(null);
     const navigate = useNavigate();
 
-    // Resolve isDefaultPassword from the server-verified user object (H-02).
+    // Resolve isDefaultPassword from the server-verified user object.
     // AuthMiddleware.isAuth() is async — never call it synchronously at render.
     useEffect(() => {
         let cancelled = false;
         AuthMiddleware.isAuth().then((user) => {
             if (!cancelled && user) {
                 setIsDefaultPassword(user.isDefaultPassword === true);
+                setIsTemporaryPassword(user.isTemporaryPassword === true);
+                setTemporaryPasswordExpiresAt(user.temporaryPasswordExpiresAt ?? null);
             }
         });
         return () => {
@@ -112,9 +120,8 @@ export const useChangePassword = () => {
                 }
 
                 AuthMiddleware.clearAuthCache();
-                toast.success(res.data?.message || "Password changed successfully!");
-                const robotRedirect = import.meta.env.VITE_ROBOT_REDIRECT || "/dashboard";
-                navigate(user?.role === "ROBOT" ? robotRedirect : "/dashboard");
+                toast.success(res.data?.message || "Your password has been updated.");
+                navigate(getLandingPath(user?.role));
                 return true;
             } catch (err) {
                 setApiError(extractApiError(err, "Failed to change password."));
@@ -141,5 +148,7 @@ export const useChangePassword = () => {
         setShaking,
         handleSubmit,
         isDefaultPassword,
+        isTemporaryPassword,
+        temporaryPasswordExpiresAt,
     };
 };

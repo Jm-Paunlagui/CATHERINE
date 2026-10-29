@@ -14,11 +14,11 @@ export function Radio({ name, options = [], value, onChange, label: groupLabel, 
         return (
             <div className="font-aumovio">
                 {groupLabel && <p className="text-xs font-aumovio-bold text-black/70 dark:text-white/70 mb-1.5">{groupLabel}</p>}
-                <div className="inline-flex overflow-hidden border divide-x border-grey-200 dark:border-grey-700 rounded-xl divide-grey-200 dark:divide-grey-700">
+                <div className="inline-flex overflow-hidden border divide-x border-(--field-border) rounded-xl divide-(--field-border)">
                     {options.map((opt) => (
                         <label
                             key={opt.value}
-                            className={`px-4 py-2 text-sm font-aumovio-bold cursor-pointer ${TRANSITION_COLORS}
+                            className={`px-4 py-2 text-sm font-aumovio-bold cursor-pointer ${TRANSITION_COLORS} has-focus-visible:ring-2 has-focus-visible:ring-inset has-focus-visible:ring-(--field-focus-border)
               ${opt.disabled || disabled ? "opacity-40 cursor-not-allowed" : ""}
               ${value === opt.value ? "bg-orange-400 text-(--on-accent-text)" : "bg-(--bg-surface) dark:bg-(--bg-surface-2) text-grey-600 dark:text-grey-300 hover:bg-orange-50 dark:hover:bg-orange-400/10 hover:text-(--accent-foreground)"}`}
                         >
@@ -41,16 +41,17 @@ export function Radio({ name, options = [], value, onChange, label: groupLabel, 
               ${
                   variant === "card"
                       ? `p-4 rounded-xl border ${TRANSITION_COLORS}
-                ${value === opt.value ? "border-orange-400 bg-orange-50 dark:bg-orange-400/5" : "border-grey-200 dark:border-grey-700 hover:border-orange-300"}`
+                ${value === opt.value ? "border-orange-400 bg-orange-50 dark:bg-orange-400/5" : "border-(--field-border) hover:border-orange-300"}`
                       : ""
               }
               ${opt.disabled || disabled ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                         <div className="relative shrink-0 mt-1">
-                            <input type="radio" name={name} value={opt.value} checked={value === opt.value} onChange={() => !opt.disabled && !disabled && onChange?.(opt.value)} disabled={opt.disabled || disabled} className="sr-only" />
+                            <input type="radio" name={name} value={opt.value} checked={value === opt.value} onChange={() => !opt.disabled && !disabled && onChange?.(opt.value)} disabled={opt.disabled || disabled} className="sr-only peer" />
                             <div
                                 className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${TRANSITION_COLORS}
-                ${value === opt.value ? "border-orange-400 bg-orange-400" : "border-grey-300 dark:border-grey-600 hover:border-orange-400 bg-white dark:bg-(--bg-surface-3)"}`}
+                ${value === opt.value ? "border-orange-400 bg-orange-400" : "border-(--field-border) hover:border-orange-400 bg-white dark:bg-(--bg-surface-3)"}
+                peer-focus-visible:ring-2 peer-focus-visible:ring-(--field-focus-border) peer-focus-visible:border-(--field-focus-border)`}
                             >
                                 {/* Inner dot sits on `bg-orange-400`, the palette PRIMARY — a hardcoded
                                     white dot disappears on a pale palette (Sage Mist, Blush Petal,

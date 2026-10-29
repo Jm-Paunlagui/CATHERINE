@@ -180,7 +180,8 @@ describe("HttpClient — statuses that take over the screen", () => {
 
         await expect(httpClient.get("status-probe/throttled-header")).rejects.toMatchObject({ response: { status: 429 } });
 
-        expect(consumeErrorPagePayload()).toMatchObject({ code: 429, retryAfter: "99" });
+        // extractRetryAfter normalises the header to seconds (it also accepts an HTTP-date).
+        expect(consumeErrorPagePayload()).toMatchObject({ code: 429, retryAfter: 99 });
     });
 
     it.each([429, 440, 498])("hands the server's own title and message to the %i screen across the hard navigation", async (status) => {

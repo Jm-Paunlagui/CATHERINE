@@ -25,7 +25,7 @@
  * the viewport again.
  */
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { TRANSITION_BOUNCE, TRANSITION_COLORS, TRANSITION_OPACITY } from "../../assets/styles/pre-set-styles";
 
@@ -70,6 +70,7 @@ const HEIGHTS = {
 };
 
 export function Drawer({ open, onClose, side = "right", size = "md", title, backdrop = true, footer, children }) {
+    const titleId = useId();
     useEffect(() => {
         if (!open) return;
         const h = (e) => {
@@ -77,8 +78,9 @@ export function Drawer({ open, onClose, side = "right", size = "md", title, back
         };
         document.addEventListener("keydown", h);
 
-        const scroller = document.getElementById("app-scroll");
-        const target = scroller ?? document.body;
+        const scroller = document.getElementById("app-main-scroll");
+        // Top-nav mode scrolls the window, not #app-main-scroll.
+        const target = scroller && getComputedStyle(scroller).overflowY !== "visible" ? scroller : document.body;
         const prevOverflow = target.style.overflow;
         const prevPadRight = target.style.paddingRight;
         const barWidth = target.offsetWidth - target.clientWidth;
@@ -108,6 +110,7 @@ export function Drawer({ open, onClose, side = "right", size = "md", title, back
             <div
                 role="dialog"
                 aria-modal="true"
+                aria-labelledby={title ? titleId : undefined}
                 aria-hidden={open ? "false" : "true"}
                 className={`fixed z-50 ${t.pos} ${dim} max-w-full ${isH ? "h-full" : "w-full"}
           bg-(--bg-surface) dark:bg-(--bg-surface-2) shadow-2xl
@@ -117,7 +120,7 @@ export function Drawer({ open, onClose, side = "right", size = "md", title, back
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200 dark:border-grey-700 shrink-0">
-                    <h2 className="text-base font-aumovio-bold text-black/85 dark:text-white/90">{title}</h2>
+                    <h2 id={titleId} className="text-base font-aumovio-bold text-black/85 dark:text-white/90">{title}</h2>
                     <button
                         onClick={onClose}
                         aria-label="Close drawer"

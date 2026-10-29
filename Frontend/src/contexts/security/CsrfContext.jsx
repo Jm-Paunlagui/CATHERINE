@@ -17,6 +17,9 @@ export function CsrfProvider({ children }) {
     const [csrfToken, setCsrfToken] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    // Structured failure for consumers that must branch on status (main.jsx's
+    // boot gate): { status, retryAfter-source headers/data, requestId }.
+    const [errorDetail, setErrorDetail] = useState(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const initialized = useRef(false);
 
@@ -28,11 +31,13 @@ export function CsrfProvider({ children }) {
             try {
                 setLoading(true);
                 setError(null);
+                setErrorDetail(null);
                 const token = await csrfMiddleware.initialize();
                 setCsrfToken(token);
                 setIsInitialized(true);
             } catch (err) {
                 setError(err.message);
+                setErrorDetail(err.response ? { status: err.response.status, headers: err.response.headers, data: err.response.data, requestId: err.requestId ?? null } : null);
                 initialized.current = false;
             } finally {
                 setLoading(false);
@@ -75,6 +80,7 @@ export function CsrfProvider({ children }) {
                 csrfToken,
                 loading,
                 error,
+                errorDetail,
                 isInitialized,
                 refreshToken,
                 clearToken,

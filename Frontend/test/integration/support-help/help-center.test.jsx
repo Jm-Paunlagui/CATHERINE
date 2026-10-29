@@ -11,7 +11,7 @@
  * ──────────────
  * 1. Role-scoped visibility on the real page: a System category
  *    ("Metrics & Observability", SUPER_ADMIN allow-list) is present for a
- *    SUPER_ADMIN, and absent for ADMIN, USER, and unauthenticated viewers —
+ *    SUPER_ADMIN, and absent for ADMIN, USER, and unauthenticated visitors —
  *    while a general category ("Account & Login") is always present.
  * 2. Page furniture: the "Help categories" nav landmark and the "Search help…"
  *    search box render.
@@ -19,10 +19,10 @@
  * 4. A miss shows the "couldn't find anything" copy.
  * 5. An article expands via its accordion button (aria-expanded toggles).
  *
- * PORT NOTE (MEAL → CATHERINE):
- *   - Route is /about/help (MEAL: /help). Page is HelpView (default export).
+ * TEMPLATE NOTE:
+ *   - Route is /about/help. Page is HelpView (default export).
  *   - The privileged category asserted is a CATHERINE System category
- *     ("Metrics & Observability") — MEAL's excess-fund/vendor categories don't exist.
+ *     ("Metrics & Observability") — no domain categories ship with the template.
  *   - Search queries use REAL CATHERINE corpus vocabulary (sessions, caching…).
  *   - No peso anywhere.
  *

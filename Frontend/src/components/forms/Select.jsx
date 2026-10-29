@@ -9,9 +9,9 @@
  * the PageSizeSelect pattern in Pagination.jsx.
  */
 import { CheckIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
+import { FIELD_BORDER, FIELD_BORDER_ERROR, FIELD_FOCUS_VISIBLE, FIELD_OPEN, FIELD_OPEN_ERROR, TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 
 const SZ = {
     // label + chevron + rounded track the size so the trigger matches a Button of
@@ -36,6 +36,8 @@ export function Select({
     /** When true the dropdown renders with position:fixed so it escapes
      *  overflow:hidden / overflow:auto ancestors (e.g. inside a Modal). */
     fixed = false,
+    /** Extra classes for the ROOT wrapper (sizing/spacing of the whole control). */
+    className = "",
 }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
@@ -46,7 +48,10 @@ export function Select({
     // click and closes/unmounts the list before its click can fire (selection no-op).
     const dropdownRef = useRef(null);
     const [fixedPos, setFixedPos] = useState({ top: 0, left: 0, width: 0 });
-    const inputId = id ?? name;
+    const autoId = useId();
+    const inputId = id ?? name ?? autoId;
+    const labelId = `${inputId}-label`;
+    const valueId = `${inputId}-value`;
     const { trigger: triggerSz, item: itemSz, label: labelSz, chevron: chevronSz, rounded: roundedSz } = SZ[size] ?? SZ.md;
 
     useEffect(() => {
@@ -126,9 +131,9 @@ export function Select({
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <div className="font-aumovio">
+        <div className={`font-aumovio ${className}`.trim()}>
             {label && (
-                <label htmlFor={inputId} className="block text-xs font-aumovio-bold text-black/70 dark:text-white/70 mb-1.5 cursor-default">
+                <label id={labelId} htmlFor={inputId} className="block text-xs font-aumovio-bold text-black/70 dark:text-white/70 mb-1.5 cursor-default">
                     {label}
                 </label>
             )}
@@ -139,23 +144,24 @@ export function Select({
                     id={inputId}
                     name={name}
                     type="button"
+                    aria-labelledby={label ? `${labelId} ${valueId}` : undefined}
                     disabled={disabled}
                     onClick={handleToggleOpen}
                     className={`w-full flex items-center justify-between gap-2 pl-3 pr-2.5 ${roundedSz} border
                         font-aumovio cursor-pointer ${TRANSITION_COLORS} ${triggerSz}
-                        bg-white dark:bg-(--bg-surface-2)
+                        bg-white dark:bg-(--bg-surface-2) ${FIELD_FOCUS_VISIBLE}
                         disabled:opacity-50 disabled:cursor-not-allowed
                         ${
                             error
                                 ? open
-                                    ? "border-danger-400 ring-2 ring-danger-400/30 shadow-md text-black/85 dark:text-white/85"
-                                    : "border-danger-400 text-black/85 dark:text-white/85 hover:border-danger-400"
+                                    ? `${FIELD_OPEN_ERROR} text-black/85 dark:text-white/85`
+                                    : `${FIELD_BORDER_ERROR} text-black/85 dark:text-white/85`
                                 : open
-                                  ? "border-orange-400 text-(--accent-foreground) ring-2 ring-orange-400/20 shadow-md"
-                                  : "border-grey-300 dark:border-grey-700 text-black/85 dark:text-white/85 hover:border-orange-400 hover:text-(--accent-foreground)"
+                                  ? `${FIELD_OPEN} text-(--accent-foreground)`
+                                  : `${FIELD_BORDER} text-black/85 dark:text-white/85 hover:border-(--field-focus-border) hover:text-(--accent-foreground)`
                         }`}
                 >
-                    <span className={`truncate ${labelSz} ${!hasValue ? "text-black/40 dark:text-white/40" : "font-aumovio-bold"}`}>{triggerLabel ?? placeholder}</span>
+                    <span id={valueId} className={`truncate ${labelSz} ${!hasValue ? "text-black/40 dark:text-white/40" : "font-aumovio-bold"}`}>{triggerLabel ?? placeholder}</span>
                     <ChevronDownIcon
                         className={`${chevronSz} shrink-0 ${TRANSITION_COLORS}
                             ${open ? "rotate-180 text-(--accent-foreground)" : "text-grey-400"}`}

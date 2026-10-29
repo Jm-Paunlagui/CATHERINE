@@ -14,8 +14,8 @@
  *    (even with a deep-link ?category=…), present on ordinary routes, and while
  *    hidden the Ctrl+K shortcut is inert and no scroll-lock / root blur leaks.
  *
- * PORT NOTE (MEAL → CATHERINE):
- *   - The hidden route is `/about/help` (MEAL used `/help`).
+ * TEMPLATE NOTE:
+ *   - The hidden route is `/about/help`.
  *   - "Present" routes are retuned to REAL CATHERINE routes (`/home`,
  *     `/about/changelog`, and the prefix-sibling `/about/helpdesk`).
  *   - FAB is matched by its exact accessible name "Open Help Assistant (Ctrl+K)".

@@ -1,0 +1,154 @@
+/*
+ * systemMap.css — SVG styling for the system-map diagrams (Architecture, Runtime).
+ *
+ * SVG presentation (fill/stroke/opacity on <path>/<rect>) is awkward through
+ * utility classes, so the diagram's few states live here. Every surface and
+ * text colour is a theme variable, so light and dark follow the app's theme.
+ */
+
+.smap-canvas {
+    background-color: var(--bg-surface);
+    background-image: radial-gradient(circle at 1px 1px, var(--border-subtle, rgba(127, 127, 127, 0.25)) 1px, transparent 0);
+    background-size: 22px 22px;
+}
+
+.smap-svg {
+    cursor: grab;
+}
+.smap-svg:active {
+    cursor: grabbing;
+}
+
+/* ── Nodes ─────────────────────────────────────────────────────────────── */
+.smap-node {
+    cursor: pointer;
+    transition: opacity 0.18s;
+    outline: none;
+}
+.smap-node.is-dim {
+    opacity: 0.18;
+}
+.smap-node-body {
+    fill: var(--bg-surface);
+    stroke-opacity: 0.7;
+    stroke-width: 1.2;
+    transition:
+        stroke 0.15s,
+        stroke-width 0.15s;
+}
+.smap-node:hover .smap-node-body {
+    stroke-width: 2;
+}
+.smap-node:focus-visible .smap-node-body,
+.smap-node.is-sel .smap-node-body {
+    stroke: var(--text-primary);
+    stroke-opacity: 1;
+    stroke-width: 2.4;
+}
+.smap-node.is-match .smap-node-body {
+    stroke: var(--status-warning-base);
+    stroke-opacity: 1;
+    stroke-width: 2.4;
+}
+.smap-node.is-cur .smap-node-body {
+    stroke: var(--text-primary);
+    stroke-opacity: 1;
+    stroke-width: 2.6;
+}
+.smap-node-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+}
+.smap-node-label,
+.smap-node-sub {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.smap-node-label {
+    color: var(--text-primary);
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 16px;
+}
+.smap-node-sub {
+    color: var(--text-muted, var(--text-secondary));
+    font-size: 10.2px;
+    line-height: 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ── Edges ─────────────────────────────────────────────────────────────── */
+.smap-edge {
+    fill: none;
+    stroke-width: 1.25;
+    opacity: 0.4;
+    transition:
+        opacity 0.18s,
+        stroke-width 0.18s;
+}
+.smap-edge.is-dim {
+    opacity: 0.05;
+}
+.smap-edge.is-hl {
+    opacity: 0.95;
+    stroke-width: 2;
+}
+.smap-edge.is-flow {
+    opacity: 0.9;
+    stroke-width: 2.4;
+}
+.smap-edge-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 10;
+    cursor: help;
+}
+.smap-edge-cur {
+    fill: none;
+    stroke: var(--text-primary);
+    stroke-width: 3.2;
+    stroke-dasharray: 7 6;
+    animation: smap-dash 0.7s linear infinite;
+    pointer-events: none;
+}
+.smap-edge-cur.is-rev {
+    animation-direction: reverse;
+}
+.smap-cur-fill {
+    fill: var(--text-primary);
+}
+@keyframes smap-dash {
+    to {
+        stroke-dashoffset: -13;
+    }
+}
+
+/* ── Step badges ───────────────────────────────────────────────────────── */
+.smap-badge circle {
+    fill: var(--bg-surface);
+}
+.smap-badge text {
+    fill: var(--text-primary);
+}
+.smap-badge.is-cur circle {
+    fill: var(--text-primary);
+}
+.smap-badge.is-cur text {
+    fill: var(--bg-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .smap-edge-cur {
+        animation: none;
+    }
+    .smap-node,
+    .smap-edge,
+    .smap-node-body {
+        transition: none;
+    }
+}

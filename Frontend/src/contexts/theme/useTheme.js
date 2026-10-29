@@ -5,7 +5,7 @@
  * requires a file to export EITHER components OR non-components, never both.
  * ThemeContext.jsx exports the `ThemeProvider` component, so the context
  * object and the `useTheme` hook (both non-components) live here instead —
- * mirrors the pre-set-styles.jsx / pre-set-styles.components.jsx split.
+ * mirrors the pre-set-styles.js / pre-set-styles.components.jsx split.
  * `.js` (no JSX) is deliberate, same reasoning as that precedent.
  */
 import { createContext, useContext } from "react";

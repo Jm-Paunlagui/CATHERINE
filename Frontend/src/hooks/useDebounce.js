@@ -120,7 +120,7 @@ export function useDebounce(value, delay = 300, options = {}) {
             // Cleanup fires on EVERY value/delay/leading/maxWait change, not just
             // real unmount — don't call cancel() as that resets leadingFired.
             // Only clear the trailing timer here. maxWaitTimer must NOT be
-            // cleared on every keystroke (FE-BUG-003): the guard above is meant
+            // cleared on every keystroke: the guard above is meant
             // to arm it once per idle period/burst and let it keep counting down
             // from the burst's start, so it can force-flush a value even while
             // changes keep arriving faster than `delay`. Clearing it here would

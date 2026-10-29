@@ -15,6 +15,7 @@
 
 import cookie from "js-cookie";
 import httpClient from "../HttpClient";
+import { clearLastLocation } from "../../utils/lastLocation";
 
 // Cache config — avoid redundant /verify calls
 let _authCache = null;
@@ -104,6 +105,13 @@ class AuthMiddleware {
     /**
      * Sign out — clear all auth state client-side.
      * Does NOT call the logout endpoint (that's the feature's job).
+     *
+     * Every real session-ending exit in this app funnels through here —
+     * `auth.hook.js`'s explicit `logout()`, `useSessionWarning`'s expiry
+     * teardown, and `HttpClient`'s own interceptor on a session-ending HTTP
+     * status — so this is the single choke point for clearing per-session
+     * client state (CWE-524): a shared browser must not carry this session's
+     * hints into the next person's.
      */
     static signout() {
         AuthMiddleware.clearAuthCache();
@@ -111,6 +119,8 @@ class AuthMiddleware {
         AuthMiddleware.removeLocalStorage("user_session");
         AuthMiddleware.removeLocalStorage("user_display");
         AuthMiddleware.removeLocalStorage("user"); // remove legacy key from older sessions
+        AuthMiddleware.removeLocalStorage("session_exp"); // numeric ms expiry hint written by auth.hook.js login()
+        clearLastLocation(); // the next person on a shared browser must not be "returned" to this user's page
     }
 
     /**
@@ -150,7 +160,7 @@ class AuthMiddleware {
      *    via withCredentials:true; 401 → clear state and return false.
      *
      * The localStorage entry is only used as a session-exists signal (step 1).
-     * All user data (role, GID, PII) lives exclusively in _authCache (memory).
+     * All user data (role, username, PII) lives exclusively in _authCache (memory).
      * The actual session validity is always decided by the server cookie check (step 3).
      *
      * @returns {Object|false} user object or false

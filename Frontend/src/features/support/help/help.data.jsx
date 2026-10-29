@@ -12,12 +12,12 @@
  * ────────────────────────
  * Two visibility models, checked in priority order (identical in both hooks):
  *   1. `roles` — an exact allow-list. Authoritative when present: a category is
- *      visible iff the viewer is signed in AND their role is in the list.
- *   2. `minRole` — the tier ladder. Visible iff the viewer's tier is at least
+ *      visible iff the user is signed in AND their role is in the list.
+ *   2. `minRole` — the tier ladder. Visible iff the user's tier is at least
  *      the category's minRole tier. Tiers:
  *         null / USER            → tier 0 (general only)
  *         ADMIN                  → tier 1 (general + admin)
- *         SUPER_ADMIN / ROBOT    → tier 2 (everything)
+ *         SUPER_ADMIN            → tier 2 (everything)
  *
  * A tier is a LADDER, so it cannot express "signed-in-only, exactly this role".
  * The three System categories (logging, metrics, admin management) therefore
@@ -56,7 +56,7 @@ void LuCircleHelp;
 // ── Role tier mapping ─────────────────────────────────────────────────────────
 
 /** @type {Record<string|null, number>} */
-export const ROLE_TIERS = { null: 0, undefined: 0, USER: 0, VIEWER: 0, APPROVER: 0, ADMIN: 1, SUPER_ADMIN: 2, ROBOT: 2 };
+export const ROLE_TIERS = { null: 0, undefined: 0, USER: 0, ADMIN: 1, SUPER_ADMIN: 2 };
 
 // ── Categories & articles ─────────────────────────────────────────────────────
 

@@ -19,11 +19,10 @@
  *
  * ROLE MODEL — source of truth is `App.jsx` ROLES and the backend's
  * `AuthService._issueTokens()` claim object. `role` is a STRING:
- *   "SUPER_ADMIN" | "ADMIN" | "USER" | "APPROVER" | "VIEWER" | "ROBOT"
+ *   "SUPER_ADMIN" | "ADMIN" | "USER"
  * The numeric form lives in `user.userLevel`, and the backend's
- * `_roleToUserLevel()` maps SUPER_ADMIN → 3, ADMIN → 2, everything else → 1.
- * APPROVER, VIEWER and ROBOT are all level 1 — do not invent higher levels for
- * them, `requireAccess` predicates read this number.
+ * `_roleToUserLevel()` maps SUPER_ADMIN → 3, ADMIN → 2, USER → 1 —
+ * `requireAccess` predicates read this number.
  */
 
 import { http, HttpResponse } from "msw";
@@ -45,7 +44,7 @@ function userLevelFor(role) {
  * `GET auth/me` returns via `AuthService.getProfile()`, which hands the decoded
  * token straight back.
  *
- * @param {"SUPER_ADMIN"|"ADMIN"|"USER"|"APPROVER"|"VIEWER"|"ROBOT"} [role="USER"]
+ * @param {"SUPER_ADMIN"|"ADMIN"|"USER"} [role="USER"]
  * @param {object} [overrides] Extra or replacement fields.
  * @returns {object} The user payload.
  */
@@ -71,7 +70,7 @@ export function buildUser(role = "USER", overrides = {}) {
 /**
  * Sign a user in for the current test.
  *
- * @param {"SUPER_ADMIN"|"ADMIN"|"USER"|"APPROVER"|"VIEWER"|"ROBOT"} [role="USER"]
+ * @param {"SUPER_ADMIN"|"ADMIN"|"USER"} [role="USER"]
  * @param {object} [overrides] Extra or replacement user fields.
  * @returns {object} The payload `auth/me` will return.
  * @example

@@ -33,8 +33,9 @@ export async function copyToClipboard(text) {
 
     // Legacy fallback — works over HTTP and in older browsers.
     if (typeof document === "undefined") return false;
+    let textarea;
     try {
-        const textarea = document.createElement("textarea");
+        textarea = document.createElement("textarea");
         textarea.value = value;
         // Keep it out of view and out of the layout/scroll flow.
         textarea.setAttribute("readonly", "");
@@ -45,11 +46,14 @@ export async function copyToClipboard(text) {
         document.body.appendChild(textarea);
         textarea.focus();
         textarea.select();
-        const ok = document.execCommand("copy");
-        document.body.removeChild(textarea);
-        return ok;
+        textarea.setSelectionRange(0, value.length); // iOS Safari requires an explicit range
+        return document.execCommand("copy");
     } catch {
         return false;
+    } finally {
+        // Declared outside the try so this always runs — even if execCommand()
+        // throws instead of returning false, the off-screen node never leaks.
+        textarea?.remove();
     }
 }
 

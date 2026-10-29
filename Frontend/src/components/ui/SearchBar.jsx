@@ -16,13 +16,14 @@
  *   <SearchBar value={input} onChange={setInput} isDebouncing={input !== debounced} />
  */
 
+import { FIELD_BORDER, FIELD_FOCUS_WITHIN } from "../../assets/styles/pre-set-styles";
+
 export function SearchBar({ value = "", onChange, placeholder = "Search…", disabled = false, isDebouncing = false, onClear, className = "" }) {
     return (
         <div
-            className={`relative flex items-center bg-(--bg-surface) dark:bg-(--bg-surface-2) border border-grey-200 dark:border-grey-700 rounded-lg
-                shadow-sm focus-within:ring-2 focus-within:ring-orange-400/40
-                focus-within:border-orange-400/50 focus-within:shadow-md
-                focus-within:shadow-orange-400/10 transition-all duration-300 ${className}`}
+            className={`relative flex items-center bg-(--bg-surface) dark:bg-(--bg-surface-2) border ${FIELD_BORDER} rounded-lg
+                shadow-sm ${FIELD_FOCUS_WITHIN} focus-within:shadow-md
+                transition-all duration-300 ${className}`}
         >
             {/* Search icon */}
             <span className="absolute left-3 text-grey-400 pointer-events-none shrink-0">

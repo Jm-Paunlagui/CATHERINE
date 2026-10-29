@@ -9,9 +9,9 @@
  * reported. The private `splitSentences` scanner now treats an inter-digit dot
  * as ordinary content.
  *
- * PORT NOTE (MEAL → CATHERINE):
+ * TEMPLATE NOTE:
  *   1. `splitSentences` was made MODULE-PRIVATE in HelpFormula.jsx (no longer
- *      exported). MEAL imported it directly; here we exercise it THROUGH the
+ *      exported). It used to be imported directly; here we exercise it THROUGH the
  *      public `AnswerBody` render output — the only consumer — and assert on the
  *      rendered paragraphs.
  *   2. Every `₱` (peso) assertion is DROPPED — CATHERINE has no peso. The

@@ -6,7 +6,7 @@
  *   error, helper, disabled, required, resize, showCount, size
  */
 import { useEffect, useRef } from "react";
-import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
+import { FIELD_BORDER, FIELD_BORDER_ERROR, FIELD_FOCUS, FIELD_FOCUS_ERROR, TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 
 export function Textarea({ label, name, value = "", onChange, placeholder, rows = 4, maxLength, error, helper, disabled = false, required = false, resize = "vertical", showCount = false, size = "md", id }) {
     const inputId = id ?? name;
@@ -52,11 +52,11 @@ export function Textarea({ label, name, value = "", onChange, placeholder, rows 
                 className={`w-full rounded-xl border font-aumovio leading-relaxed
           bg-white dark:bg-(--bg-surface-2) text-black/85 dark:text-white/85
           placeholder-grey-400 dark:placeholder-grey-600
-          focus:outline-none focus:ring-2 focus:shadow-md ${TRANSITION_COLORS}
+          ${TRANSITION_COLORS}
           disabled:opacity-50 disabled:cursor-not-allowed
           ${RESIZE[resize] ?? RESIZE.vertical}
           ${SZ[size] ?? SZ.md}
-          ${error ? "border-danger-400 focus:ring-danger-400/30" : "border-grey-300 dark:border-grey-700 focus:ring-orange-400/30 focus:border-orange-400"}`}
+          ${error ? `${FIELD_BORDER_ERROR} ${FIELD_FOCUS_ERROR}` : `${FIELD_BORDER} ${FIELD_FOCUS}`}`}
             />
             <div className="flex justify-between mt-2">
                 {error ? <p className="text-xs text-danger-400 font-aumovio-bold">{error}</p> : <p className="text-xs text-grey-400">{helper}</p>}

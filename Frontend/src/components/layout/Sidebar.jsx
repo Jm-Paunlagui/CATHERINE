@@ -1,17 +1,17 @@
-﻿/**
- * Sidebar.jsx â€” Collapsible left sidebar (Aumovio Design System v3.0)
+/**
+ * Sidebar.jsx — Collapsible left sidebar (Aumovio Design System v3.0)
  *
  * CUSTOMISATION
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * ─────────────
  * Edit nav.config.jsx to change links, groups, and role assignments.
- * This file is the renderer only â€” no link or auth logic lives here.
+ * This file is the renderer only — no link or auth logic lives here.
  *
  * ICON FLEXIBILITY
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
- *   Heroicon forwardRef â€” icon: UserCircleIcon         (typeof === "object", has .render)
- *   React Icons element â€” icon: <MdDataUsage size={16} /> (JSX ReactNode)
- *   FontAwesome object  â€” icon: faHome                 (has .iconName)
- *   Function component  â€” icon: MyIcon                 (typeof === "function")
+ * ────────────────
+ *   Heroicon forwardRef — icon: UserCircleIcon         (typeof === "object", has .render)
+ *   React Icons element — icon: <MdDataUsage size={16} /> (JSX ReactNode)
+ *   FontAwesome object  — icon: faHome                 (has .iconName)
+ *   Function component  — icon: MyIcon                 (typeof === "function")
  */
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -27,7 +27,7 @@ import { VersionBadge } from "../ui/VersionBadge";
 import { canSeeVersion } from "./config/nav.config";
 import { useNav } from "./config/useNav";
 
-// â”€â”€ Group colour palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Group colour palette ──────────────────────────────────────────────────────
 const GROUP_COLOR_MAP = {
     orange: {
         dot: "bg-[var(--side-active-border)]",
@@ -126,7 +126,7 @@ const GROUP_COLOR_MAP = {
 const DEFAULT_COL = GROUP_COLOR_MAP.orange;
 const resolveColor = (key) => GROUP_COLOR_MAP[key] ?? DEFAULT_COL;
 
-// â”€â”€ Flexible icon renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Flexible icon renderer ────────────────────────────────────────────────────
 function NavIcon({ icon, className = "w-4 h-4 shrink-0" }) {
     if (!icon) return null;
     if (typeof icon === "function") {
@@ -145,7 +145,7 @@ function NavIcon({ icon, className = "w-4 h-4 shrink-0" }) {
     return <span className="shrink-0 flex items-center justify-center">{icon}</span>;
 }
 
-// â”€â”€ FlatNavItem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── FlatNavItem ───────────────────────────────────────────────────────────────
 // Renders a NavLink for items with an href, or a <button> for action-only items
 // (e.g. "Your Profile" which opens a modal via onClick).
 // Tailwind-docs-inspired: hybrid left-border + subtle tinted bg on active.
@@ -191,13 +191,13 @@ function FlatNavItem({ item, collapsed, colorKey = "orange", danger = false }) {
     return inner;
 }
 
-// â”€â”€ SidebarGroup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SidebarGroup ──────────────────────────────────────────────────────────────
 // Tailwind-docs-inspired: groups default to expanded, chevron shown on hover
 // only, child items use left-border active indicator with subtle tinted bg.
 function SidebarGroup({ group, collapsed, currentPath }) {
     const col = resolveColor(group.color ?? "orange");
     const isGroupActive = group.items.some((item) => currentPath === item.href || (item.href !== "/" && currentPath.startsWith(item.href + "/")));
-    // Default expanded (Tailwind docs style) â€” user can still collapse
+    // Default expanded (Tailwind docs style) — user can still collapse
     const [expanded, setExpanded] = useState(true);
     const toggle = useCallback(() => setExpanded((v) => !v), []);
 
@@ -224,7 +224,7 @@ function SidebarGroup({ group, collapsed, currentPath }) {
 
     return (
         <div className="mb-1 pr-2">
-            {/* Group header â€” chevron visible on hover only (Tailwind docs style) */}
+            {/* Group header — chevron visible on hover only (Tailwind docs style) */}
             <button onClick={toggle} className={`group/hdr w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-aumovio-bold uppercase tracking-wider ${TRANSITION_COLORS} ${isGroupActive ? col.activeText : "text-(--text-tertiary) hover:text-(--text-secondary)"}`}>
                 {/* Dot indicator - */}
                 {/* <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${col.dot}`} /> */}
@@ -260,8 +260,8 @@ function SidebarGroup({ group, collapsed, currentPath }) {
     );
 }
 
-// â”€â”€ Main Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Desktop (lg+): always visible, always expanded â€” no collapsed icon-only mode.
+// ── Main Sidebar ──────────────────────────────────────────────────────────────
+// Desktop (lg+): always visible, always expanded — no collapsed icon-only mode.
 // Tablet/mobile (< lg): hidden by default, shown as an overlay when the
 // breadcrumb toggle sets sidebarOpen = true.
 export default function Sidebar() {
@@ -270,7 +270,7 @@ export default function Sidebar() {
     const { user, isLoading, navGroups, authFlatLinks, publicLinks } = useNav();
     const { version, stage } = useVersion();
 
-    // Sidebar is only rendered in sidebar layout mode â€” guard AFTER all hooks
+    // Sidebar is only rendered in sidebar layout mode — guard AFTER all hooks
     if (layout !== "sidebar") return null;
 
     const isAuth = Boolean(user) && !isLoading;
@@ -278,7 +278,7 @@ export default function Sidebar() {
 
     return (
         <>
-            {/* Backdrop overlay â€” tablet/mobile only, when sidebar is open */}
+            {/* Backdrop overlay — tablet/mobile only, when sidebar is open */}
             {sidebarOpen && <div className="absolute inset-0 z-30 bg-black/30 lg:hidden" onClick={toggleSidebar} aria-hidden="true" />}
 
             <aside
@@ -295,17 +295,17 @@ export default function Sidebar() {
                     "lg:translate-x-0!",
                 ].join(" ")}
             >
-                {/* â”€â”€ Navigation â”€â”€ */}
+                {/* ── Navigation ── */}
                 <nav className="flex-1 overflow-y-auto hide-scrollbar px-2 py-3 space-y-1">
                     {!isAuth && publicLinks.map((item) => <FlatNavItem key={item.name} item={item} collapsed={false} />)}
                     {isAuth && authFlatLinks.map((item) => <FlatNavItem key={item.name} item={item} collapsed={false} colorKey="orange" />)}
                     {isAuth && navGroups.map((group) => <SidebarGroup key={group.label} group={group} collapsed={false} currentPath={pathname} />)}
                 </nav>
 
-                {/* â”€â”€ Drawer footer: version + release stage â†’ Version History â”€â”€
+                {/* ── Drawer footer: version + release stage → Version History ──
                     `lg:hidden` on purpose. From `lg` up SidebarHeader always shows
                     its glass badge on the gradient bar, so rendering here too would
-                    duplicate it â€” and a `display:none` element contributes no width,
+                    duplicate it — and a `display:none` element contributes no width,
                     so the desktop sidebar's `w-auto` sizing is untouched. Below `sm`
                     the header hides the badge entirely, which makes this drawer the
                     only place a phone user can reach the changelog. */}

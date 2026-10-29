@@ -44,6 +44,12 @@ let _intervalHandle = null;
 /** @type {boolean} Whether a flush is currently in flight */
 let _flushing = false;
 
+/** @type {boolean} Whether the beforeunload/visibilitychange listeners have
+ * already been registered (guard — init() is safe to call more
+ * than once, but the page-lifecycle listeners must only ever be attached
+ * once, unlike the auto-flush interval which is legitimately re-created). */
+let _listenersRegistered = false;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -64,7 +70,21 @@ function _capBuffer() {
  * @returns {Promise<void>}
  */
 async function _send(events) {
-  if (!_apiBase || events.length === 0) return;
+  if (events.length === 0) return;
+
+  if (!_apiBase) {
+    // apiBase not configured yet (init() hasn't run) — requeue instead of
+    // dropping. flush() already spliced these out of _buffer before calling
+    // _send(), so without this push-back path they would be gone for good
+    // the moment init() finally runs. Put them back at the
+    // FRONT so they retain their original chronological order relative to
+    // anything recorded after this flush attempt started, then re-apply the
+    // same cap as recordVital/recordError so a pathological pre-init flood
+    // still can't grow the buffer unbounded.
+    _buffer.unshift(...events);
+    _capBuffer();
+    return;
+  }
 
   const url = `${_apiBase}/metrics/frontend`;
 
@@ -118,7 +138,7 @@ function _scheduleRetry(events) {
  * import { frontendMetrics } from './frontendMetrics';
  * import { initWebVitals } from './webVitals';
  *
- * frontendMetrics.init(API_BASE_URL); // from src/config/apiBase
+ * frontendMetrics.init(API_BASE_URL); // from src/config/apiBase.js
  * initWebVitals(({ name, value, rating }) => {
  *   frontendMetrics.recordVital(name, value, rating);
  * });
@@ -153,12 +173,18 @@ export const frontendMetrics = {
     // Unref if in a Node.js-like environment (test runs)
     if (_intervalHandle?.unref) _intervalHandle.unref();
 
-    // Flush on page unload (best-effort — keepalive helps here)
-    if (typeof window !== "undefined") {
+    // Flush on page unload (best-effort — keepalive helps here).
+    // Registered ONCE across the lifetime of the module — unlike the
+    // auto-flush interval above (safe/intended to re-create on every init()
+    // call), addEventListener has no dedup for distinct function references,
+    // so a repeated init() (hot-reload, telemetry re-init on route change)
+    // would otherwise accumulate an extra listener per call.
+    if (typeof window !== "undefined" && !_listenersRegistered) {
       window.addEventListener("beforeunload", () => frontendMetrics.flush(), { once: false });
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") frontendMetrics.flush();
       });
+      _listenersRegistered = true;
     }
   },
 

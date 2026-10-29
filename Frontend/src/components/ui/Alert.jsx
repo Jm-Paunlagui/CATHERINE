@@ -8,7 +8,7 @@
  *   icon      — custom icon component (defaults to variant icon)
  *   dismissible — boolean
  *   onDismiss — () => void
- *   actions   — [{ label, onClick }]
+ *   actions   — [{ label, onClick, disabled? }]
  *   bordered  — boolean
  *   size      — 'sm' | 'md'
  */
@@ -44,6 +44,12 @@ const CONFIG = {
     },
 };
 
+// `warn` is an accepted alias for `warning`. The design tokens these variants are
+// built from are named warn-* (see Button.jsx's warning variant), so variant="warn"
+// is the natural slip — and the `?? CONFIG.info` fallback below makes it SILENT:
+// four call sites were rendering blue "info" chrome on warning content.
+CONFIG.warn = CONFIG.warning;
+
 export function Alert({ variant = "info", title, children, icon: CustomIcon, dismissible = false, onDismiss, actions = [], bordered = true, size = "md", className = "" }) {
     const [visible, setVisible] = useState(true);
     const cfg = CONFIG[variant] ?? CONFIG.info;
@@ -73,7 +79,7 @@ export function Alert({ variant = "info", title, children, icon: CustomIcon, dis
                 {actions.length > 0 && (
                     <div className="flex gap-2 mt-3">
                         {actions.map((a, i) => (
-                            <button key={i} onClick={a.onClick} className={`text-xs font-aumovio-bold ${cfg.text} hover:underline`}>
+                            <button key={i} type="button" onClick={a.onClick} disabled={a.disabled} className={`text-xs font-aumovio-bold ${cfg.text} hover:underline disabled:opacity-60 disabled:no-underline disabled:cursor-not-allowed`}>
                                 {a.label}
                             </button>
                         ))}

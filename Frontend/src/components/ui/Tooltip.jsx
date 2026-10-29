@@ -14,9 +14,13 @@
  *   size      — 'sm'|'md'
  *   disabled  — boolean
  *   wrap      — boolean (default false) — allows text to wrap; caps width at 56 (14rem)
+ *
+ * Accessibility: the portal node is role="tooltip" with a stable id, and while
+ * visible the trigger child gains aria-describedby (an existing value wins).
+ * Escape dismisses it (WCAG 1.4.13).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ANIMATE_FADE_IN } from "../../assets/styles/pre-set-styles";
 
@@ -42,6 +46,7 @@ export function Tooltip({ children, content, placement = "top", delay = 300, siz
     const [coords, setCoords] = useState(null);
     const triggerRef = useRef(null);
     const timer = useRef(null);
+    const id = useId();
 
     const reposition = useCallback(() => {
         const el = triggerRef.current;
@@ -73,16 +78,33 @@ export function Tooltip({ children, content, placement = "top", delay = 300, siz
         };
     }, [visible, reposition]);
 
+    // Escape dismisses a visible tooltip without moving focus.
+    useEffect(() => {
+        if (!visible) return;
+        const onKey = (e) => {
+            if (e.key !== "Escape") return;
+            // Consume only while visible so an enclosing Modal does not also close.
+            e.stopPropagation();
+            clearTimeout(timer.current);
+            setVisible(false);
+        };
+        document.addEventListener("keydown", onKey, true);
+        return () => document.removeEventListener("keydown", onKey, true);
+    }, [visible]);
+
     useEffect(() => () => clearTimeout(timer.current), []);
+
+    const shown = visible && !!content && !!coords;
+    const trigger = shown && isValidElement(children) && children.props?.["aria-describedby"] == null ? cloneElement(children, { "aria-describedby": id }) : children;
 
     return (
         <span ref={triggerRef} className="inline-flex" onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
-            {children}
-            {visible &&
-                content &&
-                coords &&
+            {trigger}
+            {shown &&
                 createPortal(
                     <div
+                        role="tooltip"
+                        id={id}
                         style={{ position: "fixed", top: coords.top, left: coords.left, transform: coords.transform }}
                         className={`z-9999 pointer-events-none ${ANIMATE_FADE_IN} ${wrap ? "whitespace-normal max-w-56" : "whitespace-nowrap"}
           ${size === "sm" ? "px-3 py-1 text-xs rounded-lg" : "px-3 py-2 text-sm rounded-xl"}

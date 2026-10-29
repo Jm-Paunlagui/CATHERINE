@@ -76,6 +76,8 @@ export const ERROR_PAGE_PAYLOAD_KEY = "app.errorPage.payload";
  * @property {string|null}        message    Server's `message` from the error envelope.
  * @property {string|null}        requestId  Correlation id, rendered click-to-copy.
  * @property {string|number|null} [retryAfter] 429 only — seconds to wait.
+ * @property {string|null}        [returnTo]   Path + search the user was on at takeover time. A HINT only:
+ *                                              always run through `sanitizeReturnTo` before use (CWE-601).
  */
 
 /**

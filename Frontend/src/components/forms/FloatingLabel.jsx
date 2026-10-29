@@ -4,7 +4,7 @@
  * Props:
  *   label, name, type, value, onChange, error, disabled, required, size
  */
-import { TRANSITION_COLORS, TRANSITION_SMOOTH } from "../../assets/styles/pre-set-styles";
+import { FIELD_BORDER, FIELD_BORDER_ERROR, FIELD_FOCUS, FIELD_FOCUS_ERROR, TRANSITION_COLORS, TRANSITION_SMOOTH } from "../../assets/styles/pre-set-styles";
 export function FloatingLabel({ label, name, type = "text", value = "", onChange, error, disabled = false, required = false, id }) {
     const inputId = id ?? name;
     const filled = value !== "" && value !== null && value !== undefined;
@@ -22,9 +22,9 @@ export function FloatingLabel({ label, name, type = "text", value = "", onChange
                 placeholder=" "
                 className={`peer w-full px-4 pt-5 pb-2 text-sm rounded-xl border
           bg-white dark:bg-(--bg-surface-2) text-black/85 dark:text-(--text-primary)
-          focus:outline-none focus:ring-2 focus:shadow-md ${TRANSITION_COLORS}
+          ${TRANSITION_COLORS}
           disabled:opacity-50 disabled:cursor-not-allowed placeholder-transparent
-          ${error ? "border-danger-400 focus:ring-danger-400/30" : "border-grey-300 dark:border-grey-700 focus:ring-orange-400/30 focus:border-orange-400"}`}
+          ${error ? `${FIELD_BORDER_ERROR} ${FIELD_FOCUS_ERROR}` : `${FIELD_BORDER} ${FIELD_FOCUS}`}`}
             />
             <label
                 htmlFor={inputId}

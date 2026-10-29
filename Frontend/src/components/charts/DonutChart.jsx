@@ -15,14 +15,17 @@ import { chartBase } from "../../utils/chartDefaults";
  * @param {(value: number) => string} [props.valueFormatter] - formats the
  *   CENTRE label (both the resting total and the per-slice value shown while
  *   hovering) AND the tooltip. A money donut must pass this, or the centre
- *   renders a bare `11105` beside tiles that all read `₱11,105.00` — the same
+ *   renders a bare `11105` beside tiles that all read `$11,105.00` — the same
  *   figure in two notations on one screen.
  * @param {string}   [props.centerFontSize="15px"] - the centre label shrinks
- *   from Apex's default because a fully formatted peso value (`₱10,000,000.00`)
+ *   from Apex's default because a fully formatted money value (`$10,000,000.00`)
  *   is far wider than the raw integer the default was sized for, and Apex does
  *   not shrink it to fit — it overflows the inner circle.
+ * @param {boolean}  [props.legendBottomOnNarrow=false] - moves the donut
+ *   legend below the chart at viewports <1024px (matching the `lg:` layout
+ *   collapse); keeps it on the right side above that breakpoint.
  */
-export function DonutChart({ series = [], labels = [], height = 300, title, donut = true, colors, valueFormatter, centerFontSize = "15px" }) {
+export function DonutChart({ series = [], labels = [], height = 300, title, donut = true, colors, valueFormatter, centerFontSize = "15px", legendBottomOnNarrow = false }) {
     const { isDark } = useTheme();
 
     const options = {
@@ -63,16 +66,11 @@ export function DonutChart({ series = [], labels = [], height = 300, title, donu
                   },
               }
             : {},
-        // OMIT the key entirely when there is no title — do NOT set it to
-        // `undefined`. ApexCharts reads `cnf.title.text` unconditionally while
-        // building the chart's accessible label, and an explicit `undefined`
-        // OVERRIDES its own `title: {}` default rather than falling back to it,
-        // so the read throws "Cannot read properties of undefined (reading
-        // 'text')" and the whole chart fails to mount. Latent until a caller
-        // omitted `title` — the Sales insight cards put their titles in the Card
-        // header instead (D-9), which is what surfaced it.
+        // Omit the key when there is no title: an explicit `undefined` overrides Apex's `title: {}` default and crashes mount.
         ...(valueFormatter ? { tooltip: { ...chartBase.tooltip, y: { formatter: (v) => valueFormatter(Number(v)) } } } : {}),
         ...(title ? { title: { text: title, style: { fontFamily: "Aumovio", fontWeight: 700 } } } : {}),
+        ...(legendBottomOnNarrow ? { legend: { ...chartBase.legend, position: "right" } } : {}),
+        ...(legendBottomOnNarrow ? { responsive: [{ breakpoint: 1024, options: { legend: { position: "bottom" } } }] } : {}),
     };
 
     return <ReactApexChart type={donut ? "donut" : "pie"} options={options} series={series} height={height} />;

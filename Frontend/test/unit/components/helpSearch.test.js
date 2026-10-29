@@ -18,12 +18,9 @@
  *   • scoreTokens ranks exact (1) above fuzzy (0.5) above miss (0)
  *   • findSuggestion returns null for a real word and for an off-target word
  *
- * PORT NOTE (MEAL → CATHERINE): the MEAL micro-corpus and its synonym cases
- * ("money"→"balance", "rfid"→"card", "subsidy") are MEAL-domain vocabulary and
- * do NOT exist in CATHERINE's SYNONYMS. Every fixture here is re-tuned to the
- * REAL CATHERINE table in helpSearch.js — logs↔logging, metrics↔observability,
- * admin↔administrator, oracle↔database, session↔timeout — and to a neutral
- * micro-corpus of CATHERINE vocabulary. No peso (`₱`) anywhere.
+ * Every fixture here is tuned to the REAL synonym table in helpSearch.js —
+ * logs↔logging, metrics↔observability, admin↔administrator,
+ * oracle↔database, session↔timeout — and to a neutral micro-corpus.
  *
  * No mocks — every function here is pure. A fixed, tiny corpus keeps the
  * vocabulary assertions deterministic and independent of help.data changes.

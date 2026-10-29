@@ -1,22 +1,15 @@
 /**
  * StatusFilterPills.jsx — inline pill row for filtering a list by status.
  *
- * Extracted from `transactions/resetrequest/components/MyRequestsTab.jsx`,
- * which had already grown a second verbatim copy in `ReviewTab.jsx`. The
- * Download Requests panels (Billing, QR Billing, and both Sales sub-tabs)
- * make it five call sites, so the markup lives here once instead of being
- * pasted a third time.
- *
  * Deliberately dumb: no state, no data fetching, no page reset. The caller
- * owns `value` and decides what a change means — Excess Fund Request filters
- * client-side over rows it already holds, while the Download Requests panels
- * send `status` to the server and must also reset paging. Baking either
+ * owns `value` and decides what a change means — one list may filter
+ * client-side over rows it already holds, while a server-paged panel sends
+ * `status` to the server and must also reset paging. Baking either
  * behaviour in here would break the other.
  *
  * The "all" option is just an entry in `options` whose value is whatever the
- * caller uses for it — `"ALL"` in Excess Fund Request, `""` in the download
- * panels (where it goes straight onto the query string). No sentinel is
- * assumed.
+ * caller uses for it (e.g. `"ALL"` or `""` when it goes straight onto the
+ * query string). No sentinel is assumed.
  */
 
 /**

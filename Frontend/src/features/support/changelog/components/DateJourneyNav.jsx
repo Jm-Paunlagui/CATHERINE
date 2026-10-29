@@ -113,10 +113,18 @@ export function DateJourneyNav({ hook }) {
                             <SearchInput value={dateQuery} onChange={setDateQuery} placeholder="Search date or version…" size="sm" debounce={150} />
                         </div>
 
+                        {/* The list below is capped against the MEASURED scrollport
+                            (`--app-scroll-h`, published by App.jsx) rather than `100vh`
+                            minus a hard-coded guess at the chrome above it. The guess
+                            held only in sidebar mode; top-bar mode's navbar +
+                            breadcrumb are taller, so this rail came out taller than the
+                            scrollport — and a sticky element taller than its scrollport
+                            cannot stay pinned, which is the "not sticky in top bar mode"
+                            report. What is subtracted now is this panel's OWN chrome. */}
                         {filteredDateGroups.length === 0 ? (
                             <p className={`mt-4 text-xs text-center py-6 ${BASE_COLOR_TEXT} opacity-45`}>No dates match “{dateQuery}”.</p>
                         ) : (
-                            <div className="mt-3 max-h-[22rem] lg:max-h-[calc(100vh-19rem)] overflow-y-auto pr-1">
+                            <div className="mt-3 max-h-[22rem] lg:max-h-[calc(var(--app-scroll-h,100vh)-13rem)] overflow-y-auto pr-1">
                                 {years.map(({ year, groups }) => (
                                     <div key={year}>
                                         <p className={`sticky top-0 z-10 py-2 text-[10px] font-semibold uppercase tracking-widest ${BASE_COLOR_BG} ${BASE_COLOR_TEXT} opacity-50`}>{year}</p>

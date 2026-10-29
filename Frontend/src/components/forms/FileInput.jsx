@@ -11,7 +11,7 @@
  */
 import { CloudArrowUpIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useRef, useState } from "react";
-import { TRANSITION_COLORS, TRANSITION_SMOOTH } from "../../assets/styles/pre-set-styles";
+import { FIELD_BORDER, FIELD_BORDER_ERROR, TRANSITION_COLORS, TRANSITION_SMOOTH } from "../../assets/styles/pre-set-styles";
 
 export function FileInput({ label, name, accept, multiple = false, disabled = false, onChange, maxSize, error, preview = false, dropzone = true }) {
     const ref = useRef(null);
@@ -64,8 +64,9 @@ export function FileInput({ label, name, accept, multiple = false, disabled = fa
                 className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
           ${TRANSITION_SMOOTH}
           ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-          ${error ? "border-danger-400 bg-danger-100/10" : ""}
-          ${dragging ? "border-orange-400 bg-orange-50 dark:bg-orange-400/5 scale-[1.01]" : error ? "" : "border-grey-300 dark:border-grey-700 hover:border-orange-400 bg-white dark:bg-(--bg-surface-2)"}`}
+          ${error ? `${FIELD_BORDER_ERROR} bg-danger-100/10` : ""}
+          ${dragging ? "border-orange-400 bg-orange-50 dark:bg-orange-400/5 scale-[1.01]" : error ? "" : `${FIELD_BORDER} hover:border-(--field-focus-border) bg-white dark:bg-(--bg-surface-2)`}
+          has-focus-visible:border-(--field-focus-border) has-focus-visible:ring-1 has-focus-visible:ring-(--field-focus-border)`}
             >
                 <input ref={ref} type="file" name={name} accept={accept} multiple={multiple} className="sr-only" onChange={(e) => handle(e.target.files)} />
                 <CloudArrowUpIcon className="w-10 h-10 mx-auto mb-3 text-grey-300 dark:text-grey-600" />

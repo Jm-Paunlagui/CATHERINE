@@ -7,6 +7,7 @@
  *   countryCode — default '+63'
  */
 import { useState } from "react";
+import { FIELD_BORDER, FIELD_BORDER_ERROR, FIELD_FOCUS_WITHIN, FIELD_FOCUS_WITHIN_ERROR } from "../../assets/styles/pre-set-styles";
 
 const CODES = [
     { flag: "🇵🇭", code: "+63", country: "PH" },
@@ -35,7 +36,7 @@ export function PhoneInput({ value = "", onChange, label, error, disabled = fals
             {label && <label className="block text-xs font-aumovio-bold text-black/70 dark:text-white/70 mb-1.5">{label}</label>}
             <div
                 className={`flex rounded-xl border overflow-hidden bg-white dark:bg-(--bg-surface-2)
-        ${error ? "border-danger-400" : "border-grey-300 dark:border-grey-700 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-400/30"}`}
+        ${error ? `${FIELD_BORDER_ERROR} ${FIELD_FOCUS_WITHIN_ERROR}` : `${FIELD_BORDER} ${FIELD_FOCUS_WITHIN}`}`}
             >
                 <select
                     value={cc}

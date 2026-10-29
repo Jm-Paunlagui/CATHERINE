@@ -13,9 +13,9 @@
  *   3. a garbled-but-close word ("passwrod") yields a "did you mean?"
  *      suggestion instead of a dead end.
  *
- * PORT NOTE (MEAL → CATHERINE): every example query is retuned to CATHERINE's
- * tier-0 corpus vocabulary — MEAL's "freeze my card" / "subsidy" / "balance"
- * do not exist here. No peso.
+ * TEMPLATE NOTE: every example query is retuned to CATHERINE's
+ * tier-0 corpus vocabulary. Domain articles (cards, balances) do not ship
+ * with the template.
  *
  * HARNESS
  * ───────

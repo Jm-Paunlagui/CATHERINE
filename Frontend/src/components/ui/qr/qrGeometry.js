@@ -154,7 +154,7 @@ function isFinderCell(size, r, c) {
  * @returns {QrModel}
  * @throws {Error} When `value` is empty or cannot be encoded (propagated from `qrcode`).
  * @example
- *   const model = buildQrModel(stub.qrCode, { logo: true });
+ *   const model = buildQrModel(url, { logo: true });
  *   <path d={model.dataPath} fill="#111" />
  */
 export function buildQrModel(value, opts = {}) {

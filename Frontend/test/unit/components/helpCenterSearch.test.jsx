@@ -15,9 +15,9 @@
  *   4. applying the suggestion recovers into real results,
  *   5. a genuinely off-topic query stays empty with no misleading suggestion.
  *
- * PORT NOTE (MEAL → CATHERINE): every example query is retuned to CATHERINE's
- * tier-0 corpus vocabulary (password, sessions, appearance/theme) — MEAL's
- * "freeze my card" / "balance" articles do not exist here. No peso.
+ * TEMPLATE NOTE: every example query is retuned to CATHERINE's
+ * tier-0 corpus vocabulary (password, sessions, appearance/theme). Domain
+ * articles (cards, balances) do not ship with the template.
  *
  * HARNESS
  * ───────

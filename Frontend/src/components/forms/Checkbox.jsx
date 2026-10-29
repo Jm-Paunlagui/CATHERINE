@@ -9,7 +9,7 @@
  */
 import { CheckIcon, MinusIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef } from "react";
-import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
+import { FIELD_BORDER_ERROR, TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 
 export function Checkbox({ id, name, label, checked = false, onChange, disabled = false, indeterminate = false, description, variant = "default", error }) {
     const ref = useRef(null);
@@ -22,9 +22,10 @@ export function Checkbox({ id, name, label, checked = false, onChange, disabled 
             <input ref={ref} type="checkbox" id={id ?? name} name={name} checked={checked} onChange={onChange} disabled={disabled} className="sr-only peer" />
             <div
                 className={`w-4 h-4 rounded border-2 ${TRANSITION_COLORS} flex items-center justify-center
-        ${checked || indeterminate ? "bg-orange-400 border-orange-400" : "bg-white dark:bg-(--bg-surface-3) border-grey-300 dark:border-grey-600 peer-hover:border-orange-400"}
+        ${checked || indeterminate ? "bg-orange-400 border-orange-400" : "bg-white dark:bg-(--bg-surface-3) border-(--field-border) peer-hover:border-orange-400"}
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
-        ${error ? "border-danger-400" : ""}`}
+        ${error ? FIELD_BORDER_ERROR : ""}
+        peer-focus-visible:ring-2 peer-focus-visible:ring-(--field-focus-border) peer-focus-visible:border-(--field-focus-border)`}
             >
                 {checked && !indeterminate && <CheckIcon className="w-3 h-3 text-(--on-accent-text)" strokeWidth={3} />}
                 {indeterminate && <MinusIcon className="w-3 h-3 text-(--on-accent-text)" strokeWidth={3} />}
@@ -37,7 +38,7 @@ export function Checkbox({ id, name, label, checked = false, onChange, disabled 
             <label
                 className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer
       ${TRANSITION_COLORS} font-aumovio
-      ${checked ? "border-orange-400 bg-orange-50 dark:bg-orange-400/5" : "border-grey-200 dark:border-grey-700 bg-white dark:bg-(--bg-surface-2) hover:border-orange-300"}
+      ${checked ? "border-orange-400 bg-orange-50 dark:bg-orange-400/5" : "border-(--field-border) bg-white dark:bg-(--bg-surface-2) hover:border-orange-300"}
       ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
             >
                 {inputEl}

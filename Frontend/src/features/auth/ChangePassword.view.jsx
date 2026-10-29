@@ -5,7 +5,9 @@
  * components. Never imports changePassword.api.js directly.
  *
  * Shown when:
- *   1. user.requiresPasswordChange === true (default password in use)
+ *   1. user.requiresPasswordChange === true — an emailed temporary password
+ *      (or, during its retirement, the legacy default). The server refuses
+ *      every other route for such a session (403 PasswordChangeRequiredError).
  *   2. USER navigates manually to /auth/change-password
  *
  * The `isDefaultPassword` flag is read from the stored user object to
@@ -37,9 +39,16 @@ import { useChangePassword } from "./changePassword.hook";
 function ChangePasswordView() {
     const hook = useChangePassword();
 
-    // isDefaultPassword is resolved asynchronously in the hook (H-02).
+    // isDefaultPassword is resolved asynchronously in the hook.
     // AuthMiddleware.isAuth() is async — never called synchronously at render.
     const isDefaultPassword = hook.isDefaultPassword;
+    const isTemporaryPassword = hook.isTemporaryPassword;
+    const expiresLabel = hook.temporaryPasswordExpiresAt ? new Date(hook.temporaryPasswordExpiresAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : null;
+    const subtitle = isTemporaryPassword
+        ? `You signed in with the temporary password we emailed you. Set your own password to continue${expiresLabel ? ` — the temporary one stops working on ${expiresLabel}` : ""}.`
+        : isDefaultPassword
+          ? "You are using a temporary default password. Please set a secure password to protect your account."
+          : "Please create a new password. It must meet all the requirements shown below.";
 
     const canSubmit = hook.isPasswordValid && hook.form.newPassword === hook.form.confirmPassword && hook.form.newPassword.length > 0 && !hook.loading;
 
@@ -82,12 +91,12 @@ function ChangePasswordView() {
 
                                     {/* Subtitle */}
                                     <Paragraph size="sm" color="muted" className="mt-2 text-center opacity-80 animate-fade-in-up">
-                                        {isDefaultPassword ? "You are using a temporary default password. Please set a secure password to protect your account." : "Please create a new password. It must meet all the requirements shown below."}
+                                        {subtitle}
                                     </Paragraph>
 
                                     {/* Form */}
-                                    <form className="mt-8 space-y-5 animate-fade-in-up" style={{ animationDelay: "0.2s" }} onSubmit={hook.handleSubmit} noValidate>
-                                        <Input label="Current Password" name="currentPassword" type="password" value={hook.form.currentPassword} onChange={hook.handleChange} placeholder={isDefaultPassword ? "Your temporary password" : "Current password"} autoComplete="current-password" leftIcon={LockClosedIcon} />
+                                    <form className="mt-8 space-y-4 animate-fade-in-up" style={{ animationDelay: "0.2s" }} onSubmit={hook.handleSubmit} noValidate>
+                                        <Input label="Current Password" name="currentPassword" type="password" value={hook.form.currentPassword} onChange={hook.handleChange} placeholder={isTemporaryPassword || isDefaultPassword ? "Your temporary password" : "Current password"} autoComplete="current-password" leftIcon={LockClosedIcon} />
 
                                         <Input label="New Password" name="newPassword" type="password" value={hook.form.newPassword} onChange={hook.handleChange} placeholder="Choose a strong password" autoComplete="new-password" leftIcon={LockClosedIcon} />
 

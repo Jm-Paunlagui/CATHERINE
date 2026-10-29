@@ -19,7 +19,7 @@ import { chartBase } from "../../utils/chartDefaults";
  * @param {string[]} [props.colors]
  * @param {(value: number) => string} [props.valueFormatter] - formats the
  *   y-axis ticks AND the tooltip value. Pass a currency formatter for money
- *   charts so an axis never renders a peso figure as a bare number.
+ *   charts so an axis never renders a money figure as a bare number.
  */
 export function BarChart({ series = [], categories = [], height = 300, horizontal = false, title, stacked = false, rounded = true, colors, valueFormatter }) {
     const { isDark } = useTheme();
@@ -45,14 +45,7 @@ export function BarChart({ series = [], categories = [], height = 300, horizonta
             },
         },
         ...(valueFormatter ? { tooltip: { ...chartBase.tooltip, y: { formatter: valueFormatter } } } : {}),
-        // OMIT the key entirely when there is no title — do NOT set it to
-        // `undefined`. ApexCharts reads `cnf.title.text` unconditionally while
-        // building the chart's accessible label, and an explicit `undefined`
-        // OVERRIDES its own `title: {}` default rather than falling back to it,
-        // so the read throws "Cannot read properties of undefined (reading
-        // 'text')" and the whole chart fails to mount. Latent until a caller
-        // omitted `title` — the Sales insight cards put their titles in the Card
-        // header instead (D-9), which is what surfaced it.
+        // Omit the key when there is no title: an explicit `undefined` overrides Apex's `title: {}` default and crashes mount.
         ...(title ? { title: { text: title, style: { fontFamily: "Aumovio", fontWeight: 700 } } } : {}),
     };
 

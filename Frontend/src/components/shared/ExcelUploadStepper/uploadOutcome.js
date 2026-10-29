@@ -33,7 +33,7 @@
  * Pure module — no React, no imports, no side effects. Safe to unit test.
  */
 
-// ─── Vocabulary (mirrors Backend/src/utils/uploadOutcome.js) ─────────────────
+// ─── Vocabulary (mirrors Backend/src/utils/uploadOutcome.js) ────────────────
 
 /**
  * The five terminal buckets, in the fixed order every consumer renders them.
@@ -72,8 +72,8 @@ export const CATEGORY_LABELS = Object.freeze({
  * Field names a legacy backend might have used for a detail row's business key
  * and human label, most specific first. Used only on the legacy fallback path.
  */
-const LEGACY_KEY_FIELDS = ["key", "EMP_ID", "empId", "GID", "gid", "PAY_PERIOD", "payPeriod", "eSignNo", "E_SIGN_NO"];
-const LEGACY_LABEL_FIELDS = ["label", "EMP_NAME", "empName", "fullName", "eSignNo", "E_SIGN_NO", "poRef", "PO_REF"];
+const LEGACY_KEY_FIELDS = ["key", "id", "ID", "code", "CODE"];
+const LEGACY_LABEL_FIELDS = ["label", "name", "NAME", "fullName", "title"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

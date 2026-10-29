@@ -17,16 +17,16 @@
  *   in context.
  *
  *   This distinction is the whole point of the file. 401/403/409/422/423 are
- *   NOT takeovers: a backend uses them for business-rule failures ("you may not
- *   perform this action", "that password doesn't match", "this record is
+ *   NOT takeovers: the backend uses them for business-rule failures ("you may
+ *   not approve this request", "that password doesn't match", "this record is
  *   already closed"). Hard-navigating on those would destroy an in-progress
  *   form and lose the user's work for what is, semantically, a validation
- *   message.
+ *   message. A 403 from a service almost never means "your session ended".
  *
  * EXAMPLE
  *   import { resolveStatusHandling } from "../constants/httpStatus";
  *
- *   const plan = resolveStatusHandling(503, "reports/summary");
+ *   const plan = resolveStatusHandling(503, "metrics/summary");
  *   // → { mode: "takeover", route: "/service-is-currently-unavailable",
  *   //     severity: "danger", title: "Service Unavailable", selfHandled: false }
  *
@@ -143,30 +143,52 @@ export const TAKEOVER_ROUTE_BY_STATUS = Object.freeze({
 });
 
 /**
+ * Status codes the 523 "Service Unavailable" page accepts a stashed server payload for.
+ *
+ * HttpClient stashes the REAL status (502/503/504/523 all take over to the same page), but the page
+ * is named 523. Requiring `stored.code === 523` silently dropped the server's title/message/Request ID
+ * for every 502/503/504 — the common outage codes. Other pages keep the single-code rule.
+ * @type {ReadonlySet<number>}
+ */
+export const SERVICE_UNAVAILABLE_PAGE_CODES = Object.freeze(new Set([502, 503, 504, 523]));
+
+/**
  * Statuses whose takeover is conditional on the error being infrastructural.
  * @type {ReadonlySet<number>}
  */
 export const CONDITIONAL_TAKEOVER_STATUSES = Object.freeze(new Set([502, 503, 504, 523]));
 
 /**
- * `error.type` values a backend stamps on genuine infrastructure failures.
+ * `error.type` values the backend stamps on genuine infrastructure failures.
  *
- * Only consulted for the four `CONDITIONAL_TAKEOVER_STATUSES`. A `DatabaseError`
- * that reaches this check has, by construction, already been narrowed to a
- * connectivity/availability failure (no listener, instance down, connection
- * lost, host unreachable, pool exhausted) — the ORA- classifier stamps the
- * business-shaped `DatabaseError`s with 4xx or 500, and those never enter the
- * conditional branch.
+ * Only consulted for the four `CONDITIONAL_TAKEOVER_STATUSES`, which is what
+ * makes `DatabaseError` safe to include here even though the ORA- classifier
+ * also stamps it on ordinary constraint violations. Measured against
+ * `Backend/src/middleware/errorHandling/OraCode.js`, the ORA status
+ * distribution is `{400:20, 403:5, 404:3, 408:1, 409:3, 422:1, 423:1,
+ * 500:9, 503:20, 504:1, 507:2}` — no ORA code maps to 502 at all, and every one
+ * of the twenty 503s and the single 504 is a connectivity or availability
+ * failure (no listener, instance down, connection lost, host unreachable,
+ * shared pool exhausted). A `DatabaseError` that reaches this check has, by
+ * construction, already been narrowed to those. The business-shaped
+ * `DatabaseError`s all carry 4xx or 500 and never enter the conditional branch.
  *
- * `DatabaseUnavailableError` comes from the NJS- driver classifier (pool
- * exhausted, connection lost) and `DatabaseTimeoutError` from the
- * connection-acquire timeout.
+ * **No ORA code maps to 401.** ORA-00028 (session
+ * killed), ORA-01012 (not logged on) and ORA-01017 (logon denied) each describe
+ * the BACKEND'S OWN database session, not the caller's credential, and were
+ * moved 401 → 503 so they reach this conditional takeover instead of rendering
+ * as an inline "your session is no longer active" the user cannot act on. That
+ * is what took the 401 count from 3 to 0 and the 503 count from 17 to 20.
+ *
+ * `DatabaseUnavailableError` comes from `_classifyNjs` (every NJS- driver
+ * error: pool exhausted, connection lost) and `DatabaseTimeoutError` from
+ * `TRANSIENT_STRING_PATTERNS` (the connection-acquire timeout).
  *
  * Deliberately NOT here: every service-level 5xx type — `EmailError`,
  * `NotificationError`, `MetricsError`, `DataProtectionError`, plain `AppError`
- * — each of which describes one failed operation on a healthy server. A feature
- * that opens its own modal on a 502 `EmailError` would lose that context to a
- * hard navigation.
+ * — each of which describes one failed operation on a healthy server.
+ * A feature hook opens an <EmailFailureModal> on 502 `EmailError`;
+ * hard-navigating would throw away the drafted email.
  * @type {ReadonlySet<string>}
  */
 export const OUTAGE_ERROR_TYPES = Object.freeze(new Set(["DatabaseError", "DatabaseUnavailableError", "DatabaseTimeoutError"]));
@@ -179,6 +201,9 @@ export const OUTAGE_ERROR_TYPES = Object.freeze(new Set(["DatabaseError", "Datab
  * @type {ReadonlySet<number>}
  */
 export const SESSION_ENDING_STATUSES = Object.freeze(new Set([440, 498]));
+
+/** Backend `error.type` of a 503 sent while the API drains for a restart. */
+export const SERVER_SHUTTING_DOWN_TYPE = "ServerShuttingDown";
 
 /* ─── Severity mapping ───────────────────────────────────────────────────────── */
 
@@ -239,8 +264,13 @@ export function getStatusSeverity(code) {
  * requirement: `auth.hook.js` shows an in-context lockout countdown for 429
  * and 423, and a full-page takeover on the sign-in screen would strip away the
  * exact context a locked-out user needs. `auth/refresh` and
- * `auth/change-password` share the same server-side limiter instance, so they
- * carry the same exemption.
+ * `auth/change-password` are exempt for the same reason — their owning flows
+ * handle their own failures (`useSessionWarning`'s Extend Session catches any
+ * refresh failure and routes to the session-expired page; `changePassword.hook`
+ * renders the error in the form). The server gives each of the
+ * three its OWN rate limit (Extend Session's budget never competes with
+ * sign-in), so the exemption is about who renders the error, not a shared
+ * limiter.
  *
  * NOTE: session-ending codes (440/498) intentionally ignore this list — a dead
  * token on the sign-in screen still has to clear local session state.
@@ -268,6 +298,10 @@ export function isSelfHandledEndpoint(url) {
  * @property {"info"|"warning"|"danger"} severity  `<Alert variant>` for inline display.
  * @property {string}              title       Human-readable status title.
  * @property {boolean}             selfHandled Whether the endpoint owns its error UI.
+ * @property {"server"|"database"|null} outageCause Set when the response is a genuine infrastructure
+ *           outage (the 523 takeover's condition holds), whether or not it actually takes over. Lets
+ *           HttpClient raise the global <ServerStatusBanner> on self-handled screens (sign-in) that
+ *           keep the error inline. "database" = backend-labelled DB failure; "server" = no envelope.
  */
 
 /**
@@ -293,12 +327,12 @@ export function isSelfHandledEndpoint(url) {
  * @returns {StatusHandlingPlan}
  *
  * @example
- * const { mode, route } = resolveStatusHandling(440, { url: "reports/summary" });
+ * const { mode, route } = resolveStatusHandling(440, { url: "metrics/summary" });
  * if (mode === "takeover") window.location.replace(route);
  *
  * @example
  * // Business 502 — stays inline so the feature can open its own modal.
- * resolveStatusHandling(502, { url: "qr/resend", errorType: "EmailError" }).mode; // "inline"
+ * resolveStatusHandling(502, { url: "admin-management", errorType: "EmailError" }).mode; // "inline"
  */
 export function resolveStatusHandling(status, context = {}) {
     const ctx = typeof context === "string" ? { url: context } : (context ?? {});
@@ -318,6 +352,9 @@ export function resolveStatusHandling(status, context = {}) {
     // teardown — a 440 on auth/refresh still means the cookie is dead.
     const takes = Boolean(mappedRoute) && conditionOk && (!selfHandled || endsSession);
 
+    const isOutage = CONDITIONAL_TAKEOVER_STATUSES.has(status) && conditionOk;
+    const outageCause = isOutage ? (hasEnvelope ? "database" : "server") : null;
+
     return {
         mode: takes ? "takeover" : "inline",
         route: takes ? mappedRoute : null,
@@ -325,5 +362,6 @@ export function resolveStatusHandling(status, context = {}) {
         severity: getStatusSeverity(status),
         title: getStatusTitle(status),
         selfHandled,
+        outageCause,
     };
 }

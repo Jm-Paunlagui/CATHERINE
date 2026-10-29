@@ -7,6 +7,7 @@
 
 import { LockClosedIcon, UserIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import ApiErrorAlert from "../../components/feedback/ApiErrorAlert";
 import { ErrorBoundary } from "../../components/feedback/ErrorBoundary";
 
@@ -21,6 +22,8 @@ import { H4 } from "../../components/ui/typography/Heading";
 import Paragraph from "../../components/ui/typography/Paragraph";
 import Text from "../../components/ui/typography/Text";
 import { useAuth } from "./auth.hook";
+import { hasSessionHint, resolveSignedInDestination } from "./signedInDestination";
+import { pickSignInSubtitle } from "./signInSubtitles";
 
 const APP_NAME = import.meta.env.VITE_APP_NAME || "App";
 
@@ -37,13 +40,33 @@ export default function LoginView() {
     const [errorEffect, setErrorEffect] = useState(false);
     const [localError, setLocalError] = useState("");
     const [countdown, setCountdown] = useState(0);
+    // Chosen once per mount via a lazy initializer so the greeting stays stable
+    // across re-renders (typing, countdown ticks) but differs every visit.
+    const [signInSubtitle] = useState(pickSignInSubtitle);
+
+    // Already signed in (valid session) → back to where they left off, or their role page, instead of
+    // a login form they have already cleared. The form still renders meanwhile, so a stale hint costs
+    // the visitor nothing; no hint → no request at all.
+    const [signedInTarget, setSignedInTarget] = useState(null);
+    useEffect(() => {
+        if (!hasSessionHint()) return undefined;
+        let active = true;
+        resolveSignedInDestination()
+            .then((dest) => {
+                if (active && dest) setSignedInTarget(dest);
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, []);
 
     // Seed `countdown` from `rateLimitSeconds` whenever the hook reports a new
     // value (including going back to falsy after a successful clear). Adjusted
     // during render — not in a useEffect — per React's documented "adjusting
-    // state when a prop changes" pattern: it lands in the same commit as the
-    // change instead of a synchronous setState-in-effect that triggers a second
-    // render (react-hooks/set-state-in-effect).
+    // state when a prop changes" pattern (see SearchInput.jsx / Datepicker.jsx):
+    // it lands in the same commit as the prop change instead of a synchronous
+    // setState-in-effect that triggers a second render.
     const [prevRateLimitSeconds, setPrevRateLimitSeconds] = useState(rateLimitSeconds);
     if (rateLimitSeconds !== prevRateLimitSeconds) {
         setPrevRateLimitSeconds(rateLimitSeconds);
@@ -51,8 +74,9 @@ export default function LoginView() {
     }
 
     // Effect owns ONLY the interval subscription — no synchronous setState in
-    // its body. The per-tick decrement runs inside the setInterval callback
-    // (deferred), so it does not trip react-hooks/set-state-in-effect.
+    // its body. The per-tick decrement below runs inside the setInterval
+    // callback (deferred, not synchronous with the effect's own execution),
+    // so it does not trip react-hooks/set-state-in-effect.
     useEffect(() => {
         if (!rateLimitSeconds) return;
         const id = setInterval(() => {
@@ -96,6 +120,8 @@ export default function LoginView() {
 
     const displayError = localError || error?.message;
 
+    if (signedInTarget) return <Navigate to={signedInTarget} replace />;
+
     return (
         <ErrorBoundary>
             <div className="fixed flex items-center w-full h-full min-h-screen font-aumovio">
@@ -134,13 +160,13 @@ export default function LoginView() {
                                             Sign in to {APP_NAME}
                                         </H4>
 
-                                        {/* Subtitle */}
+                                        {/* Subtitle — rotates per visit; every phrase is exactly 44 chars so the layout never reflows */}
                                         <Paragraph size="sm" color="muted" className="mt-2 text-center opacity-80 animate-fade-in-up">
-                                            Welcome back! Please sign in to your account
+                                            {signInSubtitle}
                                         </Paragraph>
 
                                         {/* Form */}
-                                        <form className="mt-8 space-y-5 animate-fade-in-up" style={{ animationDelay: "0.2s" }} onSubmit={handleSubmit}>
+                                        <form className="mt-8 space-y-4 animate-fade-in-up" style={{ animationDelay: "0.2s" }} onSubmit={handleSubmit}>
                                             <Input label="Username" name="username" type="text" placeholder="Username or USER ID" value={form.username} onChange={handleChange} autoComplete="username" leftIcon={UserIcon} error={errorEffect && localError === "Username is required" ? localError : undefined} />
 
                                             <Input label="Password" name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} autoComplete="current-password" leftIcon={LockClosedIcon} error={errorEffect && localError === "Password is required" ? localError : undefined} />
@@ -152,10 +178,10 @@ export default function LoginView() {
                                                 </Alert>
                                             )}
 
-                                            {/* Permanent lockout alert (HR-reset required) */}
+                                            {/* Permanent lockout alert (admin reset required) */}
                                             {accountLocked && (
                                                 <Alert variant="danger" title="Account Permanently Locked" size="sm">
-                                                    Your account has been locked after too many failed sign-in attempts. Please contact HR to reset your password.
+                                                    Your account has been locked after too many failed sign-in attempts. Please contact an administrator to reset your password.
                                                 </Alert>
                                             )}
 
@@ -172,7 +198,7 @@ export default function LoginView() {
                                             {/* Actions */}
                                             <div className="flex flex-col gap-3 pt-2 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
                                                 <Text variant="italic" align="center">
-                                                    Use your HRIS or eFeedback credentials to log in.
+                                                    Use your {APP_NAME} account credentials to sign in.
                                                 </Text>
                                                 <Button type="submit" variant="gradient" size="lg" fullWidth loading={loading} disabled={loading || countdown > 0 || accountLocked}>
                                                     {loading ? "Signing In…" : countdown > 0 ? `Locked out — ${formatCountdown(countdown)}` : accountLocked ? "Account Locked" : "Sign In"}

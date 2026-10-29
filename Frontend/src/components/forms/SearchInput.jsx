@@ -1,7 +1,7 @@
 // (See full SearchBar in SearchBar.jsx — this is the standalone form version)
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
+import { FIELD_BORDER, TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 
 /** How long after the last keystroke the AI comet keeps running before it fades
  *  out. Long enough that continuous typing never flickers, short enough that the
@@ -100,7 +100,7 @@ export function SearchInput({ value = "", onChange, onSubmit, placeholder = "Sea
                 disabled={disabled}
                 className={`w-full rounded-xl border font-aumovio
           bg-white dark:bg-(--bg-surface-2) text-black/85 dark:text-(--text-primary) placeholder-grey-400
-          border-grey-300 dark:border-grey-700
+          ${FIELD_BORDER}
           focus:outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400
           ${TRANSITION_COLORS} disabled:opacity-50
           [&::-webkit-search-cancel-button]:appearance-none
@@ -110,7 +110,7 @@ export function SearchInput({ value = "", onChange, onSubmit, placeholder = "Sea
             />
             <span className={`absolute top-1/2 -translate-y-1/2 flex items-center justify-center ${RIGHT[size] ?? RIGHT.md}`}>
                 {loading ? (
-                    <span className="w-3.5 h-3.5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin block" />
+                    <span className="w-3.5 h-3.5 border-2 border-(--accent-foreground) border-t-transparent rounded-full animate-spin block" />
                 ) : (
                     local && (
                         <button

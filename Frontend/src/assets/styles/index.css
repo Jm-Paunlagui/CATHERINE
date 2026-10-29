@@ -232,6 +232,39 @@
     --accent-foreground:  #b82e05;        /* orange-600 — ≥ 4.5:1 on white */
     --accent-icon:        #da3806;        /* orange-500 — ≥ 3:1 on white */
     --on-accent-icon-text: #ffffff;       /* white foreground on #da3806 (~4.6:1) */
+    /* Form-control focus border: DARK in light mode (WCAG 1.4.11) */
+    --field-border: var(--color-grey-300);          /* soft resting border, one value for every control (owner) */
+    --field-focus-border: var(--accent-icon);       /* palette-solved, >=3:1 on light surfaces */
+    --field-error-focus-border: var(--color-danger-500);
+
+    /* ── Button + icon-tile tokens (light) ────────────────────────────────────
+       Border/outline lightness follows the THEME (light -> dark borders), never
+       the palette. --btn-primary-bg / --btn-accent-bg (+ -fg) are overridden by
+       applyPaletteVars() with palette-solved, contrast-guaranteed values. */
+    /* Tinted brand buttons: light tint + dark label, border carries 1.4.11. -bg/-on are the SOLID fill (gradient stops, outline hover). */
+    --btn-primary-tint: color-mix(in srgb, var(--accent) 12%, transparent);
+    --btn-primary-tint-hover: color-mix(in srgb, var(--accent) 22%, transparent);
+    --btn-primary-fg: var(--accent-foreground);
+    --btn-primary-border: var(--accent-icon);
+    --btn-accent-tint: color-mix(in srgb, var(--color-purple-400) 12%, transparent);
+    --btn-accent-tint-hover: color-mix(in srgb, var(--color-purple-400) 22%, transparent);
+    --btn-accent-fg: var(--secondary-foreground);
+    --btn-accent-border: var(--secondary-foreground);
+    --btn-primary-bg: #da3806;
+    --btn-primary-on: #ffffff;
+    --btn-accent-bg: #4827af;
+    --btn-accent-on: #ffffff;
+    --btn-solid-hover-brightness: 0.92;
+    --btn-neutral-fg: var(--color-grey-800);
+    --btn-neutral-border: var(--field-border);
+    --btn-neutral-border-hover: var(--color-grey-500);
+    --btn-neutral-bg-hover: var(--color-grey-100);
+    --btn-neutral-bg-active: var(--color-grey-200);
+    --btn-disabled-bg: var(--color-grey-200);
+    --btn-disabled-fg: var(--color-grey-500);
+    --btn-focus-ring: var(--color-grey-900);
+    --tile-bg: var(--surface-4);
+    --tile-border: var(--field-border);
     --color-card-surface-border: rgba(255, 66, 8, 0.04);
 
     /* ── Family foregrounds (blue/turquoise/yellow) — ≥ 4.5:1 on white ────── */
@@ -365,6 +398,35 @@
     --accent-foreground:  #ff7040;        /* orange-on-dark — ≥ 4.5:1 on dark surface */
     --accent-icon:        #ff7040;        /* same for icons at 3:1 minimum */
     --on-accent-icon-text: #1a1a1a;       /* black foreground on #ff7040 (~7.4:1) */
+    /* Form-control focus border: LIGHT in dark mode (WCAG 1.4.11) */
+    --field-border: var(--color-grey-500);          /* resting border ≥3:1 on dark surfaces */
+    --field-focus-border: var(--accent-icon);       /* palette-solved, lightened >=3:1 on dark surfaces */
+    --field-error-focus-border: var(--color-danger-300);
+
+    /* ── Button + icon-tile tokens (dark) ─────────────────────────────────── */
+    --btn-primary-tint: color-mix(in srgb, var(--accent) 18%, transparent);
+    --btn-primary-tint-hover: color-mix(in srgb, var(--accent) 30%, transparent);
+    --btn-primary-fg: var(--accent-foreground);
+    --btn-primary-border: var(--accent-icon);
+    --btn-accent-tint: color-mix(in srgb, var(--color-purple-400) 18%, transparent);
+    --btn-accent-tint-hover: color-mix(in srgb, var(--color-purple-400) 30%, transparent);
+    --btn-accent-fg: var(--secondary-foreground);
+    --btn-accent-border: var(--secondary-foreground);
+    --btn-primary-bg: #d43200;
+    --btn-primary-on: #ffffff;
+    --btn-accent-bg: #7150d8;
+    --btn-accent-on: #ffffff;
+    --btn-solid-hover-brightness: 0.92;
+    --btn-neutral-fg: var(--color-grey-100);
+    --btn-neutral-border: var(--field-border);
+    --btn-neutral-border-hover: var(--color-grey-400);
+    --btn-neutral-bg-hover: rgba(255, 255, 255, 0.10);
+    --btn-neutral-bg-active: rgba(255, 255, 255, 0.16);
+    --btn-disabled-bg: rgba(255, 255, 255, 0.10);
+    --btn-disabled-fg: var(--color-grey-400);
+    --btn-focus-ring: var(--color-grey-200);
+    --tile-bg: rgba(255, 255, 255, 0.06);
+    --tile-border: var(--field-border);
     --color-card-surface-border: rgba(255, 255, 255, 0.08);
 
     /* ── Family foregrounds (blue/turquoise/yellow) — ≥ 4.5:1 on dark surface ─ */
@@ -790,39 +852,6 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
     }
     50% {
         transform: translateY(-14px);
-    }
-}
-
-/* ── Wave drift ──────────────────────────────────────────────────────────────
-   Horizontal parallax used by the Consumption Window's data-driven wave.
-   The wave paths are drawn wider than the viewBox so a lateral shift reads as
-   a continuous rolling swell, never a hard edge sliding into view. Two speeds
-   layer for depth; a gentle vertical swell keeps the crest breathing.        */
-@keyframes wave-drift {
-    0% {
-        transform: translate3d(0, 0, 0);
-    }
-    100% {
-        transform: translate3d(-25%, 0, 0);
-    }
-}
-
-@keyframes wave-drift-slow {
-    0% {
-        transform: translate3d(0, 0, 0);
-    }
-    100% {
-        transform: translate3d(-16.6667%, 0, 0);
-    }
-}
-
-@keyframes wave-swell {
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-3px);
     }
 }
 
@@ -1266,6 +1295,18 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
     }
 }
 
+/* ── 523 "next check" bar ─────────────────────────────────────────────────
+   One linear fill per probe round (ServiceStatusPanel sets duration = the gap and a negative delay =
+   time already elapsed), so it moves continuously instead of stepping once a second. */
+@keyframes svc-next-check {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
 /* ── Gradient / aurora background ────────────────────────────────────────── */
 @keyframes gradient-shift {
     0%,
@@ -1470,18 +1511,6 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
 .animate-float-lg {
     animation: float-lg 4s var(--ease-standard) infinite;
 }
-/* Wave drift — three layered speeds for a rolling-swell parallax. Paired with
-   a wide wave path (drawn ~2x the viewBox) so the lateral shift never exposes
-   a seam. Applied while the Consumption Window is loading its data. */
-.animate-wave-drift {
-    animation: wave-drift 7s linear infinite;
-}
-.animate-wave-drift-slow {
-    animation: wave-drift-slow 11s linear infinite;
-}
-.animate-wave-swell {
-    animation: wave-swell 4s var(--ease-standard) infinite;
-}
 .animate-bounce-slow {
     animation: bounce-slow 2s infinite;
 }
@@ -1510,6 +1539,13 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
     animation: shimmer 2s linear infinite;
 }
 .animate-gradient {
+    animation: gradient-shift 4s var(--ease-standard) infinite;
+    background-size: 300% 300%;
+}
+/* ::after twin of .animate-gradient. Tailwind cannot apply the `after:` variant to a hand-written class,
+   so the pseudo-element form is spelled out. Used by the server status banner's palette hairline while
+   the server restarts; `motion-reduce:after:animate-none!` switches it off. */
+.after\:animate-gradient::after {
     animation: gradient-shift 4s var(--ease-standard) infinite;
     background-size: 300% 300%;
 }
@@ -1746,7 +1782,7 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
 }
 
 /* ── First-visit discoverability hint ────────────────────────────────────────
-   `.fab-hint` is applied by the launcher ONLY on a viewer's first ever visit
+   `.fab-hint` is applied by the launcher ONLY on a user's first ever visit
    (see useHelpAssistant HINT_SEEN_KEY) and is retired the instant the user
    hovers/focuses/opens it or after the hook's peek timeout. It does two things:
 
@@ -2264,7 +2300,7 @@ input[type="search"]::-ms-reveal {
 .focus-ring:focus-visible {
     box-shadow:
         0 0 0 2px var(--bg-surface),
-        0 0 0 4px color-mix(in srgb, var(--color-orange-400) 55%, transparent);
+        0 0 0 4px var(--btn-focus-ring);
 }
 
 /* Checkbox check-draw animation */
@@ -2377,4 +2413,50 @@ html[data-transparency="off"] *::after {
 /* (a createPortal side-effect), not from backdrop-filter.                    */
 html[data-transparency="off"] #root {
     filter: none !important;
+}
+
+/* ── Native date/time picker icon — theme + palette aware ──────────────────── */
+/* Chromium draws ::-webkit-calendar-picker-indicator as a fixed black glyph,  */
+/* so it vanished on dark surfaces and ignored the user's palette. Repaint it  */
+/* as a mask filled with --accent-icon (palette-solved, >=3:1 on the current   */
+/* theme's surface — applyPaletteVars). The native popup and Firefox's own     */
+/* icon follow the root color-scheme set in the block at the end of the file.  */
+:root {
+    --picker-icon-calendar: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4.5' width='18' height='16.5' rx='2.5'/%3E%3Cpath d='M3 9.5h18M8 2.5v4M16 2.5v4'/%3E%3Cpath d='M8 13.5h.01M12 13.5h.01M16 13.5h.01M8 17h.01M12 17h.01' stroke-width='2.6'/%3E%3C/svg%3E");
+    --picker-icon-clock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E");
+}
+input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"])::-webkit-calendar-picker-indicator {
+    width: 1.1em;
+    height: 1.1em;
+    opacity: 1;
+    cursor: pointer;
+    background: var(--accent-icon);
+    -webkit-mask: var(--picker-icon-calendar) center / contain no-repeat;
+    mask: var(--picker-icon-calendar) center / contain no-repeat;
+}
+input[type="time"]::-webkit-calendar-picker-indicator {
+    -webkit-mask-image: var(--picker-icon-clock);
+    mask-image: var(--picker-icon-clock);
+}
+input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]):disabled::-webkit-calendar-picker-indicator {
+    cursor: not-allowed;
+}
+
+/* ── Native control safety net — theme + palette aware ─────────────────────── */
+/* color-scheme is inherited: every native control we did not restyle (scroll- */
+/* bars, autofill, spinners, date popups, Firefox icons) follows the theme.    */
+/* accent-color paints native checkbox/radio/range/progress from the palette.  */
+:root {
+    color-scheme: light;
+    accent-color: var(--accent-icon);
+}
+[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+/* Password fields use Input's own show/hide toggle (heroicons, --accent-icon); */
+/* hide Edge's black native reveal eye and clear button so there is no dupe.   */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
 }

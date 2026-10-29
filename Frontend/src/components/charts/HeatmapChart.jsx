@@ -23,14 +23,7 @@ export function HeatmapChart({ series = [], height = 300, title }) {
                 },
             },
         },
-        // OMIT the key entirely when there is no title — do NOT set it to
-        // `undefined`. ApexCharts reads `cnf.title.text` unconditionally while
-        // building the chart's accessible label, and an explicit `undefined`
-        // OVERRIDES its own `title: {}` default rather than falling back to it,
-        // so the read throws "Cannot read properties of undefined (reading
-        // 'text')" and the whole chart fails to mount. Latent until a caller
-        // omitted `title` — the Sales insight cards put their titles in the Card
-        // header instead (D-9), which is what surfaced it.
+        // Omit the key when there is no title: an explicit `undefined` overrides Apex's `title: {}` default and crashes mount.
         ...(title ? { title: { text: title, style: { fontFamily: "Aumovio", fontWeight: 700 } } } : {}),
     };
 

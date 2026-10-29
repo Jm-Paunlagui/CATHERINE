@@ -14,6 +14,7 @@
  */
 
 import { API_BASE_URL } from "../../config/apiBase";
+import { POOL_OVERLOADED_TYPE, SHED_RETRY_MAX, shedRetryDelayMs, sleepUnlessAborted } from "../../utils/retryAfter";
 
 class CsrfMiddleware {
     constructor() {
@@ -97,6 +98,46 @@ class CsrfMiddleware {
         }
     }
 
+    /**
+     * GET-style fetch for the idempotent CSRF endpoints (`csrf/token`,
+     * `csrf/status`). Resolves with an OK response; otherwise throws an error
+     * shaped like an Axios one — `err.response = { status, statusText, headers,
+     * data }` plus `err.requestId` — so callers (CsrfContext → main.jsx) can
+     * read the status, the `Retry-After` header and the envelope without
+     * re-parsing a message string.
+     *
+     * A 429 whose envelope says `PoolOverloadedError` (deliberate, momentary DB
+     * pool load-shed) is transparently re-sent up to SHED_RETRY_MAX times after
+     * the clamped, jittered `Retry-After` (same rule as HttpClient; abort-aware
+     * through `options.signal`). `RateLimitExceeded` and every other status are
+     * thrown at once. Never use for the POST refresh — mutating, not idempotent.
+     *
+     * @param {string} url
+     * @param {RequestInit} options
+     * @returns {Promise<Response>}
+     * @throws {Error & { response: { status: number, headers: object, data: object|null }, requestId: string|null }}
+     */
+    async _fetchShedAware(url, options) {
+        for (let shed = 0; ; shed++) {
+            const response = await this._fetchWithTimeout(url, options);
+            if (response.ok) return response;
+
+            const data = await response.json().catch(() => null);
+            const headers = {};
+            const retryAfter = response.headers?.get?.("retry-after");
+            if (retryAfter != null) headers["retry-after"] = retryAfter;
+            const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+            err.response = { status: response.status, statusText: response.statusText, headers, data };
+            err.requestId = data?.requestId ?? response.headers?.get?.("x-request-id") ?? null;
+
+            if (response.status === 429 && data?.error?.type === POOL_OVERLOADED_TYPE && shed < SHED_RETRY_MAX) {
+                await sleepUnlessAborted(shedRetryDelayMs(retryAfter), options?.signal, () => new DOMException("canceled", "AbortError"));
+                continue;
+            }
+            throw err;
+        }
+    }
+
     // ─── Public API ───────────────────────────────────────────────────────────
 
     /**
@@ -171,14 +212,11 @@ class CsrfMiddleware {
      * Returns { success, isValid, expiresAt } or throws.
      */
     async getStatus() {
-        const response = await this._fetchWithTimeout(`${API_BASE_URL}csrf/status`, {
+        const response = await this._fetchShedAware(`${API_BASE_URL}csrf/status`, {
             method: "GET",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
         });
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
         return response.json();
     }
 
@@ -259,15 +297,11 @@ class CsrfMiddleware {
     async _fetchWithRetry() {
         for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
             try {
-                const response = await this._fetchWithTimeout(`${API_BASE_URL}csrf/token`, {
+                const response = await this._fetchShedAware(`${API_BASE_URL}csrf/token`, {
                     method: "GET",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
                 });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
 
                 const data = await response.json();
                 if (!data.success || !data.token) {
@@ -290,8 +324,19 @@ class CsrfMiddleware {
                 return data.token;
             } catch (err) {
                 this._retryCount = attempt + 1;
+                // A 429 is a healthy server refusing us (any shed retry was
+                // already spent in `_fetchShedAware`). The backoff ladder below
+                // would only re-hit the limiter and extend the block, and
+                // wrapping the error would lose the status / Retry-After the
+                // boot gate needs for the throttle page — rethrow untouched.
+                if (err?.response?.status === 429) throw err;
                 if (attempt === this._maxRetries) {
-                    throw new Error(`CSRF fetch failed after ${this._maxRetries + 1} attempts: ${err.message}`);
+                    const wrapped = new Error(`CSRF fetch failed after ${this._maxRetries + 1} attempts: ${err.message}`, { cause: err });
+                    // fetch() rejects with a bare TypeError ONLY when the server is unreachable
+                    // (no HTTP response, not a timeout/abort). Flag it so HttpClient can report
+                    // NETWORK_FAILURE even though no Axios request ever went out.
+                    wrapped.networkFailure = err instanceof TypeError && !err.response;
+                    throw wrapped;
                 }
                 await this._sleep(this._retryDelay * Math.pow(2, attempt));
             }

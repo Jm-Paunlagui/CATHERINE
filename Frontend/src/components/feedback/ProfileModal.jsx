@@ -16,7 +16,7 @@
  */
 import { BuildingOffice2Icon, EnvelopeIcon, IdentificationIcon, ShieldCheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
-import headerImg from "../../assets/img/LinkedIn_Header_Employees_1584x396.png";
+import headerImg from "../../assets/img/profile-header_1584x396.png";
 import { TRANSITION_COLORS } from "../../assets/styles/pre-set-styles";
 import { Badge } from "../ui/Badge";
 import { Modal } from "../ui/Modal";
@@ -61,16 +61,12 @@ function getInitials(name = "") {
 function resolveRoleLabel(role) {
     if (role === "SUPER_ADMIN") return "Super ADMIN";
     if (role === "ADMIN") return "ADMIN";
-    if (role === "VENDOR") return "Vendor";
-    if (role === "ROBOT") return "Automation";
     return "USER";
 }
 
 function resolveRoleBadgeVariant(role) {
     if (role === "SUPER_ADMIN") return "purple";
     if (role === "ADMIN") return "orange";
-    if (role === "VENDOR") return "cyan";
-    if (role === "ROBOT") return "green";
     return "grey";
 }
 
@@ -85,7 +81,7 @@ export default function ProfileModal({ open, onClose, user }) {
     const roleBadge = resolveRoleBadgeVariant(user.role);
 
     return (
-        <Modal open={open} onClose={onClose} size="md">
+        <Modal open={open} onClose={onClose} size="md" ariaLabel="Your profile">
             {/* ── Header banner ─────────────────────────────────── */}
             <div className="relative aspect-4/1 -mx-6 -mt-5">
                 <img src={headerImg} alt="" className="w-full h-full object-cover" draggable={false} />
@@ -134,7 +130,7 @@ export default function ProfileModal({ open, onClose, user }) {
 
                 {/* Detail rows */}
                 <div className="space-y-3 text-left text-sm text-grey-600 dark:text-grey-300">
-                    {user.empId && <DetailRow icon={IdentificationIcon} label="Employee ID" value={user.empId} />}
+                    {(user.username ?? user.userId) && <DetailRow icon={IdentificationIcon} label="Username" value={user.username ?? user.userId} />}
                     {user.email && <DetailRow icon={EnvelopeIcon} label="Email" value={user.email} />}
                     {user.segmentDesc && <DetailRow icon={BuildingOffice2Icon} label="Division" value={user.segmentDesc} />}
                     {user.role && <DetailRow icon={ShieldCheckIcon} label="Role" value={roleLabel} />}
