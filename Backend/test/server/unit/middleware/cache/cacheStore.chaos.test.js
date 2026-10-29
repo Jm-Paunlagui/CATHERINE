@@ -216,30 +216,30 @@ describe("CacheStore — chaos / edge-case unit tests", function () {
     describe("delByPattern()", function () {
         it("deletes all keys whose string includes the pattern, returns correct count", function () {
             const store = makeStore();
-            store.set("rfidMasterfile", "a");
-            store.set("rfidMasterfile:type=archived", "b");
-            store.set("rfidMasterfile:type=archived:page=2", "c");
+            store.set("catalog", "a");
+            store.set("catalog:type=archived", "b");
+            store.set("catalog:type=archived:page=2", "c");
             store.set("other:key", "d");
 
-            const deleted = store.delByPattern("rfidMasterfile:type=archived");
+            const deleted = store.delByPattern("catalog:type=archived");
 
             // Both keys containing the substring should be gone.
             expect(deleted).toBe(2);
-            expect(store.has("rfidMasterfile:type=archived")).toBe(false);
-            expect(store.has("rfidMasterfile:type=archived:page=2")).toBe(false);
+            expect(store.has("catalog:type=archived")).toBe(false);
+            expect(store.has("catalog:type=archived:page=2")).toBe(false);
 
             // Keys that do NOT contain the full substring must survive.
-            expect(store.has("rfidMasterfile")).toBe(true);
+            expect(store.has("catalog")).toBe(true);
             expect(store.has("other:key")).toBe(true);
         });
 
-        it("substring match is exact: 'rfidMasterfile' does NOT match the longer 'rfidMasterfile:type=archived'", function () {
+        it("substring match is exact: 'catalog' does NOT match the longer 'catalog:type=archived'", function () {
             const store = makeStore();
-            store.set("rfidMasterfile", "root");
-            store.set("rfidMasterfile:type=archived", "arch");
+            store.set("catalog", "root");
+            store.set("catalog:type=archived", "arch");
 
             // Deleting with the shorter root pattern removes both (root is a substring of the longer).
-            const deletedRoot = store.delByPattern("rfidMasterfile");
+            const deletedRoot = store.delByPattern("catalog");
             expect(deletedRoot).toBe(2);
             expect(store.keys().length).toBe(0);
         });
@@ -256,15 +256,15 @@ describe("CacheStore — chaos / edge-case unit tests", function () {
 
         it("matches only keys containing the exact substring", function () {
             const store = makeStore();
-            store.set("rfidMasterfile:type=archived", "a");
-            store.set("rfidMasterfile:type=archived:page=2", "b");
-            store.set("rfidMasterfile", "c"); // does NOT contain :type=archived
+            store.set("catalog:type=archived", "a");
+            store.set("catalog:type=archived:page=2", "b");
+            store.set("catalog", "c"); // does NOT contain :type=archived
 
-            const count = store.delByPattern("rfidMasterfile:type=archived");
+            const count = store.delByPattern("catalog:type=archived");
 
             expect(count).toBe(2);
             // The bare key must survive
-            expect(store.has("rfidMasterfile")).toBe(true);
+            expect(store.has("catalog")).toBe(true);
         });
     });
 

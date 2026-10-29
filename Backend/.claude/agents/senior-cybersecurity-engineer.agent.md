@@ -20,7 +20,7 @@ Invoke the `senior-cybersecurity-engineer` skill with the `Skill` tool before do
 
 ## Approach
 1. Frontend CWE scan: CWE-287/384, 352, 79, 200/312, 20, 209, 362.
-2. Backend scan: `SecurityFilterMiddleware` pos 2 / `IpFilterMiddleware` pos 12, CSRF on mutating verbs, auth rate limit `max:5`, JWT authenticate-before-authorize (bad tokens → 403), bind-variable injection safety, generic prod errors, `catchAsync`, security headers (nosniff/DENY/HSTS/Referrer/Permissions/CSP frame-ancestors none), no `.env` commits.
+2. Backend scan: `SecurityFilterMiddleware` pos 2 / `IpFilterMiddleware` pos 11, CSRF on mutating verbs, auth rate limit `max:5`, JWT authenticate-before-authorize (bad tokens → 403), bind-variable injection safety, generic prod errors, `catchAsync`, security headers (nosniff/DENY/HSTS/Referrer/Permissions/CSP frame-ancestors none), no `.env` commits.
 3. CVE: cross-reference `package.json`; prioritise with CVSS + EPSS + KEV; flag unpatched critical/high; note SBOM/transitive risk.
 4. Threat model with STRIDE per data-flow boundary; map to OWASP Top 10 (Web/API/Mobile/LLM).
 

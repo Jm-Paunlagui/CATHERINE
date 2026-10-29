@@ -2,7 +2,7 @@
 
 /**
  * ScopedSsePoller.test.js — the SSE sharing/isolation/ordering invariants
- * (plan §5.2 items 8a/8b/8c).
+ *.
  *
  * A SCOPE is a sharing unit: every connection on the same key shares ONE
  * readCursor() per tick; a second distinct key costs one more query; and — the

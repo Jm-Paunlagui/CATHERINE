@@ -3,7 +3,11 @@
  *
  * All app code imports from here:
  *   const db = require('./config');
- *   await db.withConnection('unitInventory', async (conn) => { ... });
+ *   await db.withConnection('appDb', async (conn) => { ... });
+ *
+ * The pool name must be one of the REGISTERED pools (see POOL_NAMES in
+ * ./database.js). Always pass a hardcoded literal, never a request-derived
+ * value (CWE-89 pool forgery).
  *
  * To add a new DB engine:
  *   1. Create src/config/adapters/<engine>.js

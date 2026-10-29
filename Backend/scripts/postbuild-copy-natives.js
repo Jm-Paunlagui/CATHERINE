@@ -17,6 +17,11 @@
  * Adding a new native package:
  *   Just append its name to NATIVE_PACKAGES — no paths or versions needed.
  *
+ * FAIL-LOUD CONTRACT: a NATIVE_PACKAGES entry that stages ZERO binaries
+ * fails the build (exit 1). A missing native addon is a boot crash in the
+ * compiled exe — eager require("oracledb") throws → exit 1 → WinSW
+ * restart-loops the service every 10 s — so it must never be a warning.
+ *
  * Run automatically after `npm run build` / `npm run build:debug`.
  */
 
@@ -68,13 +73,12 @@ function findFiles(dir, pattern, results = []) {
 // ── Main ──────────────────────────────────────────────────────────────────
 
 let copied = 0;
-let skipped = 0;
+const failures = [];
 
 for (const pkg of NATIVE_PACKAGES) {
     const pkgDir = path.join(NODE_MODULES, pkg);
     if (!fs.existsSync(pkgDir)) {
-        console.warn(`  ⚠  Package not installed, skipping: ${pkg}`);
-        skipped++;
+        failures.push(`${pkg}: package not installed under node_modules/`);
         continue;
     }
 
@@ -86,8 +90,15 @@ for (const pkg of NATIVE_PACKAGES) {
     );
 
     if (platformNodes.length === 0) {
-        console.warn(`  ⚠  No win32-x64 .node binaries found in: ${pkg}`);
-        skipped++;
+        failures.push(
+            `${pkg}: no win32-x64 .node binary matched. ` +
+                (allNodes.length
+                    ? `Discovered (non-matching): ${allNodes
+                          .map((f) => path.relative(NODE_MODULES, f))
+                          .join(", ")} — extend PLATFORM_FILTERS if one of ` +
+                      "these is the right binary."
+                    : "No .node files found at all under the package."),
+        );
         continue;
     }
 
@@ -98,11 +109,24 @@ for (const pkg of NATIVE_PACKAGES) {
 
         fs.mkdirSync(path.dirname(destPath), { recursive: true });
         fs.copyFileSync(srcPath, destPath);
+        if (!fs.existsSync(destPath)) {
+            failures.push(`${pkg}: copy verification failed for ${relPath}`);
+            continue;
+        }
         console.log(`  ✔  node_modules/${relPath.replace(/\\/g, "/")}`);
         copied++;
     }
 }
 
-console.log(
-    `\nPostbuild: ${copied} native addon(s) copied to dist/, ${skipped} skipped.`,
-);
+if (failures.length > 0) {
+    console.error("\nPostbuild FAILED — native addon(s) not staged:");
+    for (const failure of failures) console.error(`  ✖  ${failure}`);
+    console.error(
+        "\nThe compiled exe would crash at boot (or at first use of the " +
+            "affected module). Fix the install / platform filter and re-run " +
+            "the build. Do NOT deploy this dist folder.",
+    );
+    process.exit(1);
+}
+
+console.log(`\nPostbuild: ${copied} native addon(s) copied to dist/.`);

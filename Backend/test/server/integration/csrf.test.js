@@ -71,7 +71,7 @@ describe("CSRF Integration", function () {
         it("refreshes token when a valid JWT and CSRF session exist", async function () {
             const jwt = require("jsonwebtoken");
             const validToken = jwt.sign(
-                { sub: "test-user", userId: "test-user", userLevel: 1 },
+                { sub: "test-user", userId: "test-user", userLevel: 1, ...require("../helpers/auth").ACCESS_CLAIMS },
                 process.env.JWT_SECRET || "test-secret",
                 { expiresIn: "1h" },
             );

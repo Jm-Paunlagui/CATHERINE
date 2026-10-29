@@ -1,12 +1,16 @@
-﻿"use strict";
+"use strict";
 
 const fs = require("fs").promises;
 const path = require("path");
 
 const { logger } = require("../utils/logger");
+const { requestContext } = require("../utils/requestContext");
+const { runDetached } = require("../utils/progress/progress");
 const { AppError, AUDIT_LOG_ERRORS } = require("../constants/errors");
 const { auditLogMessages } = require("../constants/messages");
 const AuditLogModel = require("../models/audit.log.model");
+const { DATETIME_COL_WIDTH, setDateTimeCell } = require("../utils/excelFormat");
+const { searchCandidates } = require("../utils/logRedaction");
 
 /**
  * Log directory base — MUST match logger.js's LOG_BASE_DIR resolution: in
@@ -99,6 +103,24 @@ class AuditLogService {
     static SYSTEM_LOG_PRIORITY = SYSTEM_LOG_PRIORITY;
     static SYSTEM_LOG_FILENAME_RE = SYSTEM_LOG_FILENAME_RE;
 
+    /**
+     * Verbs `_normalizeEndpointFilter` may strip off a route label. Matches the
+     * methods `buildRouteLabel` can emit (`req.method`); a token that is not one
+     * of these is treated as part of the path and left alone.
+     * @type {Set<string>}
+     */
+    static HTTP_VERBS = new Set([
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS",
+        "TRACE",
+        "CONNECT",
+    ]);
+
     // ─── Batched fire-and-forget persistence ────────────────────────────────────
     // One INSERT per HTTP request meant a burst of N concurrent requests issued
     // N additional Oracle round-trips, competing with the actual read queries for
@@ -106,7 +128,15 @@ class AuditLogService {
     // as a single executeMany batch (oracle-mongo-wrapper insertMany) when the
     // buffer reaches FLUSH_MAX or FLUSH_INTERVAL_MS elapses — whichever is first.
     // The timer is unref()'d so an idle buffer never holds the process open;
-    // gracefulShutdown calls flushPending() so rows are not lost on SIGTERM.
+    // gracefulShutdown calls flushPending({ final: true }) so rows are not
+    // lost on SIGTERM.
+    //
+    // A failed batch (DB outage, pool exhausted) is put back at the FRONT of
+    // the queue — order preserved ahead of rows that arrived meanwhile — and
+    // retried on the next normal flush tick, never in a tight loop. The queue
+    // is capped at PENDING_MAX: beyond it the OLDEST rows are dropped with one
+    // warning per flush, so a long outage costs bounded memory. The shutdown
+    // flush is one attempt, capped at FINAL_FLUSH_TIMEOUT_MS, with no requeue.
 
     /** Max buffered records before an immediate flush. */
     static FLUSH_MAX = 25;
@@ -114,11 +144,23 @@ class AuditLogService {
     /** Max milliseconds a record may wait in the buffer. */
     static FLUSH_INTERVAL_MS = 1000;
 
+    /** Max records held across failed flushes; the oldest are dropped beyond it. */
+    static PENDING_MAX = 1000;
+
+    /** Cap on the single shutdown flush attempt. */
+    static FINAL_FLUSH_TIMEOUT_MS = 2000;
+
     /** @type {object[]} */
     static _pending = [];
 
     /** @type {NodeJS.Timeout|null} */
     static _flushTimer = null;
+
+    /** In-progress flush, so two triggers never insert the same batch twice. @type {Promise<void>|null} */
+    static _flushing = null;
+
+    /** After a failure, size-triggered flushes wait until this time (ms epoch). */
+    static _retryNotBefore = 0;
 
     /**
      * Fire-and-forget audit log insert. Never throws — all errors are swallowed
@@ -131,27 +173,75 @@ class AuditLogService {
     static async insertAsync(record) {
         AuditLogService._pending.push(record);
 
-        if (AuditLogService._pending.length >= AuditLogService.FLUSH_MAX) {
-            return AuditLogService.flushPending();
+        if (
+            AuditLogService._pending.length >= AuditLogService.FLUSH_MAX &&
+            !AuditLogService._flushing &&
+            Date.now() >= AuditLogService._retryNotBefore
+        ) {
+            // Detached: the batch holds OTHER requests' rows; a cut request's
+            // aborted scope must not refuse the flush.
+            return runDetached(() => AuditLogService.flushPending());
         }
 
-        if (!AuditLogService._flushTimer) {
-            AuditLogService._flushTimer = setTimeout(
+        AuditLogService._armFlushTimer();
+    }
+
+    /** Arms the interval flush if none is pending. @returns {void} */
+    static _armFlushTimer() {
+        if (AuditLogService._flushTimer) return;
+        // Armed from inside a request's async context (setImmediate of the audit
+        // middleware): the timer would inherit that request's ALS and its
+        // progress scope. If the request was cut, every flush DB call would be
+        // refused. Arm outside any request context.
+        AuditLogService._flushTimer = requestContext.exit(() =>
+            setTimeout(
                 () => AuditLogService.flushPending(),
                 AuditLogService.FLUSH_INTERVAL_MS,
-            );
-            AuditLogService._flushTimer.unref();
-        }
+            ),
+        );
+        AuditLogService._flushTimer.unref();
     }
 
     /**
      * Flushes all buffered audit records in one executeMany batch. Never throws.
      * Called automatically by insertAsync (size/interval triggers) and by
-     * server.js during graceful shutdown.
+     * server.js during graceful shutdown (`{ final: true }`).
      *
+     * Single-flight: a call while a flush is running returns that flush
+     * (`final` waits for it, then flushes whatever is left once).
+     *
+     * @param {{ final?: boolean }} [opts]
      * @returns {Promise<void>}
      */
-    static async flushPending() {
+    static async flushPending({ final = false } = {}) {
+        if (AuditLogService._flushing) {
+            if (!final) return AuditLogService._flushing;
+            // Shutdown: wait for the running flush, but never longer than the
+            // final flush's own cap — a flush stuck on a pool acquire must not
+            // eat the teardown reserve. Whatever it still holds is lost, and
+            // its own failure path logs it.
+            let timer;
+            await Promise.race([
+                AuditLogService._flushing,
+                new Promise((resolve) => {
+                    timer = setTimeout(resolve, AuditLogService.FINAL_FLUSH_TIMEOUT_MS);
+                    timer.unref?.();
+                }),
+            ]);
+            clearTimeout(timer);
+        }
+
+        AuditLogService._flushing = AuditLogService._flushOnce(final).finally(() => {
+            AuditLogService._flushing = null;
+        });
+        return AuditLogService._flushing;
+    }
+
+    /**
+     * @param {boolean} final
+     * @returns {Promise<void>}
+     */
+    static async _flushOnce(final) {
         if (AuditLogService._flushTimer) {
             clearTimeout(AuditLogService._flushTimer);
             AuditLogService._flushTimer = null;
@@ -161,17 +251,98 @@ class AuditLogService {
         if (batch.length === 0) return;
         AuditLogService._pending = [];
 
+        const insert = batch.length === 1
+            ? AuditLogModel.insert(batch[0])
+            : AuditLogModel.insertBatch(batch);
+
         try {
-            if (batch.length === 1) {
-                await AuditLogModel.insert(batch[0]);
+            if (final) {
+                let timer;
+                const timeout = new Promise((_, reject) => {
+                    timer = setTimeout(
+                        () => reject(new Error(`timed out after ${AuditLogService.FINAL_FLUSH_TIMEOUT_MS}ms`)),
+                        AuditLogService.FINAL_FLUSH_TIMEOUT_MS,
+                    );
+                    timer.unref?.();
+                });
+                try {
+                    await Promise.race([insert, timeout]);
+                } finally {
+                    clearTimeout(timer);
+                }
             } else {
-                await AuditLogModel.insertBatch(batch);
+                await insert;
             }
+            AuditLogService._retryNotBefore = 0;
         } catch (err) {
+            if (final) {
+                insert.catch(() => {}); // a timed-out insert may still reject later
+                logger.warning(auditLogMessages.SHUTDOWN_ROWS_UNPERSISTED(batch.length, err.message));
+                return;
+            }
+
             logger.warning(
                 auditLogMessages.BATCH_INSERT_FAILED(batch.length, err.message),
             );
+
+            const merged = batch.concat(AuditLogService._pending);
+            const over = merged.length - AuditLogService.PENDING_MAX;
+            if (over > 0) {
+                merged.splice(0, over);
+                logger.warning(auditLogMessages.PENDING_OVERFLOW_DROPPED(over, AuditLogService.PENDING_MAX));
+            }
+            AuditLogService._pending = merged;
+            AuditLogService._retryNotBefore = Date.now() + AuditLogService.FLUSH_INTERVAL_MS;
         }
+
+        if (!final && AuditLogService._pending.length > 0) AuditLogService._armFlushTimer();
+    }
+
+    /**
+     * Normalize an `endpoint` filter value into the exact form stored in
+     * `T_AUDIT_LOGS.ENDPOINT`.
+     *
+     * `ENDPOINT` is written from `resolveRouteLabel(req)` with the HTTP verb
+     * stripped (`AuditLogMiddleware._buildRecord`), so it holds a bare
+     * parameterized path: `/api/v1/admin-management/:username`. The same helper produces the
+     * RED-metrics route keys that Metrics alerts carry — but THOSE keep the verb
+     * (`GET /api/v1/admin-management/:username`, `buildRouteLabel`). A caller pivoting from an
+     * alert therefore holds a string one token away from matching, and that
+     * one-token mismatch would silently return zero rows.
+     *
+     * Rather than make every caller remember to split it, the verb is tolerated
+     * and stripped here. Only a real HTTP method is stripped — a path is never
+     * mangled because it happens to contain a space.
+     *
+     * @param {string} [value] - Raw filter value, with or without a leading verb.
+     * @returns {string|null} Exact ENDPOINT value, or null when nothing usable.
+     * @example
+     * _normalizeEndpointFilter("GET /api/v1/auth/login"); // → "/api/v1/auth/login"
+     * _normalizeEndpointFilter("/api/v1/auth/login");     // → "/api/v1/auth/login"
+     */
+    static _normalizeEndpointFilter(value) {
+        if (typeof value !== "string") return null;
+
+        let path = value.trim();
+        if (!path) return null;
+
+        // A value that is nothing BUT a verb carries no route. Returning "GET"
+        // as the path would pin ENDPOINT = 'GET', match zero rows, and look
+        // exactly like "this route has no traffic" — the failure mode this whole
+        // helper exists to prevent.
+        if (AuditLogService.HTTP_VERBS.has(path.toUpperCase())) return null;
+
+        const spaceIdx = path.indexOf(" ");
+        if (spaceIdx !== -1) {
+            const head = path.slice(0, spaceIdx).toUpperCase();
+            if (AuditLogService.HTTP_VERBS.has(head)) {
+                path = path.slice(spaceIdx + 1).trim();
+            }
+        }
+
+        // ENDPOINT is VARCHAR2(500 CHAR); a longer value cannot match any row,
+        // so cap rather than send an oversized bind.
+        return path ? path.slice(0, 500) : null;
     }
 
     /**
@@ -184,7 +355,11 @@ class AuditLogService {
      * @param {string} [params.toDate]          - ISO date string upper bound (inclusive, end-of-day).
      * @param {string} [params.method]          - HTTP method filter (e.g. 'GET').
      * @param {string} [params.statusCategory]  - Status category filter (e.g. '4xx').
-     * @param {string} [params.search]          - Partial text search across USERNAME, CLIENT_IP, and GID.
+     * @param {string} [params.endpoint]        - EXACT canonical route label to filter on
+     *   (e.g. '/api/v1/auth/login'). Uses IDX_AUDIT_LOGS_ENDPOINT. A leading HTTP verb
+     *   is tolerated and stripped — see `_normalizeEndpointFilter`.
+     * @param {string} [params.search]          - Partial text search across USERNAME,
+     *   CLIENT_IP, REQUEST_ID, ENDPOINT, and USER_ID (exact, integers only).
      * @returns {Promise<{ rows: object[], total: number, page: number, pageSize: number, totalPages: number }>}
      * @throws {AppError} 400 when fromDate is not before toDate.
      */
@@ -195,6 +370,7 @@ class AuditLogService {
         toDate,
         method,
         statusCategory,
+        endpoint,
         search,
     }) {
         const cappedPageSize = Math.min(pageSize, 100);
@@ -219,6 +395,13 @@ class AuditLogService {
         if (method) filter.METHOD = method;
         if (statusCategory) filter.STATUS_CATEGORY = statusCategory;
 
+        // Exact route filter — the pivot path. Equality (not $regex) so
+        // IDX_AUDIT_LOGS_ENDPOINT is usable and a route can never be matched by
+        // a coincidental substring of some other column.
+        const exactEndpoint =
+            AuditLogService._normalizeEndpointFilter(endpoint);
+        if (exactEndpoint) filter.ENDPOINT = exactEndpoint;
+
         if (search) {
             // CWE-1333: Escape regex metacharacters and cap length to prevent ReDoS.
             // User input must never flow directly into a $regex operator.
@@ -232,8 +415,13 @@ class AuditLogService {
                 { USERNAME: { $regex: safeSearch } },
                 { CLIENT_IP: { $regex: safeSearch } },
                 { REQUEST_ID: { $regex: safeSearch } },
+                // ENDPOINT is searchable so typing a partial path ("/auth")
+                // finds traffic to it. Substring matching cannot use
+                // IDX_AUDIT_LOGS_ENDPOINT — that is what the exact `endpoint`
+                // filter above is for.
+                { ENDPOINT: { $regex: safeSearch } },
             ];
-            // USER_ID is NUMBER (stores GID/EMP_ID); $regex is invalid on NUMBER columns —
+            // USER_ID is NUMBER; $regex is invalid on NUMBER columns —
             // add an exact equality match only when the search term is a valid integer.
             const numericId = /^\d+$/.test(search.trim())
                 ? parseInt(search.trim(), 10)
@@ -693,9 +881,15 @@ class AuditLogService {
             const MAX_SEARCH_LENGTH = 100;
             const needle = search.trim().slice(0, MAX_SEARCH_LENGTH).toLowerCase();
             if (needle) {
-                filtered = allRows.filter((r) =>
-                    (r.message || "").toLowerCase().includes(needle),
-                );
+                // Log lines carry a pseudonym instead of a raw account id.
+                // `searchCandidates` reproduces the token(s) a raw numeric
+                // needle would have been logged as, so typing a real id into
+                // this search box still finds every line for that account.
+                const needles = searchCandidates(needle);
+                filtered = allRows.filter((r) => {
+                    const message = (r.message || "").toLowerCase();
+                    return needles.some((n) => message.includes(n));
+                });
             }
         }
 
@@ -773,7 +967,7 @@ class AuditLogService {
         // ── Sheet 1: Audit Records ──
         const sheet1 = workbook.addWorksheet("Audit Records");
         sheet1.columns = [
-            { header: "Date", key: "CREATED_AT", width: 22 },
+            { header: "Date / Time", key: "CREATED_AT", width: DATETIME_COL_WIDTH },
             { header: "Request ID", key: "REQUEST_ID", width: 26 },
             { header: "Username", key: "USERNAME", width: 20 },
             { header: "Method", key: "METHOD", width: 10 },
@@ -797,10 +991,11 @@ class AuditLogService {
         sheet1.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
 
         rows.forEach((row) => {
-            sheet1.addRow({
-                CREATED_AT: row.CREATED_AT
-                    ? new Date(row.CREATED_AT).toISOString()
-                    : "",
+            // Real date cell in LOCAL time, not a UTC ISO string: the audit
+            // trail is read against the operator's own clock, and a raw
+            // `toISOString()` reported every event 8 hours early under
+            // TZ=Asia/Manila (and sorted as text, not chronologically).
+            const added = sheet1.addRow({
                 REQUEST_ID: row.REQUEST_ID ?? "",
                 USERNAME: row.USERNAME ?? "",
                 METHOD: row.METHOD ?? "",
@@ -809,6 +1004,7 @@ class AuditLogService {
                 RESPONSE_TIME_MS: row.RESPONSE_TIME_MS ?? 0,
                 CLIENT_IP: row.CLIENT_IP ?? "",
             });
+            setDateTimeCell(added.getCell("CREATED_AT"), row.CREATED_AT);
         });
 
         // ── Sheet 2: Summary ──
@@ -1046,7 +1242,7 @@ class AuditLogService {
                             resolvedFile !== resolvedDir
                         ) {
                             logger.warning(
-                                `AuditLogService.exportToZip: path traversal attempt blocked — ${file}`,
+                                auditLogMessages.EXPORT_ZIP_TRAVERSAL_BLOCKED(file),
                             );
                             continue;
                         }
@@ -1137,7 +1333,7 @@ class AuditLogService {
                 let rmError = null;
                 try {
                     await fs.rm(logDir, { recursive: true, force: true });
-                } catch (firstErr) {
+                } catch (_firstErr) {
                     await new Promise((resolve) => setTimeout(resolve, 250));
                     try {
                         await fs.rm(logDir, { recursive: true, force: true });

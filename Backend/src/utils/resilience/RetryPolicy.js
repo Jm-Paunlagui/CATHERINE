@@ -97,8 +97,17 @@ function envInt(name, fallback) {
 
 // ─── Classification tables (single source of truth) ────────────────────────
 
-/** ORA codes that are transient (network/session churn) — safe to retry. */
-const TRANSIENT_DB_ORA_CODES = new Set([3113, 3114, 12170, 12541, 12514, 12560, 1013]);
+/**
+ * ORA codes that are transient (network/session churn) — safe to retry.
+ * 12516/12518/12520/12537 are CONNECT-time listener/handshake blips that clear in milliseconds.
+ */
+const TRANSIENT_DB_ORA_CODES = new Set([
+    3113, 3114, 12170, 12541, 12514, 12560, 1013,
+    12516, // listener has no ready/registered handler for the service
+    12518, // listener could not hand off the client connection
+    12520, // listener could not find a handler for the requested server type
+    12537, // TNS:connection closed — server process died during handshake
+]);
 
 /** ORA codes indicating the session itself was killed — one retry on a fresh connection. */
 const FATAL_SESSION_ORA_CODES = new Set([28, 31]);
@@ -253,7 +262,7 @@ class RetryPolicy {
      */
     async execute(fn, hooks = {}) {
         let attempt = 0;
-        // eslint-disable-next-line no-constant-condition
+         
         while (true) {
             attempt += 1;
 

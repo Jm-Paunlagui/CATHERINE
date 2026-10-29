@@ -19,7 +19,7 @@
  *   own mocha+chai toolchain so the root Backend dependency tree stays free of
  *   mocha/chai (the pair flagged by `npm audit`).
  *
- *   1. Ensure .env is configured (UA_DB_USERNAME / UA_DB_PASSWORD; repo root ../../.env)
+ *   1. Point the appDb connection in src/config/database.js at a schema that has the DEV_* fixture tables and configure ../../.env
  *   2. Install mocha+chai LOCALLY IN THIS DIRECTORY (not the Backend root):
  *        cd test/oracle-mongo-wrapper && npm install
  *      (devDependencies mocha + chai are declared in this folder's package.json)
@@ -54,7 +54,7 @@ const {
 } = require("../../src/utils/oracle-mongo-wrapper/parsers/updateParser");
 
 // ─── DB binding ───────────────────────────────────────────────────────────────
-const db = createDb("userAccount");
+const db = createDb("appDb");
 
 // ─── Real table names from .env / schema ──────────────────────────────────────
 const TABLES = {
@@ -975,7 +975,7 @@ describe("14. Transactions & Savepoints", function () {
                 });
                 throw new Error("Intentional rollback");
             });
-        } catch (e) {
+        } catch (_e) {
             // expected
         }
         const doc = await scratch.findOne({ NAME: "TxRollback" });
@@ -1069,7 +1069,7 @@ describe("15. bulkWrite", function () {
                     },
                 }, // NAME is NOT NULL — will fail
             ]);
-        } catch (e) {
+        } catch (_e) {
             // expected
         }
         const countAfter = await scratch.countDocuments();
@@ -1573,7 +1573,7 @@ describe("25. Sequence Operations", function () {
                     { autoCommit: true },
                 );
             });
-        } catch (e) {
+        } catch (_e) {
             // may not exist
         }
     });

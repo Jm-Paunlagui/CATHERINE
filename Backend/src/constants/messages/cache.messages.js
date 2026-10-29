@@ -40,11 +40,19 @@ const cacheMessages = {
 
     /**
      * @param {string} storeName
+     * @param {string} key
+     * @returns {string}
+     */
+    CACHE_SET_SKIPPED_STALE: (storeName, key) =>
+        `Cache SET skipped — store: ${storeName}, key: ${key} (store was invalidated while this value was being built; next read reloads)`,
+
+    /**
+     * @param {string} storeName
      * @param {string} keys
      * @param {number} count
      * @returns {string}
      */
-    CACHE_INVALIDATE: (storeName, keys, count) =>
+    CACHE_INVALIDATE:(storeName, keys, count) =>
         `Cache INVALIDATE — store: ${storeName}, keys: [${keys}], ${count} key(s) removed`,
 
     /**

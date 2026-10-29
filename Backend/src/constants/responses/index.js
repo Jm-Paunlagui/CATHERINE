@@ -90,7 +90,7 @@ function sendSuccess(message, data = null, code = 200, requestId = null) {
  *
  * @param {string} message
  * @param {number} [code=500]
- * @param {{ type?: string, details?: Array, hint?: string, stack?: string }} [opts]
+ * @param {{ type?: string, details?: Array, hint?: string, reasons?: string[], stack?: string }} [opts]
  */
 function sendError(message, code = 500, opts = {}) {
     return {
@@ -103,6 +103,7 @@ function sendError(message, code = 500, opts = {}) {
             type: opts.type ?? "AppError",
             ...(opts.details ? { details: opts.details } : {}),
             ...(opts.hint ? { hint: opts.hint } : {}),
+            ...(opts.reasons ? { reasons: opts.reasons } : {}),
             ...(opts.stack && process.env.NODE_ENV !== "production"
                 ? { stack: opts.stack }
                 : {}),
@@ -114,10 +115,10 @@ function sendError(message, code = 500, opts = {}) {
 
 const RESPONSE_MESSAGES = {
     // Auth
-    LOGIN_SUCCESS: "Login successful.",
-    LOGOUT_SUCCESS: "Logged out successfully.",
-    TOKEN_REFRESHED: "Token refreshed successfully.",
-    PASSWORD_CHANGED: "Password changed successfully.",
+    LOGIN_SUCCESS: "Welcome back! You're signed in.",
+    LOGOUT_SUCCESS: "You've been signed out. See you next time!",
+    TOKEN_REFRESHED: "Your session has been refreshed.",
+    PASSWORD_CHANGED: "Your password has been updated.",
 
     // Generic CRUD
     FETCHED: "Data fetched successfully.",
@@ -133,9 +134,10 @@ const RESPONSE_MESSAGES = {
     ADMIN_CREATED: "Admin created successfully.",
     ADMIN_UPDATED: "Admin updated successfully.",
     ADMIN_DELETED: "Admin removed successfully.",
-    PASSWORD_RESET: "Password reset to default successfully.",
+    PASSWORD_RESET: "A new temporary password was issued.",
     SIGNATURE_RESET: "Record signature recomputed successfully.",
     ADMIN_PERMISSIONS_UPDATED: "Admin permissions updated successfully.",
+    ADMIN_REVOKED: "Admin access revoked successfully.",
 
     // Audit Log
     AUDIT_LOG_LIST_FETCHED: "Audit log records fetched successfully.",
@@ -162,14 +164,60 @@ const RESPONSE_MESSAGES = {
     // Client-side error ingestion (ErrorBoundary → POST /client/errors)
     CLIENT_ERROR_LOGGED: "Error logged successfully.",
 
+    // Help-search miss telemetry (zero-result query → POST /client/help-miss)
+    HELP_SEARCH_MISS_LOGGED: "Recorded.",
+
     // Changelog
     CHANGELOG_LIST_FETCHED: "Changelog entries fetched successfully.",
+    CHANGELOG_LATEST_FETCHED: "Latest changelog entry fetched successfully.",
+    DEV_DOCS_TREE_FETCHED: "Developer documentation index fetched successfully.",
+    DEV_DOCS_DOC_FETCHED: "Developer document fetched successfully.",
+    DEV_DOCS_SEARCH_COMPLETED: "Developer documentation search completed.",
+    ARCHITECTURE_MAP_FETCHED: "Architecture map fetched successfully.",
+    RUNTIME_MAP_FETCHED: "Runtime map fetched successfully.",
     CHANGELOG_ENTRY_CREATED: "Changelog entry created successfully.",
     CHANGELOG_ENTRY_UPDATED: "Changelog entry updated successfully.",
     CHANGELOG_ENTRY_DELETED: "Changelog entry deleted successfully.",
 
     // Release train (read-only — transitions are written via the changelog create path)
     RELEASE_STATE_FETCHED: "Release state retrieved successfully.",
+
+    // Integrity Center (SUPER_ADMIN only — per-table tamper monitoring)
+    INTEGRITY_TAMPER_FETCHED: "Integrity tamper feed fetched successfully.",
+    INTEGRITY_BROWSE_FETCHED: "Integrity rows fetched successfully.",
+    INTEGRITY_RESCAN_COMPLETE:
+        "Integrity rescan complete. See summary for details.",
+    INTEGRITY_EXPORT_FETCHED: "Integrity export rows fetched successfully.",
+    INTEGRITY_TABLES_FETCHED: "Integrity table catalog fetched successfully.",
+    INTEGRITY_FILTER_OPTIONS_FETCHED: "Filter options fetched successfully.",
+
+    // Data Purge & Restore (SUPER_ADMIN only)
+    PURGE_SCOPES_FETCHED: "Purge scope catalogue fetched successfully.",
+    PURGE_PREVIEW_FETCHED: "Purge preview generated successfully.",
+    PURGE_BACKUP_READY: "Backup archive generated successfully.",
+    PURGE_AUTHORISED:
+        "Password verified. You may proceed to the final confirmation.",
+    PURGE_EXECUTED:
+        "Purge completed successfully. See the report for per-table results.",
+    RESTORE_PREVIEW_FETCHED:
+        "Restore pre-flight report generated successfully.",
+    RESTORE_EXECUTED:
+        "Restore completed successfully. See the report for per-table results.",
+
+    // Backup tab
+    BACKUP_LIST_FETCHED: "Backup archive list fetched successfully.",
+    BACKUP_MANUAL_STARTED:
+        "Manual backup completed. See the archive details for results.",
+    BACKUP_DOWNLOADED: "Backup archive download ready.",
+    BACKUP_VERIFIED: "Backup archive integrity verified successfully.",
+    BACKUP_DELETED: "Backup archive deleted successfully.",
+
+    // Backup vote
+    BACKUP_DELETE_REQUESTED:
+        "Delete request submitted. Other admins will be notified to vote.",
+    BACKUP_DELETE_VOTED: "Vote recorded.",
+    BACKUP_DELETE_CANCELLED: "Delete request cancelled.",
+    BACKUP_VOTE_STATUS_FETCHED: "Vote status fetched successfully.",
 };
 
 module.exports = {

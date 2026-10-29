@@ -59,7 +59,7 @@ describe("CacheRegistry — chaos / edge-case unit tests", function () {
             reg.register("a", {});
             try {
                 reg.register("a", {});
-            } catch (_) {}
+            } catch (_) { /* expected: duplicate registration throws */ }
             reg.register("b", {});
 
             expect(() => reg.resolve("b")).not.toThrow();

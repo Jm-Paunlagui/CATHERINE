@@ -8,6 +8,7 @@ const MetricsService = require('../services/MetricsService');
 const systemLogTail = require('../services/SystemLogTailService');
 const { logger } = require('../utils/logger');
 const { auditLogMessages } = require('../constants/messages');
+const SseConnectionRegistry = require('../utils/sse/SseConnectionRegistry');
 
 // ── SSE shared poller ─────────────────────────────────────────────────────────
 //
@@ -97,7 +98,8 @@ const _safeSend = (res, eventName, payload) => {
 };
 
 /**
- * Build the metrics payload pushed on every tick. MetricsService throws
+ * Build the metrics payload pushed on every tick (the merged cluster snapshot
+ * in a cluster; the local one otherwise). MetricsService throws
  * (AppError 503) if the snapshot is unavailable; we swallow it and push null so
  * a metrics hiccup never breaks the audit-log stream.
  *
@@ -110,9 +112,9 @@ const _safeSend = (res, eventName, payload) => {
  *
  * @returns {{ red: object, totals: object, system: object, rates: object }|null}
  */
-const _buildMetricsPayload = () => {
+const _buildMetricsPayload = async () => {
     try {
-        const snap = MetricsService.getSnapshot();
+        const snap = await MetricsService.getClusterSnapshot();
         const t = snap.totals;
         const errorsTotal = t.errorsTotal ?? (t.clientErrorsTotal + t.serverErrorsTotal);
 
@@ -161,12 +163,30 @@ const _buildMetricsPayload = () => {
  * @returns {Promise<void>}
  */
 const _auditSharedPoll = async () => {
+    // Re-entrancy guard: a slow tick must not overlap the next interval fire.
+    if (_auditPollBusy) return;
+    _auditPollBusy = true;
+    try {
+        await _auditSharedPollTick();
+    } finally {
+        _auditPollBusy = false;
+    }
+};
+
+/** True while an `_auditSharedPoll` tick is in flight. */
+let _auditPollBusy = false;
+
+/**
+ * Body of one audit poll tick — wrapped by `_auditSharedPoll`'s guard.
+ * @returns {Promise<void>}
+ */
+const _auditSharedPollTick = async () => {
     if (_auditConnections.size === 0) return;
     const ts = new Date().toISOString();
 
     try {
         const latestMs = await AuditLogService.getLatestCreatedAt();
-        const metricsPayload = _buildMetricsPayload();
+        const metricsPayload = await _buildMetricsPayload();
         _consecutivePollErrors = 0;
 
         for (const [userId, conn] of _auditConnections) {
@@ -211,6 +231,7 @@ const _startAuditPoller = () => {
     if (_auditPollInterval !== null) return;
     _consecutivePollErrors = 0;
     _auditPollInterval = setInterval(_auditSharedPoll, SSE_POLL_INTERVAL_MS);
+    _auditPollInterval.unref?.();
     logger.notice(auditLogMessages.SSE_SHARED_POLL_STARTED());
 };
 
@@ -227,7 +248,7 @@ const _stopAuditPoller = () => {
 
 class AuditLogController {
   static getList = catchAsync(async (req, res) => {
-    const { page = 1, pageSize = 20, fromDate, toDate, method, statusCategory, search } = req.query;
+    const { page = 1, pageSize = 20, fromDate, toDate, method, statusCategory, endpoint, search } = req.query;
     const data = await AuditLogService.getList({
       page:     parseInt(page, 10)     || 1,
       pageSize: parseInt(pageSize, 10) || 20,
@@ -235,6 +256,7 @@ class AuditLogController {
       toDate,
       method,
       statusCategory,
+      endpoint,
       search,
     });
     res.json(sendSuccess(RESPONSE_MESSAGES.AUDIT_LOG_LIST_FETCHED, data));
@@ -281,8 +303,8 @@ class AuditLogController {
   static exportExcel = catchAsync(async (req, res) => {
     const { fromDate, toDate } = req.query;
     const buffer = await AuditLogService.exportToExcel({ fromDate, toDate });
-    const safeFrom = String(fromDate).replace(/[^0-9\-]/g, '');
-    const safeTo = String(toDate).replace(/[^0-9\-]/g, '');
+    const safeFrom = String(fromDate).replace(/[^0-9-]/g, '');
+    const safeTo = String(toDate).replace(/[^0-9-]/g, '');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${safeFrom}-to-${safeTo}.xlsx"`);
     res.send(buffer);
@@ -298,8 +320,8 @@ class AuditLogController {
   static exportLogs = catchAsync(async (req, res) => {
     const { fromDate, toDate } = req.query;
     const buffer = await AuditLogService.exportToZip({ fromDate, toDate });
-    const safeFrom = String(fromDate).replace(/[^0-9\-]/g, '');
-    const safeTo = String(toDate).replace(/[^0-9\-]/g, '');
+    const safeFrom = String(fromDate).replace(/[^0-9-]/g, '');
+    const safeTo = String(toDate).replace(/[^0-9-]/g, '');
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="server-logs-${safeFrom}-to-${safeTo}.zip"`);
     res.send(buffer);
@@ -360,6 +382,10 @@ class AuditLogController {
     res.setHeader('X-Accel-Buffering', 'no'); // Nginx proxy buffer disable
     res.flushHeaders();
 
+    // Register with the process-level SSE registry so gracefulShutdown can
+    // end this stream cleanly on restart (defect B1).
+    const unregisterFromShutdown = SseConnectionRegistry.register(res);
+
     logger.info(auditLogMessages.SSE_CONNECTED(userId));
 
     // Register in the shared connection map — baseline is set on the first poll tick
@@ -382,6 +408,7 @@ class AuditLogController {
 
     // ── Cleanup on disconnect ───────────────────────────────────────────────────
     req.on('close', () => {
+      unregisterFromShutdown();
       _auditConnections.delete(userId);
       logger.info(auditLogMessages.SSE_DISCONNECTED(userId));
       _stopAuditPoller(); // no-op unless _auditConnections is now empty
@@ -416,20 +443,20 @@ class AuditLogController {
    * GET /api/v1/audit-logs/system-logs/stream
    *
    * SSE live tail of today's RFC 5424 level files, filtered to `maxPriority`
-   * (query, default 5) or, when `level` (query) is given, to that single exact
-   * level instead — mirroring how `AuditLogService.getSystemLogs`' `level` param
-   * overrides `maxPriority` on the browse endpoint, so a user who picks one
-   * exact level while Live is on is not sent every level over the wire just to
-   * discard them client-side. Delegates all poll/offset/dispatch logic to
-   * `SystemLogTailService` — this method only owns the HTTP/SSE lifecycle
-   * (headers, connection registration, and disconnect cleanup), mirroring
-   * `stream()` above.
+   * (query, default 5) or, when `level` (query) is given, to that single
+   * exact level instead — mirroring `AuditLogService.getSystemLogs`' `level`
+   * param overriding `maxPriority` on the browse endpoint, so a user who
+   * picks one exact level while Live is on is not sent every level over the
+   * wire just to be discarded client-side. Delegates all poll/offset/dispatch
+   * logic to `SystemLogTailService` — this method only owns the HTTP/SSE
+   * lifecycle (headers, connection registration, and disconnect cleanup),
+   * mirroring `stream()` above.
    *
    * NOT wrapped in catchAsync — manages its own SSE lifecycle; an HTTP error
    * response after the connection is upgraded to an event stream would crash
-   * with write-after-end. An invalid `level` is therefore rejected with a plain
-   * JSON 400 BEFORE the SSE headers are sent, mirroring this method's existing
-   * 401/409 raw-JSON error responses above.
+   * with write-after-end. An invalid `level` is therefore rejected with a
+   * plain JSON 400 BEFORE the SSE headers are sent, mirroring this method's
+   * existing 401/409 raw-JSON error responses above.
    *
    * Separate connection registry from the audit-log stream (a user may hold
    * both open at once — e.g. User Traffic live view in one tab, System live
@@ -459,8 +486,8 @@ class AuditLogController {
 
     // Exact level filter — overrides maxPriority for this connection when
     // provided. Validated against the same known-level-name set the browse
-    // endpoint uses (AuditLogService.SYSTEM_LOG_LEVEL_NAMES) so the two paths
-    // never disagree on what a valid level is.
+    // endpoint uses (AuditLogService.SYSTEM_LOG_LEVEL_NAMES) so the two
+    // paths never disagree on what a valid level is.
     let level = null;
     if (req.query.level != null && req.query.level !== '') {
       const normalizedLevel = AuditLogService.SYSTEM_LOG_LEVEL_NAMES[String(req.query.level).toLowerCase()];
@@ -477,6 +504,12 @@ class AuditLogController {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
+    // Register with the process-level SSE registry so gracefulShutdown can
+    // end this stream cleanly on restart (defect B1). The service boundary is
+    // unchanged: SystemLogTailService stays HTTP-free; only the controller
+    // touches the registry.
+    const unregisterFromShutdown = SseConnectionRegistry.register(res);
+
     systemLogTail.addConnection(userId, res, maxPriority, level);
 
     res.write('event: connected\n');
@@ -484,6 +517,7 @@ class AuditLogController {
     if (typeof res.flush === 'function') res.flush();
 
     req.on('close', () => {
+      unregisterFromShutdown();
       systemLogTail.removeConnection(userId);
     });
   };

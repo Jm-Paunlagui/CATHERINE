@@ -3,9 +3,7 @@
 const { HTTP_STATUS, AppError, AUTH_ERRORS } = require("../constants");
 const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
 const { catchAsync } = require("../utils/catchAsync");
-const { logger } = require("../utils/logger");
-const { authMessages } = require("../constants/messages");
-const AuthService = require("../services/auth.service");
+const AuthService = require("../services/AuthService");
 
 class AuthController {
     /**
@@ -38,16 +36,19 @@ class AuthController {
 
     /**
      * POST /api/v1/auth/refresh
-     * Reads the refresh token from the signed cookie or Authorization header.
+     * Reads the refresh token ONLY from the signed, httpOnly, path-scoped cookie.
+     * An Authorization-header fallback would be a replay vector: a captured
+     * refresh token could be presented by any script or proxy.
+     * A missing, unsigned or tampered cookie is a 401 REFRESH_TOKEN_MISSING —
+     * not USER_NOT_FOUND, which would misreport the cause to clients and logs.
      */
     static refresh = catchAsync(async (req, res) => {
         const refreshToken =
-            req.signedCookies?.[AuthService.COOKIE_NAMES.REFRESH] ||
-            req.headers["authorization"]?.split(" ")[1];
+            req.signedCookies?.[AuthService.COOKIE_NAMES.REFRESH];
 
         if (!refreshToken) {
             throw new AppError(
-                AUTH_ERRORS.USER_NOT_FOUND,
+                AUTH_ERRORS.REFRESH_TOKEN_MISSING,
                 HTTP_STATUS.UNAUTHORIZED,
                 {
                     type: "AuthenticationError",
@@ -83,14 +84,13 @@ class AuthController {
      * Requires: AuthMiddleware.authenticate
      */
     static logout = catchAsync(async (req, res) => {
-        const userId = req.user?.userId;
+        // Revokes the session family (best effort) and logs AUTH_LOGOUT.
+        await AuthService.logout(req.user);
 
         res.clearCookie(AuthService.COOKIE_NAMES.ACCESS, { path: "/" });
         res.clearCookie(AuthService.COOKIE_NAMES.REFRESH, {
             path: "/api/v1/auth/refresh",
         });
-
-        if (userId) logger.info(authMessages.AUTH_LOGOUT(userId));
 
         res.status(HTTP_STATUS.OK).json(
             sendSuccess(RESPONSE_MESSAGES.LOGOUT_SUCCESS),

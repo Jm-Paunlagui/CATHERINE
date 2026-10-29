@@ -93,13 +93,11 @@ describe("GET /api/v1/health/ready — readiness probe", function () {
     // Without this stub, each probe attempt takes ~15 s × 3 retries = 45 s+,
     // exceeding the 10 s test timeout before a response is even sent.
     beforeEach(function () {
-        if (!db.withConnection.mock !== undefined) {
-            vi.spyOn(db, "withConnection").mockRejectedValue(
-                new Error(
-                    "ORA-12541: TNS:no listener — test environment, Oracle not available",
-                ),
-            );
-        }
+        vi.spyOn(db, "withConnection").mockRejectedValue(
+            new Error(
+                "ORA-12541: TNS:no listener — test environment, Oracle not available",
+            ),
+        );
     });
     afterEach(function () {
         vi.restoreAllMocks();
@@ -126,7 +124,7 @@ describe("GET /api/v1/health/ready — readiness probe", function () {
         expect(res.body.data).toHaveProperty("ready");
     });
 
-    it("data.checks contains oracle_userAccount and oracle_Meal keys", async function () {
+    it("data.checks contains the oracle_appDb key", async function () {
         const res = await request(app).get("/api/v1/health/ready");
         const { checks } = res.body.data;
         expect(checks).toBeInstanceOf(Object);

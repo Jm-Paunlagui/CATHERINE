@@ -1,56 +1,68 @@
-﻿"use strict";
+"use strict";
 
 /**
  * @fileoverview Per-user login lockout with configurable fixed/incremental mode.
  *
  * WHAT THIS FILE DOES
- *   Tracks failed login attempts per userId using CacheStore (in-memory, 24h TTL).
- *   Enforces a progressive lockout policy:
+ *   Tracks failed login attempts per userId and enforces a progressive lockout
+ *   policy (the arithmetic lives in `LoginLockoutPolicy`):
  *     - Each lockout cycle reduces the number of allowed attempts by LOGIN_RETRY_DECREMENT.
  *     - In incremental mode each lockout duration multiplies by LOGIN_LOCKOUT_MULTIPLIER.
  *     - After LOGIN_MAX_LOCKOUT_CYCLES completed cycles the account enters HR-reset state
  *       where every subsequent attempt is rejected with 423 until HR clears the record.
+ *     - A failure that arrives while the account is ALREADY locked is not counted
+ *       (race fix).
  *
- * HOW IT WORKS
- *   State per userId in CacheStore (24h TTL):
- *   {
- *     cycles:     number   — completed lockout episodes
- *     currentMax: number   — max attempts allowed in the current window
- *     failCount:  number   — failures in the current window
- *     lockUntil:  number|null — Date.now() ms when lock expires, null if not locked
- *   }
+ * WHERE THE STATE LIVES
+ *   - Single process: a per-instance CacheStore (24h TTL) - the sync API below.
+ *   - Cluster worker (`clusterRpc.active`): the counters live on the PRIMARY
+ *     (`LoginLockoutState`, reached over IPC with `lockout.check|fail|clear`) so
+ *     the threshold is per user across ALL workers. The *Async methods choose the
+ *     path. If the primary is unreachable the worker falls back to its LOCAL
+ *     lockout (per-worker threshold, today's behaviour) and logs
+ *     CLUSTER_LOCKOUT_FALLBACK at most once a minute.
+ *   The WORKER writes the log lines (LOGIN_ATTEMPT_FAILED, LOGIN_LOCKOUT_ENGAGED,
+ *   ...) in both paths so they keep the serving worker's [PID].
  *
- *   check(userId)         — read-only; returns { locked, retryAfter?, hrReset? }
- *   recordFailure(userId) — increments fail count, engages lockout when threshold hit
- *   recordSuccess(userId) — deletes the key (clean slate on good login)
+ * PUBLIC API
+ *   check / recordFailure / recordSuccess            - sync, local CacheStore
+ *   checkAsync / recordFailureAsync / recordSuccessAsync - cluster-aware
  *
  * EXAMPLE
  *   const { loginLockout } = require('./LoginLockoutMiddleware');
  *
  *   // In AuthService.login():
- *   const lockState = loginLockout.check(userId);
+ *   const lockState = await loginLockout.checkAsync(userId);
  *   if (lockState.hrReset) throw new AppError(AUTH_ERRORS.ACCOUNT_LOCKED_PERMANENTLY, 423, ...);
  *   if (lockState.locked)  throw new AppError(AUTH_ERRORS.ACCOUNT_LOCKED, 429, ...);
  *
- *   // On credential failure:
- *   loginLockout.recordFailure(userId);
+ *   // On credential failure (await BEFORE throwing the 401):
+ *   await loginLockout.recordFailureAsync(userId);
  *
  *   // On successful authentication:
- *   loginLockout.recordSuccess(userId);
+ *   await loginLockout.recordSuccessAsync(userId);
  */
 
 const { CacheStore } = require("../cache");
 const { logger } = require("../../utils/logger");
 const { authMessages } = require("../../constants/messages");
+const { clusterMessages } = require("../../constants/messages/cluster.messages");
+const { canonicalUserKey } = require("../../utils/auth/userKey");
+const { clusterRpc } = require("../../utils/cluster/ClusterRpcClient");
+const { validateArgs } = require("../../utils/cluster/ipcSchemas");
+const {
+  CLUSTER_RPC_METHODS,
+  CLUSTER_RPC_TIMEOUTS,
+  CLUSTER_RPC_LIMITS,
+} = require("../../constants/clusterIpc");
+const { LoginLockoutPolicy } = require("./LoginLockoutPolicy");
 
-// ── Config (read once at class instantiation) ─────────────────────────────────
-
-const DEFAULT_MAX_ATTEMPTS = 3;
-const DEFAULT_LOCKOUT_MODE = "incremental"; // 'fixed' | 'incremental'
-const DEFAULT_LOCKOUT_DURATION_MS = 30_000; // 30 s
-const DEFAULT_LOCKOUT_MULTIPLIER = 2;
-const DEFAULT_MAX_LOCKOUT_CYCLES = 3;
-const DEFAULT_RETRY_DECREMENT = 1;
+/**
+ * Canonical store key for a login identifier. Kept as an alias of
+ * `canonicalUserKey` (lives in utils/auth/userKey.js so the refresh
+ * token registry and the lockout share ONE spelling-collapse rule, CWE-307).
+ */
+const lockoutKey = canonicalUserKey;
 
 class LoginLockoutMiddleware {
   /**
@@ -64,56 +76,24 @@ class LoginLockoutMiddleware {
    * @param {CacheStore} [options.store]           - Override the CacheStore instance (for testing).
    */
   constructor(options = {}) {
-    this._maxAttempts =
-      options.maxAttempts ??
-      parseInt(
-        process.env.LOGIN_MAX_ATTEMPTS || String(DEFAULT_MAX_ATTEMPTS),
-        10,
-      );
-
-    this._lockoutMode =
-      options.lockoutMode ??
-      (process.env.LOGIN_LOCKOUT_MODE || DEFAULT_LOCKOUT_MODE);
-
-    this._lockoutDurationMs =
-      options.lockoutDurationMs ??
-      parseInt(
-        process.env.LOGIN_LOCKOUT_DURATION_MS ||
-          String(DEFAULT_LOCKOUT_DURATION_MS),
-        10,
-      );
-
-    this._lockoutMultiplier =
-      options.lockoutMultiplier ??
-      parseFloat(
-        process.env.LOGIN_LOCKOUT_MULTIPLIER ||
-          String(DEFAULT_LOCKOUT_MULTIPLIER),
-      );
-
-    this._maxLockoutCycles =
-      options.maxLockoutCycles ??
-      parseInt(
-        process.env.LOGIN_MAX_LOCKOUT_CYCLES ||
-          String(DEFAULT_MAX_LOCKOUT_CYCLES),
-        10,
-      );
-
-    this._retryDecrement =
-      options.retryDecrement ??
-      parseInt(
-        process.env.LOGIN_RETRY_DECREMENT || String(DEFAULT_RETRY_DECREMENT),
-        10,
-      );
+    this._policy = new LoginLockoutPolicy(options);
+    this._maxAttempts = this._policy.maxAttempts;
+    this._lockoutMode = this._policy.lockoutMode;
+    this._lockoutDurationMs = this._policy.lockoutDurationMs;
+    this._lockoutMultiplier = this._policy.lockoutMultiplier;
+    this._maxLockoutCycles = this._policy.maxLockoutCycles;
+    this._retryDecrement = this._policy.retryDecrement;
 
     this._store =
       options.store ??
       new CacheStore("loginLockout", { ttl: 86400, checkPeriod: 600 });
+    this._lastFallbackLog = -Infinity;
   }
 
-  // ── Public API ────────────────────────────────────────────────────────────
+  // ── Public API (sync, local CacheStore) ───────────────────────────────────
 
   /**
-   * Checks the current lockout state for a userId without mutating it.
+   * Checks the current lockout state for a userId without counting anything.
    *
    * @param {string} userId
    * @returns {{ locked: boolean, retryAfter?: number, hrReset?: boolean }}
@@ -122,93 +102,162 @@ class LoginLockoutMiddleware {
    *   hrReset    — true when all cycles have been consumed (permanent block)
    */
   check(userId) {
-    const state = this._readState(userId);
-    const now = Date.now();
+    const r = this._policy.evaluate(this._readState(userId), Date.now());
+    if (r.changed) this._writeState(userId, r.state);
 
-    // Active lockout window?
-    if (state.lockUntil && now < state.lockUntil) {
-      return {
-        locked: true,
-        retryAfter: Math.ceil((state.lockUntil - now) / 1000),
-      };
-    }
-
-    // Lockout window expired — clear it so the caller sees a fresh window
-    if (state.lockUntil && now >= state.lockUntil) {
-      state.lockUntil = null;
-      state.failCount = 0;
-      this._writeState(userId, state);
-    }
-
-    // All cycles exhausted → permanent HR-reset block
-    if (state.cycles >= this._maxLockoutCycles) {
+    if (r.locked) return { locked: true, retryAfter: r.retryAfter };
+    if (r.hrReset) {
       logger.warning(authMessages.LOGIN_LOCKOUT_PERMANENT(userId));
       return { locked: false, hrReset: true };
     }
-
     return { locked: false };
   }
 
   /**
    * Records a failed login attempt for a userId.
-   * Engages a lockout when failCount reaches currentMax.
+   * Engages a lockout when failCount reaches currentMax. A failure arriving
+   * while the account is already locked is ignored (state unchanged).
    *
    * @param {string} userId
    * @returns {object} The updated state object (for logging / testing).
    */
   recordFailure(userId) {
-    const state = this._readState(userId);
-    const now = Date.now();
-
-    // Clear any expired lockout first
-    if (state.lockUntil && now >= state.lockUntil) {
-      state.lockUntil = null;
-      state.failCount = 0;
-    }
-
-    state.failCount += 1;
-
-    logger.warning(
-      authMessages.LOGIN_ATTEMPT_FAILED(
-        userId,
-        state.failCount,
-        state.currentMax,
-      ),
-    );
-
-    if (state.failCount >= state.currentMax) {
-      state.cycles += 1;
-
-      const lockDuration =
-        this._lockoutMode === "fixed"
-          ? this._lockoutDurationMs
-          : this._lockoutDurationMs *
-            Math.pow(this._lockoutMultiplier, state.cycles - 1);
-
-      state.lockUntil = now + lockDuration;
-      state.currentMax = Math.max(1, state.currentMax - this._retryDecrement);
-      state.failCount = 0;
-
-      logger.warning(
-        authMessages.LOGIN_LOCKOUT_ENGAGED(userId, lockDuration, state.cycles),
-      );
-    }
-
-    this._writeState(userId, state);
-    return state;
+    const r = this._policy.fail(this._readState(userId), Date.now());
+    this._logFailure(userId, r);
+    if (!r.ignored) this._writeState(userId, r.state);
+    return r.state;
   }
 
   /**
    * Clears the lockout state for a userId on successful authentication.
+   * The CacheStore `del` is relayed to sibling workers (ClusterCacheSync).
    *
    * @param {string} userId
    */
   recordSuccess(userId) {
-    this._store.del(userId);
+    this._store.del(lockoutKey(userId));
     logger.info(authMessages.LOGIN_LOCKOUT_CLEARED(userId));
   }
 
+  // ── Public API (cluster-aware) ────────────────────────────────────────────
+
+  /**
+   * Cluster-wide `check`. Outside a cluster worker this IS `check`.
+   *
+   * @param {string} userId
+   * @returns {Promise<{ locked: boolean, retryAfter?: number, hrReset?: boolean }>}
+   */
+  async checkAsync(userId) {
+    if (!clusterRpc.active) return this.check(userId);
+
+    const r = await this._rpc(CLUSTER_RPC_METHODS.LOCKOUT_CHECK, userId);
+    if (r === null) return this.check(userId);
+
+    if (r.hrReset) {
+      logger.warning(authMessages.LOGIN_LOCKOUT_PERMANENT(userId));
+      return { locked: false, hrReset: true };
+    }
+    if (r.locked) return { locked: true, retryAfter: r.retryAfter };
+    return { locked: false };
+  }
+
+  /**
+   * Cluster-wide `recordFailure`. Outside a cluster worker this IS
+   * `recordFailure`. AWAIT it before answering the 401: the next attempt (on any
+   * worker) must see this failure.
+   *
+   * @param {string} userId
+   * @returns {Promise<void>}
+   */
+  async recordFailureAsync(userId) {
+    if (!clusterRpc.active) {
+      this.recordFailure(userId);
+      return;
+    }
+    const r = await this._rpc(CLUSTER_RPC_METHODS.LOCKOUT_FAIL, userId);
+    if (r === null) {
+      this.recordFailure(userId);
+      return;
+    }
+    this._logFailure(userId, r);
+  }
+
+  /**
+   * Cluster-wide `recordSuccess`: clears this worker's store (with the sibling
+   * `del` broadcast) AND the primary's counters.
+   *
+   * @param {string} userId
+   * @returns {Promise<void>}
+   */
+  async recordSuccessAsync(userId) {
+    this.recordSuccess(userId);
+    if (!clusterRpc.active) return;
+    await this._rpc(CLUSTER_RPC_METHODS.LOCKOUT_CLEAR, userId);
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
+
+  /**
+   * One primary round trip. Resolves `null` when the caller must use its local
+   * lockout instead (primary declined, timed out, errored, or the key does not
+   * fit the IPC schema); never throws.
+   *
+   * @param {string} method - CLUSTER_RPC_METHODS.LOCKOUT_*
+   * @param {string} userId
+   * @returns {Promise<object|null>}
+   * @private
+   */
+  async _rpc(method, userId) {
+    const args = { key: lockoutKey(userId) };
+    if (!validateArgs(method, args).ok) {
+      this._warnFallback("bad-key");
+      return null;
+    }
+    try {
+      const r = await clusterRpc.call("primary", method, args, {
+        timeoutMs: CLUSTER_RPC_TIMEOUTS.LOCKOUT_MS,
+      });
+      if (r !== null && r?.fallback === true) {
+        this._warnFallback("primary-declined");
+        return null;
+      }
+      return r ?? {};
+    } catch (err) {
+      this._warnFallback(err?.code ?? err?.message ?? "error");
+      return null;
+    }
+  }
+
+  /** CLUSTER_LOCKOUT_FALLBACK, at most once a minute. */
+  _warnFallback(reason) {
+    const now = Date.now();
+    if (now - this._lastFallbackLog < CLUSTER_RPC_LIMITS.REJECT_LOG_GAP_MS) return;
+    this._lastFallbackLog = now;
+    logger.warning(clusterMessages.CLUSTER_LOCKOUT_FALLBACK(String(reason)));
+  }
+
+  /**
+   * The log lines for one counted/ignored failure (written by the worker in
+   * both the local and the cluster path).
+   *
+   * @param {string} userId
+   * @param {{ignored: boolean, failCount: number, currentMax: number, engaged: boolean, lockDurationMs: number|null, cycles: number}} r
+   * @private
+   */
+  _logFailure(userId, r) {
+    if (r.ignored) {
+      logger.warning(authMessages.LOGIN_FAILURE_IGNORED_LOCKED(userId));
+      return;
+    }
+    logger.warning(
+      authMessages.LOGIN_ATTEMPT_FAILED(userId, r.failCount, r.currentMax),
+    );
+    if (r.engaged) {
+      logger.warning(
+        authMessages.LOGIN_LOCKOUT_ENGAGED(userId, r.lockDurationMs, r.cycles),
+      );
+    }
+  }
 
   /**
    * Returns the current state for a userId, initialising defaults if absent.
@@ -217,14 +266,7 @@ class LoginLockoutMiddleware {
    * @private
    */
   _readState(userId) {
-    return (
-      this._store.get(userId) ?? {
-        cycles: 0,
-        currentMax: this._maxAttempts,
-        failCount: 0,
-        lockUntil: null,
-      }
-    );
+    return this._store.get(lockoutKey(userId)) ?? this._policy.initial();
   }
 
   /**
@@ -234,7 +276,7 @@ class LoginLockoutMiddleware {
    * @private
    */
   _writeState(userId, state) {
-    this._store.set(userId, state, 86400);
+    this._store.set(lockoutKey(userId), state, 86400);
   }
 }
 
@@ -242,4 +284,4 @@ class LoginLockoutMiddleware {
 
 const loginLockout = new LoginLockoutMiddleware();
 
-module.exports = { LoginLockoutMiddleware, loginLockout };
+module.exports = { LoginLockoutMiddleware, loginLockout, lockoutKey };

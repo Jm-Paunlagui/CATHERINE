@@ -4,15 +4,18 @@ This folder contains the **standalone, project-agnostic** SQL for the template's
 authentication, RBAC, and audit-log features. Drop it into any fresh Oracle
 schema and the backend has its own users, admins, and audit trail.
 
-| File               | What it does                                                                            |
-| ------------------ | --------------------------------------------------------------------------------------- |
-| `01_schema.sql`    | Creates `T_USERS_DEV`, `T_ADMINS_DEV` (RBAC + signature), `T_AUDIT_LOGS_DEV` + indexes. |
-| `02_seed_demo.sql` | (Optional) Inserts ~200 synthetic audit rows so the dashboard has data.                 |
+| File                                     | What it does                                                                                                                                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `01_schema.sql`                          | Drops and recreates every template table: users, admins (RBAC + signature), audit log, alert log and ack, refresh-token ledger, backup-token ledger, backup-delete votes and system config, plus indexes. |
+| `02_seed_demo.sql`                       | (Optional) Inserts ~200 synthetic audit rows so the dashboard has data.                                                                                                                                      |
+| `03_alter_admins_notification_columns.sql` | Additive. Adds `EMAIL` and `CAN_RECEIVE_SRV_*` to an older `T_ADMINS_DEV`.                                                                                                                                  |
+| `04_platform_tables.sql`                 | Additive. Creates the tables from sections 6-9 when they are missing. It never drops anything. Use it on an existing install that fails with `ORA-00942`.                                                    |
 
 > **Accounts are seeded by a Node script, not SQL.** Argon2id hashes are peppered
 > with `ARGON2_PEPPER` and each admin row is HMAC-signed with `DATA_SIGNING_SECRET`,
-> so valid rows can only be produced by the app. See the project root
-> `GETTING_STARTED.md` for the seed command.
+> so valid rows can only be produced by the app. Run `npm run db:seed:template`
+> from `Backend/` (creates `admin` / `manager` / `user`, password `Demo@123`).
+> See the project root `GETTING_STARTED.md`.
 
 ## Prerequisites
 
@@ -37,9 +40,22 @@ sqlplus APP_USER/APP_PASSWORD@//localhost:1521/XEPDB1 @02_seed_demo.sql   # opti
 2. Open `01_schema.sql`, run the whole script (F5 / "Run Script").
 3. (Optional) Open `02_seed_demo.sql`, run it for sample dashboard data.
 
+### Existing install (upgrade without data loss)
+
+Do **not** run `01_schema.sql` on a database you want to keep — it drops tables.
+Run the additive scripts in order instead:
+
+```bash
+sqlplus APP_USER/APP_PASSWORD@//localhost:1521/XEPDB1 @03_alter_admins_notification_columns.sql
+sqlplus APP_USER/APP_PASSWORD@//localhost:1521/XEPDB1 @04_platform_tables.sql
+```
+
+Apply them **before** deploying backend code that reads the new columns/tables
+(models use explicit projections, so code ahead of schema fails with `ORA-00904` / `ORA-00942`).
+
 ## Notes
 
-- `01_schema.sql` is **idempotent**: it drops the three template tables first
+- `01_schema.sql` is **idempotent**: it drops every template table first
   (ignoring "table does not exist"), so you can re-run it safely. Comment out the
   `RESET` block at the top if you want `CREATE` to fail on an existing table.
 - `02_seed_demo.sql` only `INSERT`s. To reset the sample data:
@@ -57,12 +73,28 @@ T_USERS_DEV         ID, USERNAME(unique), PASSWORD(argon2), FIRST_NAME, LAST_NAM
 
 T_ADMINS_DEV        ID, USERNAME(unique), PASSWORD(argon2),
                 ROLE  CHECK in (SUPER_ADMIN, ADMIN, USER),
+                EMAIL, CAN_RECEIVE_SRV_* (notification flags),
                 IS_ACTIVE, SYSSIGNATURE(HMAC), CREATED_AT, UPDATED_AT
+                + IX_ADMINS_ACTIVE on IS_ACTIVE
 
 T_AUDIT_LOGS_DEV    ID, REQUEST_ID, USER_ID, USERNAME, METHOD, ENDPOINT, PARAMS,
                 STATUS_CODE, STATUS_CATEGORY, RESPONSE_TIME_MS,
                 CLIENT_IP, SERVER_IP, CREATED_AT
                 + indexes on CREATED_AT, STATUS_CATEGORY, USER_ID
+
+T_SERVER_ALERT_LOG_DEV / T_SERVER_ALERT_ACK_DEV   alert history (ALERT_KEY) + live acks
+                (ACKED_BY = T_ADMINS_DEV.ID)
+
+T_AUTH_REFRESH_TOKEN_DEV   ID, JTI_HASH(unique, 64 hex), FAMILY_ID, USER_ID(USERNAME text),
+                ROLE_SOURCE CHECK in (admin, user), ISSUED_AT, EXPIRES_AT,
+                USED_AT+REPLACED_BY (pair), REVOKED_AT+REVOKE_REASON (pair)
+                + CHK_TART_* constraints, IDX_TART_FAMILY/USER/EXPIRES
+
+T_SERVER_BACKUP_TOKEN_CONSUMED_DEV   JTI(PK), EMP_ID, EXPIRES_AT, CONSUMED_AT
+T_SERVER_BACKUP_DELETE_VOTE_DEV      VOTE_ID(PK), ARCHIVE_ID, REQUESTED_BY, VOTED_BY,
+                VOTED_AT, UNIQUE (ARCHIVE_ID, VOTED_BY)
+T_SYSTEM_CONFIG_DEV        CONFIG_KEY(PK), CONFIG_VALUE, VALUE_TYPE, DESCRIPTION,
+                UPDATED_BY, UPDATED_AT, ROW_HASH
 ```
 
 ## Money column contract (read before adding any monetary column)

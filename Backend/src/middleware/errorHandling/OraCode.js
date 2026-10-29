@@ -49,16 +49,37 @@ const ORA_MAP = {
         // ORA-00020: maximum number of processes exceeded
     },
 
+    // ⚠ 28, 1012 and 1017 (SECTION 7) describe the BACKEND'S OWN database
+    // session, never the caller's credential. Mapping them to 401 would
+    // tell the client the exact opposite of what happened:
+    // the caller's token is valid, the server's DB connection died.
+    //
+    // Two concrete consequences of the old mapping:
+    //   • 401 is not a CONDITIONAL_TAKEOVER_STATUS on the frontend
+    //     (Frontend/src/constants/httpStatus.js), so a real outage rendered as
+    //     an inline "your session is no longer active" — advice the user
+    //     cannot act on, and the outage screen built for this never appeared.
+    //   • /api/v1/health/live has no auth in its chain, yet a burst against it
+    //     was observed returning 401 under pool contention. A load balancer
+    //     reads any non-200 there as unhealthy and pulls a live backend out of
+    //     rotation.
+    //
+    // 503 is correct on both counts: it is what the frontend's conditional
+    // takeover consults, and `_classifyOracle` stamps `DatabaseError`, which is
+    // in OUTAGE_ERROR_TYPES — so these now reach the outage screen like every
+    // other connectivity failure in this file. Pinned by
+    // test/unit/constants/httpStatusCatalog.test.js ("never maps an ORA code
+    // to 401").
     28: {
-        status: 401,
-        msg: "Your database session was terminated by an administrator.",
+        status: 503,
+        msg: "The database connection was terminated. Please try again shortly.",
         // ORA-00028: your session has been killed
         // Source: docs.oracle.com/en/error-help/db/ora-00028/ (confirmed)
     },
 
     1012: {
-        status: 401,
-        msg: "Not logged on. The session is no longer active.",
+        status: 503,
+        msg: "The database connection is no longer active. Please try again shortly.",
         // ORA-01012: not logged on
     },
 
@@ -397,11 +418,20 @@ const ORA_MAP = {
     // SECTION 7 — Authentication / Authorization Errors
     // ════════════════════════════════════════════════════════════════════════
 
+    // ⚠ An Oracle AUTHENTICATION error is not an API authentication error.
+    // ORA-01017 means the deployment's own DB credentials are wrong — a
+    // misconfiguration no end user can act on, and one that makes the whole
+    // service unavailable rather than one request unauthorised. The section
+    // header above is what previously argued this into a 401. See the note on
+    // codes 28/1012 in SECTION 1.
     1017: {
-        status: 401,
-        msg: "Database authentication failed: invalid username or password.",
+        status: 503,
+        msg: "The database is unavailable. Please try again shortly.",
         // ORA-01017: invalid username/password; logon denied
         // Source: antapex.org (confirmed), techonthenet.com (confirmed)
+        // Client message is deliberately generic: naming a credential failure
+        // would disclose deployment configuration state (CWE-209). The precise
+        // cause reaches the server log via `rawMessage`.
     },
 
     1031: {

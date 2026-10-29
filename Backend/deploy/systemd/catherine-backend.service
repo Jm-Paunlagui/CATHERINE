@@ -1,0 +1,65 @@
+# CATHERINE backend as a systemd service (Linux).
+#
+# Template tracked in the repo. Copy to /etc/systemd/system/catherine-backend.service,
+# adjust the lines marked EDIT, then:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now catherine-backend
+# See deploy/systemd/README.md. The template's primary target is Windows
+# (deploy/winsw/); this unit gives a Linux host the SAME stop behaviour.
+
+[Unit]
+Description=CATHERINE backend (Express 5 + OracleDB)
+Documentation=file:///opt/catherine-backend/deploy/systemd/README.md
+# Start once the network is really up (Oracle and SMTP are remote).
+Wants=network-online.target
+After=network-online.target
+# A boot fault must not restart forever: at most 10 starts in 10 min.
+StartLimitIntervalSec=600
+StartLimitBurst=10
+
+[Service]
+Type=simple
+# EDIT: the account that owns the checkout (never root).
+User=catherine
+Group=catherine
+# EDIT: the Backend checkout. server.js loads .env from here, and the
+# restart marker lives in <this>/data/server-run.json (never delete it).
+WorkingDirectory=/opt/catherine-backend
+# EDIT: the node binary (Node 24, the major version the release was tested on).
+ExecStart=/usr/bin/node server.js
+Environment=NODE_ENV=production
+
+# Crash supervision, same as WinSW <onfailure action="restart" delay="10 sec"/>:
+# server.js exits 1 on a crash, so on-failure restarts it; a clean stop (0) is
+# left stopped. The start limit is in [Unit] (systemd ignores it here).
+Restart=on-failure
+RestartSec=10
+
+# -- Stopping ----------------------------------------------------------------
+# SIGTERM goes to the MAIN process only (KillMode=mixed). server.js runs its
+# graceful shutdown on it: new requests are refused at once, requests already
+# in progress may finish while they keep making progress (cap 30 min), then
+# pools close and the audit buffer flushes. With ENABLE_CLUSTERING=true the
+# primary forwards the stop to every worker itself; signalling the workers
+# directly would race it. Whatever is still alive when TimeoutStopSec ends
+# gets SIGKILL.
+KillSignal=SIGTERM
+KillMode=mixed
+# Must exceed server.js FORCED_EXIT_MS (1834 s) + CLUSTER_SHUTDOWN_MARGIN_MS
+# (10 s) + the forced-exit email (<= 5.5 s) = 1849.5 s, like WinSW
+# <stoptimeout>. systemd's default is 90 s, which would SIGKILL a long import
+# or export mid-write. A stop with nothing in flight still exits in about a
+# second - this is a ceiling, not a wait. Keep it equal to <stoptimeout> in
+# deploy/winsw/catherine-backend-service.xml.
+TimeoutStopSec=1860
+# A reboot or poweroff stops this unit with the SAME TimeoutStopSec (systemd
+# honours the unit value at shutdown), so a host restart also gets the full
+# graceful stop - unlike Windows. A hypervisor or UPS may still cut it short.
+
+# The app writes only logs/, data/ and its backup directory.
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

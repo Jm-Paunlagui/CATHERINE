@@ -603,19 +603,19 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
             expect(store.get("bar:c")).toBe("3"); // must survive
         });
 
-        it("namespace wipe: rfidMasterfile pattern removes all rfidMasterfile:* keys", async function () {
+        it("namespace wipe: catalog pattern removes all catalog:* keys", async function () {
             const store = makeStore();
-            store.set("rfidMasterfile", "active list");
-            store.set("rfidMasterfile:type=archived", "archived list");
+            store.set("catalog", "active list");
+            store.set("catalog:type=archived", "archived list");
             store.set(
-                "rfidMasterfile:cardNumber=100:gid=1:type=history",
+                "catalog:id=100:type=history",
                 "history",
             );
             store.set("other:data", "untouched");
 
             const mw = CacheMiddleware.invalidate(
                 store,
-                () => "rfidMasterfile",
+                () => "catalog",
                 { usePattern: true },
             );
             const res = mockRes(200);
@@ -625,10 +625,10 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
 
             await flushImmediate();
 
-            expect(store.get("rfidMasterfile")).toBe(undefined);
-            expect(store.get("rfidMasterfile:type=archived")).toBe(undefined);
+            expect(store.get("catalog")).toBe(undefined);
+            expect(store.get("catalog:type=archived")).toBe(undefined);
             expect(
-                store.get("rfidMasterfile:cardNumber=100:gid=1:type=history"),
+                store.get("catalog:id=100:type=history"),
             ).toBe(undefined);
             expect(store.get("other:data")).toBe("untouched");
         });

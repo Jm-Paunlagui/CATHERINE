@@ -296,7 +296,7 @@ describe("HTTP status catalogue", function () {
             // parks a business error on 503, the frontend will take the page
             // over for it. Every current entry names an unreachable or
             // unavailable database.
-            const AVAILABILITY = /session|process|starting up|shutting down|not available|restricted mode|out of space|shared memory|shared pool|connection|not connected|resolve|connect|listener|unreachable|hostname|protocol adapter|timed out|timeout/i;
+            const AVAILABILITY = /unavailable|session|process|starting up|shutting down|not available|restricted mode|out of space|shared memory|shared pool|connection|not connected|resolve|connect|listener|unreachable|hostname|protocol adapter|timed out|timeout/i;
 
             const offenders = Object.entries(ORA_MAP)
                 .filter(([, e]) => e.status === 503 || e.status === 504)

@@ -203,7 +203,7 @@ const InventoryUnit = {
 
 // ─── DB binding ───────────────────────────────────────────────────────────────
 const inventoryDB = createDb("unitInventory");
-const userdb = createDb("userAccount");
+const userdb = createDb("appDb");
 
 // ─── Collection handles ───────────────────────────────────────────────────────
 const devBook = new OracleCollection(SAPBook.table, inventoryDB);
@@ -1392,7 +1392,7 @@ describe("14. Transactions & Savepoints", function () {
                 });
                 throw new Error("Intentional rollback");
             });
-        } catch (e) {
+        } catch (_e) {
             /* expected */
         }
         const doc = await scratch.findOne({ NAME: "TxRollback" });
@@ -1497,7 +1497,7 @@ describe("15. bulkWrite", function () {
                     },
                 }, // NAME NOT NULL
             ]);
-        } catch (e) {
+        } catch (_e) {
             /* expected */
         }
         const countAfter = await scratch.countDocuments();
@@ -1918,7 +1918,7 @@ describe("21. Join Builder — Unit Tests", function () {
 
     it("21.6 select — pulls only specified columns from the right table", function () {
         const sql = buildJoinSQL('"stage_0"', {
-            from: "U_PERSONALINFOS",
+            from: "T_USER_PROFILES",
             localField: "USERID",
             foreignField: "USERID",
             as: "pi",
@@ -1932,7 +1932,7 @@ describe("21. Join Builder — Unit Tests", function () {
 
     it("21.7 select — multiple columns are all included", function () {
         const sql = buildJoinSQL('"stage_0"', {
-            from: "U_PERSONALINFOS",
+            from: "T_USER_PROFILES",
             localField: "USERID",
             foreignField: "USERID",
             as: "pi",
@@ -2155,7 +2155,7 @@ describe("25. Sequence Operations", function () {
                     { autoCommit: true },
                 );
             });
-        } catch (e) {
+        } catch (_e) {
             /* may not exist */
         }
     });

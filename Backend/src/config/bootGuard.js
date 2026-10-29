@@ -46,10 +46,12 @@ function normalise(val) {
 
 /**
  * Secret validation rules.
- * Each entry: { env, minLength, label }
- *   - env:       process.env key name
- *   - minLength: minimum acceptable length (32 = 128-bit entropy minimum)
- *   - label:     human-readable name for error messages
+ * Each entry: { env, minLength, label, pattern?, patternHint? }
+ *   - env:         process.env key name
+ *   - minLength:   minimum acceptable length (32 = 128-bit entropy minimum)
+ *   - label:       human-readable name for error messages
+ *   - pattern:     optional exact-shape RegExp the value must match
+ *   - patternHint: what the shape is, for the violation message
  */
 const SECRET_RULES = [
     { env: "JWT_SECRET", minLength: 32, label: "JWT signing secret" },
@@ -58,14 +60,23 @@ const SECRET_RULES = [
     { env: "ARGON2_PEPPER", minLength: 32, label: "Argon2 pepper" },
     { env: "DATA_SIGNING_SECRET", minLength: 32, label: "Data signing secret" },
     {
+        // changelog.model.js#resolveKey uses this ONLY when it is exactly 64 hex
+        // chars; any other value silently falls back to DATA_SIGNING_SECRET, so a
+        // 40-char value would pass a length check yet never be the real key.
         env: "CHANGELOG_ENCRYPTION_KEY",
-        minLength: 32,
+        minLength: 64,
         label: "Changelog encryption key",
+        pattern: /^[0-9a-fA-F]{64}$/,
+        patternHint: "exactly 64 hex characters (32 bytes)",
     },
 ];
 
+// NOTE: there is no backup-email passphrase check. Purge backup emails are
+// notification-only (no attachment, no encryption, no passphrase). The BACKUP_EMAIL_ENABLED
+// master switch is the only gate — no passphrase validation needed.
+
 /**
- * Validates the money layer's system-level facts (plan §3.0 rule 1, §3.7.10).
+ * Validates the money layer's system-level facts.
  *
  * Rules enforced:
  *   1. `MONEY_BASE_CURRENCY`, if set, must be a registered ISO 4217 code
@@ -77,7 +88,7 @@ const SECRET_RULES = [
  *      in `MONEY_BASE_CURRENCY_PREVIOUS`, an in-place change (new != previous)
  *      is refused UNLESS `MONEY_BASE_CURRENCY_MIGRATION=true` is set
  *      deliberately — because a functional-currency change must be a new
- *      prospective epoch, not an in-place edit that restates history (§3.7.10).
+ *      prospective epoch, not an in-place edit that restates history.
  *
  * Adds any problems to `violations`; does not exit itself.
  *
@@ -124,20 +135,14 @@ function validateMoneyConfig(violations, isProduction) {
 }
 
 /**
- * Validates all security-critical secrets at boot time.
+ * Checks every SECRET_RULES entry against process.env: set, long enough, not
+ * a shipped placeholder, and — when the rule has one — the exact shape.
+ * Pushes human-readable violations; never exits. Pure env-reader (testable).
  *
- * In production (NODE_ENV=production):
- *   - Any violation → process.exit(1) (fail closed)
- *
- * In development:
- *   - Violations are logged as warnings but do not halt the process
- *
- * @throws {never} Exits the process in production on failure.
+ * @param {string[]} violations
+ * @returns {void}
  */
-function validateSecrets() {
-    const isProduction = process.env.NODE_ENV === "production";
-    const violations = [];
-
+function validateSecretRules(violations) {
     for (const rule of SECRET_RULES) {
         const value = process.env[rule.env];
 
@@ -161,8 +166,34 @@ function validateSecrets() {
             violations.push(
                 `${rule.label} (${rule.env}): still using the template placeholder — rotate immediately`,
             );
+            continue;
+        }
+
+        // Wrong shape (e.g. a non-hex or over-long key the consumer would ignore)
+        if (rule.pattern && !rule.pattern.test(value)) {
+            violations.push(
+                `${rule.label} (${rule.env}): must be ${rule.patternHint}`,
+            );
         }
     }
+}
+
+/**
+ * Validates all security-critical secrets at boot time.
+ *
+ * In production (NODE_ENV=production):
+ *   - Any violation → process.exit(1) (fail closed)
+ *
+ * In development:
+ *   - Violations are logged as warnings but do not halt the process
+ *
+ * @throws {never} Exits the process in production on failure.
+ */
+function validateSecrets() {
+    const isProduction = process.env.NODE_ENV === "production";
+    const violations = [];
+
+    validateSecretRules(violations);
 
     // ── DEMO_MODE + production guard (M4) ─────────────────────────────────────
     if (
@@ -208,9 +239,9 @@ function validateSecrets() {
         }
     }
 
-    // ── Money base-currency guard (plan §3.0 rule 1, §3.7.10) ─────────────────
+    // ── Money base-currency guard ─────────────────
     // The currency of the whole system is a SYSTEM FACT — an env var — never a
-    // column on a transaction row (§3.0 rule 1). Every money column holds the
+    // column on a transaction row. Every money column holds the
     // base currency, always. This guard validates that fact at boot.
     //
     // ARMED BUT INERT. On the bare template there is no ledger table, so the
@@ -219,7 +250,7 @@ function validateSecrets() {
     // refuses an in-place change to the base currency: under IAS 21 a functional-
     // currency change is applied PROSPECTIVELY as a NEW time-keyed epoch, never
     // by editing the current base in place, because that would silently restate
-    // every closed period (§3.7.10). Migrating requires setting
+    // every closed period. Migrating requires setting
     // MONEY_BASE_CURRENCY_MIGRATION=true deliberately.
     validateMoneyConfig(violations, isProduction);
 
@@ -235,7 +266,7 @@ function validateSecrets() {
         process.stderr.write(
             `${header}\n${body}\n\n  Server REFUSED to start. Fix the above before deploying.\n${footer}\n`,
         );
-        logger.crit("Boot guard failed — server refused to start", {
+        logger.critical("Boot guard failed — server refused to start", {
             violations,
         });
         process.exit(1);
@@ -248,4 +279,4 @@ function validateSecrets() {
     }
 }
 
-module.exports = { validateSecrets, validateMoneyConfig };
+module.exports = { validateSecrets, validateSecretRules, validateMoneyConfig };

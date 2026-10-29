@@ -88,7 +88,7 @@ describe("OracleCollection.insertMany — options", function () {
             rowsAffected: 2,
             batchErrors: [{ offset: 1, message: "ORA-00001: unique" }],
         });
-        const coll = new OracleCollection("TAP_SUBSIDY_UPLOAD", fakeDb, conn);
+        const coll = new OracleCollection("T_BULK_UPLOAD", fakeDb, conn);
         const res = await coll.insertMany(
             [{ GID: 1 }, { GID: 2 }, { GID: 3 }],
             { returning: [], batchErrors: true },
@@ -151,12 +151,12 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
         const conn = fakeConn({ rowsAffected: 1 });
         const coll = new OracleCollection("T_SAMPLE_TABLE", fakeDb, conn);
         await coll.bulkUpdateByKeys(
-            [{ GID: 1, CARD_NUMBER: 100, EMP_NAME: "NEW" }],
-            { keys: ["GID", "CARD_NUMBER"] },
+            [{ GID: 1, ITEM_NO: 100, ITEM_NAME: "NEW" }],
+            { keys: ["GID", "ITEM_NO"] },
         );
         const { sql, rows } = conn.calls[0];
-        expect(sql).toMatch(/SET "EMP_NAME" = :s0/);
-        expect(sql).toMatch(/WHERE "GID" = :k0 AND "CARD_NUMBER" = :k1/);
+        expect(sql).toMatch(/SET "ITEM_NAME" = :s0/);
+        expect(sql).toMatch(/WHERE "GID" = :k0 AND "ITEM_NO" = :k1/);
         expect(rows[0]).toEqual({ s0: "NEW", k0: 1, k1: 100 });
     });
 
@@ -214,7 +214,7 @@ describe("OracleCollection bulk — bind-type inference & sizing", function () {
         const conn = fakeConn({ rowsAffected: 1, outBinds: undefined });
         const coll = new OracleCollection("T", fakeDb, conn);
         const name = "ñ".repeat(120); // 120 chars, 240 bytes
-        await coll.insertMany([{ EMP_NAME: name }], { returning: [] });
+        await coll.insertMany([{ ITEM_NAME: name }], { returning: [] });
         const def = conn.calls[0].options.bindDefs.v0;
         expect(def.type).toBe(ORACLEDB.STRING);
         // maxSize must be at least the true byte length (240), which the old

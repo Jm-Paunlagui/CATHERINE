@@ -3,7 +3,9 @@
 /**
  * Changelog routes
  *
- *   GET    /api/v1/changelog                  list (PUBLIC — read-only, no auth)
+ *   GET    /api/v1/changelog/public           list, author-stripped (PUBLIC — no auth)
+ *   GET    /api/v1/changelog/public/latest    newest entry, author-stripped (PUBLIC)
+ *   GET    /api/v1/changelog                  list (authenticated)
  *   POST   /api/v1/changelog                  create (SUPER_ADMIN only)
  *   PUT    /api/v1/changelog/:id              update (SUPER_ADMIN only)
  *   DELETE /api/v1/changelog/:id              delete (SUPER_ADMIN only)
@@ -20,6 +22,7 @@ const express = require("express");
 const AuthMiddleware        = require("../middleware/authentication/AuthMiddleware");
 const ChangelogController   = require("../controllers/ChangelogController");
 const ReleaseController     = require("../controllers/ReleaseController");
+const { RateLimiterMiddleware } = require("../middleware/security/RateLimiterMiddleware");
 
 const router = express.Router();
 
@@ -28,12 +31,37 @@ const requireSuperAdmin = AuthMiddleware.requireAccess(
     (user) => user.role === "SUPER_ADMIN",
 );
 
-// ── Read — PUBLIC (read-only) ────────────────────────────────────────────────
-// Version History is viewable without signing in. listAll() returns only
-// committed release entries (release-train drafts are derived separately by the
-// SUPER_ADMIN-only /release/current route). Mutations below remain SUPER_ADMIN.
+// Rate limiter for the public read (unauthenticated) — stands in for the
+// auth-based abuse protection every other route on this router has.
+const publicChangelogLimiter = new RateLimiterMiddleware({
+    max: 30,
+    windowMs: 60_000,
+    label: "RateLimit:changelog-public",
+});
+
+// ── Public read — NO auth ────────────────────────────────────────────────────
+// Declared before "/:id" so the literal path is never shadowed. Serves the
+// author-stripped payload (ChangelogService.listPublic): Version History and
+// the version badge are viewable without signing in. GET / below stays
+// authenticated (401 without a session) and keeps returning the full record.
+router.get(
+    "/public",
+    publicChangelogLimiter.handle,
+    ChangelogController.listPublic,
+);
+
+// Newest public entry only — the version badge's read. Same limiter, same
+// author stripping; ~1 KB instead of the full list.
+router.get(
+    "/public/latest",
+    publicChangelogLimiter.handle,
+    ChangelogController.latestPublic,
+);
+
+// ── Read — all authenticated roles ───────────────────────────────────────────
 router.get(
     "/",
+    AuthMiddleware.authenticate,
     ChangelogController.list,
 );
 

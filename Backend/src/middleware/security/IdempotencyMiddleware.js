@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview `IdempotencyMiddleware` — replay protection for money-moving
- * writes. (Plan §3.5. NET-NEW — no reference-system equivalent.)
+ * writes.
  *
  * ============================================================================
  * THE GAP THIS CLOSES

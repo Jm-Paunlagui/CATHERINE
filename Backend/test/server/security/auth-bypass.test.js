@@ -10,12 +10,13 @@ const {
     defaultErrorHandler,
 } = require("../../../src/middleware/errorHandling/ErrorHandlerMiddleware");
 
+const { ACCESS_CLAIMS } = require("../helpers/auth");
 const TEST_SECRET = "your-jwt-secret-here-change-in-production";
 const COOKIE_SECRET = "test-cookie-secret";
 
 function signToken(payload = {}, expiresIn = "1h") {
     return jwt.sign(
-        { sub: "test-user", userLevel: 1, ...payload },
+        { sub: "test-user", userLevel: 1, ...ACCESS_CLAIMS, ...payload },
         TEST_SECRET,
         {
             expiresIn,

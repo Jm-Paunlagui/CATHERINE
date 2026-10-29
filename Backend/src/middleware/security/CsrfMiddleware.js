@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 /**
  * @fileoverview CSRF protection middleware using double-submit cookie pattern.
@@ -9,6 +9,7 @@
 const { doubleCsrf } = require("csrf-csrf");
 const { logger } = require("../../utils/logger");
 const { middlewareMessages } = require("../../constants/messages");
+const { getStatusTitle } = require("../../constants/responses");
 
 const TOKEN_TTL_MS = 5 * 60 * 1000;
 const TOKEN_SIZE = 64;
@@ -98,7 +99,7 @@ class CsrfMiddleware {
       const token = this._generateCsrfToken(req, res);
       if (!token) throw new Error("Token generation returned an empty value");
 
-      logger.info("CSRF token generated", {
+      logger.info(middlewareMessages.CSRF_TOKEN_GENERATED(req.ip), {
         ip: req.ip,
         userAgent: req.get("user-agent"),
         endpoint: req.originalUrl,
@@ -109,7 +110,7 @@ class CsrfMiddleware {
 
       this._buildTokenResponse(res, token);
     } catch (error) {
-      logger.error("Failed to generate CSRF token", {
+      logger.error(middlewareMessages.CSRF_TOKEN_GENERATE_FAILED(req.ip), {
         error: error.message ?? String(error),
         errorName: error.name,
         stack: error.stack,
@@ -140,10 +141,13 @@ class CsrfMiddleware {
 
         return res.status(400).json({
           success: false,
+          status: "error",
+          title: getStatusTitle(400),
           message:
             "Cannot refresh without an existing CSRF session. " +
             "Obtain a token via GET /csrf/token first.",
           code: "NO_CSRF_SESSION",
+          requestId: req.id ?? null,
         });
       }
 
@@ -213,7 +217,7 @@ class CsrfMiddleware {
           : "CSRF protection is active (no secret cookie found on this request)",
       });
     } catch (error) {
-      logger.error("Failed to return CSRF status", {
+      logger.error(middlewareMessages.CSRF_STATUS_FAILED(req.ip), {
         error: error.message ?? String(error),
         stack: error.stack,
         ip: req.ip,
@@ -227,25 +231,31 @@ class CsrfMiddleware {
   _protect(req, res, next) {
     this._doubleCsrfProtection(req, res, (err) => {
       if (err) {
-        logger.warning("CSRF validation failed", {
-          ip: req.ip,
-          userAgent: req.get("user-agent"),
-          url: req.originalUrl,
-          method: req.method,
-          error: err.message,
-          hasToken: !!(
-            req.headers["x-csrf-token"] ??
-            req.body?._csrf ??
-            req.body?.csrfToken
-          ),
-          hasCookie: !!req.cookies?.[this._cookieName],
-          operation: "CSRF_TOKEN_INVALID",
-        });
+        logger.warning(
+          middlewareMessages.CSRF_VALIDATION_FAILED(req.ip, req.originalUrl),
+          {
+            ip: req.ip,
+            userAgent: req.get("user-agent"),
+            url: req.originalUrl,
+            method: req.method,
+            error: err.message,
+            hasToken: !!(
+              req.headers["x-csrf-token"] ??
+              req.body?._csrf ??
+              req.body?.csrfToken
+            ),
+            hasCookie: !!req.cookies?.[this._cookieName],
+            operation: "CSRF_TOKEN_INVALID",
+          },
+        );
 
         return res.status(403).json({
           success: false,
+          status: "error",
+          title: getStatusTitle(403),
           message: "CSRF validation failed",
           code: "CSRF_TOKEN_INVALID",
+          requestId: req.id ?? null,
           error:
             process.env.NODE_ENV === "development"
               ? err.message
@@ -253,12 +263,15 @@ class CsrfMiddleware {
         });
       }
 
-      logger.debug("CSRF validation passed", {
-        ip: req.ip,
-        url: req.originalUrl,
-        method: req.method,
-        operation: "CSRF_TOKEN_VALID",
-      });
+      logger.debug(
+        middlewareMessages.CSRF_VALIDATION_PASSED(req.ip, req.originalUrl),
+        {
+          ip: req.ip,
+          url: req.originalUrl,
+          method: req.method,
+          operation: "CSRF_TOKEN_VALID",
+        },
+      );
 
       next();
     });

@@ -74,6 +74,7 @@
  */
 
 const { sseMessages } = require("../../constants/messages");
+const SseConnectionRegistry = require("./SseConnectionRegistry");
 
 /** Default poll cadence. */
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
@@ -138,6 +139,20 @@ class ScopedSsePoller {
         res.setHeader("X-Accel-Buffering", "no");
         res.flushHeaders();
 
+        // Register with the process-level SSE registry so gracefulShutdown can
+        // end this stream cleanly on restart (defect B1).
+        //
+        // The registry is also handed this connection's OWN teardown. Ending
+        // the socket is not enough here: `res` stays in `scope.connections`
+        // and the shared `setInterval` keeps polling the database against a
+        // closing pool until the disconnect closure below actually runs.
+        // `disconnect` is assigned further down, so the callback defers to it
+        // rather than capturing its (still undefined) value now.
+        let disconnect = () => {};
+        const unregisterFromShutdown = SseConnectionRegistry.register(res, () =>
+            disconnect(),
+        );
+
         let scope = this._scopes.get(key);
         if (!scope) {
             scope = {
@@ -166,14 +181,31 @@ class ScopedSsePoller {
 
         this._startSharedPoller();
 
-        return () => {
+        // Idempotent: both `req.on("close")` and the registry's shutdown
+        // teardown can reach this, and on a shutdown mid-request they BOTH do.
+        // Without the guard the second call re-logs SSE_SCOPE_CLOSED for a
+        // scope that is already gone.
+        let closed = false;
+        disconnect = () => {
+            if (closed) return;
+            closed = true;
+
+            unregisterFromShutdown();
             scope.connections.delete(res);
-            if (scope.connections.size === 0) {
+            // Identity guard: a disconnect closure outlives its scope when the
+            // error bulkhead tears the scope down, and a client may since have
+            // re-opened the same key. Only delete the scope this closure belongs to.
+            if (
+                scope.connections.size === 0 &&
+                this._scopes.get(key) === scope
+            ) {
                 this._scopes.delete(key);
                 this._log("info", sseMessages.SSE_SCOPE_CLOSED(this.name, key));
             }
             this._stopSharedPoller();
         };
+
+        return disconnect;
     }
 
     /**
@@ -270,6 +302,17 @@ class ScopedSsePoller {
                     message: "Stream polling failed repeatedly. Please refresh your page.",
                     code: "POLL_FAILED",
                 });
+                // End every socket of the torn-down scope. Left open, each one
+                // keeps a disconnect closure over this (now unregistered) scope
+                // and receives nothing further; the client's EventSource then
+                // reconnects on the normal close path instead of hanging.
+                for (const res of scope.connections) {
+                    try {
+                        res.end();
+                    } catch {
+                        // Socket already closed.
+                    }
+                }
                 this._scopes.delete(key);
             }
         }
@@ -296,6 +339,13 @@ class ScopedSsePoller {
     _startSharedPoller() {
         if (this._pollInterval !== null) return;
         this._pollInterval = setInterval(this._tick, this.pollIntervalMs);
+        // unref: a poll timer must never be the reason the process stays
+        // alive. Without this the interval holds the event loop open on its
+        // own, so a shutdown that has already ended every stream still waits
+        // for the forced-exit failsafe instead of exiting cleanly.
+        if (typeof this._pollInterval.unref === "function") {
+            this._pollInterval.unref();
+        }
         this._log("notice", sseMessages.SSE_SHARED_POLL_STARTED(this.name));
     }
 

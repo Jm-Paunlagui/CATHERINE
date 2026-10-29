@@ -6,11 +6,11 @@
  * Regression coverage for the Logging & Observability dashboard bug where:
  *   - Route labels were built from req.route.path alone, which EXCLUDES the
  *     Express mount prefix — so POST /api/v1/pay-period/save,
- *     POST /api/v1/rfid-management/save and POST /api/v1/subsidy-management/save
+ *     POST /api/v1/user-management/save and POST /api/v1/order-management/save
  *     all collapsed into a single "POST /save" row.
  *   - OPTIONS (CORS preflight) requests fell back to the raw URL (no req.route
  *     before routing), leaking unparameterized concrete paths such as
- *     "OPTIONS /api/v1/rfid-management/90603664/13761/history" into labels
+ *     "OPTIONS /api/v1/user-management/90603664/13761/history" into labels
  *     (cardinality explosion + PII exposure, CWE-200/CWE-400).
  *
  * Verifies:
@@ -66,16 +66,16 @@ function buildApp(fakeStore, rt) {
     payPeriod.post("/save", ok);
     payPeriod.post("/verify", ok);
 
-    const rfid = express.Router();
-    rfid.post("/save", ok);
-    rfid.get("/:gid/:cardNumber/history", ok);
+    const users = express.Router();
+    users.post("/save", ok);
+    users.get("/:groupId/:id/history", ok);
 
-    const subsidy = express.Router();
-    subsidy.post("/save", ok);
+    const orders = express.Router();
+    orders.post("/save", ok);
 
     app.use("/api/v1/pay-period", payPeriod);
-    app.use("/api/v1/rfid-management", rfid);
-    app.use("/api/v1/subsidy-management", subsidy);
+    app.use("/api/v1/user-management", users);
+    app.use("/api/v1/order-management", orders);
 
     return app;
 }
@@ -116,11 +116,11 @@ describe("routeLabel.buildRouteLabel()", function () {
     it("preserves Express param tokens", function () {
         const req = {
             method: "GET",
-            baseUrl: "/api/v1/rfid-management",
-            route: { path: "/:gid/:cardNumber/history" },
+            baseUrl: "/api/v1/user-management",
+            route: { path: "/:groupId/:id/history" },
         };
         expect(buildRouteLabel(req)).toBe(
-            "GET /api/v1/rfid-management/:gid/:cardNumber/history",
+            "GET /api/v1/user-management/:groupId/:id/history",
         );
     });
 
@@ -129,8 +129,8 @@ describe("routeLabel.buildRouteLabel()", function () {
             method: "GET",
             baseUrl: "",
             route: undefined,
-            path: "/api/v1/rfid-management/90603664/13761/history",
-            originalUrl: "/api/v1/rfid-management/90603664/13761/history",
+            path: "/api/v1/user-management/90603664/13761/history",
+            originalUrl: "/api/v1/user-management/90603664/13761/history",
         };
         const label = buildRouteLabel(req);
         expect(label).toBe(`GET ${UNMATCHED_ROUTE_LABEL}`);
@@ -186,14 +186,14 @@ describe("MetricsMiddleware — route labels (mounted routers)", function () {
 
     it("records full mounted paths — sibling routers' /save never collapse", async function () {
         await request(app).post("/api/v1/pay-period/save").send({});
-        await request(app).post("/api/v1/rfid-management/save").send({});
-        await request(app).post("/api/v1/subsidy-management/save").send({});
+        await request(app).post("/api/v1/user-management/save").send({});
+        await request(app).post("/api/v1/order-management/save").send({});
         await tick();
 
         expect(recordedRoutes()).toEqual(expect.arrayContaining([
             "POST /api/v1/pay-period/save",
-            "POST /api/v1/rfid-management/save",
-            "POST /api/v1/subsidy-management/save",
+            "POST /api/v1/user-management/save",
+            "POST /api/v1/order-management/save",
         ]));
         expect(recordedRoutes()).not.toContain("POST /save");
     });
@@ -205,14 +205,14 @@ describe("MetricsMiddleware — route labels (mounted routers)", function () {
         expect(recordedRoutes()).toEqual(["GET /api/v1/pay-period"]);
     });
 
-    it("preserves param tokens — raw GID/card values never enter labels", async function () {
+    it("preserves param tokens — raw id values never enter labels", async function () {
         await request(app).get(
-            "/api/v1/rfid-management/90603664/13761/history",
+            "/api/v1/user-management/90603664/13761/history",
         );
         await tick();
 
         expect(recordedRoutes()).toEqual([
-            "GET /api/v1/rfid-management/:gid/:cardNumber/history",
+            "GET /api/v1/user-management/:groupId/:id/history",
         ]);
         expect(JSON.stringify(recordedRoutes())).not.toContain("90603664");
         expect(JSON.stringify(recordedRoutes())).not.toContain("13761");
@@ -220,7 +220,7 @@ describe("MetricsMiddleware — route labels (mounted routers)", function () {
 
     it("does not record OPTIONS (CORS preflight) requests at all", async function () {
         await request(app)
-            .options("/api/v1/rfid-management/90603664/13761/history")
+            .options("/api/v1/user-management/90603664/13761/history")
             .set("Origin", "http://localhost:3000")
             .set("Access-Control-Request-Method", "GET");
         await tick();
@@ -279,16 +279,16 @@ describe("ResponseTimeMiddleware — per-route keys match MetricsMiddleware", fu
     });
 
     it("aggregates under the full mounted, parameterized label", async function () {
-        await request(app).post("/api/v1/subsidy-management/save").send({});
+        await request(app).post("/api/v1/order-management/save").send({});
         await request(app).get(
-            "/api/v1/rfid-management/90603664/13761/history",
+            "/api/v1/user-management/90603664/13761/history",
         );
         await tick();
 
         const keys = Object.keys(rt.getPerformanceMetrics());
         expect(keys).toEqual(expect.arrayContaining([
-            "POST /api/v1/subsidy-management/save",
-            "GET /api/v1/rfid-management/:gid/:cardNumber/history",
+            "POST /api/v1/order-management/save",
+            "GET /api/v1/user-management/:groupId/:id/history",
         ]));
     });
 

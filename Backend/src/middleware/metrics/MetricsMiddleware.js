@@ -13,8 +13,8 @@
  *   - Route key is built via utils/routeLabel.buildRouteLabel() INSIDE the finish
  *     handler — req.baseUrl + req.route.path are only populated after the router
  *     has matched, never at request start. This yields the full mounted pattern
- *     ("POST /api/v1/pay-period/save") with param tokens preserved
- *     ("/:gid/:cardNumber/history"), so distinct routers never collapse into one
+ *     ("POST /api/v1/users/save") with param tokens preserved
+ *     ("/:id/:itemId/history"), so distinct routers never collapse into one
  *     key and raw param values never leak into labels.
  *   - OPTIONS (CORS preflight) requests are not recorded at all — they are
  *     answered before routing and would pollute labels with raw concrete paths.

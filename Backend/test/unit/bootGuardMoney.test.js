@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * bootGuardMoney.test.js — the base-currency invariant at boot (plan §5.2, §3.7.10).
+ * bootGuardMoney.test.js — the base-currency invariant at boot.
  *
  * validateMoneyConfig(violations, isProduction) is a pure env-reader that pushes
  * human-readable strings onto `violations`. It never exits. The rules under test:
@@ -66,7 +66,7 @@ describe("validateMoneyConfig — base currency validity", function () {
     });
 });
 
-describe("validateMoneyConfig — base-change guard (§3.7.10)", function () {
+describe("validateMoneyConfig — base-change guard", function () {
     it("is DISARMED when no ledger tables are declared (no refusal even on a change)", function () {
         process.env.MONEY_BASE_CURRENCY = "USD";
         process.env.MONEY_BASE_CURRENCY_PREVIOUS = "PHP";

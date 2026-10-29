@@ -5,7 +5,7 @@
  * every currency the money layer can present.
  *
  * ============================================================================
- * WHY CODES, NEVER SYMBOLS (see plan §3.0)
+ * WHY CODES, NEVER SYMBOLS
  * ============================================================================
  * Only the three-letter ISO 4217 CODE is ever persisted. Symbols (`$`, `€`,
  * `₱`) are presentation, resolved from this registry client-side or at export
@@ -19,8 +19,8 @@
  *   code        {string} ISO 4217 three-letter code (the ONLY persisted value)
  *   displayScale {number} decimal places shown to a human (2–4). This is a
  *                PRESENTATION scale — it never governs storage (always
- *                NUMBER(19,4), plan §3.0 rule 2) and never rounds the stored
- *                value; it only formats it (plan §3.0 rule 3).
+ *                NUMBER(19,4)) and never rounds the stored
+ *                value; it only formats it.
  *   symbol      {string} display glyph — presentation only, never persisted.
  *   locale      {string} BCP-47 locale used for grouping/decimal separators
  *                in `Intl.NumberFormat`.

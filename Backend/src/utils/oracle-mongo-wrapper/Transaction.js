@@ -171,9 +171,9 @@ class Session {
      * is a no-op (does nothing). It exists for API compatibility with
      * MongoDB's session interface.
      *
-     * @param {string} name - The savepoint name (ignored in Oracle)
+     * @param {string} _name - The savepoint name (ignored in Oracle)
      */
-    async releaseSavepoint(name) {
+    async releaseSavepoint(_name) {
         // Oracle does not support RELEASE SAVEPOINT — no-op
     }
 }
@@ -194,7 +194,7 @@ class Transaction {
      * @param {Object} db - The db interface from createDb()
      *
      * @example
-     *   const db = createDb("userAccount");
+     *   const db = createDb("appDb");
      *   const txManager = new Transaction(db);
      */
     constructor(db) {

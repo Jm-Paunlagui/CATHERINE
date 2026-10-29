@@ -2,7 +2,7 @@
 
 /**
  * Regression test for the money fence on the legacy ORM `convertTypes` /
- * `rowToDoc` helpers (plan §3.0 rule 3b, §5.2).
+ * `rowToDoc` helpers.
  *
  * These helpers are exported for API compatibility but must NEVER re-round a
  * money or rate value. The money-safe `fetchTypeHandler` hands a scaled NUMBER

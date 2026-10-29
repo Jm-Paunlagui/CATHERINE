@@ -8,8 +8,8 @@
 
 const uploadMessages = {
     /**
-     * Emitted at CRITICAL when a save batch's terminal buckets do not sum to
-     * the number of submitted rows. An unbalanced ledger means at least one row
+     * Emitted at CRIT when a save batch's terminal buckets do not sum to the
+     * number of submitted rows. An unbalanced ledger means at least one row
      * silently disappeared between the request and the response — the exact
      * class of defect this module exists to make impossible.
      */

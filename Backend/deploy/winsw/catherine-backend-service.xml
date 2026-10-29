@@ -24,8 +24,31 @@
   <!-- Crash supervision: restart 10s after any non-zero/unexpected exit -->
   <onfailure action="restart" delay="10 sec"/>
 
-  <!-- Window for the backend's graceful shutdown (pool close, audit flush) -->
-  <stoptimeout>20 sec</stoptimeout>
+  <!-- Window for the backend's graceful shutdown: requests already in
+       progress may finish for as long as they keep making progress (absolute
+       cap 30 min; a request idle past its limit is cut much sooner), then
+       pool close and audit flush. Must exceed server.js's FORCED_EXIT_MS
+       (1834 s) + CLUSTER_SHUTDOWN_MARGIN_MS (10 s) + the forced-exit alert
+       email (<=5.5 s) with margin, or Windows force-kills the service
+       mid-teardown. A stop with nothing in flight still exits in seconds -
+       this is a ceiling, not a wait. Changing it requires re-running
+       install-service.ps1 so the installed service picks it up. -->
+  <stoptimeout>1860 sec</stoptimeout>
+
+  <!-- Host shutdown / reboot. Without preshutdown (WinSW v2.12.0 accepts only the
+       plain shutdown control), Windows waits up to WaitToKillServiceTimeout
+       (about 20 s by default) - enough for a quiet backend to stop cleanly, not
+       for a long request. With it the SCM waits for the service to reach
+       STOPPED for up to <preshutdownTimeout> before continuing the shutdown.
+       This is NOT the stop window above: a host reboot cannot wait 30 min, so
+       requests still running when this window ends are cut. Audit rows are
+       flushed at the START of the stop (early flush), so they survive that cut.
+       Windows documents no maximum, only defaults (10 s since build 15063,
+       3 min before); hypervisors / UPS / Group Policy may impose their own.
+       WinSW v3 ONLY: v2.12.0 (the version this repo pins) has no such element
+       and silently ignores both lines - see README "Host shutdown". -->
+  <preshutdown>true</preshutdown>
+  <preshutdownTimeout>5 min</preshutdownTimeout>
 
   <!-- Wrapper captures the exe's stdout/stderr (banner, [FATAL] lines) here.
        The app's own structured logs still go to %BASE%\logs\ as usual. -->

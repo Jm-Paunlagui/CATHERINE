@@ -49,9 +49,13 @@
  * `EMAIL_RETRYING` log line can report an accurate "`attempt/max`" — it
  * does not re-implement classification.
  *
- * SECURITY (CWE-312): log lines never include mail body/HTML/attachments —
- * only the label, attempt counters, and `err.message` (which nodemailer
- * populates with protocol-level text, never message content).
+ * SECURITY (CWE-312 / CWE-532): log lines never include mail body/HTML/
+ * attachments — only the label, attempt counters, and `err.message` (which
+ * nodemailer populates with protocol-level text, never message content).
+ * Every recipient address that reaches a log line (message string AND meta
+ * object) is masked first via `ServerNotificationService.maskEmail` — this
+ * applies at DEBUG (success-path recipient) as well as WARNING (fallback
+ * recipient list), because DEBUG is expected to be enabled in production.
  *
  * Complexity: O(a + b) time where `a`/`b` are the primary/fallback attempt
  * counts actually made (bounded by `EMAIL_RETRY_ATTEMPTS` +
@@ -95,12 +99,18 @@ const { RetryPolicy } = require("../../utils/resilience");
 const { logger } = require("../../utils/logger");
 const { resilienceMessages } = require("../../constants/messages");
 const SharedTransporter = require("./SharedTransporter");
+const { maskEmail } = require("./ServerNotificationService");
 
 /** Result status constants — exposed so callers never hardcode magic strings. */
 const STATUS = Object.freeze({
     DELIVERED: "DELIVERED",
     FALLBACK: "FALLBACK",
     FAILED: "FAILED",
+    // SMTP accepted the message but REJECTED some of its recipients
+    // (info.rejected non-empty). Only reachable for a multi-recipient send —
+    // a single rejected recipient makes sendMail throw. Deliberately not
+    // retried: a resend would duplicate the message to everyone who did get it.
+    PARTIAL: "PARTIAL",
 });
 
 /** SMTP retry backoff ceiling in ms — see RetryPolicy.js header ("SMTP base 500ms cap 8s"). */
@@ -203,8 +213,9 @@ class EmailProtectionService {
         let primaryCause = null;
         let primaryErrorCode = null;
 
+        let primaryInfo = null;
         try {
-            await primaryPolicy.execute(
+            primaryInfo = await primaryPolicy.execute(
                 async (attempt) => {
                     primaryAttempts = attempt;
                     const mailOptions = buildMailOptions();
@@ -232,9 +243,31 @@ class EmailProtectionService {
                 },
             );
 
+            const maskedPrimaryRecipient = maskEmail(primaryRecipient);
+
+            // A resolved sendMail is not proof every recipient got it. Before
+            // this check a partly rejected multi-recipient send (one address
+            // bounced at RCPT TO) was reported
+            // DELIVERED and its batch counted as sent.
+            const rejected = Array.isArray(primaryInfo?.rejected) ? primaryInfo.rejected : [];
+            if (rejected.length > 0) {
+                const maskedRejected = rejected.map((r) => maskEmail(String(r?.address ?? r)));
+                logger.warning(resilienceMessages.EMAIL_PARTIALLY_REJECTED(label, maskedRejected.length, maskedRejected.join(", ")));
+                return {
+                    status: STATUS.PARTIAL,
+                    recipient: primaryRecipient,
+                    rejectedRecipients: rejected.map((r) => String(r?.address ?? r)),
+                    fallbackRecipients: [],
+                    attempts: primaryAttempts,
+                    fallbackAttempts: 0,
+                    cause: `SMTP rejected ${rejected.length} recipient(s)`,
+                    smtpErrorCode: null,
+                };
+            }
+
             logger.debug(
-                resilienceMessages.EMAIL_ATTEMPT_OK(label, primaryRecipient, "primary", primaryAttempts),
-                { label, recipient: primaryRecipient, tier: "primary", attempt: primaryAttempts },
+                resilienceMessages.EMAIL_ATTEMPT_OK(label, maskedPrimaryRecipient, "primary", primaryAttempts),
+                { label, recipient: maskedPrimaryRecipient, tier: "primary", attempt: primaryAttempts },
             );
             logger.info(
                 resilienceMessages.EMAIL_DELIVERY_SUMMARY(label, 1, 0, 0),
@@ -308,7 +341,15 @@ class EmailProtectionService {
             };
         }
 
-        logger.warning(resilienceMessages.EMAIL_FALLBACK(fallbackRecipients));
+        // Mask each address before it ever reaches the template, matching
+        // AlertNotifierService's `emails.map(ServerNotificationService.maskEmail)`
+        // precedent. maskEmail now guards array input itself, so `.map` is belt
+        // and braces rather than a requirement — but it was NOT always so: a raw
+        // array used to stringify via commas and only the first address was
+        // masked, shipping every later one in the clear.
+        logger.warning(
+            resilienceMessages.EMAIL_FALLBACK(fallbackRecipients.map(maskEmail)),
+        );
 
         const fallbackPolicy = new RetryPolicy({
             maxAttempts: fallbackMaxAttempts,
@@ -344,16 +385,19 @@ class EmailProtectionService {
                 },
             );
 
+            const maskedFallbackRecipients = fallbackRecipients
+                .map(maskEmail)
+                .join(", ");
             logger.debug(
                 resilienceMessages.EMAIL_ATTEMPT_OK(
                     label,
-                    fallbackRecipients.join(", "),
+                    maskedFallbackRecipients,
                     "fallback",
                     fallbackAttempts,
                 ),
                 {
                     label,
-                    recipient: fallbackRecipients.join(", "),
+                    recipient: maskedFallbackRecipients,
                     tier: "fallback",
                     attempt: fallbackAttempts,
                 },

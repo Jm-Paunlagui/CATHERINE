@@ -3,7 +3,7 @@
 /**
  * @fileoverview UserModel — standalone regular-user accounts (T_USERS_DEV).
  *
- * Generic, project-agnostic replacement for the HRIS U_USERS coupling. The login
+ * Generic, project-agnostic user store (no external directory coupling). The login
  * identifier is USERNAME; PASSWORD holds an Argon2id hash. A T_USERS_DEV account with
  * no matching T_ADMINS_DEV row authenticates at USER level.
  *

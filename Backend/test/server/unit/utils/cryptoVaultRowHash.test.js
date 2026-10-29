@@ -1,9 +1,10 @@
 "use strict";
 
-// Salvaged from the removed tamperDetection.test.js. The TamperDetectionService
-// (financial-table ROW_HASH verification) was removed with the consumption /
-// wallet feature set; only the feature-agnostic CryptoVault.verifyRowHash
-// primitive remains and is exercised here.
+// Unit tests for the feature-agnostic CryptoVault.verifyRowHash primitive
+// (plain SHA-256, for Oracle STANDARD_HASH columns). This is NOT the HMAC
+// ROW_HASH path: src/services/TamperDetectionService.js still exists and
+// verifies HMAC-signed rows (T_SYSTEM_CONFIG in the template) through
+// CryptoVault.verifyRecord — it is not exercised here.
 
 const crypto = require("crypto");
 const { CryptoVault } = require("../../../../src/utils/encryption/CryptoVault");

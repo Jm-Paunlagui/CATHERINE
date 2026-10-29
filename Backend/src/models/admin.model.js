@@ -13,9 +13,60 @@
  * connection is opened.
  */
 
-const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
+const {
+    createDb,
+    OracleCollection,
+    Transaction,
+} = require("../utils/oracle-mongo-wrapper");
 const { isDemoMode } = require("../config/demoMode");
+const { AppError, ADMIN_ERRORS } = require("../constants/errors");
+const { HTTP_STATUS } = require("../constants");
+const { adminMessages } = require("../constants/messages");
+const { logger } = require("../utils/logger");
 const demo = require("./demo/demoStore");
+
+/** Physical table. */
+const TABLE = "T_ADMINS_DEV";
+
+/** search(): default / maximum rows returned, and the longest needle accepted. */
+const SEARCH_DEFAULT_LIMIT = 20;
+const SEARCH_MAX_LIMIT = 50;
+const SEARCH_MAX_QUERY_LENGTH = 100;
+
+/**
+ * Case-insensitive substring search on USERNAME / EMAIL (admins carry no name
+ * columns). The needle is bound (`:q`) and its LIKE wildcards are escaped by
+ * the caller, so `%` and `_` typed by a user match literally. FETCH FIRST is
+ * bound too (`:lim`). The same bind name may appear twice in Oracle SQL.
+ */
+const SEARCH_SQL = `SELECT ID, USERNAME, EMAIL, ROLE, IS_ACTIVE
+   FROM ${TABLE}
+  WHERE UPPER(USERNAME) LIKE :q ESCAPE '\\'
+     OR UPPER(EMAIL)    LIKE :q ESCAPE '\\'
+  ORDER BY USERNAME
+  FETCH FIRST :lim ROWS ONLY`;
+
+/**
+ * Escapes the LIKE metacharacters `\`, `%` and `_` with a backslash so they
+ * match literally under `ESCAPE '\'`.
+ * @param {string} s
+ * @returns {string}
+ */
+function escapeLike(s) {
+    return s.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Clamps a requested search limit to 1..SEARCH_MAX_LIMIT (default when absent
+ * or not a finite number).
+ * @param {*} limit
+ * @returns {number}
+ */
+function clampLimit(limit) {
+    const n = Math.trunc(Number(limit));
+    if (!Number.isFinite(n) || n < 1) return SEARCH_DEFAULT_LIMIT;
+    return Math.min(n, SEARCH_MAX_LIMIT);
+}
 
 /** Signature context — namespaces the HMAC so it can't be replayed cross-table. */
 const SIGN_CONTEXT = "T_ADMINS_DEV";
@@ -67,11 +118,28 @@ const SERVER_NOTIFY_FLAG_COLUMNS = Object.freeze({
     "server-system-notification": "CAN_RECEIVE_SRV_SYS",
 });
 
+let _db = null;
 let _col = null;
+/** Lazily resolves the appDb interface (never called in DEMO_MODE). */
+function db() {
+    if (!_db) _db = createDb("appDb");
+    return _db;
+}
 /** Lazily resolves the T_ADMINS_DEV collection (never called in DEMO_MODE). */
 function col() {
-    if (!_col) _col = new OracleCollection("T_ADMINS_DEV", createDb("appDb"));
+    if (!_col) _col = new OracleCollection(TABLE, db());
     return _col;
+}
+
+/**
+ * The collection a write should use: the transaction-bound one when a guard
+ * session is passed (so the write joins the transaction holding the row locks
+ * instead of blocking on them from a second connection), else the pool one.
+ * @param {object|null|undefined} session - Transaction session or null
+ * @returns {OracleCollection}
+ */
+function writeCol(session) {
+    return session ? session.collection(TABLE) : col();
 }
 
 class AdminModel {
@@ -88,6 +156,100 @@ class AdminModel {
             return admins.find((a) => a.USERNAME === username) ?? null;
         }
         return col().find({ USERNAME: username }).project(PROJECTION).next();
+    }
+
+    /**
+     * Finds an admin by numeric ID (the JWT `id` claim), including PASSWORD +
+     * SYSSIGNATURE. Null when absent or when `id` is not a finite number.
+     * @param {number|string} id
+     * @returns {Promise<object|null>}
+     */
+    static async findById(id) {
+        const numericId = Number(id);
+        if (id === null || id === undefined || id === "" || !Number.isFinite(numericId)) {
+            return null;
+        }
+        if (isDemoMode()) {
+            const { admins } = await demo.accounts();
+            return admins.find((a) => Number(a.ID) === numericId) ?? null;
+        }
+        return col().find({ ID: numericId }).project(PROJECTION).next();
+    }
+
+    /**
+     * Batch lookup by USERNAME in one `$in` query (bound list). Returns the
+     * contact projection only — no PASSWORD / SYSSIGNATURE. Absent names are
+     * simply missing from the result. At most SEARCH_MAX_LIMIT names are used.
+     * @param {string[]} usernames
+     * @returns {Promise<Array<{ID:number, USERNAME:string, EMAIL:string|null, ROLE:string, IS_ACTIVE:string}>>}
+     */
+    static async findByUsernames(usernames) {
+        const names = [
+            ...new Set((usernames ?? []).filter((u) => typeof u === "string" && u)),
+        ].slice(0, SEARCH_MAX_LIMIT);
+        if (names.length === 0) return [];
+        if (isDemoMode()) {
+            const { admins } = await demo.accounts();
+            return admins
+                .filter((a) => names.includes(a.USERNAME))
+                .map((a) => ({
+                    ID: a.ID,
+                    USERNAME: a.USERNAME,
+                    EMAIL: a.EMAIL ?? null,
+                    ROLE: a.ROLE,
+                    IS_ACTIVE: a.IS_ACTIVE,
+                }));
+        }
+        return col()
+            .find({ USERNAME: { $in: names } })
+            .project({ ID: 1, USERNAME: 1, EMAIL: 1, ROLE: 1, IS_ACTIVE: 1 })
+            .toArray();
+    }
+
+    /**
+     * Case-insensitive substring search on USERNAME and EMAIL (T_ADMINS_DEV has
+     * no name columns; names live in T_USERS_DEV). `q` is trimmed and capped at
+     * 100 characters; `%`, `_` and `\` match literally. `limit` is clamped to
+     * 1..50 (default 20). PASSWORD and SYSSIGNATURE are NOT returned.
+     *
+     * @param {string} q
+     * @param {number} [limit=20]
+     * @returns {Promise<Array<{ID:number, USERNAME:string, EMAIL:string|null, ROLE:string, IS_ACTIVE:string}>>}
+     */
+    static async search(q, limit = SEARCH_DEFAULT_LIMIT) {
+        const needle = String(q ?? "").trim().slice(0, SEARCH_MAX_QUERY_LENGTH);
+        if (!needle) return [];
+        const lim = clampLimit(limit);
+
+        if (isDemoMode()) {
+            const lower = needle.toLowerCase();
+            const { admins } = await demo.accounts();
+            return admins
+                .filter((a) =>
+                    [a.USERNAME, a.EMAIL].some((v) =>
+                        String(v ?? "").toLowerCase().includes(lower),
+                    ),
+                )
+                .sort((a, b) => a.USERNAME.localeCompare(b.USERNAME))
+                .slice(0, lim)
+                .map((a) => ({
+                    ID: a.ID,
+                    USERNAME: a.USERNAME,
+                    EMAIL: a.EMAIL ?? null,
+                    ROLE: a.ROLE,
+                    IS_ACTIVE: a.IS_ACTIVE,
+                }));
+        }
+
+        const d = db();
+        const res = await d.withConnection((conn) =>
+            conn.execute(
+                SEARCH_SQL,
+                { q: `%${escapeLike(needle.toUpperCase())}%`, lim },
+                { outFormat: d.oracledb.OUT_FORMAT_OBJECT },
+            ),
+        );
+        return res?.rows ?? [];
     }
 
     /**
@@ -123,29 +285,85 @@ class AdminModel {
     }
 
     /**
-     * Counts ACTIVE admins with the given role, excluding one username.
-     * Used by the last-super-admin guard before role/active changes or deletes.
+     * Counts ACTIVE admins with the given role, optionally excluding one
+     * username. A null/undefined exclusion omits the predicate entirely — a
+     * bound `USERNAME <> NULL` would match nothing and always return 0.
      * @param {string} role
-     * @param {string} excludeUsername
+     * @param {string|null} [excludeUsername]
      * @returns {Promise<number>}
      */
-    static async countActiveByRole(role, excludeUsername) {
+    static async countActiveByRole(role, excludeUsername = null) {
+        const hasExclusion = excludeUsername !== null && excludeUsername !== undefined;
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return admins.filter(
                 (a) =>
                     a.ROLE === role &&
                     a.IS_ACTIVE === "Y" &&
-                    a.USERNAME !== excludeUsername,
+                    (!hasExclusion || a.USERNAME !== excludeUsername),
             ).length;
         }
-        return col()
-            .find({
-                ROLE: role,
-                IS_ACTIVE: "Y",
-                USERNAME: { $ne: excludeUsername },
-            })
-            .count();
+        const filter = { ROLE: role, IS_ACTIVE: "Y" };
+        if (hasExclusion) filter.USERNAME = { $ne: excludeUsername };
+        return col().find(filter).count();
+    }
+
+    // ─── Last-SUPER_ADMIN guard ───────────────────────────────────────────────
+
+    /**
+     * Runs `fn` inside ONE transaction that first locks every ACTIVE
+     * SUPER_ADMIN row (`SELECT ... FOR UPDATE`), refusing with 409 when
+     * removing `excludeId` would leave zero. Two concurrent demotions of the
+     * last two SUPER_ADMINs serialise on the locks, so the second one sees the
+     * first one's committed change and is refused (no check-then-act race).
+     *
+     * `fn(session)` runs in the SAME transaction: writes to T_ADMINS_DEV inside
+     * it MUST pass `session` to the model write method, otherwise they would
+     * block on the very locks this transaction holds. Commit on return,
+     * rollback on throw. A target that is not itself an active SUPER_ADMIN
+     * cannot reduce the count and is never refused.
+     *
+     * In DEMO_MODE the same check runs against the in-memory store and `fn`
+     * receives `null`.
+     *
+     * @template T
+     * @param {number|string} excludeId - T_ADMINS_DEV.ID being demoted/deactivated/revoked/deleted
+     * @param {(session: object|null) => Promise<T>} fn
+     * @returns {Promise<T>}
+     * @throws {AppError} 409 LAST_ACTIVE_SUPER_ADMIN
+     */
+    static async withLastSuperAdminGuard(excludeId, fn) {
+        const targetId = Number(excludeId);
+
+        const assertNotLast = (rows) => {
+            const ids = rows.map((r) => Number(r.ID));
+            if (ids.includes(targetId) && ids.every((id) => id === targetId)) {
+                logger.warning(adminMessages.ADMIN_LAST_SUPER_ADMIN_BLOCKED(excludeId));
+                throw new AppError(ADMIN_ERRORS.LAST_ACTIVE_SUPER_ADMIN, HTTP_STATUS.CONFLICT, {
+                    type: "BusinessRuleError",
+                });
+            }
+        };
+
+        if (isDemoMode()) {
+            const { admins } = await demo.accounts();
+            assertNotLast(
+                admins.filter((a) => a.ROLE === "SUPER_ADMIN" && a.IS_ACTIVE === "Y"),
+            );
+            return fn(null);
+        }
+
+        return new Transaction(db()).withTransaction(async (session) => {
+            // No .limit(): FETCH FIRST cannot be combined with FOR UPDATE.
+            const rows = await session
+                .collection(TABLE)
+                .find({ ROLE: "SUPER_ADMIN", IS_ACTIVE: "Y" })
+                .project({ ID: 1 })
+                .forUpdate(true)
+                .toArray();
+            assertNotLast(rows ?? []);
+            return fn(session);
+        });
     }
 
     // ─── Server-notification recipients ───────────────────────────────────────
@@ -286,16 +504,30 @@ class AdminModel {
      *
      * @param {string} username
      * @param {Record<string, 'Y'|'N'>} channelFlags - e.g. { "server-system-notification": "Y" }
+     * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async setNotifyFlags(username, channelFlags) {
+    static async setNotifyFlags(username, channelFlags, session = null) {
         const fields = {};
         for (const [channel, value] of Object.entries(channelFlags ?? {})) {
             const column = SERVER_NOTIFY_FLAG_COLUMNS[channel];
             if (column) fields[column] = value === "Y" ? "Y" : "N";
         }
         if (Object.keys(fields).length === 0) return;
-        return AdminModel._set(username, fields);
+        return AdminModel._set(username, fields, session);
+    }
+
+    /**
+     * Persists an admin's EMAIL (e.g. the operator-typed override address a
+     * temporary password was sent to). EMAIL is outside the signed field set,
+     * so SYSSIGNATURE is unchanged. A blank value stores NULL.
+     * @param {string} username
+     * @param {string|null} email
+     * @returns {Promise<void>}
+     */
+    static async setEmail(username, email) {
+        const value = typeof email === "string" && email.trim() ? email.trim() : null;
+        return AdminModel._set(username, { EMAIL: value });
     }
 
     /**
@@ -317,13 +549,15 @@ class AdminModel {
      * @param {string} username
      * @param {string} role
      * @param {string} sysSignature
+     * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async updateRole(username, role, sysSignature) {
-        return AdminModel._set(username, {
-            ROLE: role,
-            SYSSIGNATURE: sysSignature,
-        });
+    static async updateRole(username, role, sysSignature, session = null) {
+        return AdminModel._set(
+            username,
+            { ROLE: role, SYSSIGNATURE: sysSignature },
+            session,
+        );
     }
 
     /**
@@ -331,42 +565,48 @@ class AdminModel {
      * @param {string} username
      * @param {string} isActive  - 'Y' | 'N'
      * @param {string} sysSignature
+     * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async setActive(username, isActive, sysSignature) {
-        return AdminModel._set(username, {
-            IS_ACTIVE: isActive,
-            SYSSIGNATURE: sysSignature,
-        });
+    static async setActive(username, isActive, sysSignature, session = null) {
+        return AdminModel._set(
+            username,
+            { IS_ACTIVE: isActive, SYSSIGNATURE: sysSignature },
+            session,
+        );
     }
 
     /**
      * Deletes an admin by USERNAME.
      * @param {string} username
+     * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async deleteAdmin(username) {
+    static async deleteAdmin(username, session = null) {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             const idx = admins.findIndex((a) => a.USERNAME === username);
             if (idx !== -1) admins.splice(idx, 1);
             return;
         }
-        await col().deleteOne({ USERNAME: username });
+        await writeCol(session).deleteOne({ USERNAME: username });
     }
 
     /**
      * Internal $set helper shared by the update methods. Always stamps UPDATED_AT.
+     * @param {string} username
+     * @param {object} fields
+     * @param {object|null} [session] - guard session; null uses the pool
      * @private
      */
-    static async _set(username, fields) {
+    static async _set(username, fields, session = null) {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             const row = admins.find((a) => a.USERNAME === username);
             if (row) Object.assign(row, fields, { UPDATED_AT: new Date() });
             return;
         }
-        await col().updateOne(
+        await writeCol(session).updateOne(
             { USERNAME: username },
             { $set: { ...fields, UPDATED_AT: new Date() } },
         );
@@ -376,5 +616,6 @@ class AdminModel {
 AdminModel.SIGN_CONTEXT = SIGN_CONTEXT;
 AdminModel.buildSignedFields = buildSignedFields;
 AdminModel.SERVER_NOTIFY_FLAG_COLUMNS = SERVER_NOTIFY_FLAG_COLUMNS;
+AdminModel.SEARCH_MAX_LIMIT = SEARCH_MAX_LIMIT;
 
 module.exports = AdminModel;

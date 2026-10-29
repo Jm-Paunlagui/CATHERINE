@@ -2,13 +2,95 @@
 
 /**
  * @fileoverview Oracle-Mongo-Wrapper parser/schema validation messages.
- * Used ONLY in logger calls — never thrown or sent to clients.
+ * `wrapError` is thrown as `new Error(...)` at all 45 call sites across the
+ * wrapper (never a logger call itself) and reaches `error.log` only via
+ * `ErrorHandlerMiddleware:32-46`'s generic `logger.error(err.message, ...)`;
+ * it is never sent to clients. Bind VALUES are redacted before they ever
+ * reach that string (CWE-532 — insertion of sensitive information into a
+ * log file) — see `describeBinds` below.
  */
+
+/**
+ * Cap on the number of bind entries individually described in a
+ * `wrapError` message. This is the only length bound on the `Binds:`
+ * segment — `LOG_MAX_SAFESTR_LENGTH` does NOT apply here: `logger.js:358`
+ * short-circuits truncation for string values (`if (typeof value ===
+ * "string") return value;`), and `wrapError`'s output is the log
+ * **message**, not a meta object value.
+ * @type {number}
+ */
+const MAX_DESCRIBED_BINDS = 40;
+
+/**
+ * Describes a single bind value's *shape* — never its content. Kept
+ * information (type, length, array/buffer size, bind direction) is exactly
+ * what diagnoses the Oracle errors this wrapper throws for: ORA-01008 (not
+ * all variables bound — arity), ORA-01722 (invalid number — type),
+ * ORA-12899 (value too large for column — length). The value itself is
+ * never diagnostic and is exactly what must never reach a log file.
+ *
+ * ⚠ Recursion is capped at one level (`depth > 0` short-circuits to
+ * `"<object>"`) so this stays provably bounded in a logging path — it must
+ * never be able to walk an attacker- or data-shaped object indefinitely.
+ *
+ * @param {*} v - The raw bind value (primitive, Buffer, Date, array, or a
+ *   node-oracledb `{ val, dir, type }` bind descriptor).
+ * @param {number} [depth=0] - Recursion depth guard.
+ * @returns {string} A value-free shape description, e.g. `<string:11>`.
+ */
+function describeBindValue(v, depth = 0) {
+  if (v === null) return "<null>";
+  if (v === undefined) return "<undefined>";
+  if (Buffer.isBuffer(v)) return `<buffer:${v.length}>`;
+  if (v instanceof Date) return "<date>";
+  if (Array.isArray(v)) return `<array:${v.length}>`;
+  if (typeof v === "string") return `<string:${v.length}>`;
+  if (typeof v === "number") return "<number>";
+  if (typeof v === "boolean") return "<boolean>";
+  if (typeof v === "object") {
+    if (depth > 0) return "<object>";
+    if ("val" in v || "dir" in v) {
+      return `<bind dir:${v.dir ?? "IN"} ${describeBindValue(v.val, depth + 1)}>`;
+    }
+    return "<object>";
+  }
+  return "<object>";
+}
+
+/**
+ * Describes an entire `binds` argument (object or array form accepted by
+ * the wrapper's execute calls) as a value-free, length-bounded summary
+ * suitable for `error.log`. Never includes a bind's actual value.
+ *
+ * @param {object|Array|null|undefined} binds - Named binds object or
+ *   positional binds array.
+ * @returns {string} e.g. `"3 bind(s): where_GID=<string:11>, where_CUTOFF_ID=<number>"`,
+ *   `"0 bind(s)"`, or `"<none>"`.
+ */
+function describeBinds(binds) {
+  if (binds === null || typeof binds !== "object") return "<none>";
+
+  const entries = Array.isArray(binds)
+    ? binds.map((v, i) => [String(i), v])
+    : Object.entries(binds);
+
+  if (entries.length === 0) return "0 bind(s)";
+
+  const shown = entries
+    .slice(0, MAX_DESCRIBED_BINDS)
+    .map(([name, v]) => `${name}=${describeBindValue(v)}`)
+    .join(", ");
+
+  const remaining = entries.length - MAX_DESCRIBED_BINDS;
+  const suffix = remaining > 0 ? `, …+${remaining} more` : "";
+
+  return `${entries.length} bind(s): ${shown}${suffix}`;
+}
 
 const oracleMongoWrapperMessages = {
   // ── Error formatter ──────────────────────────────────────────────────────
   wrapError: (scope, err, sql, binds) =>
-    `[${scope}] ${err.message}\nSQL: ${sql}${binds !== undefined ? `\nBinds: ${JSON.stringify(binds)}` : ""}`,
+    `[${scope}] ${err.message}\nSQL: ${sql}${binds !== undefined ? `\nBinds: ${describeBinds(binds)}` : ""}`,
 
   // ── Privilege / DCL ──────────────────────────────────────────────────────
   INSUFFICIENT_PRIVILEGES: (scope, requiredPrivilege, err, sql) =>

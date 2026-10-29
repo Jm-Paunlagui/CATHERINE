@@ -5,6 +5,10 @@ const auditLogMessages = {
     `Audit log insert failed for REQUEST_ID ${requestId}: ${err}.`,
   BATCH_INSERT_FAILED: (count, err) =>
     `Audit log batch insert failed for ${count} record(s): ${err}.`,
+  PENDING_OVERFLOW_DROPPED: (dropped, cap) =>
+    `Audit log queue over cap ${cap} during DB outage — ${dropped} oldest record(s) dropped.`,
+  SHUTDOWN_ROWS_UNPERSISTED: (count, reason) =>
+    `Shutdown: ${count} audit record(s) could not be persisted (${reason}) and are lost.`,
   INSERT_SKIPPED_DISABLED: () =>
     `Audit log middleware is disabled — skipping DB insert.`,
   LIST_FETCHED: (count, page) =>
@@ -19,6 +23,8 @@ const auditLogMessages = {
     `Audit log Excel export started — range: ${from} to ${to}.`,
   EXPORT_ZIP_STARTED: (from, to) =>
     `Audit log ZIP export started — range: ${from} to ${to}.`,
+  EXPORT_ZIP_TRAVERSAL_BLOCKED: (file) =>
+    `AuditLogService.exportToZip: path traversal attempt blocked — ${file}`,
   DELETE_RANGE_STARTED: (from, to) =>
     `Audit log delete range started — ${from} to ${to}.`,
   DELETE_RANGE_DONE: (rows, days) =>
@@ -49,7 +55,7 @@ const auditLogMessages = {
     `Audit log SSE shared poller hit ${max} consecutive errors with ${size} client(s) — stopping and notifying all.`,
   SSE_CONNECTED_EVENT_SENT: (userId) =>
     `Audit log SSE connected event sent — userId: ${userId}.`,
-  
+
   // ── System log file view (RFC 5424 level files, System sub-tab) ─────────────
   SYSTEM_LOGS_FETCHED: (date, count, page) =>
     `System log entries fetched — date: ${date}, ${count} row(s), page ${page}.`,

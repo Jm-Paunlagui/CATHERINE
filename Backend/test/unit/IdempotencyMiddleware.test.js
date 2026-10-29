@@ -2,7 +2,7 @@
 
 /**
  * Unit tests for IdempotencyMiddleware (src/middleware/security/IdempotencyMiddleware.js).
- * Pure — mocked req/res, no HTTP server, no DB. (Plan §3.5.)
+ * Pure — mocked req/res, no HTTP server, no DB.
  */
 
 const {

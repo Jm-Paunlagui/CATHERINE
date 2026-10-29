@@ -6,8 +6,7 @@
  * WHAT THIS FILE DOES
  * -------------------
  * Resolves the Access Control DB opt-in half of `recipients(channel) = env
- * floor ∪ DB opt-ins` (server-email-notifications-plan.md "Phase 2 —
- * Recipients managed in Access Control"). Holds a short-TTL, per-channel,
+ * floor ∪ DB opt-ins` (recipients managed in Access Control). Holds a short-TTL, per-channel,
  * last-known-good cache of resolved email addresses so a DB outage can
  * never mute a notification channel — the whole point of an ops-alert
  * pipeline is to still work when the database is the thing that's down.
@@ -28,19 +27,17 @@
  *   `warning` with `_noNotify: true` (loop guard, R1b) and the cache
  *   timestamp is bumped anyway so the resolver backs off for a full
  *   interval before retrying (never hammers a down DB on every send).
- * - `invalidate()` forces the NEXT read to refresh immediately — call it from
- *   wherever your app writes a `CAN_RECEIVE_SRV_*` flag (e.g. an Access
- *   Control permissions endpoint, or `AdminModel.setNotifyFlags`' caller) so a
- *   toggle takes effect on the very next notification instead of waiting out
- *   the TTL.
+ * - `invalidate()` forces the NEXT read to refresh immediately — called by
+ *   `AdminManagementService.updatePermissions` whenever any
+ *   `CAN_RECEIVE_SRV_*` flag changes, so a toggle in Access Control takes
+ *   effect on the very next notification instead of waiting out the TTL.
  * - Concurrent callers during a refresh share ONE in-flight request
  *   (`_refreshPromise`) instead of firing N redundant DB round-trips.
  *
- * Addresses come straight from `T_ADMINS_DEV.EMAIL` via
- * `AdminModel.findServerNotifyRecipients`, which already drops admins with no
- * address on file. If your deployment keeps emails in a separate HR directory,
- * resolve them inside that model method — this resolver deliberately knows
- * nothing about where an address comes from.
+ * Addresses come from `AdminModel.findServerNotifyRecipients`, which already
+ * drops admins with no address on file. Where the address lives (the admin
+ * table, a user directory, an external service) is decided inside that model
+ * method — this resolver deliberately knows nothing about the source.
  *
  * EXAMPLE
  * -------
@@ -52,6 +49,8 @@
 
 const { logger } = require("../../utils/logger");
 const { notificationMessages } = require("../../constants/messages");
+const { clusterRpc } = require("../../utils/cluster/ClusterRpcClient");
+const { CLUSTER_RPC_METHODS } = require("../../constants/clusterIpc");
 
 class RecipientResolver {
     constructor() {
@@ -71,7 +70,24 @@ class RecipientResolver {
      * @returns {Promise<string[]>}
      */
     async getDbRecipients(channel) {
-        await this._maybeRefresh();
+        // Bounded: when the database is the thing that hung (a
+        // stop's failsafe, a pool outage) the refresh can hang too, and an
+        // unbounded wait made the whole send lose its 5 s race, env floor
+        // included. After the bound the last-known-good list is served and the
+        // shared refresh keeps running in the background.
+        const waitMs = RecipientResolver.REFRESH_WAIT_MS;
+        let timer;
+        const timedOut = await Promise.race([
+            this._maybeRefresh().then(() => false),
+            new Promise((resolve) => {
+                timer = setTimeout(() => resolve(true), waitMs);
+                if (typeof timer.unref === "function") timer.unref();
+            }),
+        ]);
+        clearTimeout(timer);
+        if (timedOut) {
+            logger.warning(notificationMessages.RECIPIENT_REFRESH_WAIT_EXCEEDED(waitMs), { _noNotify: true }); // R1b loop guard
+        }
         return this._cache.get(channel) ?? [];
     }
 
@@ -80,6 +96,18 @@ class RecipientResolver {
      * regardless of TTL. Call after any `CAN_RECEIVE_SRV_*` flag write.
      */
     invalidate() {
+        this._lastRefreshAt = 0;
+        // Cluster: the cron leader is the one that sends alert email, and a toggle
+        // is usually made on another worker. Tell the primary, which tells the
+        // others (this worker is excluded: it just invalidated). No-op single-process.
+        if (clusterRpc.active) clusterRpc.notify(CLUSTER_RPC_METHODS.RECIPIENTS_INVALIDATE, {});
+    }
+
+    /**
+     * Applies an invalidation another worker made (cluster broadcast). Local
+     * only: never re-sent, so it cannot loop.
+     */
+    applyRemoteInvalidate() {
         this._lastRefreshAt = 0;
     }
 
@@ -128,9 +156,7 @@ class RecipientResolver {
         try {
             const channels = Object.keys(AdminModel.SERVER_NOTIFY_FLAG_COLUMNS);
             const emailLists = await Promise.all(
-                channels.map((channel) =>
-                    AdminModel.findServerNotifyRecipients(channel),
-                ),
+                channels.map((channel) => AdminModel.findServerNotifyRecipients(channel)),
             );
 
             const next = new Map();
@@ -153,6 +179,9 @@ class RecipientResolver {
         }
     }
 }
+
+/** Longest a send waits on a recipient refresh before using the cached list. */
+RecipientResolver.REFRESH_WAIT_MS = 2000;
 
 module.exports = new RecipientResolver();
 module.exports.RecipientResolver = RecipientResolver;

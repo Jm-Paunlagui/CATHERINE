@@ -13,6 +13,19 @@ function buildSimpleConnectString(host, port, service) {
     return `${host}:${port}/${service}`;
 }
 
+/**
+ * Parses a whole number >= 0, falling back on anything else. Unlike the
+ * `parseInt(x, 10) || fallback` idiom, an explicit 0 is kept.
+ *
+ * @param {string|undefined} raw
+ * @param {number} fallback
+ * @returns {number}
+ */
+function nonNegativeInt(raw, fallback) {
+  const s = String(raw ?? "").trim();
+  return /^\d+$/.test(s) ? Number(s) : fallback;
+}
+
 function buildTNSConnectString(host, port, sid) {
     return (
         `(DESCRIPTION=` +
@@ -39,21 +52,41 @@ function buildTNSConnectString(host, port, sid) {
  *   connectString  {string}  Oracle connect string
  *   poolMin        {number}  optional — overrides global default
  *   poolMax        {number}  optional — overrides global default
+ *   queueMax       {number}  optional — bounds the acquire queue (NJS-076 when full)
+ *   poolTimeout    {number}  optional — idle seconds above poolMin before close (0 = never)
  */
+const appDbCredentials = {
+    user: process.env.APP_DB_USERNAME,
+    password: process.env.APP_DB_PASSWORD,
+    connectString: buildTNSConnectString(
+        process.env.DB_HOST,
+        process.env.DB_PORT,
+        process.env.DB_APP_SERVICE_NAME,
+    ),
+};
+
 const connections = {
     // ── appDb — the standalone template connection (T_USERS_DEV / T_ADMINS_DEV /
     //    T_AUDIT_LOGS_DEV). This is the only connection a fresh project needs.
     //    Skipped entirely when DEMO_MODE=true (no Oracle pool is opened).
     appDb: {
-        user: process.env.APP_DB_USERNAME,
-        password: process.env.APP_DB_PASSWORD,
-        connectString: buildTNSConnectString(
-            process.env.DB_HOST,
-            process.env.DB_PORT,
-            process.env.DB_APP_SERVICE_NAME,
-        ),
+        ...appDbCredentials,
         poolMin: parseInt(process.env.APP_POOL_MIN, 10) || 5,
         poolMax: parseInt(process.env.APP_POOL_MAX, 10) || 20,
+        queueMax: parseInt(process.env.APP_QUEUE_MAX, 10) || 40,
+        poolTimeout: nonNegativeInt(process.env.APP_POOL_TIMEOUT, 30),
+    },
+
+    // ── appDbBulk — same credentials, separate pool for long-hold work (export,
+    //    backup, purge, restore) so it cannot starve interactive traffic.
+    appDbBulk: {
+        ...appDbCredentials,
+        poolMin: parseInt(process.env.APP_BULK_POOL_MIN, 10) || 1,
+        poolMax: parseInt(process.env.APP_BULK_POOL_MAX, 10) || 6,
+        queueMax: parseInt(process.env.APP_BULK_QUEUE_MAX, 10) || 24,
+        queueTimeout: parseInt(process.env.APP_BULK_QUEUE_TIMEOUT, 10) || 30000,
+        // ms (app acquire race); converted to whole seconds for the driver in adapters/oracle.js.
+        connectTimeout: parseInt(process.env.APP_BULK_CONNECT_TIMEOUT, 10) || 20000,
     },
 
     // ── Add new connections below ──────────────────────────────────────────
@@ -91,11 +124,31 @@ function getConnectionNames() {
  */
 const POOL_NAMES = Object.freeze(Object.keys(connections));
 
+/**
+ * Pools whose SATURATION (NJS-076) makes /health/ready answer 503.
+ *
+ * Every pool must answer with a closed breaker for /ready to be 200; this list
+ * only decides which pools may not be saturated. `appDbBulk` is excluded: it is
+ * the load-shedding bulkhead, so a saturated bulk pool is the design working,
+ * not the service being unready.
+ */
+const READINESS_GATING_POOLS = Object.freeze(["appDb"]);
+
+// FAIL-CLOSED: a gating pool that is not a registered pool is a config error.
+for (const p of READINESS_GATING_POOLS) {
+  if (!POOL_NAMES.includes(p)) {
+    throw new Error(
+      `Invalid READINESS_GATING_POOLS entry "${p}". Must be one of the registered pools: ${POOL_NAMES.join(", ")}.`,
+    );
+  }
+}
+
 module.exports = {
     connections,
     getConnectionConfig,
     getConnectionNames,
     POOL_NAMES,
+    READINESS_GATING_POOLS,
     // isDevelopment,
     buildSimpleConnectString,
     buildTNSConnectString,

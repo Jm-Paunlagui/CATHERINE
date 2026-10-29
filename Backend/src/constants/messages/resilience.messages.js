@@ -62,7 +62,7 @@ const resilienceMessages = {
      * default, unlike the DEBUG-only attempt trace).
      * @param {string} label
      * @param {string|number|null} key - Identifying key for the recovered
-     *   record (e.g. a primary-key value), when the `onRetry` hook or its resolved value exposes one.
+     *   record (e.g. a TRXN_ID), when the `onRetry` hook or its resolved value exposes one.
      * @returns {string}
      */
     IDEMPOTENT_RESOLVE: (label, key) =>
@@ -125,13 +125,35 @@ const resilienceMessages = {
     BATCH_ABORTED: (label, remaining, cause) =>
         `[${label}] Batch aborted after a fatal session error — ${remaining} remaining item(s) moved to pending: ${cause}`,
 
+    /**
+     * Logged when a batch trips its cumulative retry budget — the total number
+     * of retries spent across failed items has reached the configured ceiling,
+     * so the remaining un-started items are aborted to `pending` rather than
+     * amplifying an ongoing outage with more retry traffic.
+     * @param {string} label - BatchGuard label identifying the batch operation.
+     * @param {number} used - Retries consumed across failed items when the ceiling tripped.
+     * @param {number} budget - The configured cumulative retry budget.
+     * @returns {string}
+     */
+    BATCH_BUDGET_EXHAUSTED: (label, used, budget) =>
+        `[${label}] Batch retry budget exhausted — ${used}/${budget} retries spent across failed items; remaining un-started item(s) moved to pending to avoid amplifying the outage.`,
+
+    /**
+     * Pending-reason for an un-started item skipped because the owning request
+     * was cut by the request watchdog (B-D9).
+     * @param {string} label - BatchGuard label identifying the batch operation.
+     * @returns {string}
+     */
+    BATCH_REQUEST_ABORTED: (label) =>
+        `REQUEST_ABORTED — [${label}] request was cancelled by the server (no progress); item not attempted.`,
+
     // ── Generic phase marker ─────────────────────────────────────────────────
 
     /**
      * Generic DEBUG phase-boundary marker for reliability-layer call sites that
      * don't warrant a dedicated template (e.g. "email dispatch phase start").
      * @param {string} label - Identifies the phase/operation.
-     * @param {string} detail - Human-readable detail (e.g. "12 item(s)").
+     * @param {string} detail - Human-readable detail (e.g. "12 stub(s)").
      * @returns {string}
      */
     PHASE: (label, detail) => `[${label}] ${detail}`,
@@ -140,7 +162,7 @@ const resilienceMessages = {
 
     /**
      * Logged on every successful send — primary or fallback tier (logger.debug).
-     * @param {string} label - Identifies the email flow (e.g. "welcome-email").
+     * @param {string} label - Identifies the email flow (e.g. "admin-temp-password").
      * @param {string|null} recipient - The resolved `to` address(es) for the send that succeeded.
      * @param {"primary"|"fallback"} tier - Which tier delivered the email.
      * @param {number} attempt - 1-indexed attempt number that succeeded within its tier.
@@ -163,7 +185,7 @@ const resilienceMessages = {
 
     /**
      * Logged on every retried email send attempt (logger.warning).
-     * @param {string} label - Identifies the email flow (e.g. "welcome-email").
+     * @param {string} label - Identifies the email flow (e.g. "admin-temp-password").
      * @param {number} attempt
      * @param {number} max
      * @param {string} cause
@@ -173,13 +195,24 @@ const resilienceMessages = {
         `[${label}] Email retry ${attempt}/${max} after transient SMTP failure: ${cause}`,
 
     /**
-     * Logged when primary delivery fails and the flow falls back to the
-     * configured fallback recipients (logger.warning).
+     * Logged when primary delivery fails and the flow falls back to admin recipients (logger.warning).
      * @param {string[]|string} recipients - Fallback recipient address(es).
      * @returns {string}
      */
     EMAIL_FALLBACK: (recipients) =>
         `Primary email delivery failed — falling back to: ${Array.isArray(recipients) ? recipients.join(", ") : recipients}`,
+
+    /**
+     * SMTP accepted a multi-recipient message but rejected some recipients.
+     * Addresses arrive already masked.
+     *
+     * @param {string} label
+     * @param {number} count
+     * @param {string} maskedList
+     * @returns {string}
+     */
+    EMAIL_PARTIALLY_REJECTED: (label, count, maskedList) =>
+        `Email "${label}" was accepted by SMTP but ${count} recipient(s) were rejected: ${maskedList}. Reported as PARTIAL, not delivered.`,
 
     /**
      * Logged when both the primary and fallback tiers are exhausted (logger.error).
@@ -195,7 +228,7 @@ const resilienceMessages = {
      * email-dispatch phase of a batch operation is already exhausted
      * (logger.warning — the outcome is recorded as a structured failure in the
      * batch report, never silently dropped).
-     * @param {string} label - Identifies the specific recipient/message skipped.
+     * @param {string} label - Identifies the specific recipient/stub skipped.
      * @returns {string}
      */
     EMAIL_BUDGET_EXHAUSTED: (label) =>

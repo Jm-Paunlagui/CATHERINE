@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 /**
  * @fileoverview Centralized error handling middleware.
@@ -11,11 +11,21 @@
 
 const { logger } = require("../../utils/logger");
 const ORA_MAP = require("./OraCode");
-const { NJS_MAP, TRANSIENT_STRING_PATTERNS } = require("./NjsCode");
+const { NJS_MAP, TRANSIENT_STRING_PATTERNS, POOL_OVERLOADED_TYPE } = require("./NjsCode");
 const { getStatusTitle } = require("../../constants/responses");
 
+/** AppError type of the shutdown-drain 503 (ShutdownGateMiddleware). */
+const SHUTTING_DOWN_TYPE = "ServerShuttingDown";
+
 class ErrorHandlerMiddleware {
-    constructor() {
+    /**
+     * @param {object} [options]
+     * @param {{ applyToErrorResponse: Function }} [options.cors] - CORS policy
+     *   for errors raised before the CORS middleware ran; defaults to the one
+     *   `app.js` mounts.
+     */
+    constructor(options = {}) {
+        this._cors = options.cors ?? require("../security/CorsMiddleware").defaultCors;
         this.handle = this.handle.bind(this);
         this.notFoundHandler = this.notFoundHandler.bind(this);
         this.captureResponseBody = this.captureResponseBody.bind(this);
@@ -24,11 +34,26 @@ class ErrorHandlerMiddleware {
     // ─── Main handler ──────────────────────────────────────────────────────────
 
     handle(err, req, res, _next) {
+        // The request watchdog already answered (504) or destroyed this
+        // response. The handler's late error (ERR_HTTP_HEADERS_SENT, or the
+        // RequestStalledError thrown by a later DB call) must not be logged as
+        // a fresh 5xx nor written to a finished response.
+        if (res.locals?.__watchdogTerminated) return;
+
         const classified = this._classify(err);
-        const { statusCode, message, type, details, hint, rawMessage } =
+        const { statusCode, message, type, details, hint, reasons, rawMessage, retryAfterSec } =
             classified;
 
-        if (statusCode >= 500) {
+        if (type === SHUTTING_DOWN_TYPE) {
+            // A drain is expected and can last seconds under load: log at notice
+            // so it cannot flood the error log or trip error alerts.
+            logger.notice(rawMessage ?? err.message, {
+                statusCode,
+                path: req.originalUrl,
+                method: req.method,
+                requestId: req.id,
+            });
+        } else if (statusCode >= 500) {
             logger.error(rawMessage ?? err.message, {
                 statusCode,
                 stack: err.stack,
@@ -57,11 +82,43 @@ class ErrorHandlerMiddleware {
                 type,
                 ...(details ? { details } : {}),
                 ...(hint ? { hint } : {}),
+                ...(reasons ? { reasons } : {}),
                 ...(isDev ? { stack: err.stack } : {}),
             },
         };
 
-        res.status(statusCode).json(response);
+        // Headers already out (error mid-stream): a JSON envelope can no longer
+        // be sent — `res.status().json()` would throw ERR_HTTP_HEADERS_SENT.
+        // Do what Express' default handler does: drop the socket if the
+        // response is still open, otherwise there is nothing left to do.
+        if (res.headersSent) {
+            if (!res.writableEnded) res.destroy();
+            return;
+        }
+
+        // A pool load-shed 429 (NJS-076, queue full) is deliberate back-pressure:
+        // tell clients and proxies when to retry (RFC 9110 §10.2.3) so a shed
+        // request is not retried immediately into the same full queue.
+        if (
+            statusCode === 429 &&
+            type === POOL_OVERLOADED_TYPE &&
+            !res.getHeader("Retry-After")
+        ) {
+            res.setHeader("Retry-After", "1");
+        }
+
+        // Explicit back-off from the thrower (AppError.retryAfterSec, e.g. the
+        // shutdown gate); never overrides a header a deeper layer already set.
+        if (retryAfterSec && !res.getHeader("Retry-After")) {
+            res.setHeader("Retry-After", String(retryAfterSec));
+        }
+
+        // An error raised before the CORS middleware (a malformed or oversized
+        // body at step 4) would otherwise leave without CORS headers, and the
+        // browser would hide it from the UI entirely.
+        this._cors.applyToErrorResponse(req, res, () => {
+            res.status(statusCode).json(response);
+        });
     }
 
     // ─── Error classifier ──────────────────────────────────────────────────────
@@ -73,8 +130,8 @@ class ErrorHandlerMiddleware {
      * Priority order:
      *   1. AppError (already operational + classified)
      *   2. Oracle DB errors (ORA-XXXXX anywhere in message)
-     *   2a. node-oracledb driver errors (NJS-XXX — pool/connection failures)
-     *   2b. Adapter-level transient failures (no ORA-/NJS- code, string match)
+     *   2a. node-oracledb driver errors (NJS-XXX anywhere in message)
+     *   2b. Adapter-level transient string patterns (e.g. connection acquire timeout)
      *   3. JWT errors
      *   4. HTTP-level framework errors (body-parser, multer)
      *   5. Fallback generic 500
@@ -88,6 +145,8 @@ class ErrorHandlerMiddleware {
                 type: err.name || "AppError",
                 details: err.details,
                 hint: err.hint,
+                reasons: err.reasons,
+                retryAfterSec: err.retryAfterSec,
             };
         }
 
@@ -158,6 +217,13 @@ class ErrorHandlerMiddleware {
                 statusCode: 413,
                 message: "Request body exceeds the size limit.",
                 type: "PayloadTooLargeError",
+            };
+        }
+        if (err.type === "encoding.unsupported") {
+            return {
+                statusCode: 415,
+                message: "Request body encoding is not supported.",
+                type: "UnsupportedMediaTypeError",
             };
         }
         if (
@@ -236,8 +302,14 @@ class ErrorHandlerMiddleware {
         return {
             statusCode: known?.status ?? 503,
             message: known?.msg ?? "A database connection error occurred.",
-            type: "DatabaseUnavailableError",
-            hint: "Transient database failure — the operation may be retried.",
+            // Per-entry type/hint override the generic transient-failure
+            // defaults so a deliberate load-shed (NJS-076) can present as a
+            // distinct 429 PoolOverloadedError with back-off guidance, while
+            // every other NJS code keeps its original 503 semantics.
+            type: known?.type ?? "DatabaseUnavailableError",
+            hint:
+                known?.hint ??
+                "Transient database failure — the operation may be retried.",
             rawMessage: err.message,
         };
     }

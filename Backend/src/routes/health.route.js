@@ -7,44 +7,37 @@
  *   GET /api/v1/health        Legacy combined check — backward compatible
  *   GET /api/v1/health/live   Liveness: is the process alive? Never checks DB.
  *   GET /api/v1/health/ready  Readiness: are all dependencies healthy?
+ *   GET /api/v1/health/stream Readiness push (SSE): status on change + heartbeat
  *
  * The /live endpoint is safe for Kubernetes/PM2 liveness probes — it never
  * contacts the DB and therefore never causes false restarts due to DB flakiness.
  *
- * The /ready endpoint pings all named Oracle pools and returns 503 if any
- * are unreachable, allowing load-balancers to stop sending traffic during
- * pool recovery or cold start.
+ * The /ready endpoint pings every Oracle pool (appDb, appDbBulk) and
+ * returns 503 unless every pool answers AND every circuit breaker is closed
+ * (appDbBulk saturation still counts as up). See
+ * services/ReadinessService.js. This allows load-balancers to stop sending
+ * traffic during pool recovery or cold start, and keeps the UI's "Back online"
+ * from appearing while sign-in would still fail fast.
+ *
+ * The /stream endpoint (services/HealthStreamHub.js) pushes the same verdict to
+ * the UI the moment it changes, so the status banner is proactive.
  */
 
 const express = require("express");
 const router = express.Router();
-const os = require("os");
 
 const db = require("../config");
 const { POOL_NAMES } = require("../config/database");
+const InFlightTaskRegistry = require("../utils/InFlightTaskRegistry");
+const ReadinessService = require("../services/ReadinessService");
+const HealthStreamHub = require("../services/HealthStreamHub");
 const { catchAsync } = require("../utils/catchAsync");
 const { sendSuccess, sendError } = require("../constants/responses");
+const { GENERAL_ERRORS } = require("../constants/errors");
+const { sendSsePreflightError } = require("../utils/sse/ssePreflight");
+const { SHUTDOWN_RETRY_AFTER_SEC } = require("../constants/shutdownGate");
 
-// ─── Helper: probe a single pool with a timeout ───────────────────────────────
-
-/**
- * Ping a named Oracle pool with a SELECT 1 FROM DUAL.
- * Returns { status: "up", latencyMs } or { status: "down", error }.
- *
- * @param {string} poolName - Named connection registered in database.js
- * @returns {Promise<{ status: string, latencyMs?: number, error?: string }>}
- */
-async function probePool(poolName) {
-    const start = Date.now();
-    try {
-        await db.withConnection(poolName, async (conn) => {
-            await conn.execute("SELECT 1 FROM DUAL");
-        });
-        return { status: "up", latencyMs: Date.now() - start };
-    } catch (err) {
-        return { status: "down", error: err.message || "Connection failed" };
-    }
-}
+// Probing + the readiness rule live in services/ReadinessService.js (shared with /stream).
 
 // ─── GET /health/live → mounted at /api/v1/health/live ───────────────────────
 
@@ -70,24 +63,30 @@ router.get("/live", (_req, res) => {
 /**
  * Readiness probe — are all dependencies connected and the app ready to serve?
  * Probes all named Oracle pools in parallel.
- * Returns 200 when all deps are up, 503 when any dep is down.
+ * Returns 200 when every pool answers and every breaker is closed, else 503.
  * Load-balancers should stop routing traffic on 503.
  */
 router.get(
     "/ready",
     catchAsync(async (_req, res) => {
-        const results = await Promise.all(POOL_NAMES.map(probePool));
-
-        // Build a friendlier key name: "oracle_appDb"
-        const namedChecks = {};
-        for (let i = 0; i < POOL_NAMES.length; i++) {
-            namedChecks[`oracle_${POOL_NAMES[i]}`] = results[i];
+        // Draining: report not-ready at once and do NOT probe the pools -
+        // the load-balancer and the UI's "server is restarting" banner only need the 503.
+        if (InFlightTaskRegistry.isShuttingDown()) {
+            res.set("Retry-After", String(SHUTDOWN_RETRY_AFTER_SEC));
+            return res.status(503).json({
+                ...sendError("Service Unavailable", 503, {
+                    type: "ServerShuttingDown",
+                }),
+                data: { ready: false, draining: true },
+            });
         }
 
-        const allUp = results.every((r) => r.status === "up");
-        const payload = { ready: allUp, checks: namedChecks };
+        // One rule for /ready and /stream: every pool answers AND every breaker
+        // is closed (services/ReadinessService.js). Concurrent calls share one probe.
+        const payload = await ReadinessService.evaluate();
+        const { ready } = payload;
 
-        if (allUp) {
+        if (ready) {
             res.json(sendSuccess("Ready", payload));
         } else {
             // Return error status (consistent with sendError contract) but include
@@ -102,18 +101,54 @@ router.get(
     }),
 );
 
+// ─── GET /health/stream → mounted at /api/v1/health/stream ──────────────────
+
+/**
+ * Readiness push stream (SSE). Unauthenticated like /ready; exempt from the
+ * rate limiter and the shutdown gate (HEALTH_PATH_RE) and from the request
+ * watchdog (EXEMPT_RULES). Events: `status` {ready, cause} on open and on every
+ * change, `heartbeat` every 15 s, `shutdown` when the server drains.
+ * NOT wrapped in catchAsync: refusals happen before the upgrade.
+ */
+router.get("/stream", (req, res) => {
+    if (InFlightTaskRegistry.isShuttingDown()) {
+        res.set("Retry-After", String(SHUTDOWN_RETRY_AFTER_SEC));
+        return sendSsePreflightError(req, res, GENERAL_ERRORS.SERVER_SHUTTING_DOWN, 503, {
+            type: "ServerShuttingDown",
+        });
+    }
+    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    if (!HealthStreamHub.canAccept(ip)) {
+        return sendSsePreflightError(req, res, GENERAL_ERRORS.TOO_MANY_HEALTH_STREAMS, 429, {
+            type: "RateLimitError",
+        });
+    }
+    HealthStreamHub.open(req, res, ip);
+});
+
 // ─── GET / → mounted at /api/v1/health (legacy combined) ────────────────────
 
 /**
  * Legacy combined health check — kept for backward compatibility with existing
  * monitoring integrations that hit this endpoint. Returns 200 regardless of
- * DB status (database field reflects actual connectivity).
+ * DB status (database field reflects actual connectivity; "draining" while shutting down, no pool call).
  */
 router.get(
     "/",
     catchAsync(async (_req, res) => {
+        // Draining: answer 200 from memory with database:"draining" - no pool borrow per monitor poll,
+        // and the 200 stays compatible with legacy monitors (shutdownGate.integration pin).
+        if (InFlightTaskRegistry.isShuttingDown()) {
+            return res.json(
+                sendSuccess("OK", {
+                    uptime: process.uptime(),
+                    timestamp: new Date().toISOString(),
+                    database: "draining",
+                }),
+            );
+        }
+
         // L3: Do not expose host, pid, or environment to unauthenticated callers.
-        // These are available on /health/live (internal probes only).
         const data = {
             uptime: process.uptime(),
             timestamp: new Date().toISOString(),

@@ -19,7 +19,7 @@
  *   a clean interface to use that pool without managing connections manually.
  *
  * HOW TO USE:
- *   const db = createDb("userAccount");
+ *   const db = createDb("appDb");
  *   // Now pass `db` to OracleCollection, OracleSchema, Transaction, etc.
  *   // You NEVER need to open or close connections yourself.
  *
@@ -39,7 +39,7 @@ const { oracleMongoWrapperMessages: MSG } = require("../../constants/messages");
  * The returned object provides methods to safely borrow connections,
  * run transactions, check pool health, etc.
  *
- * @param {string} connectionName - Which database pool to use (e.g. "userAccount")
+ * @param {string} connectionName - Which database pool to use (e.g. "appDb")
  *   This name must match a key in your database.js configuration.
  * @returns {Object} The db interface with the following methods:
  *   - withConnection(fn)      — Borrow a connection, run fn(conn), auto-release
@@ -51,13 +51,13 @@ const { oracleMongoWrapperMessages: MSG } = require("../../constants/messages");
  *   - oracledb                — Direct access to the oracledb driver (for type constants)
  *
  * @example
- *   const db = createDb("userAccount");
+ *   const db = createDb("appDb");
  *   // Use it with OracleCollection:
  *   const users = new OracleCollection("users", db);
  *   // Use it with OracleSchema:
  *   const schema = new OracleSchema(db);
  */
-function createDb(connectionName = "userAccount") {
+function createDb(connectionName = "appDb") {
   if (!connectionName || typeof connectionName !== "string") {
     throw new TypeError(MSG.CREATEDB_INVALID_CONNECTION_NAME);
   }

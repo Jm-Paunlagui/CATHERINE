@@ -46,8 +46,8 @@ const adminToken = () =>
     signToken({ userId: "ADM001", role: "ADMIN", userLevel: 2 });
 const superToken = () =>
     signToken({ userId: "SA001", role: "SUPER_ADMIN", userLevel: 3 });
-const approverToken = () =>
-    signToken({ userId: "APR001", role: "APPROVER", userLevel: 1 });
+const standardUserToken = () =>
+    signToken({ userId: "USR001", role: "USER", userLevel: 1 });
 
 // ── Stub return values ────────────────────────────────────────────────────────
 
@@ -113,10 +113,10 @@ describe("GET /api/v1/metrics — full snapshot", function () {
         expectErrorShape(res.body);
     });
 
-    it("returns 403 for APPROVER (userLevel 1 < 2 required)", async function () {
+    it("returns 403 for USER (userLevel 1 < 2 required)", async function () {
         const res = await request(app)
             .get("/api/v1/metrics")
-            .set("Authorization", `Bearer ${approverToken()}`);
+            .set("Authorization", `Bearer ${standardUserToken()}`);
         expect(res.status).toBe(403);
         expectErrorShape(res.body);
     });
@@ -158,10 +158,10 @@ describe("GET /api/v1/metrics/summary — summary", function () {
         vi.restoreAllMocks();
     });
 
-    it("returns 200 for APPROVER (userLevel 1 meets threshold)", async function () {
+    it("returns 200 for USER (userLevel 1 meets threshold)", async function () {
         const res = await request(app)
             .get("/api/v1/metrics/summary")
-            .set("Authorization", `Bearer ${approverToken()}`);
+            .set("Authorization", `Bearer ${standardUserToken()}`);
         expect(res.status).toBe(200);
         expectSuccessShape(res.body);
     });
@@ -226,10 +226,10 @@ describe("GET /api/v1/metrics/alerts — alert evaluations", function () {
         expect(res.status).toBe(401);
     });
 
-    it("returns 403 for APPROVER (userLevel 1 < 2 required)", async function () {
+    it("returns 403 for USER (userLevel 1 < 2 required)", async function () {
         const res = await request(app)
             .get("/api/v1/metrics/alerts")
-            .set("Authorization", `Bearer ${approverToken()}`);
+            .set("Authorization", `Bearer ${standardUserToken()}`);
         expect(res.status).toBe(403);
     });
 

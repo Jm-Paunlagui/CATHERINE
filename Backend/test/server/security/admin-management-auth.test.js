@@ -8,10 +8,10 @@
  *
  * Tests are grouped by attack vector:
  *   1. JWT bypass attempts (missing / forged / expired / tampered)
- *   2. Role escalation (APPROVER / VIEWER / User attempting admin actions)
+ *   2. Role escalation (USER-level accounts attempting admin actions)
  *   3. SQL injection payloads via query string and body
  *   4. CSRF bypass on mutating routes
- *   5. Parameter tampering (empId swapping)
+ *   5. Parameter tampering (username swapping)
  */
 
 const request = require("supertest");
@@ -67,12 +67,12 @@ const ADMIN_MUTATING_ROUTES = [
     {
         method: "post",
         path: "/api/v1/admin-management",
-        body: { empId: "E001", role: "ADMIN", retainPassword: true },
+        body: { username: "E001", role: "ADMIN", retainPassword: true },
     },
     {
         method: "put",
         path: "/api/v1/admin-management/E001",
-        body: { role: "APPROVER", changePassword: false },
+        body: { role: "USER", changePassword: false },
     },
     {
         method: "patch",
@@ -105,8 +105,7 @@ describe("Admin Management Security — JWT bypass", function () {
                 { userId: "HACKER", role: "SUPER_ADMIN" },
                 "wrong-secret-completely-different",
             );
-            const req = request(app)
-                [method](path)
+            const req = request(app)[method](path)
                 .set("Cookie", `token=${forged}`);
             if (query) req.query(query);
             const res = await req;
@@ -118,8 +117,7 @@ describe("Admin Management Security — JWT bypass", function () {
                 { userId: "ADM001", role: "SUPER_ADMIN" },
                 "-1s",
             );
-            const req = request(app)
-                [method](path)
+            const req = request(app)[method](path)
                 .set("Authorization", `Bearer ${expired}`);
             if (query) req.query(query);
             const res = await req;
@@ -138,8 +136,7 @@ describe("Admin Management Security — JWT bypass", function () {
                 }),
             ).toString("base64url");
             const tampered = parts.join(".");
-            const req = request(app)
-                [method](path)
+            const req = request(app)[method](path)
                 .set("Cookie", `token=${tampered}`);
             if (query) req.query(query);
             const res = await req;
@@ -147,8 +144,7 @@ describe("Admin Management Security — JWT bypass", function () {
         });
 
         it(`[${method.toUpperCase()} ${path}] returns 403 for a structurally invalid JWT`, async function () {
-            const req = request(app)
-                [method](path)
+            const req = request(app)[method](path)
                 .set("Cookie", "token=not.a.valid.jwt.at.all");
             if (query) req.query(query);
             const res = await req;
@@ -169,14 +165,14 @@ describe("Admin Management Security — role escalation prevention", function ()
                 signToken({ userId: "U001", role: "User", userLevel: 1 }),
         },
         {
-            label: "APPROVER",
+            label: "USER",
             token: () =>
-                signToken({ userId: "A001", role: "APPROVER", userLevel: 1 }),
+                signToken({ userId: "A001", role: "USER", userLevel: 1 }),
         },
         {
-            label: "VIEWER",
+            label: "USER (userLevel 0)",
             token: () =>
-                signToken({ userId: "V001", role: "VIEWER", userLevel: 1 }),
+                signToken({ userId: "V001", role: "USER", userLevel: 0 }),
         },
     ];
 
@@ -211,13 +207,13 @@ describe("Admin Management Security — injection attack mitigation", function (
     });
 
     SQL_PAYLOADS.forEach((payload) => {
-        it(`create body empId injection: "${payload.slice(0, 50)}" does not crash server`, async function () {
+        it(`create body username injection: "${payload.slice(0, 50)}" does not crash server`, async function () {
             const { agent, csrfToken } = await getCsrfToken();
             const res = await agent
                 .post("/api/v1/admin-management")
                 .set("Cookie", `token=${adminSearchToken}`)
                 .set("x-csrf-token", csrfToken)
-                .send({ empId: payload, role: "ADMIN", retainPassword: true });
+                .send({ username: payload, role: "ADMIN", retainPassword: true });
 
             expect(res.status).not.toBe(500);
         });
@@ -237,8 +233,7 @@ describe("Admin Management Security — CSRF protection on mutating routes", fun
 
     ADMIN_MUTATING_ROUTES.forEach(({ method, path, body }) => {
         it(`[${method.toUpperCase()} ${path}] returns 403 when CSRF token is missing`, async function () {
-            const res = await request(app)
-                [method](path)
+            const res = await request(app)[method](path)
                 .set("Cookie", `token=${adminTok}`)
                 // Intentionally no x-csrf-token header
                 .send(body);
@@ -247,8 +242,7 @@ describe("Admin Management Security — CSRF protection on mutating routes", fun
         });
 
         it(`[${method.toUpperCase()} ${path}] returns 403 when CSRF token is forged`, async function () {
-            const res = await request(app)
-                [method](path)
+            const res = await request(app)[method](path)
                 .set("Cookie", `token=${adminTok}`)
                 .set("x-csrf-token", "totally-forged-csrf-token-string")
                 .send(body);
@@ -259,27 +253,27 @@ describe("Admin Management Security — CSRF protection on mutating routes", fun
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 5. Path traversal in empId parameter
+// 5. Path traversal in username parameter
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe("Admin Management Security — path traversal via empId", function () {
+describe("Admin Management Security — path traversal via username", function () {
     const adminTok = signToken({
         userId: "SA001",
         role: "SUPER_ADMIN",
         userLevel: 3,
     });
 
-    const TRAVERSAL_EMPIDS = [
+    const TRAVERSAL_USERNAMES = [
         "../../../etc/passwd",
         "..%2F..%2F..%2Fetc%2Fpasswd",
         "EMP001;DROP TABLE T_ADMINS_DEV",
     ];
 
-    TRAVERSAL_EMPIDS.forEach((empId) => {
-        it(`DELETE with empId "${empId.slice(0, 40)}" does not crash server`, async function () {
+    TRAVERSAL_USERNAMES.forEach((username) => {
+        it(`DELETE with username "${username.slice(0, 40)}" does not crash server`, async function () {
             const { agent, csrfToken } = await getCsrfToken();
             const res = await agent
-                .delete(`/api/v1/admin-management/${encodeURIComponent(empId)}`)
+                .delete(`/api/v1/admin-management/${encodeURIComponent(username)}`)
                 .set("Cookie", `token=${adminTok}`)
                 .set("x-csrf-token", csrfToken);
 

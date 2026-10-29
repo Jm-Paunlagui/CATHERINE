@@ -28,6 +28,10 @@
 "use strict";
 
 const crypto = require("crypto");
+const {
+    parseStoredAdminPassword,
+    isTemporaryExpired,
+} = require("./adminTempPassword");
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 1: SYMMETRIC CRYPTO ENGINE (from SymmetricCrypto.js / C# CoreLib)
@@ -213,7 +217,7 @@ const SymmetricCrypto = (() => {
                 enc.IV = iv;
                 const cipherText = enc.encrypt(plainText, key);
                 return cipherText.toString("base64");
-            } catch (ex) {
+            } catch (_ex) {
                 return null;
             }
         }
@@ -232,7 +236,7 @@ const SymmetricCrypto = (() => {
                 dec.IV = iv;
                 const plainText = dec.decrypt(cipherText, key);
                 return plainText.toString("ascii");
-            } catch (ex) {
+            } catch (_ex) {
                 return null;
             }
         }
@@ -467,6 +471,9 @@ const MAX_PASSWORD_BYTES = parseEnvInt(
 const applyPepper = (password) =>
     crypto.createHmac("sha256", getArgon2Pepper()).update(password).digest();
 
+/** bcrypt consumes only the first 72 bytes of its input. */
+const BCRYPT_MAX_PASSWORD_BYTES = 72;
+
 const validatePassword = (value, label = "Password") => {
     if (!value || typeof value !== "string") {
         throw new TypeError(
@@ -629,6 +636,23 @@ class CryptoVault {
     // ───────────────────────────────────────────────────────────────────────
 
     /**
+     * The largest password, in UTF-8 bytes, CryptoVault will accept without
+     * throwing. Request validators read this so an over-length password is
+     * rejected as a 400 before it reaches a method that throws RangeError.
+     *
+     * @param {object}  [opts]
+     * @param {boolean} [opts.forHash=false] - true for a password about to be
+     *   hashed by `hashAdminPassword` (72 bytes in bcrypt admin mode); false
+     *   for a password being verified.
+     * @returns {number}
+     */
+    static maxPasswordBytes({ forHash = false } = {}) {
+        return forHash && getAdminMode() === "bcrypt"
+            ? BCRYPT_MAX_PASSWORD_BYTES
+            : MAX_PASSWORD_BYTES;
+    }
+
+    /**
      * Hashes a plaintext admin password using the strong admin mode
      * (resolved via PASSWORD_ENCRYPTION_MODE or PASSWORD_HASH_MODE when
      * PASSWORD_HASH_MODE is already strong).
@@ -645,6 +669,13 @@ class CryptoVault {
         const mode = getAdminMode(); // bcrypt | argon2 only
 
         if (mode === "bcrypt") {
+            // bcrypt reads only the first 72 bytes; a longer password would be
+            // interchangeable with any other sharing that prefix (CWE-916).
+            if (Buffer.byteLength(password, "utf8") > BCRYPT_MAX_PASSWORD_BYTES) {
+                throw new RangeError(
+                    `[CryptoVault] Admin password exceeds bcrypt's ${BCRYPT_MAX_PASSWORD_BYTES}-byte limit. Use argon2 or a shorter password.`,
+                );
+            }
             const bcrypt = require("bcryptjs");
             try {
                 return await bcrypt.hash(password, getBcryptRounds());
@@ -684,9 +715,21 @@ class CryptoVault {
      *   { matched: true, newHash: string } so the caller can persist the
      *   upgraded hash. For modern hashes returns { matched: boolean, newHash: null }.
      *
+     * Temporary passwords (`$t$<expiry><hash>`, see adminTempPassword.js) add
+     * three fields — `temporary: true`, `expired`, `expiresAt` — and ONLY for a
+     * marker; every other stored format returns exactly the shape above.
+     *   - correct + not expired → matched: true
+     *   - correct + expired     → matched: FALSE, expired: true. Every caller
+     *     that reads only `matched` (the purge / restore / export
+     *     re-auth prompts) therefore refuses an expired temporary password with
+     *     no change of its own; only login reads `expired` to pick its message.
+     *   - wrong password        → matched: false, expired: false, expiresAt: null —
+     *     the expiry is never disclosed to someone who has not proved the password.
+     *   - malformed marker      → matched: false (fail closed; never verified raw).
+     *
      * @param {string} password - Plaintext password.
-     * @param {string} storedHash - Stored EMP_PW value.
-     * @returns {Promise<{ matched: boolean, newHash: string|null }>}
+     * @param {string} storedHash - Stored admin PASSWORD column value.
+     * @returns {Promise<{ matched: boolean, newHash: string|null, temporary?: true, expired?: boolean, expiresAt?: number|null }>}
      */
     static async verifyAdminPassword(password, storedHash) {
         validatePassword(password);
@@ -695,6 +738,20 @@ class CryptoVault {
             throw new TypeError(
                 "[CryptoVault] Stored admin hash must be a non-empty string.",
             );
+        }
+
+        // ── Temporary password marker — unwrap, verify the inner hash, then
+        // apply the expiry. The inner value is always argon2/bcrypt (the
+        // parser refuses anything else), so this recursion is one level deep
+        // and can never reach the TripleDES rehash branch.
+        const parsed = parseStoredAdminPassword(storedHash);
+        if (parsed.temporary) {
+            const refused = { matched: false, newHash: null, temporary: true, expired: false, expiresAt: null };
+            if (parsed.malformed) return refused;
+            const inner = await CryptoVault.verifyAdminPassword(password, parsed.hash);
+            if (!inner.matched) return refused;
+            const expired = isTemporaryExpired(parsed);
+            return { matched: !expired, newHash: null, temporary: true, expired, expiresAt: parsed.expiresAt };
         }
 
         // ── Modern: Argon2id hash ──
@@ -717,6 +774,11 @@ class CryptoVault {
 
         // ── Modern: bcrypt hash ──
         if (storedHash.startsWith("$2b$") || storedHash.startsWith("$2a$")) {
+            // Over 72 bytes bcrypt would compare only the prefix — refuse
+            // rather than accept a different password (CWE-916).
+            if (Buffer.byteLength(password, "utf8") > BCRYPT_MAX_PASSWORD_BYTES) {
+                return { matched: false, newHash: null };
+            }
             const bcrypt = require("bcryptjs");
             try {
                 const matched = await bcrypt.compare(password, storedHash);
@@ -794,13 +856,21 @@ class CryptoVault {
      */
     static needsRehash(hashedPassword) {
         if (getMode() !== "argon2") return false;
+        if (typeof hashedPassword !== "string" || !hashedPassword) return false;
+        // A bcrypt / legacy hash under argon2 mode is exactly the "rehash me"
+        // case; argon2.needsRehash would throw on it.
+        if (!hashedPassword.startsWith("$argon2")) return true;
         const argon2 = require("argon2");
         const cfg = getArgon2Config();
-        return argon2.needsRehash(hashedPassword, {
-            memoryCost: cfg.memoryCost,
-            timeCost: cfg.timeCost,
-            parallelism: cfg.parallelism,
-        });
+        try {
+            return argon2.needsRehash(hashedPassword, {
+                memoryCost: cfg.memoryCost,
+                timeCost: cfg.timeCost,
+                parallelism: cfg.parallelism,
+            });
+        } catch {
+            return true; // unparseable argon2 string — replace it
+        }
     }
 
     // ───────────────────────────────────────────────────────────────────────
@@ -919,9 +989,13 @@ class CryptoVault {
                 "[CryptoVault] buildPayload: fields must be a plain object.",
             );
         }
+        // "|" inside a value is doubled so a value can never fake a field
+        // boundary ("ok|STATUS=APPROVED" was indistinguishable from two
+        // fields — CWE-347). Pipe-free values serialise exactly as before,
+        // so every existing signature over pipe-free rows stays valid.
         const parts = Object.keys(fields)
             .sort()
-            .map((k) => `${k}=${fields[k]}`);
+            .map((k) => `${k}=${String(fields[k]).replace(/\|/g, "||")}`);
         return `${context}:${parts.join("|")}`;
     }
 
@@ -967,12 +1041,16 @@ class CryptoVault {
             .update(payload, "utf8")
             .digest();
 
-        let actual;
-        try {
-            actual = Buffer.from(signature, "hex");
-        } catch {
+        // Buffer.from(…, "hex") silently stops at the first non-hex character
+        // and drops an odd nibble, so "<sig>zz" would decode to the real
+        // bytes. Only the exact hex encoding is a valid signature (CWE-347).
+        if (
+            signature.length !== expected.length * 2 ||
+            !/^[0-9a-f]+$/i.test(signature)
+        ) {
             return false;
         }
+        const actual = Buffer.from(signature, "hex");
 
         // timingSafeEqual requires equal-length buffers; mismatched length is a
         // fast-path rejection that leaks no timing information about the content.
@@ -1021,6 +1099,9 @@ class CryptoVault {
      */
     static async verifyRecord(context, fields, signature) {
         if (!signature) return false;
+        // No fallback to the pre-escape ("|" unescaped) form: it was removed
+        // once a production count found zero signed rows with a "|" in any
+        // value, so no row depends on it.
         return CryptoVault.verifySignature(
             CryptoVault.buildPayload(context, fields),
             signature,
@@ -1042,7 +1123,7 @@ class CryptoVault {
      * @returns {boolean}
      *
      * @example
-     * const canonical = `${row.ID}|${row.TRXN_ID}|${row.EMP_ID}|${row.AMOUNT}|${row.STATUS}|${row.CREATED_DATE}`;
+     * const canonical = `${row.ID}|${row.ORDER_NO}|${row.USERNAME}|${row.AMOUNT}|${row.STATUS}|${row.CREATED_DATE}`;
      * const ok = CryptoVault.verifyRowHash(canonical, row.ROW_HASH);
      */
     static verifyRowHash(canonicalInput, storedHash) {
@@ -1052,12 +1133,12 @@ class CryptoVault {
             .update(canonicalInput, "utf8")
             .digest("hex")
             .toUpperCase();
-        const stored = storedHash.toUpperCase();
-        if (computed.length !== stored.length) return false;
-        return crypto.timingSafeEqual(
-            Buffer.from(computed, "utf8"),
-            Buffer.from(stored, "utf8"),
-        );
+        const computedBuf = Buffer.from(computed, "utf8");
+        const storedBuf = Buffer.from(String(storedHash).toUpperCase(), "utf8");
+        // Byte lengths, not UTF-16 lengths: a non-ASCII character of equal
+        // string length would otherwise make timingSafeEqual throw.
+        if (computedBuf.length !== storedBuf.length) return false;
+        return crypto.timingSafeEqual(computedBuf, storedBuf);
     }
 }
 
@@ -1215,11 +1296,19 @@ module.exports = { CryptoVault, Argon2Adapter, BCryptAdapter, SymmetricCrypto };
 // SECTION 8: SELF-TEST SUITE (run: node CryptoVault.js)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/* c8 ignore start -- CLI self-test harness: this block is guarded by
+   `require.main === module` and executes ONLY when the file is run directly via
+   `node CryptoVault.js`. Under Vitest the module is always imported (never the
+   entrypoint), so this region is structurally unreachable by the test runner and
+   is excluded from coverage rather than faked. */
 if (require.main === module) {
-    const TEST_PASSWORD = "Continental01";
+    /* eslint-disable no-console -- CLI self-test harness: this block runs only under
+       `node CryptoVault.js`, where terminal output IS the function. The production
+       body of this file stays under no-console. */
+    const TEST_PASSWORD = "SelfTest-Passw0rd!";
 
     const hr = () => console.log("─".repeat(65));
-    const pass = (label) => console.log(`  ✅  ${label}`);
+    const pass = (label) => console.log(`    ${label}`);
     const fail = (label, err) =>
         console.error(`  ❌  ${label}: ${err?.constructor?.name ?? "Error"}`);
 
@@ -1239,7 +1328,7 @@ if (require.main === module) {
         hr();
         try {
             // Set a temp key for testing if not present
-            if (!process.env.PASSWORD_KEY) process.env.PASSWORD_KEY = "HRIS";
+            if (!process.env.PASSWORD_KEY) process.env.PASSWORD_KEY = "self-test-key";
 
             const {
                 SecurityCryptHelper,
@@ -1292,7 +1381,7 @@ if (require.main === module) {
             // Force tripledes mode for this test
             _mode = null;
             process.env.PASSWORD_HASH_MODE = "tripledes";
-            if (!process.env.PASSWORD_KEY) process.env.PASSWORD_KEY = "HRIS";
+            if (!process.env.PASSWORD_KEY) process.env.PASSWORD_KEY = "self-test-key";
             _mode = null; // reset cache
 
             const hash = await CryptoVault.hashPassword(TEST_PASSWORD);
@@ -1609,7 +1698,7 @@ if (require.main === module) {
         try {
             const targetCipher = "0k9DQnY8Zp0=";
 
-            // Decrypt using the helper (ensure process.env.PASSWORD_KEY is "HRIS" or your specific key)
+            // Decrypt using the helper (process.env.PASSWORD_KEY must match the key that produced it)
             const result =
                 SymmetricCrypto.SecurityCryptHelper.decryptText(targetCipher);
 
@@ -1637,3 +1726,4 @@ if (require.main === module) {
         process.exit(1);
     });
 }
+/* c8 ignore stop */

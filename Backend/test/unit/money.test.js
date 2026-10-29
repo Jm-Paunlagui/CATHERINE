@@ -4,13 +4,13 @@
  * Property + unit tests for the exact-decimal `Money` value type
  * (src/utils/money.js). Pure — no DB, no HTTP.
  *
- * These encode ACCOUNTING INVARIANTS, not implementation details (plan §5.2):
- *   - exact arithmetic never rounds (§3.0 rule 3)
- *   - `allocate` parts sum to the total EXACTLY (§3.7.1)
- *   - `allocate` is shuffle-stable via ID-ascending tie-break (§3.7.2)
+ * These encode ACCOUNTING INVARIANTS, not implementation details:
+ *   - exact arithmetic never rounds
+ *   - `allocate` parts sum to the total EXACTLY
+ *   - `allocate` is shuffle-stable via ID-ascending tie-break
  *   - `divide` returns a residue that exactly recomposes the dividend
- *   - storage refuses >4 decimals rather than rounding (§3.0 rule 2)
- *   - `Money.from` rejects a JS number (already-rounded double, §3.1)
+ *   - storage refuses >4 decimals rather than rounding
+ *   - `Money.from` rejects a JS number (already-rounded double)
  */
 
 const { Money, STORAGE_SCALE } = require("../../src/utils/money");
@@ -76,7 +76,7 @@ describe("Money — exact arithmetic never rounds", function () {
     });
 });
 
-describe("Money — add/sub algebraic laws (property, §3.0 rule 3)", function () {
+describe("Money — add/sub algebraic laws (property)", function () {
     // Draw exact scale-4 decimals as coefficient BigInts so no rounding ever
     // enters the generator itself — the numbers are constructed, not parsed as
     // floats. Range spans well past MAX_SAFE_INTEGER to prove BigInt storage.
@@ -137,7 +137,7 @@ describe("Money — add/sub algebraic laws (property, §3.0 rule 3)", function (
     });
 });
 
-describe("Money.divide — DERIVED, residue returned (§3.7.1)", function () {
+describe("Money.divide — DERIVED, residue returned", function () {
     it("requires an explicit precision", function () {
         expect(() => Money.from("100").divide(Money.from("3"))).toThrow();
         expect(() => Money.from("100").divide(Money.from("3"), {})).toThrow();
@@ -157,7 +157,7 @@ describe("Money.divide — DERIVED, residue returned (§3.7.1)", function () {
     });
 });
 
-describe("Money.allocate — POSTED, parts sum EXACTLY (§3.7.1)", function () {
+describe("Money.allocate — POSTED, parts sum EXACTLY", function () {
     it("splits 100 three ways with no lost centavo", function () {
         const parts = Money.from("100").allocate([1, 1, 1]);
         expect(parts.map((p) => p.toStorage())).toEqual([
@@ -242,7 +242,7 @@ describe("Money.allocate — weights are whole units, never truncated", function
     });
 });
 
-describe("Money.allocate — deterministic tie-break (§3.7.2, blocking)", function () {
+describe("Money.allocate — deterministic tie-break (blocking)", function () {
     it("equal weights give the extra unit to the EARLIER index, not array luck", function () {
         // 0.03 over 3 equal parts is exact — no tie. 0.0001 over 3 equal parts
         // creates a residue that MUST land on index 0 deterministically.
@@ -298,7 +298,7 @@ describe("Money.allocate — deterministic tie-break (§3.7.2, blocking)", funct
     });
 });
 
-describe("Money.toStorage — refuses >4 decimals rather than rounding (§3.0 rule 2)", function () {
+describe("Money.toStorage — refuses >4 decimals rather than rounding", function () {
     it("throws on a value carrying more than 4 non-zero decimals", function () {
         expect(() => Money.from("1.00001").toStorage()).toThrow();
     });
@@ -313,7 +313,7 @@ describe("Money.toStorage — refuses >4 decimals rather than rounding (§3.0 ru
     });
 });
 
-describe("Money — wire format is a STRING, never a JSON number (§3.0 rule 3)", function () {
+describe("Money — wire format is a STRING, never a JSON number", function () {
     it("serialises to a scale-4 string via toJSON", function () {
         expect(JSON.stringify({ amount: Money.from("12.5") })).toBe(
             '{"amount":"12.5000"}',

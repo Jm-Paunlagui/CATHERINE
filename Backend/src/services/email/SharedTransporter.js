@@ -116,6 +116,10 @@ const fs = require("fs");
 const path = require("path");
 const nodemailer = require("nodemailer");
 const { logger } = require("../../utils/logger");
+const { touch } = require("../../utils/progress/progress");
+
+/** Marks a transporter whose sendMail is already wrapped (never stack). */
+const kInstrumented = Symbol.for("app.progress.smtp");
 
 class SharedTransporter {
     constructor() {
@@ -201,12 +205,40 @@ class SharedTransporter {
      */
     getTransporter() {
         if (!this._transporter) {
-            this._transporter = nodemailer.createTransport({
-                ...this._baseConfig(),
-                ...this._poolConfig(),
-            });
+            this._transporter = this._instrumentSendMail(
+                nodemailer.createTransport({
+                    ...this._baseConfig(),
+                    ...this._poolConfig(),
+                }),
+            );
         }
         return this._transporter;
+    }
+
+    /**
+     * Wrap `sendMail` ONCE so every send is request-watchdog progress: touch
+     * before the send and (promise form) when it settles. The callback form
+     * only touches before. Outside a watched context `touch` is a no-op.
+     *
+     * @param {object} transporter - nodemailer transporter.
+     * @returns {object} the same transporter.
+     */
+    _instrumentSendMail(transporter) {
+        const original = transporter?.sendMail;
+        if (typeof original !== "function" || transporter[kInstrumented]) {
+            return transporter;
+        }
+        transporter.sendMail = function instrumentedSendMail(...args) {
+            touch("smtp");
+            if (typeof args[args.length - 1] === "function") {
+                return original.apply(this, args);
+            }
+            return Promise.resolve(original.apply(this, args)).finally(() =>
+                touch("smtp"),
+            );
+        };
+        transporter[kInstrumented] = true;
+        return transporter;
     }
 
     /**
@@ -217,8 +249,8 @@ class SharedTransporter {
      *
      * ⚠ Required in the graceful-shutdown path now that the singleton pools:
      * open pool sockets keep the Node event loop alive, so without this the
-     * process hangs until the forced-exit timer fires. Never throws —
-     * shutdown must not fail here.
+     * process hangs until the 10 s forced-exit timer fires and the service
+     * stop looks like a hang. Never throws — shutdown must not fail here.
      *
      * @returns {void}
      */
@@ -252,7 +284,9 @@ class SharedTransporter {
      * loop alive and the process from exiting.
      *
      * @param {import("nodemailer").TransportOptions} [overrides] Merged on
-     *   top of the same base config `getTransporter()` uses.
+     *   top of the same base config `getTransporter()` uses — e.g.
+     *   `{ pool: true, maxConnections: 2, maxMessages: 50, rateDelta: 60000,
+     *   rateLimit: 30 }`.
      * @returns {import("nodemailer").Transporter} A fresh transporter — never
      *   reused, never shared.
      */
@@ -269,8 +303,7 @@ class SharedTransporter {
      * When `SMTP_CA_FILE` is set, reads the PEM-encoded CA certificate(s)
      * from `certs/<SMTP_CA_FILE>` and passes them as `tls.ca` so Node's
      * TLS stack trusts the SMTP server's certificate chain (fixes "unable
-     * to get local issuer certificate" for internal CAs like the
-     * automotive-root CA).
+     * to get local issuer certificate" for internal CAs).
      *
      * Resolution mirrors the PFX_FILENAME pattern in server.js:
      *   - pkg build → certs/ sits next to the compiled executable
@@ -288,6 +321,7 @@ class SharedTransporter {
         // Resolve certs/ the same way server.js resolves PFX_FILENAME:
         // compiled (pkg) → next to the exe; normal Node → project root.
         const certDir = path.resolve(
+            /* c8 ignore next -- process.pkg is only defined inside the PKG-compiled binary; the compiled-exe path is structurally unreachable under Node/vitest (same policy as the encodingPolyfill/consoleManager coverage excludes) */
             process.pkg
                 ? path.dirname(process.execPath)
                 : path.join(__dirname, "..", "..", ".."),

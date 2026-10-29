@@ -8,6 +8,10 @@
  * OracleCollection.prototype.insertOne/insertMany are spied so no Oracle
  * connection is ever attempted; AuditLogFileModel is spied so file-tier
  * delegation is observable without touching the filesystem.
+ *
+ * DEMO_MODE is pinned per test: isDemoMode() is read live and short-circuits
+ * every method to the in-memory demo store, so an inherited DEMO_MODE=true
+ * (shell or .env) would otherwise bypass the routing under test.
  */
 
 const {
@@ -15,6 +19,9 @@ const {
 } = require("../../../../src/utils/oracle-mongo-wrapper");
 const AuditLogModel = require("../../../../src/models/audit.log.model");
 const AuditLogFileModel = require("../../../../src/models/audit.log.file.model");
+const demo = require("../../../../src/models/demo/demoStore");
+
+const ORIGINAL_DEMO_MODE = process.env.DEMO_MODE;
 
 const RECORD = {
     REQUEST_ID: "req_test123",
@@ -35,6 +42,8 @@ describe("AuditLogModel — storage routing", function () {
     let fileInsertBatchSpy;
 
     beforeEach(function () {
+        process.env.DEMO_MODE = "false";
+        delete process.env.AUDIT_LOG_STORAGE;
         AuditLogModel._resetStorageForTests();
         insertOneMock = vi
             .spyOn(OracleCollection.prototype, "insertOne")
@@ -53,7 +62,43 @@ describe("AuditLogModel — storage routing", function () {
     afterEach(function () {
         delete process.env.AUDIT_LOG_STORAGE;
         delete process.env.AUDIT_LOG_TABLE;
+        if (ORIGINAL_DEMO_MODE === undefined) delete process.env.DEMO_MODE;
+        else process.env.DEMO_MODE = ORIGINAL_DEMO_MODE;
+        AuditLogModel._resetStorageForTests();
         vi.restoreAllMocks();
+    });
+
+    describe("DEMO_MODE=true", function () {
+        beforeEach(function () {
+            process.env.DEMO_MODE = "true";
+        });
+
+        it("insert writes the record unchanged to the demo store — no Oracle and no file", async function () {
+            process.env.AUDIT_LOG_STORAGE = "db";
+            const before = demo.auditLogs().length;
+            const result = await AuditLogModel.insert({ ...RECORD, REQUEST_ID: "req_demo_1" });
+
+            expect(result).toEqual({ rowsAffected: 1 });
+            expect(demo.auditLogs()).toHaveLength(before + 1);
+            expect(demo.auditLogs().at(-1)).toMatchObject({ ...RECORD, REQUEST_ID: "req_demo_1" });
+            expect(insertOneMock).not.toHaveBeenCalled();
+            expect(fileInsertSpy).not.toHaveBeenCalled();
+        });
+
+        it("insertBatch writes every record to the demo store and reports the count", async function () {
+            process.env.AUDIT_LOG_STORAGE = "file";
+            const before = demo.auditLogs().length;
+            const batch = [
+                { ...RECORD, REQUEST_ID: "req_demo_2" },
+                { ...RECORD, REQUEST_ID: "req_demo_3" },
+            ];
+            const result = await AuditLogModel.insertBatch(batch);
+
+            expect(result).toEqual({ rowsAffected: 2 });
+            expect(demo.auditLogs()).toHaveLength(before + 2);
+            expect(insertManyMock).not.toHaveBeenCalled();
+            expect(fileInsertBatchSpy).not.toHaveBeenCalled();
+        });
     });
 
     describe("AUDIT_LOG_STORAGE=db", function () {

@@ -9,7 +9,7 @@
  * concurrency (via `mapWithConcurrency`), wrapping every item in a
  * `RetryPolicy` and segregating outcomes into `succeeded` / `failed` /
  * `pending` buckets instead of letting a single item's failure — or a total
- * outage — silently masquerade as a full success (the failure mode this
+ * outage — silently masquerade as a full success (the real incident this
  * layer fixes: a DB timeout mid-batch produced `inserted: 0` yet still
  * returned HTTP 200).
  *
@@ -43,6 +43,7 @@
  * -------
  *   const guard = new BatchGuard({
  *       retryPolicy: new RetryPolicy({
+ *           maxAttempts: 10,
  *           classifier: RetryPolicy.classifyDbError,
  *           label: "batch-row",
  *       }),
@@ -60,6 +61,7 @@ const { mapWithConcurrency } = require("../concurrency");
 const { logger } = require("../logger");
 const { resilienceMessages } = require("../../constants/messages");
 const { RetryPolicy } = require("./RetryPolicy");
+const { currentScope } = require("../progress/progress");
 
 class BatchGuard {
     /**
@@ -67,17 +69,32 @@ class BatchGuard {
      * @param {import("./RetryPolicy").RetryPolicy} options.retryPolicy - Retry policy applied to every item.
      * @param {number} [options.concurrency=16] - Max concurrent in-flight items.
      * @param {string} [options.label="batch"] - Human-readable label used in log messages.
-     * @throws {TypeError} When `retryPolicy` is not a usable RetryPolicy-shaped object.
+     * @param {number} [options.retryBudget=Infinity] - Cumulative ceiling on retries spent across FAILED items before the batch aborts remaining un-started items to `pending`. `Infinity` (the default) disables the budget. Must otherwise be a positive integer.
+     * @throws {TypeError} When `retryPolicy` is not a usable RetryPolicy-shaped object, or `retryBudget` is neither `Infinity` nor a positive integer.
      */
-    constructor({ retryPolicy, concurrency = 16, label = "batch" } = {}) {
+    constructor({
+        retryPolicy,
+        concurrency = 16,
+        label = "batch",
+        retryBudget = Infinity,
+    } = {}) {
         if (!retryPolicy || typeof retryPolicy.execute !== "function") {
             throw new TypeError(
                 "BatchGuard: retryPolicy must be a RetryPolicy instance (or an object exposing an execute() method).",
             );
         }
+        if (
+            retryBudget !== Infinity &&
+            !(Number.isInteger(retryBudget) && retryBudget > 0)
+        ) {
+            throw new TypeError(
+                "BatchGuard: retryBudget must be Infinity or a positive integer.",
+            );
+        }
         this._retryPolicy = retryPolicy;
         this._concurrency = Math.max(1, Number(concurrency) || 1);
         this._label = label;
+        this._retryBudget = retryBudget;
     }
 
     /**
@@ -124,10 +141,28 @@ class BatchGuard {
 
         let aborted = false;
         let abortReason = null;
+        // Cumulative retries spent across FAILED items only. We deliberately do
+        // NOT count retries that ended in success (including idempotency-probe
+        // "resolved" outcomes): a success-after-retry is RECOVERY, not budget
+        // spend — counting it would trip the budget on a batch that is actually
+        // healing itself. Do not "fix" this to count all attempts.
+        let retriesUsed = 0;
+
+        // Request watchdog (B-D9): the ambient scope, if any. Each settled item
+        // is progress; once the request was cut, un-started items go to
+        // `pending` instead of running against a request nobody is waiting for.
+        const scope = currentScope();
 
         const outcomes = await mapWithConcurrency(list, this._concurrency, async (item, index) => {
             if (aborted) {
                 return { outcome: "pending", item, reason: abortReason };
+            }
+            if (scope?.aborted) {
+                return {
+                    outcome: "pending",
+                    item,
+                    reason: resilienceMessages.BATCH_REQUEST_ABORTED(this._label),
+                };
             }
 
             try {
@@ -135,14 +170,29 @@ class BatchGuard {
                     () => worker(item, index),
                     hooksFor(item, index),
                 );
+                scope?.touch("batch-item");
                 return { outcome: "succeeded", item, result };
             } catch (err) {
+                scope?.touch("batch-item");
                 const classification = err?.classification ?? null;
                 const attempts = err?.attempts ?? 1;
 
                 if (classification === RetryPolicy.CLASSIFICATIONS.FATAL_SESSION && !aborted) {
                     aborted = true;
                     abortReason = err.message;
+                }
+
+                // Budget accounting fires only on the FAILED path (retries that
+                // did not recover). `attempts` is the total attempt count on the
+                // exhausted error, so retries = attempts - 1 (never negative).
+                retriesUsed += Math.max(0, (attempts ?? 1) - 1);
+                if (retriesUsed >= this._retryBudget && !aborted) {
+                    aborted = true;
+                    abortReason = resilienceMessages.BATCH_BUDGET_EXHAUSTED(
+                        this._label,
+                        retriesUsed,
+                        this._retryBudget,
+                    );
                 }
 
                 return {

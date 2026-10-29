@@ -10,6 +10,8 @@
  *
  * HOW IT WORKS
  *   - Per-route ring buffers (max 1000 durations) for accurate p50/p95/p99 percentiles.
+ *   - A parallel per-route timestamp ring feeds `red[route].window` (p99 over the
+ *     last LATENCY_WINDOW_MS) - the value the HIGH_LATENCY alert reads.
  *   - System metrics polled every 10 s via setInterval (CPU, memory, handles, requests).
  *   - Event-loop lag measured via recurring setImmediate probe.
  *   - GC stats collected via perf_hooks PerformanceObserver when available.
@@ -23,7 +25,7 @@
  *   const snapshot = metricsStore.getSnapshot();
  */
 
-const { PerformanceObserver, performance } = require("perf_hooks");
+const { PerformanceObserver } = require("perf_hooks");
 const v8 = require("node:v8");
 const os = require("node:os");
 
@@ -107,6 +109,26 @@ const CLIENT_ERROR_MIN_STATUS = 400;
 const SERVER_ERROR_MIN_STATUS = 500;
 
 /**
+ * Rolling window the HIGH_ERROR_RATE alert reads (`totals.window`). Lifetime
+ * totals stay for the dashboard tiles; the alert must reflect CURRENT traffic,
+ * or a burst at boot keeps it firing and long uptime dilutes a late incident.
+ */
+const ERROR_WINDOW_MS = 300_000;
+
+/**
+ * Rolling window the HIGH_LATENCY alert reads (`red[route].window`). The lifetime
+ * duration ring has no timestamps, so one slow call on a quiet route stayed that
+ * route's p99 forever and the alert never recovered. Same width as the error window.
+ */
+const LATENCY_WINDOW_MS = ERROR_WINDOW_MS;
+
+/** Bucket width of that window — 30 buckets, so memory is O(1). */
+const ERROR_WINDOW_BUCKET_MS = 10_000;
+
+/** Number of buckets that make up the window. */
+const ERROR_WINDOW_BUCKETS = ERROR_WINDOW_MS / ERROR_WINDOW_BUCKET_MS;
+
+/**
  * @constant {number} Apdex target threshold T, in milliseconds.
  * Requests ≤ T are "satisfied", ≤ 4T are "tolerating", > 4T are "frustrated".
  * Apdex = (satisfied + tolerating/2) / total. 500ms is the conventional default
@@ -188,13 +210,53 @@ function computeRates(total, clientErrors, serverErrors) {
 
 // ─── MetricsStore class ───────────────────────────────────────────────────────
 
+/**
+ * Whether the self-rescheduling background probes run by default.
+ *
+ * Two of this class's probes re-arm themselves forever: the 10 s system poller
+ * (`setInterval`) and the 1 s event-loop-lag probe (a `setImmediate` inside a
+ * `setTimeout` that schedules the next `setTimeout`). Both are unref'd, which
+ * is enough for process exit but is NOT enough under a test runner:
+ *
+ *   - A suite that installs fake timers adopts the pending probe timer. Running
+ *     the queue re-arms it every tick, so the runner gives up with
+ *     "Aborting after running 10000 timers, assuming an infinite loop!"
+ *     (test/server/unit/utils/retryPolicy.test.js).
+ *   - A suite that counts `setImmediate` calls to prove it scheduled no
+ *     fire-and-forget work sees the probe's own `setImmediate` and reports a
+ *     leak that is not there.
+ *
+ * The probes measure the HOST process, which under Vitest is a worker running
+ * arbitrary suites — the numbers are meaningless there even when they do not
+ * break anything. So they are off under a test runner and on everywhere else.
+ * A test that wants them passes `new MetricsStore({ backgroundProbes: true })`.
+ *
+ * The one-shot system collection at construction is NOT gated: `getSnapshot()`
+ * must return real memory/CPU figures on its first call, which several suites
+ * assert on directly.
+ */
+const BACKGROUND_PROBES_DEFAULT = !(
+  process.env.VITEST || process.env.NODE_ENV === "test"
+);
+
+/** Max distinct route labels kept in the watchdog termination breakdown. */
+const WATCHDOG_ROUTES_MAX = 200;
+
 class MetricsStore {
-  constructor() {
+  /**
+   * @param {object} [options]
+   * @param {boolean} [options.backgroundProbes] - Run the recurring system
+   *   poller and event-loop-lag probe. Defaults to false under a test runner
+   *   (see BACKGROUND_PROBES_DEFAULT), true otherwise.
+   */
+  constructor(options = {}) {
     /**
      * Per-route RED data.
      * Key: "<METHOD> <path>" e.g. "GET /api/v1/health"
-     * Value: { count, clientErrorCount, serverErrorCount, durations: CircularBuffer }
-     * @type {Map<string, { count: number, clientErrorCount: number, serverErrorCount: number, durations: number[] }>}
+     * Value: { count, clientErrorCount, serverErrorCount, durations, timestamps }.
+     * `timestamps` (epoch ms) is parallel to `durations`: same cap, pushed and
+     * evicted in lockstep, so timestamps[i] is when durations[i] completed.
+     * @type {Map<string, { count: number, clientErrorCount: number, serverErrorCount: number, durations: number[], timestamps: number[] }>}
      */
     this._routes = new Map();
 
@@ -212,6 +274,13 @@ class MetricsStore {
 
     /** Total SERVER error counter (5xx) — the only failures that count against availability */
     this._serverErrorsTotal = 0;
+
+    /**
+     * Rolling error window: bucket index (epoch / ERROR_WINDOW_BUCKET_MS) →
+     * request / 4xx / 5xx counts. At most ERROR_WINDOW_BUCKETS + 1 entries.
+     * @type {Map<number, {total: number, client: number, server: number}>}
+     */
+    this._errorWindow = new Map();
 
     /**
      * Oracle pool stats.
@@ -239,6 +308,14 @@ class MetricsStore {
      * @type {Map<string, { sent: number, failed: number, consecutiveFailures: number, lastSuccessAt: string|null, lastFailureAt: string|null, lastFailureCause: string|null, suppressedCount: number }>}
      */
     this._notifications = new Map();
+
+    /**
+     * Request-watchdog terminations (B-D9): total, and per bounded route label
+     * (capped at WATCHDOG_ROUTES_MAX so a stream of distinct labels cannot grow
+     * memory — CWE-400).
+     * @type {{ terminated: number, byRoute: Map<string, number> }}
+     */
+    this._watchdog = { terminated: 0, byRoute: new Map() };
 
     /**
      * Frontend vitals FIFO (max FRONTEND_VITALS_MAX entries).
@@ -289,8 +366,19 @@ class MetricsStore {
     /** Previous cpuUsage snapshot for delta calculation */
     this._prevCpuUsage = process.cpuUsage();
 
-    this.#startSystemPoller();
-    this.#startEventLoopProbe();
+    /** Whether this instance runs the recurring background probes. */
+    this._backgroundProbes = options.backgroundProbes ?? BACKGROUND_PROBES_DEFAULT;
+
+    // Always collect once, probes or not — the first getSnapshot() must carry
+    // real numbers rather than the zeroed initial shape.
+    this.#collectSystemMetrics();
+
+    if (this._backgroundProbes) {
+      this.#startSystemPoller();
+      this.#startEventLoopProbe();
+    }
+    // The GC observer schedules nothing of its own — it only receives
+    // perf_hooks entries — so it stays on in every environment.
     this.#startGcObserver();
   }
 
@@ -308,9 +396,6 @@ class MetricsStore {
     }, SYSTEM_POLL_INTERVAL_MS);
 
     if (typeof interval.unref === "function") interval.unref();
-
-    // Collect once immediately so first getSnapshot() has data
-    this.#collectSystemMetrics();
   }
 
   /**
@@ -513,9 +598,79 @@ class MetricsStore {
     buf.push(durationMs);
   }
 
+  /**
+   * Durations of one route recorded within the last LATENCY_WINDOW_MS, ascending.
+   * Timestamps are non-decreasing, so walk from the newest entry backwards and
+   * stop at the first one at or before the cutoff.
+   *
+   * Complexity: O(k log k), k = in-window samples <= RING_BUFFER_SIZE (1000).
+   *
+   * @param {{ durations: number[], timestamps?: number[] }} entry
+   * @param {number} now - epoch ms
+   * @returns {number[]}
+   */
+  #windowedSorted(entry, now) {
+    const cutoff = now - LATENCY_WINDOW_MS;
+    const ts = entry.timestamps ?? [];
+    const out = [];
+    for (let i = ts.length - 1; i >= 0 && ts[i] > cutoff; i--) {
+      out.push(entry.durations[i]);
+    }
+    return out.sort((a, b) => a - b);
+  }
+
   // ========================================
   // PUBLIC MUTATORS
   // ========================================
+
+  /**
+   * Counts one request into the current rolling-window bucket, pruning
+   * buckets older than the window when a new bucket opens (O(1) amortised).
+   * @param {number} now - epoch ms captured once per request
+   * @param {boolean} isClientError
+   * @param {boolean} isServerError
+   */
+  #recordWindow(now, isClientError, isServerError) {
+    const idx = Math.floor(now / ERROR_WINDOW_BUCKET_MS);
+    let bucket = this._errorWindow.get(idx);
+    if (!bucket) {
+      bucket = { total: 0, client: 0, server: 0 };
+      this._errorWindow.set(idx, bucket);
+      for (const key of this._errorWindow.keys()) {
+        if (key <= idx - ERROR_WINDOW_BUCKETS) this._errorWindow.delete(key);
+      }
+    }
+    bucket.total++;
+    if (isClientError) bucket.client++;
+    if (isServerError) bucket.server++;
+  }
+
+  /**
+   * Sums the last ERROR_WINDOW_MS of requests.
+   * @returns {{ windowMs: number, requests: number, clientErrors: number, serverErrors: number, serviced: number, errorRate: number, availability: number }}
+   */
+  #windowTotals() {
+    const nowIdx = Math.floor(Date.now() / ERROR_WINDOW_BUCKET_MS);
+    let requests = 0;
+    let clientErrors = 0;
+    let serverErrors = 0;
+    for (const [key, b] of this._errorWindow) {
+      if (key <= nowIdx - ERROR_WINDOW_BUCKETS) continue;
+      requests += b.total;
+      clientErrors += b.client;
+      serverErrors += b.server;
+    }
+    const rates = computeRates(requests, clientErrors, serverErrors);
+    return {
+      windowMs: ERROR_WINDOW_MS,
+      requests,
+      clientErrors,
+      serverErrors,
+      serviced: requests - clientErrors,
+      errorRate: rates.errorRate,
+      availability: rates.availability,
+    };
+  }
 
   /**
    * Record a completed HTTP request for RED metric aggregation.
@@ -526,6 +681,7 @@ class MetricsStore {
    * @param {number} durationMs - Request duration in milliseconds
    */
   recordRequest(route, method, statusCode, durationMs) {
+    const now = Date.now();
     this._requestsTotal++;
 
     // 304 → not-modified (cache hit); 3xx (non-304) → real redirect;
@@ -542,12 +698,13 @@ class MetricsStore {
 
     if (isServerError) this._serverErrorsTotal++;
     if (isClientError) this._clientErrorsTotal++;
+    this.#recordWindow(now, isClientError, isServerError);
     if (isRedirect) this._redirectsTotal++;
     if (isNotModified) this._notModifiedTotal++;
 
     let entry = this._routes.get(route);
     if (!entry) {
-      entry = { count: 0, redirectCount: 0, notModifiedCount: 0, clientErrorCount: 0, serverErrorCount: 0, durations: [] };
+      entry = { count: 0, redirectCount: 0, notModifiedCount: 0, clientErrorCount: 0, serverErrorCount: 0, durations: [], timestamps: [] };
       this._routes.set(route, entry);
     }
 
@@ -557,12 +714,26 @@ class MetricsStore {
     if (isRedirect) entry.redirectCount++;
     if (isNotModified) entry.notModifiedCount++;
     this.#pushRing(entry.durations, durationMs);
+    this.#pushRing(entry.timestamps, now); // lockstep with durations
+  }
+
+  /**
+   * Record a request cut by the request watchdog (idle past its limit).
+   *
+   * @param {string} route - Bounded "<METHOD> <route-pattern>" label.
+   */
+  recordWatchdogTermination(route) {
+    this._watchdog.terminated++;
+    const map = this._watchdog.byRoute;
+    if (map.has(route) || map.size < WATCHDOG_ROUTES_MAX) {
+      map.set(route, (map.get(route) ?? 0) + 1);
+    }
   }
 
   /**
    * Record an Oracle DB query for dependency metrics.
    *
-   * @param {string}  poolName   - Named connection pool (e.g. "userAccount")
+   * @param {string}  poolName   - Named connection pool (e.g. "appDb")
    * @param {number}  durationMs - Query round-trip duration in milliseconds
    * @param {boolean} success    - Whether the query succeeded
    */
@@ -590,8 +761,8 @@ class MetricsStore {
    *   - capacity    = connectionsOpen / poolMax           (how close the pool
    *     is to its hard ceiling — headroom before exhaustion)
    *
-   * @param {string} poolName - Named connection pool (e.g. "userAccount")
-   * @param {{ connectionsInUse: number, connectionsOpen: number, poolMax: number, queueLength: number }} stats
+   * @param {string} poolName - Named connection pool (e.g. "appDb")
+   * @param {{ connectionsInUse: number, connectionsOpen: number, poolMax: number, queueLength: number, healthy?: boolean, consecutiveFailures?: number }} stats
    */
   recordPoolStats(poolName, stats) {
     const open = Number(stats?.connectionsOpen) || 0;
@@ -605,6 +776,10 @@ class MetricsStore {
       queueLength,
       utilization: open > 0 ? inUse / open : 0,
       capacity: poolMax > 0 ? open / poolMax : 0,
+      // O5 pool-outage health signal from the adapter's health poll.
+      // Default healthy=true when absent (older callers / success path).
+      healthy: stats?.healthy !== false,
+      consecutiveFailures: Number(stats?.consecutiveFailures) || 0,
       updatedAt: new Date().toISOString(),
     });
   }
@@ -743,12 +918,16 @@ class MetricsStore {
    * Sorting ring buffers for percentile calculation is done on read, not on write,
    * to keep recordRequest() as fast as possible.
    *
+   * `red[route].window` is the p99 over the last LATENCY_WINDOW_MS only (0 when
+   * no request fell inside it); `window.count` is capped at the ring size (1000)
+   * per worker. Lifetime p50/p95/p99/count/avgMs/apdex are unchanged.
+   *
    * @returns {{
    *   timestamp: string,
    *   uptime: number,
-   *   red: Object.<string, { count: number, clientErrorCount: number, serverErrorCount: number, errorRate: number, clientErrorRate: number, availability: number, p50: number, p95: number, p99: number, avgMs: number }>,
+   *   red: Object.<string, { count: number, clientErrorCount: number, serverErrorCount: number, errorRate: number, clientErrorRate: number, availability: number, p50: number, p95: number, p99: number, avgMs: number, window: { windowMs: number, count: number, p99: number } }>,
    *   system: { cpu: object, memory: object, eventLoopLag: number, gc: object, handles: number, requests: number },
-   *   dependencies: { oracle: Object.<string, { queryCount: number, errorCount: number, avgMs: number, p95Ms: number, poolUtilization: number|null, connectionsInUse: number|null, connectionsOpen: number|null, poolMax: number|null, queueLength: number|null, capacity: number|null }> },
+   *   dependencies: { oracle: Object.<string, { queryCount: number, errorCount: number, avgMs: number, p95Ms: number, poolUtilization: number|null, connectionsInUse: number|null, connectionsOpen: number|null, poolMax: number|null, queueLength: number|null, capacity: number|null, healthy: boolean|null, consecutiveFailures: number|null }> },
    *   totals: { requestsTotal: number, clientErrorsTotal: number, serverErrorsTotal: number, errorRate: number, clientErrorRate: number, availability: number },
    *   frontendVitals: Array,
    *   frontendErrors: Array
@@ -763,8 +942,10 @@ class MetricsStore {
     let apdexSatisfied = 0; // d ≤ T
     let apdexTolerating = 0; // T < d ≤ 4T
     let apdexSamples = 0;
+    const now = Date.now();
 
     for (const [route, entry] of this._routes) {
+      const win = this.#windowedSorted(entry, now);
       const sorted = [...entry.durations].sort((a, b) => a - b);
       const avg = sorted.length
         ? Math.round(sorted.reduce((s, v) => s + v, 0) / sorted.length)
@@ -795,6 +976,11 @@ class MetricsStore {
         p95: calcPercentile(sorted, 0.95),
         p99: calcPercentile(sorted, 0.99),
         avgMs: avg,
+        window: {
+          windowMs: LATENCY_WINDOW_MS,
+          count: win.length,
+          p99: calcPercentile(win, 0.99),
+        },
       };
     }
 
@@ -830,6 +1016,9 @@ class MetricsStore {
         poolMax: pool?.poolMax ?? null,
         queueLength: pool?.queueLength ?? null,
         capacity: pool ? Number(pool.capacity.toFixed(4)) : null,
+        // O5 health signal. null = never reported (fires neither DOWN nor DEGRADED).
+        healthy: pool ? pool.healthy : null,
+        consecutiveFailures: pool ? pool.consecutiveFailures : null,
       };
     }
 
@@ -906,6 +1095,7 @@ class MetricsStore {
           clientErrorRate: rates.clientErrorRate,
           availability: rates.availability,
           apdex,
+          window: this.#windowTotals(),
         };
       })(),
       frontendVitals: [...this._frontendVitals],
@@ -913,6 +1103,60 @@ class MetricsStore {
       notifications: Object.fromEntries(
         [...this._notifications].map(([channel, entry]) => [channel, { ...entry }]),
       ),
+      watchdog: {
+        terminated: this._watchdog.terminated,
+        byRoute: Object.fromEntries(this._watchdog.byRoute),
+      },
+    };
+  }
+
+  /**
+   * Snapshot plus the raw material `metricsMerge` needs to combine several
+   * workers' stores: per-route and per-pool quantile sketches (sorted durations
+   * sampled on QUANTILE_GRID), total Oracle query ms and Apdex bucket counts.
+   * `getSnapshot()` itself is unchanged. `routeWindowSketches` holds the same
+   * sketch built from only the last LATENCY_WINDOW_MS of each route's samples.
+   *
+   * @returns {{ snapshot: object, extras: { routeSketches: object, routeWindowSketches: object, oracleSketches: object, oracleTotalMs: object, apdexCounts: { satisfied: number, tolerating: number, samples: number } } }}
+   */
+  getMergeableSnapshot() {
+    // Lazy: metricsMerge requires this module for computeRates.
+    const { buildQuantileSketch } = require("./metricsMerge");
+    const snapshot = this.getSnapshot();
+
+    const routeSketches = new Map();
+    const routeWindowSketches = new Map();
+    const now = Date.now();
+    let satisfied = 0;
+    let tolerating = 0;
+    let samples = 0;
+    for (const [route, entry] of this._routes) {
+      const sorted = [...entry.durations].sort((a, b) => a - b);
+      routeSketches.set(route, buildQuantileSketch(sorted));
+      routeWindowSketches.set(route, buildQuantileSketch(this.#windowedSorted(entry, now)));
+      for (const d of sorted) {
+        samples++;
+        if (d <= APDEX_THRESHOLD_MS) satisfied++;
+        else if (d <= APDEX_THRESHOLD_MS * 4) tolerating++;
+      }
+    }
+
+    const oracleSketches = new Map();
+    const oracleTotalMs = new Map();
+    for (const [pool, entry] of this._oracle) {
+      oracleSketches.set(pool, buildQuantileSketch([...entry.durations].sort((a, b) => a - b)));
+      oracleTotalMs.set(pool, entry.totalMs);
+    }
+
+    return {
+      snapshot,
+      extras: {
+        routeSketches: Object.fromEntries(routeSketches),
+        routeWindowSketches: Object.fromEntries(routeWindowSketches),
+        oracleSketches: Object.fromEntries(oracleSketches),
+        oracleTotalMs: Object.fromEntries(oracleTotalMs),
+        apdexCounts: { satisfied, tolerating, samples },
+      },
     };
   }
 }
@@ -933,4 +1177,5 @@ module.exports = {
   CLIENT_ERROR_MIN_STATUS,
   SERVER_ERROR_MIN_STATUS,
   APDEX_THRESHOLD_MS,
+  LATENCY_WINDOW_MS,
 };

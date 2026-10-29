@@ -19,8 +19,8 @@ Oracle Database
 ## Table of Contents
 
 - [Setup](#setup)
-  - [Prerequisites — Database Configuration](#prerequisites--database-configuration)
-  - [Imports & Connection](#imports--connection)
+    - [Prerequisites — Database Configuration](#prerequisites--database-configuration)
+    - [Imports & Connection](#imports--connection)
 - [Basic — Your First Queries](#-basic--your-first-queries)
 - [Medium — Filtering, Updating & Chaining](#-medium--filtering-updating--chaining)
 - [Hard — Aggregation, Transactions & Joins](#-hard--aggregation-transactions--joins)
@@ -176,14 +176,14 @@ The wrapper's `db.js` imports from this file, so when you call `createDb("appDb"
 ```js
 // Import what you need
 const {
-  createDb,
-  OracleCollection,
-  OracleSchema,
-  OracleDCL,
-  Transaction,
-  withCTE,
-  withRecursiveCTE,
-  createPerformance,
+    createDb,
+    OracleCollection,
+    OracleSchema,
+    OracleDCL,
+    Transaction,
+    withCTE,
+    withRecursiveCTE,
+    createPerformance,
 } = require("./oracle-mongo-wrapper");
 
 // Connect to your database pool (configured in src/config/database.js)
@@ -204,10 +204,10 @@ That's it. `db` is your gateway to everything.
 const schema = new OracleSchema(db);
 
 await schema.createTable("users", {
-  id: { type: "NUMBER", primaryKey: true, autoIncrement: true },
-  name: { type: "VARCHAR2(200)", notNull: true },
-  email: { type: "VARCHAR2(300)", notNull: true },
-  status: { type: "VARCHAR2(20)", default: "'active'" },
+    id: { type: "NUMBER", primaryKey: true, autoIncrement: true },
+    name: { type: "VARCHAR2(200)", notNull: true },
+    email: { type: "VARCHAR2(300)", notNull: true },
+    status: { type: "VARCHAR2(20)", default: "'active'" },
 });
 ```
 
@@ -224,14 +224,14 @@ This doesn't query anything yet — it just creates a reference to the `users` t
 ```js
 // Insert one row
 const { insertedId } = await users.insertOne({
-  name: "Juan",
-  email: "juan@email.com",
+    name: "Juan",
+    email: "juan@email.com",
 });
 
 // Insert many rows at once (bulk insert — much faster than looping insertOne)
 await users.insertMany([
-  { name: "Maria", email: "maria@email.com" },
-  { name: "Pedro", email: "pedro@email.com" },
+    { name: "Maria", email: "maria@email.com" },
+    { name: "Pedro", email: "pedro@email.com" },
 ]);
 
 // insertMany options:
@@ -242,15 +242,18 @@ await users.insertMany([
 //                  ONLY that row; the rest of the batch still inserts and
 //                  result.batchErrors lists { offset, message } per failure.
 //                  Mutually exclusive with a non-empty `returning`.
-const r1 = await wallets.insertMany(rows, { returning: ["WALLET_ID"] });
-// r1.returning → [{ WALLET_ID: 7 }, { WALLET_ID: 8 }, …]
+const r1 = await accounts.insertMany(rows, { returning: ["ACCOUNT_ID"] });
+// r1.returning → [{ ACCOUNT_ID: 7 }, { ACCOUNT_ID: 8 }, …]
 
-const r2 = await subsidies.insertMany(rows, { returning: [], batchErrors: true });
+const r2 = await orders.insertMany(rows, {
+    returning: [],
+    batchErrors: true,
+});
 // r2.batchErrors → [{ offset: 3, message: "ORA-00001: …" }]
 
 // Session binding: inside Transaction sessions, insertMany joins the
 // surrounding transaction (same rule as insertOne):
-//   await session.collection("TAP_WALLET").insertMany(rows, { returning: [] });
+//   await session.collection("T_ACCOUNTS").insertMany(rows, { returning: [] });
 ```
 
 ### Find Data
@@ -274,8 +277,8 @@ const activeUsers = await users.find({ status: "active" }).toArray();
 ```js
 // Update one row — set the status field
 await users.updateOne(
-  { name: "Juan" }, // filter: find the row
-  { $set: { status: "premium" } }, // update: what to change
+    { name: "Juan" }, // filter: find the row
+    { $set: { status: "premium" } }, // update: what to change
 );
 
 // Update all rows matching a filter
@@ -285,14 +288,14 @@ await users.updateMany({ status: "trial" }, { $set: { status: "expired" } });
 // the bulk counterpart of looping updateOne when every row carries different
 // values. options.keys names the WHERE columns; every other property of each
 // row becomes the SET clause. All rows must share the same property set.
-await wallets.bulkUpdateByKeys(
-  [
-    { WALLET_ID: 7, ROW_HASH: "ab…" },
-    { WALLET_ID: 8, ROW_HASH: "cd…" },
-  ],
-  { keys: ["WALLET_ID"] },
+await accounts.bulkUpdateByKeys(
+    [
+        { ACCOUNT_ID: 7, ROW_HASH: "ab…" },
+        { ACCOUNT_ID: 8, ROW_HASH: "cd…" },
+    ],
+    { keys: ["ACCOUNT_ID"] },
 );
-// → UPDATE "TAP_WALLET" SET "ROW_HASH" = :s0 WHERE "WALLET_ID" = :k0  (executeMany)
+// → UPDATE "T_ACCOUNTS" SET "ROW_HASH" = :s0 WHERE "ACCOUNT_ID" = :k0  (executeMany)
 ```
 
 ### Delete Data
@@ -361,31 +364,31 @@ await users.find({ age: { $gte: 18, $lte: 65 } }).toArray();
 ```js
 // OR — either condition matches
 await users
-  .find({
-    $or: [{ city: "Manila" }, { city: "Cebu" }],
-  })
-  .toArray();
+    .find({
+        $or: [{ city: "Manila" }, { city: "Cebu" }],
+    })
+    .toArray();
 
 // AND — all conditions match (explicit)
 await users
-  .find({
-    $and: [{ age: { $gte: 18 } }, { status: "active" }],
-  })
-  .toArray();
+    .find({
+        $and: [{ age: { $gte: 18 } }, { status: "active" }],
+    })
+    .toArray();
 
 // NOR — none of the conditions match
 await users
-  .find({
-    $nor: [{ status: "banned" }, { status: "deleted" }],
-  })
-  .toArray();
+    .find({
+        $nor: [{ status: "banned" }, { status: "deleted" }],
+    })
+    .toArray();
 
 // NOT — negate a condition
 await users
-  .find({
-    $not: { status: "inactive" },
-  })
-  .toArray();
+    .find({
+        $not: { status: "inactive" },
+    })
+    .toArray();
 ```
 
 ### Chaining: Sort, Limit, Skip, Project
@@ -394,12 +397,12 @@ await users
 
 ```js
 const results = await users
-  .find({ status: "active" }) // WHERE status = 'active'
-  .sort({ name: 1 }) // ORDER BY name ASC (use -1 for DESC)
-  .skip(20) // OFFSET 20 ROWS (skip first 20)
-  .limit(10) // FETCH FIRST 10 ROWS ONLY
-  .project({ name: 1, email: 1 }) // SELECT name, email (only these columns)
-  .toArray(); // Execute and return rows
+    .find({ status: "active" }) // WHERE status = 'active'
+    .sort({ name: 1 }) // ORDER BY name ASC (use -1 for DESC)
+    .skip(20) // OFFSET 20 ROWS (skip first 20)
+    .limit(10) // FETCH FIRST 10 ROWS ONLY
+    .project({ name: 1, email: 1 }) // SELECT name, email (only these columns)
+    .toArray(); // Execute and return rows
 ```
 
 **Sort direction:** `1` = ascending (A→Z, 0→9), `-1` = descending (Z→A, 9→0)
@@ -433,8 +436,8 @@ await users.updateOne({ id: 1 }, { $inc: { loginCount: 1 } });
 
 // $mul — multiply a number
 await products.updateMany(
-  { category: "electronics" },
-  { $mul: { price: 0.9 } },
+    { category: "electronics" },
+    { $mul: { price: 0.9 } },
 ); // 10% off
 
 // $min / $max — set to the lesser/greater value
@@ -449,12 +452,12 @@ await users.updateOne({ id: 1 }, { $unset: { temporaryNote: "" } });
 
 // Combine multiple operators in one call
 await users.updateOne(
-  { id: 1 },
-  {
-    $set: { status: "premium" },
-    $inc: { loginCount: 1 },
-    $currentDate: { updatedAt: true },
-  },
+    { id: 1 },
+    {
+        $set: { status: "premium" },
+        $inc: { loginCount: 1 },
+        $currentDate: { updatedAt: true },
+    },
 );
 ```
 
@@ -463,9 +466,9 @@ await users.updateOne(
 ```js
 // Find a row, update it, and return the original (or updated) document
 const original = await users.findOneAndUpdate(
-  { id: 1 },
-  { $set: { status: "premium" } },
-  { returnDocument: "before" }, // "before" = return old value, "after" = return new value
+    { id: 1 },
+    { $set: { status: "premium" } },
+    { returnDocument: "before" }, // "before" = return old value, "after" = return new value
 );
 
 // Find and delete — returns the deleted document
@@ -473,8 +476,8 @@ const deleted = await users.findOneAndDelete({ status: "inactive" });
 
 // Find and replace — replace the entire row (except the ID)
 await users.findOneAndReplace(
-  { id: 1 },
-  { name: "New Name", email: "new@email.com", status: "active" },
+    { id: 1 },
+    { name: "New Name", email: "new@email.com", status: "active" },
 );
 ```
 
@@ -514,12 +517,12 @@ An aggregation pipeline is an **ordered array of stages**. Data flows through ea
 ```
 
 ```js
-// "Top 5 regions by total completed sales"
+// "Top 5 regions by total completed revenue"
 const report = await orders.aggregate([
-  { $match: { status: "completed" } }, // Step 1: filter
-  { $group: { _id: "$region", total: { $sum: "$amount" } } }, // Step 2: group & sum
-  { $sort: { total: -1 } }, // Step 3: sort descending
-  { $limit: 5 }, // Step 4: top 5 only
+    { $match: { status: "completed" } }, // Step 1: filter
+    { $group: { _id: "$region", total: { $sum: "$amount" } } }, // Step 2: group & sum
+    { $sort: { total: -1 } }, // Step 3: sort descending
+    { $limit: 5 }, // Step 4: top 5 only
 ]);
 ```
 
@@ -549,28 +552,28 @@ Used inside `$group`, `$project`, and `$addFields`:
 
 ```js
 await orders.aggregate([
-  {
-    $group: {
-      _id: "$customerId", // GROUP BY customerId
-      totalSpent: { $sum: "$amount" }, // SUM(amount)
-      orderCount: { $count: "*" }, // COUNT(*)
-      avgOrder: { $avg: "$amount" }, // AVG(amount)
-      biggest: { $max: "$amount" }, // MAX(amount)
-      smallest: { $min: "$amount" }, // MIN(amount)
+    {
+        $group: {
+            _id: "$customerId", // GROUP BY customerId
+            totalSpent: { $sum: "$amount" }, // SUM(amount)
+            orderCount: { $count: "*" }, // COUNT(*)
+            avgOrder: { $avg: "$amount" }, // AVG(amount)
+            biggest: { $max: "$amount" }, // MAX(amount)
+            smallest: { $min: "$amount" }, // MIN(amount)
+        },
     },
-  },
-  { $sort: { totalSpent: -1 } },
+    { $sort: { totalSpent: -1 } },
 ]);
 ```
 
 ### $having — Filter After Grouping
 
 ```js
-// Only show regions with total sales over 10,000
-await sales.aggregate([
-  { $group: { _id: "$region", total: { $sum: "$amount" } } },
-  { $having: { total: { $gt: 10000 } } }, // filters AFTER the GROUP BY
-  { $sort: { total: -1 } },
+// Only show regions with total revenue over 10,000
+await orders.aggregate([
+    { $group: { _id: "$region", total: { $sum: "$amount" } } },
+    { $having: { total: { $gt: 10000 } } }, // filters AFTER the GROUP BY
+    { $sort: { total: -1 } },
 ]);
 ```
 
@@ -578,22 +581,22 @@ await sales.aggregate([
 
 ```js
 await users.aggregate([
-  {
-    $project: {
-      name: 1, // include as-is
-      upperName: { $toUpper: "$name" }, // UPPER(name)
-      displayName: { $ifNull: ["$nickname", "$name"] }, // COALESCE(nickname, name)
-      fullName: { $concat: ["$firstName", "$lastName"] }, // firstName || lastName
-      tier: {
-        $cond: {
-          // CASE WHEN ... THEN ... ELSE ... END
-          if: { totalSpent: { $gte: 10000 } },
-          then: "VIP",
-          else: "Regular",
+    {
+        $project: {
+            name: 1, // include as-is
+            upperName: { $toUpper: "$name" }, // UPPER(name)
+            displayName: { $ifNull: ["$nickname", "$name"] }, // COALESCE(nickname, name)
+            fullName: { $concat: ["$firstName", "$lastName"] }, // firstName || lastName
+            tier: {
+                $cond: {
+                    // CASE WHEN ... THEN ... ELSE ... END
+                    if: { totalSpent: { $gte: 10000 } },
+                    then: "VIP",
+                    else: "Regular",
+                },
+            },
         },
-      },
     },
-  },
 ]);
 ```
 
@@ -602,44 +605,44 @@ await users.aggregate([
 ```js
 // Left join: all orders, with customer info if available
 await orders.aggregate([
-  {
-    $lookup: {
-      from: "customers", // table to join
-      localField: "customerId", // column in orders
-      foreignField: "id", // column in customers
-      as: "cust", // alias
-      joinType: "left", // left | right | inner | full | cross | self | natural
+    {
+        $lookup: {
+            from: "customers", // table to join
+            localField: "customerId", // column in orders
+            foreignField: "id", // column in customers
+            as: "cust", // alias
+            joinType: "left", // left | right | inner | full | cross | self | natural
+        },
     },
-  },
-  { $project: { orderId: 1, amount: 1, "cust.name": 1 } },
+    { $project: { orderId: 1, amount: 1, "cust.name": 1 } },
 ]);
 
 // Multi-condition join
 await orders.aggregate([
-  {
-    $lookup: {
-      from: "inventory",
-      as: "stock",
-      joinType: "inner",
-      on: [
-        { localField: "productId", foreignField: "id" },
-        { localField: "warehouseId", foreignField: "warehouseId" },
-      ],
+    {
+        $lookup: {
+            from: "inventory",
+            as: "stock",
+            joinType: "inner",
+            on: [
+                { localField: "productId", foreignField: "id" },
+                { localField: "warehouseId", foreignField: "warehouseId" },
+            ],
+        },
     },
-  },
 ]);
 
 // Self-join: employees with their managers
 await employees.aggregate([
-  {
-    $lookup: {
-      from: "employees",
-      localField: "managerId",
-      foreignField: "id",
-      as: "manager",
-      joinType: "self",
+    {
+        $lookup: {
+            from: "employees",
+            localField: "managerId",
+            foreignField: "id",
+            as: "manager",
+            joinType: "self",
+        },
     },
-  },
 ]);
 ```
 
@@ -653,36 +656,36 @@ Use `select` to list only the columns you need from the **right-hand (joined) ta
 The left table is always included in full.
 
 ```js
-// Without select — raises ORA-00918 if U_USERS and U_PERSONALINFOS both have USERID
+// Without select — raises ORA-00918 if T_USERS and T_USER_PROFILES both have USERID
 await users.aggregate([
-  { $match: { USERID: "48022603" } },
-  {
-    $lookup: {
-      from: "U_PERSONALINFOS",
-      localField: "USERID",
-      foreignField: "USERID",
-      as: "pi",
-      joinType: "left",
-      // ← no select: both tables expose USERID → ambiguous
+    { $match: { USERID: "48022603" } },
+    {
+        $lookup: {
+            from: "T_USER_PROFILES",
+            localField: "USERID",
+            foreignField: "USERID",
+            as: "pi",
+            joinType: "left",
+            // ← no select: both tables expose USERID → ambiguous
+        },
     },
-  },
-  { $project: { USERID: 1, EMAILADDRESS: 1 } }, // ORA-00918 ❌
+    { $project: { USERID: 1, EMAILADDRESS: 1 } }, // ORA-00918 ❌
 ]);
 
-// With select — only EMAILADDRESS is pulled from U_PERSONALINFOS
+// With select — only EMAILADDRESS is pulled from T_USER_PROFILES
 await users.aggregate([
-  { $match: { USERID: "48022603" } },
-  {
-    $lookup: {
-      from: "U_PERSONALINFOS",
-      localField: "USERID",
-      foreignField: "USERID",
-      as: "pi",
-      joinType: "left",
-      select: ["EMAILADDRESS"], // ← pull only this column from the right side ✅
+    { $match: { USERID: "48022603" } },
+    {
+        $lookup: {
+            from: "T_USER_PROFILES",
+            localField: "USERID",
+            foreignField: "USERID",
+            as: "pi",
+            joinType: "left",
+            select: ["EMAILADDRESS"], // ← pull only this column from the right side
+        },
     },
-  },
-  { $project: { USERID: 1, EMAILADDRESS: 1 } }, // unambiguous ✅
+    { $project: { USERID: 1, EMAILADDRESS: 1 } }, // unambiguous
 ]);
 ```
 
@@ -691,11 +694,11 @@ Generated SQL comparison:
 ```sql
 -- Without select (ambiguous USERID):
 SELECT "stage_0".*, "pi".*
-FROM "stage_0" LEFT OUTER JOIN "U_PERSONALINFOS" "pi" ON "stage_0"."USERID" = "pi"."USERID"
+FROM "stage_0" LEFT OUTER JOIN "T_USER_PROFILES" "pi" ON "stage_0"."USERID" = "pi"."USERID"
 
 -- With select: ["EMAILADDRESS"] (no duplicate columns):
 SELECT "stage_0".*, "pi"."EMAILADDRESS"
-FROM "stage_0" LEFT OUTER JOIN "U_PERSONALINFOS" "pi" ON "stage_0"."USERID" = "pi"."USERID"
+FROM "stage_0" LEFT OUTER JOIN "T_USER_PROFILES" "pi" ON "stage_0"."USERID" = "pi"."USERID"
 ```
 
 > **Rule of thumb:** Any time the joined table shares a column name with the left table,
@@ -709,23 +712,23 @@ Transactions ensure **all-or-nothing** execution. If anything fails, everything 
 const txManager = new Transaction(db);
 
 await txManager.withTransaction(async (session) => {
-  // Everything inside here uses the SAME database connection
-  const orders = session.collection("orders");
-  const payments = session.collection("payments");
+    // Everything inside here uses the SAME database connection
+    const orders = session.collection("orders");
+    const payments = session.collection("payments");
 
-  await orders.insertOne({ item: "laptop", qty: 1, total: 50000 });
+    await orders.insertOne({ item: "laptop", qty: 1, total: 50000 });
 
-  // Create a savepoint — a checkpoint you can roll back to
-  await session.savepoint("after_order");
+    // Create a savepoint — a checkpoint you can roll back to
+    await session.savepoint("after_order");
 
-  try {
-    await payments.insertOne({ amount: -999 }); // this might fail
-  } catch (err) {
-    // Roll back to the savepoint — the order insert is preserved
-    await session.rollbackTo("after_order");
-  }
+    try {
+        await payments.insertOne({ amount: -999 }); // this might fail
+    } catch (err) {
+        // Roll back to the savepoint — the order insert is preserved
+        await session.rollbackTo("after_order");
+    }
 
-  // If we reach here without errors, everything is committed automatically
+    // If we reach here without errors, everything is committed automatically
 });
 ```
 
@@ -736,20 +739,20 @@ Insert if the row doesn't exist, update if it does:
 ```js
 // Match on id — update salary if found, insert if not
 await employees.merge(
-  { id: 10, name: "Ana", salary: 60000 },
-  { localField: "id", foreignField: "id" },
-  {
-    whenMatched: { $set: { salary: 60000 } },
-    whenNotMatched: "insert",
-  },
+    { id: 10, name: "Ana", salary: 60000 },
+    { localField: "id", foreignField: "id" },
+    {
+        whenMatched: { $set: { salary: 60000 } },
+        whenNotMatched: "insert",
+    },
 );
 
 // Merge from another table
 await employees.mergeFrom({
-  sourceTable: "temp_employees",
-  on: { id: "$src.id" },
-  whenMatched: { $set: { salary: "$src.salary" } },
-  whenNotMatched: "insert",
+    sourceTable: "temp_employees",
+    on: { id: "$src.id" },
+    whenMatched: { $set: { salary: "$src.salary" } },
+    whenNotMatched: "insert",
 });
 ```
 
@@ -760,20 +763,20 @@ Combine results from two queries:
 ```js
 // UNION — combine and remove duplicates
 const allVip = await OracleCollection.union(
-  users.find({ tier: "gold" }).project({ name: 1, email: 1 }),
-  users.find({ tier: "platinum" }).project({ name: 1, email: 1 }),
+    users.find({ tier: "gold" }).project({ name: 1, email: 1 }),
+    users.find({ tier: "platinum" }).project({ name: 1, email: 1 }),
 );
 
 // INTERSECT — only rows appearing in BOTH queries
 const overlap = await OracleCollection.intersect(
-  users.find({ dept: "A" }).project({ name: 1 }),
-  users.find({ status: "premium" }).project({ name: 1 }),
+    users.find({ dept: "A" }).project({ name: 1 }),
+    users.find({ status: "premium" }).project({ name: 1 }),
 );
 
 // MINUS — rows in first query but NOT in second
 const aOnly = await OracleCollection.minus(
-  users.find({ dept: "A" }).project({ name: 1 }),
-  users.find({ dept: "B" }).project({ name: 1 }),
+    users.find({ dept: "A" }).project({ name: 1 }),
+    users.find({ dept: "B" }).project({ name: 1 }),
 );
 ```
 
@@ -785,14 +788,14 @@ Execute multiple operations in a single transaction:
 
 ```js
 await users.bulkWrite([
-  { insertOne: { document: { name: "Alex", status: "active" } } },
-  {
-    updateOne: {
-      filter: { name: "Juan" },
-      update: { $set: { status: "premium" } },
+    { insertOne: { document: { name: "Alex", status: "active" } } },
+    {
+        updateOne: {
+            filter: { name: "Juan" },
+            update: { $set: { status: "premium" } },
+        },
     },
-  },
-  { deleteOne: { filter: { name: "Pedro" } } },
+    { deleteOne: { filter: { name: "Pedro" } } },
 ]);
 ```
 
@@ -805,10 +808,10 @@ const schema = new OracleSchema(db);
 await schema.alterTable("users", { addColumn: { phone: "VARCHAR2(20)" } });
 await schema.alterTable("users", { dropColumn: "phone" });
 await schema.alterTable("users", {
-  renameColumn: { from: "phone", to: "mobile" },
+    renameColumn: { from: "phone", to: "mobile" },
 });
 await schema.alterTable("users", {
-  addConstraint: { type: "UNIQUE", columns: ["email"], name: "UQ_email" },
+    addConstraint: { type: "UNIQUE", columns: ["email"], name: "UQ_email" },
 });
 
 // Other table operations
@@ -821,9 +824,9 @@ await schema.createSequence("order_seq", { startWith: 1000, incrementBy: 1 });
 
 // Views
 await schema.createView(
-  "active_users",
-  users.find({ status: "active" }).project({ id: 1, name: 1, email: 1 }),
-  { orReplace: true },
+    "active_users",
+    users.find({ status: "active" }).project({ id: 1, name: 1, email: 1 }),
+    { orReplace: true },
 );
 await schema.dropView("active_users", { ifExists: true });
 ```
@@ -849,48 +852,48 @@ Unlike `$group` (which collapses rows), window functions **add computed columns 
 
 ```js
 await orders.aggregate([
-  {
-    $addFields: {
-      // Rank orders by amount within each region (highest first)
-      rank: {
-        $window: {
-          fn: "RANK",
-          partitionBy: "region",
-          orderBy: { amount: -1 },
-        },
-      },
+    {
+        $addFields: {
+            // Rank orders by amount within each region (highest first)
+            rank: {
+                $window: {
+                    fn: "RANK",
+                    partitionBy: "region",
+                    orderBy: { amount: -1 },
+                },
+            },
 
-      // Get the previous order's amount for the same customer
-      prevAmount: {
-        $window: {
-          fn: "LAG",
-          field: "amount",
-          offset: 1,
-          partitionBy: "customerId",
-        },
-      },
+            // Get the previous order's amount for the same customer
+            prevAmount: {
+                $window: {
+                    fn: "LAG",
+                    field: "amount",
+                    offset: 1,
+                    partitionBy: "customerId",
+                },
+            },
 
-      // Running total per customer, ordered by date
-      runningTotal: {
-        $window: {
-          fn: "SUM",
-          field: "amount",
-          partitionBy: "customerId",
-          orderBy: { date: 1 },
-        },
-      },
+            // Running total per customer, ordered by date
+            runningTotal: {
+                $window: {
+                    fn: "SUM",
+                    field: "amount",
+                    partitionBy: "customerId",
+                    orderBy: { date: 1 },
+                },
+            },
 
-      // 3-row moving average
-      movingAvg: {
-        $window: {
-          fn: "AVG",
-          field: "amount",
-          orderBy: { date: 1 },
-          frame: "ROWS BETWEEN 2 PRECEDING AND CURRENT ROW",
+            // 3-row moving average
+            movingAvg: {
+                $window: {
+                    fn: "AVG",
+                    field: "amount",
+                    orderBy: { date: 1 },
+                    frame: "ROWS BETWEEN 2 PRECEDING AND CURRENT ROW",
+                },
+            },
         },
-      },
     },
-  },
 ]);
 ```
 
@@ -919,19 +922,19 @@ Name a query, then reference it — like SQL variables.
 const { withCTE } = require("./oracle-mongo-wrapper");
 
 const result = await withCTE(db, {
-  activeUsers: users.find({ status: "active" }).project({ id: 1, name: 1 }),
-  recentOrders: orders.find({ year: 2024 }).project({ userId: 1, total: 1 }),
+    activeUsers: users.find({ status: "active" }).project({ id: 1, name: 1 }),
+    recentOrders: orders.find({ year: 2024 }).project({ userId: 1, total: 1 }),
 })
-  .from("activeUsers")
-  .join({
-    from: "recentOrders",
-    localField: "id",
-    foreignField: "userId",
-    joinType: "inner",
-  })
-  .sort({ total: -1 })
-  .limit(10)
-  .toArray();
+    .from("activeUsers")
+    .join({
+        from: "recentOrders",
+        localField: "id",
+        foreignField: "userId",
+        joinType: "inner",
+    })
+    .sort({ total: -1 })
+    .limit(10)
+    .toArray();
 ```
 
 ### Recursive CTEs (Tree Traversal)
@@ -942,14 +945,14 @@ For parent-child hierarchical data (org charts, categories, file trees):
 const { withRecursiveCTE } = require("./oracle-mongo-wrapper");
 
 const orgChart = await withRecursiveCTE(db, "org", {
-  anchor: employees.find({ managerId: null }), // Start: employees with no manager (root nodes)
-  recursive: {
-    collection: "employees",
-    joinOn: { managerId: "$org.id" }, // child.managerId = parent.id
-  },
+    anchor: employees.find({ managerId: null }), // Start: employees with no manager (root nodes)
+    recursive: {
+        collection: "employees",
+        joinOn: { managerId: "$org.id" }, // child.managerId = parent.id
+    },
 })
-  .sort({ LVL: 1, name: 1 }) // LVL is added automatically (1 = root, 2 = direct report, etc.)
-  .toArray();
+    .sort({ LVL: 1, name: 1 }) // LVL is added automatically (1 = root, 2 = direct report, etc.)
+    .toArray();
 ```
 
 ### CONNECT BY (Oracle Hierarchical Queries)
@@ -958,12 +961,12 @@ Oracle's native syntax for tree traversal (alternative to recursive CTEs):
 
 ```js
 const orgTree = await employees.connectBy({
-  startWith: { managerId: null }, // Root nodes
-  connectBy: { managerId: "$PRIOR id" }, // PRIOR id = parent's ID
-  includeLevel: true, // Add LEVEL pseudo-column
-  includePath: true, // Add SYS_CONNECT_BY_PATH
-  orderSiblings: { name: 1 }, // Sort siblings alphabetically
-  maxLevel: 5, // Maximum depth
+    startWith: { managerId: null }, // Root nodes
+    connectBy: { managerId: "$PRIOR id" }, // PRIOR id = parent's ID
+    includeLevel: true, // Add LEVEL pseudo-column
+    includePath: true, // Add SYS_CONNECT_BY_PATH
+    orderSiblings: { name: 1 }, // Sort siblings alphabetically
+    maxLevel: 5, // Maximum depth
 });
 ```
 
@@ -975,11 +978,11 @@ Turn row values into column headers:
 // Before: { region: "East", quarter: "Q1", amount: 100 }, { region: "East", quarter: "Q2", amount: 200 }
 // After:  { region: "East", Q1: 100, Q2: 200, Q3: ..., Q4: ... }
 
-const pivotResult = await sales.pivot({
-  value: { $sum: "$amount" },
-  pivotOn: "quarter",
-  pivotValues: ["Q1", "Q2", "Q3", "Q4"],
-  groupBy: "region",
+const pivotResult = await orders.pivot({
+    value: { $sum: "$amount" },
+    pivotOn: "quarter",
+    pivotValues: ["Q1", "Q2", "Q3", "Q4"],
+    groupBy: "region",
 });
 ```
 
@@ -992,9 +995,9 @@ The reverse — turn column headers into row values:
 // After:  { region: "East", quarter: "Q1", revenue: 100 }, { region: "East", quarter: "Q2", revenue: 200 }, ...
 
 const unpivotResult = await quarterly.unpivot({
-  valueColumn: "revenue",
-  nameColumn: "quarter",
-  columns: ["Q1", "Q2", "Q3", "Q4"],
+    valueColumn: "revenue",
+    nameColumn: "quarter",
+    columns: ["Q1", "Q2", "Q3", "Q4"],
 });
 ```
 
@@ -1002,34 +1005,34 @@ const unpivotResult = await quarterly.unpivot({
 
 ```js
 // ROLLUP — subtotals + grand total
-await sales.aggregate([
-  {
-    $group: {
-      _id: { $rollup: ["region", "product"] },
-      total: { $sum: "$amount" },
+await orders.aggregate([
+    {
+        $group: {
+            _id: { $rollup: ["region", "product"] },
+            total: { $sum: "$amount" },
+        },
     },
-  },
 ]);
 // Result includes: per product per region, per region subtotal, grand total
 
 // CUBE — all possible combination subtotals
-await sales.aggregate([
-  {
-    $group: {
-      _id: { $cube: ["region", "product"] },
-      total: { $sum: "$amount" },
+await orders.aggregate([
+    {
+        $group: {
+            _id: { $cube: ["region", "product"] },
+            total: { $sum: "$amount" },
+        },
     },
-  },
 ]);
 
 // GROUPING SETS — custom combos
-await sales.aggregate([
-  {
-    $group: {
-      _id: { $groupingSets: [["region"], ["product"], []] },
-      total: { $sum: "$amount" },
+await orders.aggregate([
+    {
+        $group: {
+            _id: { $groupingSets: [["region"], ["product"], []] },
+            total: { $sum: "$amount" },
+        },
     },
-  },
 ]);
 ```
 
@@ -1038,39 +1041,39 @@ await sales.aggregate([
 ```js
 // EXISTS — find users who have at least one order
 await users
-  .find({
-    $exists: { collection: "orders", match: { userId: "$id" } },
-  })
-  .toArray();
+    .find({
+        $exists: { collection: "orders", match: { userId: "$id" } },
+    })
+    .toArray();
 
 // NOT EXISTS — find users with NO orders
 await users
-  .find({
-    $notExists: { collection: "orders", match: { userId: "$id" } },
-  })
-  .toArray();
+    .find({
+        $notExists: { collection: "orders", match: { userId: "$id" } },
+    })
+    .toArray();
 
 // IN subquery — find users whose IDs are in the orders table
 await users
-  .find({
-    id: { $inSelect: orders.find({}).project({ userId: 1 }) },
-  })
-  .toArray();
+    .find({
+        id: { $inSelect: orders.find({}).project({ userId: 1 }) },
+    })
+    .toArray();
 
 // Scalar subquery — add a computed column
 await users
-  .find({})
-  .project({
-    name: 1,
-    orderCount: {
-      $subquery: {
-        collection: "orders",
-        fn: "count",
-        filter: { userId: "$id" },
-      },
-    },
-  })
-  .toArray();
+    .find({})
+    .project({
+        name: 1,
+        orderCount: {
+            $subquery: {
+                collection: "orders",
+                fn: "count",
+                filter: { userId: "$id" },
+            },
+        },
+    })
+    .toArray();
 ```
 
 ### Special Filter Operators
@@ -1078,32 +1081,32 @@ await users
 ```js
 // CASE expression
 await users
-  .find({
-    tier: {
-      $case: [
-        { when: { totalSpent: { $gte: 10000 } }, then: "VIP" },
-        { when: { totalSpent: { $gte: 5000 } }, then: "Gold" },
-      ],
-      $else: "Regular",
-    },
-  })
-  .toArray();
+    .find({
+        tier: {
+            $case: [
+                { when: { totalSpent: { $gte: 10000 } }, then: "VIP" },
+                { when: { totalSpent: { $gte: 5000 } }, then: "Gold" },
+            ],
+            $else: "Regular",
+        },
+    })
+    .toArray();
 
 // COALESCE — first non-null value
 await users
-  .find({})
-  .project({
-    displayName: { $coalesce: ["$nickname", "$name", "Anonymous"] },
-  })
-  .toArray();
+    .find({})
+    .project({
+        displayName: { $coalesce: ["$nickname", "$name", "Anonymous"] },
+    })
+    .toArray();
 
 // NULLIF — returns NULL if two values are equal
 await users
-  .find({})
-  .project({
-    effectiveDiscount: { $nullif: ["$discount", 0] },
-  })
-  .toArray();
+    .find({})
+    .project({
+        effectiveDiscount: { $nullif: ["$discount", 0] },
+    })
+    .toArray();
 ```
 
 ### Performance Utilities
@@ -1120,16 +1123,16 @@ await perf.analyze("orders");
 
 // Create a materialized view (pre-computed query — cached on disk)
 await perf.createMaterializedView(
-  "monthly_sales_mv",
-  "SELECT region, SUM(amount) AS total FROM orders GROUP BY region",
-  { refreshMode: "force", refreshOn: "demand" },
+    "monthly_revenue_mv",
+    "SELECT region, SUM(amount) AS total FROM orders GROUP BY region",
+    { refreshMode: "force", refreshOn: "demand" },
 );
 
 // Refresh the materialized view
-await perf.refreshMaterializedView("monthly_sales_mv", "complete");
+await perf.refreshMaterializedView("monthly_revenue_mv", "complete");
 
 // Drop when no longer needed
-await perf.dropMaterializedView("monthly_sales_mv");
+await perf.dropMaterializedView("monthly_revenue_mv");
 ```
 
 ### Debug: See the Generated SQL
@@ -1137,10 +1140,10 @@ await perf.dropMaterializedView("monthly_sales_mv");
 ```js
 // Use .explain() to see the SQL without running it
 const sql = await users
-  .find({ status: "active", age: { $gte: 18 } })
-  .sort({ name: 1 })
-  .project({ name: 1, email: 1 })
-  .explain();
+    .find({ status: "active", age: { $gte: 18 } })
+    .sort({ name: 1 })
+    .project({ name: 1, email: 1 })
+    .explain();
 
 console.log(sql);
 // → SELECT "name", "email" FROM "users" t0 WHERE "status" = :where_status_0 AND "age" >= :where_age_1 ORDER BY "name" ASC
@@ -1217,62 +1220,62 @@ console.log(sql);
 ```js
 // FIND: "Active users over 18, sorted by name, page 2 (10 per page)"
 await users
-  .find({ status: "active", age: { $gt: 18 } })
-  .sort({ name: 1 })
-  .skip(10)
-  .limit(10)
-  .toArray();
+    .find({ status: "active", age: { $gt: 18 } })
+    .sort({ name: 1 })
+    .skip(10)
+    .limit(10)
+    .toArray();
 
 // UPDATE: "Increment login count and mark last login for user 5"
 await users.updateOne(
-  { id: 5 },
-  {
-    $inc: { loginCount: 1 },
-    $currentDate: { lastLogin: true },
-  },
+    { id: 5 },
+    {
+        $inc: { loginCount: 1 },
+        $currentDate: { lastLogin: true },
+    },
 );
 
-// AGGREGATE: "Total sales per region, only regions over 10000"
-await sales.aggregate([
-  { $group: { _id: "$region", total: { $sum: "$amount" } } },
-  { $having: { total: { $gt: 10000 } } },
-  { $sort: { total: -1 } },
+// AGGREGATE: "Total revenue per region, only regions over 10000"
+await orders.aggregate([
+    { $group: { _id: "$region", total: { $sum: "$amount" } } },
+    { $having: { total: { $gt: 10000 } } },
+    { $sort: { total: -1 } },
 ]);
 
 // JOIN: "Orders with customer names"
 await orders.aggregate([
-  {
-    $lookup: {
-      from: "customers",
-      localField: "customerId",
-      foreignField: "id",
-      as: "cust",
-      joinType: "left",
+    {
+        $lookup: {
+            from: "customers",
+            localField: "customerId",
+            foreignField: "id",
+            as: "cust",
+            joinType: "left",
+        },
     },
-  },
-  { $project: { orderId: 1, amount: 1, "cust.name": 1 } },
+    { $project: { orderId: 1, amount: 1, "cust.name": 1 } },
 ]);
 
 // WINDOW: "Rank employees by salary within each department"
 await employees.aggregate([
-  {
-    $addFields: {
-      rank: {
-        $window: {
-          fn: "RANK",
-          partitionBy: "deptId",
-          orderBy: { salary: -1 },
+    {
+        $addFields: {
+            rank: {
+                $window: {
+                    fn: "RANK",
+                    partitionBy: "deptId",
+                    orderBy: { salary: -1 },
+                },
+            },
         },
-      },
     },
-  },
 ]);
 
 // MERGE/UPSERT: "Insert or update employee"
 await employees.merge(
-  { id: 10, name: "Ana", salary: 60000 },
-  { localField: "id", foreignField: "id" },
-  { whenMatched: { $set: { salary: 60000 } }, whenNotMatched: "insert" },
+    { id: 10, name: "Ana", salary: 60000 },
+    { localField: "id", foreignField: "id" },
+    { whenMatched: { $set: { salary: 60000 } }, whenNotMatched: "insert" },
 );
 ```
 

@@ -10,7 +10,7 @@ const crypto = require("crypto");
 // This harness asserts argon2-specific behaviour (e.g. a "$argon2id$" prefix and
 // the argon2 tuning snapshot). Argon2Adapter is a thin ALIAS to the mode-driven
 // CryptoVault — Argon2Adapter.hashPassword() emits whatever PASSWORD_HASH_MODE
-// resolves to. The deployment .env may run tripledes/bcrypt (HRIS-interop), under
+// resolves to. The deployment .env may run tripledes/bcrypt (legacy interop), under
 // which these argon2 assertions would (correctly) fail. So we pin argon2 mode and
 // a valid pepper BEFORE loading .env and requiring CryptoVault. dotenv does not
 // override already-set process.env vars, so these win over the .env values; the
@@ -86,7 +86,7 @@ function assert(cond, msg) {
     let skipped = 0;
     for (const alg of ALGORITHMS) {
         await it(`${alg.name} — encrypt → decrypt round-trip`, async () => {
-            const pt = "Continental01";
+            const pt = "SelfTest-Passw0rd!";
             const key = crypto.randomBytes(alg.keySize);
             const iv = crypto.randomBytes(alg.ivSize);
             try {
@@ -117,7 +117,7 @@ function assert(cond, msg) {
     section("SymmetricCrypto — SecurityCryptHelper (TripleDES)");
 
     await it("encryptText / decryptText round-trip (multiple samples)", async () => {
-        for (const s of ["password123", "P@ssw0rd!", "Continental01"]) {
+        for (const s of ["password123", "P@ssw0rd!", "SelfTest-Passw0rd!"]) {
             const e = SecurityCryptHelper.encryptText(s);
             assert(e !== null, "encryptText returned null");
             assert(

@@ -64,7 +64,7 @@ class MetricsController {
    * Requires userLevel >= 2.
    */
   static getSnapshot = catchAsync(async (_req, res) => {
-    const snapshot = MetricsService.getSnapshot();
+    const snapshot = await MetricsService.getClusterSnapshot();
     logger.info(metricsMessages.SNAPSHOT_FETCHED());
     res.json(sendSuccess(RESPONSE_MESSAGES.METRICS_FETCHED, snapshot));
   });
@@ -75,7 +75,7 @@ class MetricsController {
    * Requires userLevel >= 1.
    */
   static getSummary = catchAsync(async (_req, res) => {
-    const summary = MetricsService.getSummary();
+    const summary = MetricsService.getSummary(await MetricsService.getClusterSnapshot());
     logger.info(metricsMessages.SUMMARY_FETCHED());
     res.json(sendSuccess(RESPONSE_MESSAGES.METRICS_SUMMARY_FETCHED, summary));
   });
@@ -89,7 +89,7 @@ class MetricsController {
    * Requires userLevel >= 2.
    */
   static getAlerts = catchAsync(async (_req, res) => {
-    const alerts = MetricsService.evaluateAlerts();
+    const alerts = MetricsService.evaluateAlerts(await MetricsService.getClusterSnapshot());
     const decorated = await AlertNotifierService.decorateAlertsWithAckState(alerts);
     logger.info(metricsMessages.ALERTS_FETCHED());
     res.json(

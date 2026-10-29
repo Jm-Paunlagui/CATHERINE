@@ -9,15 +9,26 @@ const middlewareMessages = {
   IP_BLOCKED: (ip, path) => `IP blocked by filter: ${ip} on ${path}`,
   RATE_LIMIT_EXCEEDED: (ip, path, count, max) =>
     `Rate limit exceeded for ${ip} on ${path} (${count}/${max}).`,
+  RATE_LIMIT_STORE_FULL: (label) =>
+    `[${label}] Rate limit store is full - failing open (requests are admitted uncounted until entries expire).`,
   CSRF_TOKEN_GENERATED: (ip) => `CSRF token generated for ${ip}.`,
+  CSRF_TOKEN_GENERATE_FAILED: (ip) =>
+    `Failed to generate CSRF token for ${ip}.`,
   CSRF_VALIDATION_FAILED: (ip, url) =>
     `CSRF validation failed for ${ip} on ${url}.`,
+  CSRF_VALIDATION_PASSED: (ip, url) =>
+    `CSRF validation passed for ${ip} on ${url}.`,
+  CSRF_STATUS_FAILED: (ip) => `Failed to retrieve CSRF status for ${ip}.`,
   SECURITY_FILTER_BLOCKED: (ip, method, path) =>
     `Security filter blocked ${method} ${path} from ${ip}.`,
   SUSPICIOUS_IP_TRACKED: (ip, count) =>
     `Suspicious IP tracked: ${ip} (${count} offenses).`,
   SUSPICIOUS_IP_BLOCKED: (ip, blockedUntil) =>
     `IP ${ip} blocked until ${blockedUntil}.`,
+  SUSPICIOUS_IP_BLOCK_EXPIRED: (ip) =>
+    `Suspicious-IP block expired for ${ip} — offence counter reset to 0.`,
+  SUSPICIOUS_IP_UNBLOCKED: (ip, actor) =>
+    `Suspicious-IP block manually cleared for ${ip} by ${actor}.`,
   CORS_ORIGIN_BLOCKED: (origin) => `CORS: origin blocked — ${origin}`,
   CSRF_TOKEN_REFRESHED: (userId) => `CSRF token refreshed for user ${userId}.`,
   CSRF_REFRESH_NO_SESSION: (userId) =>

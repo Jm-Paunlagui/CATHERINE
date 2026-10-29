@@ -65,7 +65,7 @@ describe("ClusterCacheSync", function () {
             ClusterCacheSync._cluster = { isWorker: false };
             let sent = 0;
             ClusterCacheSync._send = () => sent++;
-            ClusterCacheSync.broadcast("subsidy", "flush");
+            ClusterCacheSync.broadcast("orders", "flush");
             expect(sent).toBe(0);
         });
 
@@ -89,7 +89,7 @@ describe("ClusterCacheSync", function () {
             let sent = 0;
             ClusterCacheSync._send = () => sent++;
             ClusterCacheSync._applyingRemote = true;
-            ClusterCacheSync.broadcast("subsidy", "flush");
+            ClusterCacheSync.broadcast("orders", "flush");
             expect(sent).toBe(0);
         });
 
@@ -100,7 +100,7 @@ describe("ClusterCacheSync", function () {
             };
             ClusterCacheSync._applyingRemote = false;
             expect(() =>
-                ClusterCacheSync.broadcast("subsidy", "flush"),
+                ClusterCacheSync.broadcast("orders", "flush"),
             ).not.toThrow();
         });
     });
@@ -108,7 +108,7 @@ describe("ClusterCacheSync", function () {
     describe("applyRemote()", function () {
         it("ignores messages that are not cache-sync envelopes", function () {
             const store = fakeStore();
-            const reg = fakeRegistry({ subsidy: store });
+            const reg = fakeRegistry({ orders: store });
             expect(
                 ClusterCacheSync.applyRemote(reg, { ch: "other", op: "flush" }),
             ).toBe(false);
@@ -117,10 +117,10 @@ describe("ClusterCacheSync", function () {
 
         it("applies a del op to the named store", function () {
             const store = fakeStore();
-            const reg = fakeRegistry({ subsidy: store });
+            const reg = fakeRegistry({ orders: store });
             const ok = ClusterCacheSync.applyRemote(reg, {
                 ch: ClusterCacheSync.CHANNEL,
-                store: "subsidy",
+                store: "orders",
                 op: "del",
                 arg: ["k1", "k2"],
             });
@@ -153,10 +153,10 @@ describe("ClusterCacheSync", function () {
             store.flush = () => {
                 guardDuringApply = ClusterCacheSync._applyingRemote;
             };
-            const reg = fakeRegistry({ subsidy: store });
+            const reg = fakeRegistry({ orders: store });
             ClusterCacheSync.applyRemote(reg, {
                 ch: ClusterCacheSync.CHANNEL,
-                store: "subsidy",
+                store: "orders",
                 op: "flush",
             });
             expect(guardDuringApply).toBe(true);
@@ -200,7 +200,7 @@ describe("ClusterCacheSync", function () {
             ClusterCacheSync.initPrimary();
             const msg = {
                 ch: ClusterCacheSync.CHANNEL,
-                store: "subsidy",
+                store: "orders",
                 op: "flush",
                 arg: null,
             };

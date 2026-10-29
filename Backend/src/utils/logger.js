@@ -5,14 +5,36 @@
  *   to 7 (lowest) — emergency, alert, critical, error, warning, notice, info, debug.
  * @author Jm-Paunlagui
  * @version 5.0.0
- * @since v4.0.0 2025-08-16 — initial four-level logger
- * @since v5.0.0 2026-05-21 — RFC 5424 eight-level expansion (emergency/alert/critical/notice added)
+ * Levels follow RFC 5424 (eight levels: emergency/alert/critical/error/warning/notice/info/debug).
  */
 
 const fs = require("fs").promises;
 const path = require("path");
 const os = require("os");
 const { requestContext } = require("./requestContext");
+const { scrubValue, scrubMeta } = require("./logRedaction");
+
+/**
+ * Backpressure-loss report emitted when the write queue overflows.
+ *
+ * CLAUDE.md's rule is that log strings live in `constants/messages/`. This one
+ * is the documented exception: logger.js is the logging infrastructure those
+ * message modules exist to feed, and it imports only modules whose own
+ * transitive closure is Node built-ins — today `./requestContext`
+ * (`async_hooks`) and `./logRedaction` (`crypto`). Nothing in that closure
+ * may ever require the logger; that, not the count of imports, is what
+ * prevents the cycle every other module's `require("./logger")` would
+ * otherwise create. Keeping this single template local preserves the
+ * logger's zero-dependency position.
+ *
+ * @param {number} dropped - Entries discarded.
+ * @param {number} cap - The queue cap that triggered the drop.
+ * @returns {string}
+ */
+const WRITE_QUEUE_OVERFLOW = (dropped, cap) =>
+    `Log write queue overflowed — ${dropped} oldest entr${dropped === 1 ? "y" : "ies"} DROPPED (cap ${cap}). ` +
+    `The log file has a gap. The disk could not keep up with log volume; check disk health, free space, ` +
+    `and any antivirus real-time scanning of the log directory.`;
 
 class Logger {
     // ========================================
@@ -126,6 +148,32 @@ class Logger {
         this._maxSafeStrLength = Logger.CONFIG.MAX_SAFESTR_LENGTH;
         this.writeQueue = [];
         this.isWriting = false;
+
+        /**
+         * Hard cap on queued-but-unwritten log entries (backpressure).
+         *
+         * `log()` is fire-and-forget: it pushes and returns without awaiting the
+         * `fs.appendFile`. If the disk stalls, the drain rate drops to ~0 while
+         * the fill rate keeps tracking request volume, so an uncapped array grows
+         * without bound until the process dies of memory exhaustion — taking the
+         * service down for a *logging* problem.
+         *
+         * Not hypothetical on the deployment target: Windows Server with Defender
+         * real-time scanning of freshly-created rotating log files, which the
+         * runbook does not exclude.
+         *
+         * On overflow the OLDEST entries are dropped, not the newest — during an
+         * incident the most recent lines are the ones worth keeping, and the drop
+         * itself is recorded so a gap in the log is never silent.
+         *
+         * @type {number}
+         */
+        this._maxQueueLength = Number(
+            process.env.LOG_MAX_QUEUE_LENGTH || 10000,
+        );
+
+        /** @type {number} Entries discarded by the cap since the last report. */
+        this._droppedCount = 0;
         this.machineIdentifier = this.#computeMachineIdentifier();
         this.#initializeBaseDirectory();
 
@@ -149,7 +197,7 @@ class Logger {
      * logger to any notification code.
      *
      * Records whose meta carries `_noNotify: true` are skipped — this is the
-     * loop-guard (R1b in server-email-notifications-plan.md): logging that
+     * loop-guard: logging that
      * happens INSIDE the notification path itself must never re-trigger a
      * notification, or a failing SMTP send could log a warning that logs a
      * warning forever. `_noNotify` only ever suppresses the TAP; the log
@@ -662,6 +710,26 @@ class Logger {
                 console.error("Error processing write queue:", error.message);
             }
         }
+
+        // Report any backpressure loss now that the disk has caught up, so a
+        // gap in the log is always accounted for. Written directly rather than
+        // via log() — log() would push onto the queue we are draining and could
+        // re-enter this method.
+        if (this._droppedCount > 0) {
+            const dropped = this._droppedCount;
+            this._droppedCount = 0;
+            try {
+                await this.#writeToFile(
+                    "CRITICAL",
+                    WRITE_QUEUE_OVERFLOW(dropped, this._maxQueueLength),
+                    {},
+                    null,
+                );
+            } catch (error) {
+                console.error("Error reporting dropped logs:", error.message);
+            }
+        }
+
         this.isWriting = false;
     }
 
@@ -727,13 +795,71 @@ class Logger {
         if (!message || (typeof message === "string" && !message.trim()))
             return;
 
+        // ⚠ #injectCallSite MUST run first: it mutates `meta` to add
+        // function/file/line, and scrubMeta below clones AFTER — the clone
+        // must carry those keys or every line's "[fn @ file:line]" becomes
+        // "[anonymous @ ]". See logRedaction.js's INTERNAL_KEYS.
         this.#injectCallSite(meta);
         // Capture now — the ALS context is correct here. By the time #processWriteQueue
         // dequeues this item it may be running under a different request's context.
         const requestId = requestContext.getStore()?.requestId ?? null;
-        this.#notifySubscribers(level, message, meta, requestId);
-        this.writeQueue.push({ level, message, meta, requestId });
+
+        // Redact once per record at enqueue so every sink (file, stdout, taps, SSE) sees the same text;
+        // `_noRedact` is honoured only outside production.
+        const bypass =
+            meta?._noRedact === true && process.env.NODE_ENV !== "production";
+        const safeMessage = bypass ? message : scrubValue(message);
+        const safeMeta = bypass ? meta : scrubMeta(meta);
+
+        this.#notifySubscribers(level, safeMessage, safeMeta, requestId);
+
+        // Backpressure — see _maxQueueLength. Drop OLDEST so the newest lines
+        // (the ones that matter during an incident) always survive, and count
+        // the loss so the gap is reported rather than silent.
+        if (this.writeQueue.length >= this._maxQueueLength) {
+            const overflow = this.writeQueue.length - this._maxQueueLength + 1;
+            this.writeQueue.splice(0, overflow);
+            this._droppedCount += overflow;
+        }
+
+        this.writeQueue.push({
+            level,
+            message: safeMessage,
+            meta: safeMeta,
+            requestId,
+        });
         this.#processWriteQueue();
+    }
+
+    /**
+     * Wait until every queued line has been written to disk.
+     *
+     * `log()` is fire-and-forget by design — it pushes onto `writeQueue` and
+     * returns without awaiting the `fs.appendFile`. That is right for the hot
+     * request path and wrong at process exit: `server.js`'s `gracefulShutdown`
+     * logs "All resources cleaned up." and then calls `process.exit(0)` on the
+     * next tick, which tears the process down before the queue drains. The
+     * shutdown banner — the exact line `deploy/winsw/README.md` tells operators
+     * to look for to distinguish a clean service stop from a hard kill — could
+     * therefore be missing from a genuinely graceful stop, and on a slow disk
+     * so could the lines before it.
+     *
+     * Bounded by `timeoutMs` so a stuck/full disk cannot hold the process open:
+     * losing a few log lines is better than a service that will not stop.
+     *
+     * @param {number} [timeoutMs=3000] Give up waiting after this long.
+     * @returns {Promise<boolean>} true if the queue drained, false on timeout.
+     */
+    async flush(timeoutMs = 3000) {
+        const deadline = Date.now() + Math.max(0, timeoutMs);
+        while (
+            (this.writeQueue.length > 0 || this.isWriting) &&
+            Date.now() < deadline
+        ) {
+            this.#processWriteQueue();
+            await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        return this.writeQueue.length === 0 && !this.isWriting;
     }
 
     // ========================================
@@ -904,20 +1030,36 @@ class Logger {
         return `${username} (C) ${this.#getClientIp(req)}`;
     }
 
+    /**
+     * Resolve the client IP recorded in every `[username (C) IP]` log line.
+     *
+     * CWE-290 (spoofing via forged request header). This deliberately does NOT
+     * read `X-Forwarded-For` / `X-Real-IP` / `CF-Connecting-IP`. Those headers
+     * are fully client-controlled, and this deployment puts NO reverse proxy in
+     * front of Node — browsers connect straight to `https://SERVER:3000` (see
+     * deploy/DEPLOYMENT_RUNBOOK.md), so nothing strips or rewrites them. Reading
+     * them let any caller stamp an arbitrary source address onto every line of
+     * the forensic log by adding one header, which is exactly the trail this
+     * system leans on for audits.
+     *
+     * `req.ip` is the correct source for both topologies: the raw socket peer
+     * when trust proxy is off (today), and the rightmost untrusted hop once
+     * `app.set('trust proxy', N)` is configured in app.js (a future proxied
+     * deployment) — Express does the X-Forwarded-For walk itself, correctly.
+     *
+     * This now matches RateLimiterMiddleware.extractIp, IpFilterMiddleware
+     * .extractClientIp, and AuditLogMiddleware's DB-persisted CLIENT_IP, all of
+     * which already dropped raw header parsing for this reason. The file logger
+     * was the last consumer still trusting them.
+     *
+     * @param {import('express').Request} req
+     * @returns {string}
+     */
     #getClientIp(req) {
-        const headers = req.headers || {};
-        const xff = headers["x-forwarded-for"];
-        const xri = headers["x-real-ip"];
-        const cfi = headers["cf-connecting-ip"];
-
-        if (xff && typeof xff === "string") return xff.split(",")[0].trim();
-        if (xri && typeof xri === "string") return xri.trim();
-        if (cfi && typeof cfi === "string") return cfi.trim();
-
         return (
             req.ip ||
-            req.connection?.remoteAddress ||
             req.socket?.remoteAddress ||
+            req.connection?.remoteAddress ||
             "unknown"
         );
     }
@@ -995,15 +1137,16 @@ class Logger {
         }
     }
 
-    async cleanupOldLogs(daysToKeep = 30) {
-        try {
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-            this.info("Log cleanup completed", { daysToKeep, cutoffDate });
-        } catch (error) {
-            this.error("Log cleanup failed", { error: error.message });
-        }
-    }
+    // A `cleanupOldLogs()` method used to live here. It logged "Log cleanup
+    // completed" on every call and deleted no file — it computed a cutoff
+    // date and never used it. It also had zero call sites anywhere in this
+    // codebase, so the false assurance it gave never even reached an
+    // operator through a real invocation. The real, unattended retention
+    // sweep is `src/services/LogRetentionService.js` — it lives in a service, not
+    // here, because this file deliberately imports nothing from `src/`
+    // except `requestContext` (see the comment at :20-27); pulling in
+    // `constants/messages` or `fs`-heavy retention logic here would invert
+    // that dependency.
 
     #formatBytes(bytes, decimals = 2) {
         if (bytes === 0) return "0 Bytes";

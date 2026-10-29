@@ -24,6 +24,19 @@ class ClientController {
             .status(HTTP_STATUS.OK)
             .json(sendSuccess(RESPONSE_MESSAGES.CLIENT_ERROR_LOGGED));
     });
+
+    /**
+     * POST /api/v1/client/help-miss
+     * Records a Help-search zero-result event (from the frontend Help Center /
+     * Help Assistant). Fire-and-forget telemetry — always returns 200 so a
+     * failed search's telemetry never becomes a second visible failure.
+     */
+    static logHelpMiss = catchAsync(async (req, res) => {
+        await ClientService.logHelpMiss(req.body, req.user);
+        res
+            .status(HTTP_STATUS.OK)
+            .json(sendSuccess(RESPONSE_MESSAGES.HELP_SEARCH_MISS_LOGGED));
+    });
 }
 
 module.exports = ClientController;

@@ -140,6 +140,42 @@ class ChangelogService {
     }
 
     /**
+     * Lists all entries for UNAUTHENTICATED callers (newest first).
+     *
+     * Identical to listAll() except that `authors` and `coAuthors` are removed.
+     * Those fields carry the names of individual engineers; the release notes
+     * themselves are meant to be readable by anyone (the public menu board is
+     * now the app's landing page, and its version badge resolves from this
+     * endpoint), but staff names are not, and an anonymous visitor has no
+     * reason to receive them. Authenticated callers still get the full record
+     * through GET / — this is a narrowing of the payload, not of the feature.
+     *
+     * The strip happens HERE rather than in the controller so that no future
+     * public caller can bypass it by reaching for the service directly.
+     *
+     * @returns {object[]}
+     */
+    static listPublic() {
+        return ChangelogModel.listAll().map(({ authors, coAuthors, ...rest }) => rest);
+    }
+
+    /**
+     * The newest public entry — exactly `listPublic()[0]` (same sort, same
+     * author stripping), or `null` when the store is empty.
+     *
+     * Exists so the version badge stops downloading every entry to read one
+     * field: the full public list is ~540 KB of JSON (~170 KB gzipped) and is
+     * serialised and compressed on every landing-page visit. Derived from
+     * `listPublic` on purpose, never a second sort, so the badge cannot
+     * disagree with the Version History page.
+     *
+     * @returns {object|null}
+     */
+    static latestPublic() {
+        return ChangelogService.listPublic()[0] ?? null;
+    }
+
+    /**
      * Creates a new changelog entry.
      * @param {object} body - Request body
      * @returns {object} Created entry

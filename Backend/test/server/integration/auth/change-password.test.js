@@ -18,9 +18,7 @@ const request = require("supertest");
 const app = require("../../../../src/app");
 const { signToken } = require("../../helpers/auth");
 const AuthService = require("../../../../src/services/auth.service");
-const {
-    authRateLimiter,
-} = require("../../../../src/middleware/security/RateLimiterMiddleware");
+const { authRateLimiters: authRateLimiter } = require("../../../../src/middleware/security/authRateLimiters");
 
 // ── Token factories ────────────────────────────────────────────────────────────
 
@@ -35,8 +33,8 @@ const adminToken = () =>
 const superAdminToken = () =>
     signToken({ userId: "SA001", role: "SUPER_ADMIN", userLevel: 3 });
 
-const approverToken = () =>
-    signToken({ userId: "APR001", role: "APPROVER", userLevel: 1 });
+const standardUserToken = () =>
+    signToken({ userId: "USR001", role: "USER", userLevel: 1 });
 
 // ── Mock success return ────────────────────────────────────────────────────────
 
@@ -123,7 +121,7 @@ describe("PATCH /api/v1/auth/change-password", function () {
 
         expect(res.status).toBe(200);
         expectSuccessShape(res.body);
-        expect(res.body.message).toBe("Password changed successfully.");
+        expect(res.body.message).toBe("Your password has been updated.");
         expect(changePasswordStub).toHaveBeenCalledTimes(1);
         const [userId] = changePasswordStub.mock.calls[0];
         expect(userId).toBe("ADM001");
@@ -139,10 +137,10 @@ describe("PATCH /api/v1/auth/change-password", function () {
         expect(res.status).toBe(200);
     });
 
-    it("returns 200 for APPROVER role (change-password accessible to all roles)", async function () {
+    it("returns 200 for USER role (change-password accessible to all roles)", async function () {
         const res = await agent
             .patch("/api/v1/auth/change-password")
-            .set("Authorization", `Bearer ${approverToken()}`)
+            .set("Authorization", `Bearer ${standardUserToken()}`)
             .set("x-csrf-token", agent._csrfToken)
             .send(validBody());
 
@@ -292,7 +290,7 @@ describe("PATCH /api/v1/auth/change-password", function () {
         const { AppError } = require("../../../../src/constants/errors");
         changePasswordStub.mockRejectedValue(
             new AppError(
-                "Admin record not found. Verify the Employee ID and try again.",
+                "Admin record not found. Verify the username and try again.",
                 404,
             ),
         );

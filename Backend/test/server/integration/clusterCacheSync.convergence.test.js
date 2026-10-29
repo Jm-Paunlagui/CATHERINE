@@ -24,7 +24,7 @@ const {
 } = require("../../../src/middleware/cache/ClusterCacheSync");
 
 const STORES = {
-    subsidy: { ttl: 600, maxKeys: 500 },
+    orders: { ttl: 600, maxKeys: 500 },
     billing: { ttl: 1800, maxKeys: 1000 },
 };
 
@@ -40,8 +40,8 @@ function makeWorkers(n) {
 /** Seeds the same keys into every worker's stores so we can watch them clear. */
 function seedAll(workers) {
     for (const reg of workers) {
-        reg.resolve("subsidy").set("subsidy:year=2026:month=3", { rows: 1 });
-        reg.resolve("subsidy").set("subsidy:type=years", [2026]);
+        reg.resolve("orders").set("orders:year=2026:month=3", { rows: 1 });
+        reg.resolve("orders").set("orders:type=years", [2026]);
         reg.resolve("billing").set("billing:page=1", { total: 9 });
     }
 }
@@ -81,15 +81,15 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
     // ── C1 / C3: delByPattern converges across all workers ──────────────────
     it("a delByPattern on one worker clears that namespace on ALL workers", function () {
         originIndex = 2;
-        // Worker 2 saved subsidy data → invalidate the whole subsidy namespace.
-        workers[originIndex].resolve("subsidy").delByPattern("subsidy");
+        // Worker 2 saved orders data → invalidate the whole orders namespace.
+        workers[originIndex].resolve("orders").delByPattern("orders");
 
         for (let i = 0; i < workers.length; i++) {
-            const subsidyKeys = workers[i]
-                .resolve("subsidy")
+            const orderKeys = workers[i]
+                .resolve("orders")
                 .keys()
-                .filter((k) => k.includes("subsidy"));
-            expect(subsidyKeys, `worker ${i} subsidy keys`).toHaveLength(0);
+                .filter((k) => k.includes("orders"));
+            expect(orderKeys, `worker ${i} orders keys`).toHaveLength(0);
             // Other namespaces are untouched on every worker.
             expect(workers[i].resolve("billing").keys()).toHaveLength(1);
         }
@@ -98,14 +98,14 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
     // ── C3: exact-key del converges ─────────────────────────────────────────
     it("an exact-key del on one worker removes that key on ALL workers", function () {
         originIndex = 0;
-        workers[0].resolve("subsidy").del("subsidy:type=years");
+        workers[0].resolve("orders").del("orders:type=years");
         for (let i = 0; i < workers.length; i++) {
             expect(
-                workers[i].resolve("subsidy").has("subsidy:type=years"),
+                workers[i].resolve("orders").has("orders:type=years"),
             ).toBe(false);
-            // The other subsidy key survives (surgical, not a flush).
+            // The other orders key survives (surgical, not a flush).
             expect(
-                workers[i].resolve("subsidy").has("subsidy:year=2026:month=3"),
+                workers[i].resolve("orders").has("orders:year=2026:month=3"),
             ).toBe(true);
         }
     });
@@ -116,9 +116,9 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         workers[5].resolve("billing").flush();
         for (let i = 0; i < workers.length; i++) {
             expect(workers[i].resolve("billing").keys()).toHaveLength(0);
-            // subsidy store on every worker is untouched.
+            // orders store on every worker is untouched.
             expect(
-                workers[i].resolve("subsidy").keys().length,
+                workers[i].resolve("orders").keys().length,
             ).toBeGreaterThan(0);
         }
     });
@@ -132,7 +132,7 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
             sendCount++;
             baseSend(msg);
         };
-        workers[1].resolve("subsidy").delByPattern("subsidy");
+        workers[1].resolve("orders").delByPattern("orders");
         // Exactly ONE outbound broadcast (from the origin). The 7 relayed
         // applications must NOT trigger further broadcasts.
         expect(sendCount).toBe(1);
@@ -141,8 +141,8 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
     // ── C4: a worker throwing during relay does not block the others ────────
     it("convergence continues even if one worker throws while applying", function () {
         originIndex = 0;
-        // Make worker 4's subsidy store throw on delByPattern.
-        const victim = workers[4].resolve("subsidy");
+        // Make worker 4's orders store throw on delByPattern.
+        const victim = workers[4].resolve("orders");
         const realDel = victim.delByPattern.bind(victim);
         victim.delByPattern = () => {
             throw new Error("worker 4 store exploded");
@@ -162,7 +162,7 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         };
 
         expect(() =>
-            workers[0].resolve("subsidy").delByPattern("subsidy"),
+            workers[0].resolve("orders").delByPattern("orders"),
         ).not.toThrow();
 
         // Every healthy worker converged; the guard is left clean for reuse.
@@ -171,9 +171,9 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
             if (i === 4) continue;
             expect(
                 workers[i]
-                    .resolve("subsidy")
+                    .resolve("orders")
                     .keys()
-                    .filter((k) => k.includes("subsidy")),
+                    .filter((k) => k.includes("orders")),
                 `worker ${i}`,
             ).toHaveLength(0);
         }
@@ -188,20 +188,20 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         };
         // The write path must still succeed locally despite the relay failing.
         expect(() =>
-            workers[3].resolve("subsidy").delByPattern("subsidy"),
+            workers[3].resolve("orders").delByPattern("orders"),
         ).not.toThrow();
         // Origin is updated; siblings are stale-until-TTL (acceptable bound).
         expect(
             workers[3]
-                .resolve("subsidy")
+                .resolve("orders")
                 .keys()
-                .filter((k) => k.includes("subsidy")),
+                .filter((k) => k.includes("orders")),
         ).toHaveLength(0);
         expect(
             workers[0]
-                .resolve("subsidy")
+                .resolve("orders")
                 .keys()
-                .filter((k) => k.includes("subsidy")),
+                .filter((k) => k.includes("orders")),
         ).toHaveLength(2);
     });
 
@@ -225,7 +225,7 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
         ClusterCacheSync.initPrimary();
         const msg = {
             ch: ClusterCacheSync.CHANNEL,
-            store: "subsidy",
+            store: "orders",
             op: "flush",
             arg: null,
         };

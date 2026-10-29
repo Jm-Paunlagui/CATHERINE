@@ -18,7 +18,7 @@
  *
  * Covers:
  *   - Happy paths for every route
- *   - RBAC: ADMIN, SUPER_ADMIN, APPROVER (userLevel 1 — never authorised here)
+ *   - RBAC: ADMIN, SUPER_ADMIN, USER (userLevel 1 — never authorised here)
  *   - 401 for unauthenticated, 440 for expired token
  *   - CSRF gate on DELETE
  *   - Response shape { status, code, message, data } for JSON routes
@@ -38,8 +38,8 @@ const adminToken = () =>
     signToken({ userId: "ADM001", role: "ADMIN", userLevel: 2 });
 const superToken = () =>
     signToken({ userId: "SA001", role: "SUPER_ADMIN", userLevel: 3 });
-const approverToken = () =>
-    signToken({ userId: "APR001", role: "APPROVER", userLevel: 1 });
+const standardUserToken = () =>
+    signToken({ userId: "USR001", role: "USER", userLevel: 1 });
 
 // ── Mock service returns ──────────────────────────────────────────────────────
 
@@ -122,10 +122,10 @@ describe("GET /api/v1/audit-logs/stats", function () {
         expect(res.status).toBe(200);
     });
 
-    it("returns 403 for APPROVER (role not in [ADMIN, SUPER_ADMIN])", async function () {
+    it("returns 403 for USER (role not in [ADMIN, SUPER_ADMIN])", async function () {
         const res = await request(app)
             .get("/api/v1/audit-logs/stats")
-            .set("Authorization", `Bearer ${approverToken()}`);
+            .set("Authorization", `Bearer ${standardUserToken()}`);
         expect(res.status).toBe(403);
         expectErrorShape(res.body);
     });
@@ -202,10 +202,10 @@ describe("GET /api/v1/audit-logs — paginated list", function () {
         expect(res.status).toBe(200);
     });
 
-    it("returns 403 for APPROVER", async function () {
+    it("returns 403 for USER", async function () {
         const res = await request(app)
             .get("/api/v1/audit-logs")
-            .set("Authorization", `Bearer ${approverToken()}`);
+            .set("Authorization", `Bearer ${standardUserToken()}`);
         expect(res.status).toBe(403);
     });
 
@@ -293,10 +293,10 @@ describe("GET /api/v1/audit-logs/:requestId/logs", function () {
         expect(res.status).toBe(200);
     });
 
-    it("returns 403 for APPROVER", async function () {
+    it("returns 403 for USER", async function () {
         const res = await request(app)
             .get(`/api/v1/audit-logs/${TEST_ID}/logs`)
-            .set("Authorization", `Bearer ${approverToken()}`);
+            .set("Authorization", `Bearer ${standardUserToken()}`);
         expect(res.status).toBe(403);
     });
 
@@ -361,10 +361,10 @@ describe("GET /api/v1/audit-logs/export/excel — binary xlsx export", function 
         expect(res.status).toBe(403);
     });
 
-    it("returns 403 for APPROVER", async function () {
+    it("returns 403 for USER", async function () {
         const res = await request(app)
             .get("/api/v1/audit-logs/export/excel")
-            .set("Authorization", `Bearer ${approverToken()}`);
+            .set("Authorization", `Bearer ${standardUserToken()}`);
         expect(res.status).toBe(403);
     });
 
@@ -548,10 +548,10 @@ describe("DELETE /api/v1/audit-logs — range delete", function () {
         expect(res.status).toBe(403);
     });
 
-    it("returns 403 for APPROVER", async function () {
+    it("returns 403 for USER", async function () {
         const res = await agent
             .delete("/api/v1/audit-logs?fromDate=2025-01-01&toDate=2025-01-31")
-            .set("Authorization", `Bearer ${approverToken()}`)
+            .set("Authorization", `Bearer ${standardUserToken()}`)
             .set("x-csrf-token", csrfToken);
 
         expect(res.status).toBe(403);
@@ -614,7 +614,7 @@ describe("DELETE /api/v1/audit-logs — range delete", function () {
 // 200 and the correct response shape, not 500. AuditLogService is stubbed so
 // the test is resilient to Oracle unavailability in CI.
 //
-// See: docs/performance-rca.md §RC-6 — AuditLogModel.$or bleed (2.6% error)
+// Regression guard: AuditLogModel.$or bleed (a past 2.6% error rate)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("REGRESSION — GET /api/v1/audit-logs with ?search= param (2.6% error fix)", function () {
@@ -735,7 +735,7 @@ describe("route ordering — static segments not matched as :requestId", functio
     });
 
     it("/export/excel is NOT captured by /:requestId/logs — exportToExcel is called", async function () {
-        const res = await request(app)
+        const _res = await request(app)
             .get("/api/v1/audit-logs/export/excel")
             .set("Authorization", `Bearer ${superToken()}`);
 

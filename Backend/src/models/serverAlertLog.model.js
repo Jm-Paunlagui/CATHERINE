@@ -38,6 +38,7 @@
  *                               and queueing layer on top of this).
  *   - findPage(filters, opts) — offset pagination (OFFSET/FETCH NEXT), capped
  *                               at 200 rows/page, DETAILS parsed back to an object.
+ *   - findLatestByAlertKey()  — newest row for one (rule, alertKey).
  *   - findRecent(limit)       — most recent N rows (status endpoint's
  *                               "recent sends" view).
  *   - purgeOlderThan(days)    — retention purge (ALERT_LOG_RETENTION_DAYS).
@@ -59,6 +60,7 @@
 
 const { createDb } = require("../utils/oracle-mongo-wrapper");
 const { isDemoMode } = require("../config/demoMode");
+const { normalizeText } = require("../utils/textNormalize");
 
 /** @returns {string} Resolved table name (env override or NODE_ENV default). */
 function resolveTableName() {
@@ -110,7 +112,9 @@ function parseDetails(raw) {
 /**
  * Builds a `{ whereSql, binds }` pair from history filters. Column names are
  * fixed literals (never interpolated); only VALUES flow through bind variables.
- * @param {{ rule?: string, severity?: string, from?: Date, to?: Date }} [filters]
+ * `alertKey` is for SERVER-SIDE callers only (state-row lookups); the history
+ * controller whitelists rule/severity/from/to and never forwards it.
+ * @param {{ rule?: string, severity?: string, alertKey?: string, from?: Date, to?: Date }} [filters]
  * @returns {{ whereSql: string, binds: object }}
  */
 function buildWhere(filters = {}) {
@@ -123,6 +127,10 @@ function buildWhere(filters = {}) {
     if (filters.severity) {
         clauses.push("SEVERITY = :severity");
         binds.severity = filters.severity;
+    }
+    if (filters.alertKey) {
+        clauses.push("ALERT_KEY = :alertKey");
+        binds.alertKey = String(filters.alertKey).slice(0, 200);
     }
     if (filters.from instanceof Date) {
         clauses.push("CREATED_AT >= :fromDate");
@@ -143,6 +151,7 @@ function demoFilter(filters = {}) {
     return _demoRows.filter((r) => {
         if (filters.rule && r.RULE !== filters.rule) return false;
         if (filters.severity && r.SEVERITY !== filters.severity) return false;
+        if (filters.alertKey && r.ALERT_KEY !== filters.alertKey) return false;
         if (filters.from instanceof Date && r.CREATED_AT < filters.from)
             return false;
         if (filters.to instanceof Date && r.CREATED_AT > filters.to)
@@ -178,9 +187,11 @@ class ServerAlertLogModel {
             severity: row.severity,
             transition: row.transition,
             valueNum: row.valueNum ?? null,
+            // Internal message-template prose never passes TextNormalizeMiddleware;
+            // fold it so a single-byte DB charset cannot mangle em-dashes.
             description:
                 row.description != null
-                    ? String(row.description).slice(0, 1000)
+                    ? normalizeText(String(row.description)).slice(0, 1000)
                     : null,
             channel: String(row.channel ?? "").slice(0, 64),
             notificationId: row.notificationId ?? null,
@@ -297,6 +308,22 @@ class ServerAlertLogModel {
 
             return { rows, total, page, limit };
         });
+    }
+
+    /**
+     * Latest row for one (rule, alertKey) — the read side of the persisted
+     * alert-state rows. Delegates to `findPage`, so it adds no new SQL.
+     *
+     * @param {string} rule
+     * @param {string} alertKey
+     * @returns {Promise<object|null>} newest row (DETAILS parsed) or null
+     */
+    static async findLatestByAlertKey(rule, alertKey) {
+        const { rows } = await ServerAlertLogModel.findPage(
+            { rule, alertKey },
+            { page: 1, limit: 1 },
+        );
+        return rows[0] ?? null;
     }
 
     /**

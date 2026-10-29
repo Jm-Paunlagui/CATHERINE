@@ -38,8 +38,27 @@ const oracleMessages = {
     `Pool "${name}" health check failed (consecutive failures: ${failures}).`,
   POOL_MARKED_UNHEALTHY: (name, max) =>
     `Pool "${name}" marked UNHEALTHY after ${max} failures.`,
+  /**
+   * Thrown (not just logged) by withConnection when the health monitor has
+   * marked a pool unhealthy and the caller did not opt out via
+   * `{ bypassBreaker: true }` — the circuit-breaker fail-fast path.
+   *
+   * ⚠ The literal `NJS-503` token MUST stay in this string: the shared
+   * ErrorHandlerMiddleware `/NJS-\d+/` classifier reads it and routes to
+   * NJS_MAP[503] → 503 DatabaseUnavailableError. Removing/altering the token
+   * silently downgrades a breaker-open rejection to a generic 500.
+   *
+   * @param {string} name - Connection/pool name.
+   * @returns {string}
+   */
+  POOL_CIRCUIT_OPEN: (name) =>
+    `Pool "${name}" circuit open (NJS-503): marked unhealthy after repeated ping failures — failing fast.`,
   POOL_RECOVERED: (name, failures) =>
     `Pool "${name}" RECOVERED after ${failures} consecutive failures.`,
+  POOL_CREATE_FAILED_EVICTED: (name, ms) =>
+    `Pool "${name}" creation failed — cached failure evicted after ${ms}ms; the next acquire will retry creation.`,
+  POOL_STATS_RECORD_FAILED: (name, message) =>
+    `Metrics push failed on the catch path for pool "${name}": ${message}. Health-checking was unaffected.`,
   POOL_CLOSED: (name) => `Pool "${name}" closed.`,
   POOL_CLOSE_ERROR: (name, err) => `Pool "${name}" close error: ${err}`,
   SHUTDOWN_ALREADY: "Shutdown already in progress.",

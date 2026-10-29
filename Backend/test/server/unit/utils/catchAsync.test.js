@@ -29,7 +29,7 @@ describe("catchAsync", function () {
         const req = mockReq();
         const res = mockRes();
 
-        const wrapped = catchAsync(async (r, s, n) => {
+        const wrapped = catchAsync(async (r, s, _n) => {
             expect(r).toBe(req);
             expect(s).toBe(res);
             done();
@@ -84,7 +84,7 @@ describe("catchAsync", function () {
         });
 
         const res = mockRes();
-        wrapped(mockReq(), res, (err) => {
+        wrapped(mockReq(), res, (_err) => {
             done(new Error("next should not be called"));
         });
 

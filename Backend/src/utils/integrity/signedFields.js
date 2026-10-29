@@ -3,7 +3,7 @@
 /**
  * @fileoverview `makeSignedFields` — a factory that produces ONE canonical
  * field-projection function per signed row type, shared verbatim by the signer
- * and the verifier. (Plan §3.4; generalised from MEAL's `subsidySignedFields`.)
+ * and the verifier.
  *
  * ============================================================================
  * WHY THIS EXISTS — THE FOUR-COPY DRIFT LESSON
@@ -20,7 +20,7 @@
  * paths import it. Never inline a copy of a signed projection.
  *
  * ============================================================================
- * MONEY CANONICALISATION — THE SECOND DOOR TO THE SAME FAILURE (§3.4)
+ * MONEY CANONICALISATION — THE SECOND DOOR TO THE SAME FAILURE
  * ============================================================================
  * `CryptoVault.buildPayload` interpolates each field: `` `${k}=${fields[k]}` ``.
  * For a money value that is JavaScript interpolation, which drops trailing
@@ -58,7 +58,7 @@ const { Money } = require("../money");
 function canonicalMoney(v) {
     if (v === null || v === undefined || v === "") return Money.zero().toStorage();
     // Accept a string or Oracle-number-as-string; a bare JS number is coerced to
-    // its string form first (the fetchTypeHandler in §3.0 rule 3b means money
+    // its string form first (the money-safe fetchTypeHandler means money
     // columns already arrive as strings, so this path is the belt to that braces).
     const asStr = typeof v === "number" ? String(v) : v;
     return Money.from(asStr).toStorage();

@@ -7,7 +7,7 @@ const { SymmetricCrypto } = require("../../src/utils/encryption/CryptoVault");
 const { EncryptionAlgorithm, Encryptor, Decryptor, SecurityCryptHelper } =
   SymmetricCrypto;
 
-const plaintext = "Continental01";
+const plaintext = "SelfTest-Passw0rd!";
 
 // ── Algorithm configs: { name, id, keySize, ivSize } ──
 const algorithms = [

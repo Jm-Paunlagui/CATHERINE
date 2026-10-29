@@ -28,7 +28,7 @@ function smtpError({ code, responseCode, message } = {}) {
  * @param {string} [to]
  * @returns {() => object}
  */
-function buildPrimaryOpts(to = "employee@example.com") {
+function buildPrimaryOpts(to = "user@example.com") {
     return () => ({
         from: "noreply@app.internal",
         to,
@@ -68,7 +68,7 @@ describe("EmailProtectionService", function () {
 
         expect(result).toEqual({
             status: "DELIVERED",
-            recipient: "employee@example.com",
+            recipient: "user@example.com",
             fallbackRecipients: [],
             attempts: 1,
             fallbackAttempts: 0,
@@ -105,7 +105,7 @@ describe("EmailProtectionService", function () {
     it("primary exhausted (3 transient failures) → fallback resolves 2 admins → fallback delivers → FALLBACK", async function () {
         vi.useFakeTimers();
         sendMail.mockImplementation(async (opts) => {
-            if (opts.to === "employee@example.com") {
+            if (opts.to === "user@example.com") {
                 throw smtpError({ code: "ETIMEDOUT" });
             }
             return { messageId: "fallback-ok" };
@@ -148,7 +148,7 @@ describe("EmailProtectionService", function () {
 
     it("PERMANENT_SMTP (responseCode 550) on attempt 1 → skips remaining primary retries, goes straight to fallback", async function () {
         sendMail.mockImplementation(async (opts) => {
-            if (opts.to === "employee@example.com") {
+            if (opts.to === "user@example.com") {
                 throw smtpError({
                     responseCode: 550,
                     message: "mailbox unavailable",
@@ -291,7 +291,8 @@ describe("EmailProtectionService", function () {
             const [, okMeta] = okCall;
             expect(okMeta).toMatchObject({
                 label: "obs-flow",
-                recipient: "recipient@example.com",
+                // Recipients are masked in log metadata (CWE-532).
+                recipient: "r********@example.com",
                 tier: "primary",
                 attempt: 1,
             });
@@ -313,7 +314,7 @@ describe("EmailProtectionService", function () {
         it("fallback delivery logs EMAIL_ATTEMPT_OK (debug, tier=fallback) and EMAIL_DELIVERY_SUMMARY (info, fallbackDelivered:1)", async function () {
             vi.useFakeTimers();
             sendMail.mockImplementation(async (opts) => {
-                if (opts.to === "employee@example.com") {
+                if (opts.to === "user@example.com") {
                     throw smtpError({ code: "ETIMEDOUT" });
                 }
                 return { messageId: "fallback-ok" };
@@ -342,7 +343,7 @@ describe("EmailProtectionService", function () {
             const [, okMeta] = okCall;
             expect(okMeta).toMatchObject({
                 label: "obs-fallback-flow",
-                recipient: "admin1@x.com, admin2@x.com",
+                recipient: "a*****@x.com, a*****@x.com",
                 tier: "fallback",
                 attempt: 1,
             });

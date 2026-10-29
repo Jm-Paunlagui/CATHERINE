@@ -4,7 +4,7 @@
  * @fileoverview FxRateService — resolves an exchange rate as of a date.
  *
  * ============================================================================
- * SCOPE: SHAPE + SERVICE + ADAPTER INTERFACE. NO PROVIDER INTEGRATION. (§3.7.9)
+ * SCOPE: SHAPE + SERVICE + ADAPTER INTERFACE. NO PROVIDER INTEGRATION.
  * ============================================================================
  * The template ships the rate TABLE SHAPE, this service, and a documented
  * adapter interface — and nothing more. Manual admin entry is the only shipped
@@ -29,8 +29,8 @@
  * ============================================================================
  *   CURRENCY_CODE   VARCHAR2(3)   ISO 4217, the NON-base side. The base currency
  *                                 is a system fact (MONEY_BASE_CURRENCY), never a
- *                                 column on a transaction row (§3.0 rule 1).
- *   RATE            NUMBER(19,8)  A rate, NEVER a posting (§3.7.3). Higher scale
+ *                                 column on a transaction row.
+ *   RATE            NUMBER(19,8)  A rate, NEVER a posting. Higher scale
  *                                 than a posted amount; read back as a STRING via
  *                                 the fetchTypeHandler, never a JS double.
  *   EFFECTIVE_FROM  DATE          Start of the window this rate governs.
@@ -41,7 +41,7 @@
  *   SET_BY          VARCHAR2(...) The admin or system principal responsible.
  *
  * ============================================================================
- * APPEND-ONLY (§3.7.9)
+ * APPEND-ONLY
  * ============================================================================
  * Rate rows are append-only, exactly like ledger rows. A rate is NEVER UPDATEd;
  * a correction CLOSES the current window (sets EFFECTIVE_TO) and OPENS a new one.
@@ -80,7 +80,7 @@ const { isDemoMode } = require("../config/demoMode");
 const demo = require("../models/demo/demoStore");
 
 // Rates are stored at scale 8 (NUMBER(19,8)) — a rate carries more precision than
-// a posted amount and is never itself a posting (§3.7.3).
+// a posted amount and is never itself a posting.
 const RATE_SCALE = 8;
 
 /**
@@ -110,7 +110,7 @@ function _inWindow(row, asOf) {
 class FxRateService {
     /**
      * Resolves the rate for `currencyCode` in force at `asOf`. This is the
-     * load-bearing accounting rule (§3.0 rule 4): a historical figure converts
+     * load-bearing accounting rule: a historical figure converts
      * with the rate that was effective on ITS OWN date, so inserting a newer rate
      * never changes a past report.
      *
@@ -155,7 +155,7 @@ class FxRateService {
     }
 
     /**
-     * Appends a new rate row WITH its audit fields (§3.7.9). Never updates an
+     * Appends a new rate row WITH its audit fields. Never updates an
      * existing row. A correction should first close the current window
      * (EFFECTIVE_TO) then call this to open the new one.
      *

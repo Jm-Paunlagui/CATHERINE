@@ -14,10 +14,10 @@
  * @param {Object[]} rows - Array of row objects to insert
  * @returns {Promise<void>}
  */
-async function seedTable(tableName, rows) {
+async function seedTable(_tableName, _rows) {
   // Stub: requires live DB connection
   // const db = require('../../src/config');
-  // await db.withConnection('userAccount', async (conn) => { ... });
+  // await db.withConnection('appDb', async (conn) => { ... });
 }
 
 /**
@@ -25,7 +25,7 @@ async function seedTable(tableName, rows) {
  * @param {string} tableName - The table to truncate
  * @returns {Promise<void>}
  */
-async function truncateTable(tableName) {
+async function truncateTable(_tableName) {
   // Stub: requires live DB connection
 }
 

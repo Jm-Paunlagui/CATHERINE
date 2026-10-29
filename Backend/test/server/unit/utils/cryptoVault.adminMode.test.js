@@ -100,7 +100,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: undefined,
-                PASSWORD_KEY: "HRIS1",
+                PASSWORD_KEY: "TESTK",
             });
             try {
                 const { CryptoVault } = freshVault();
@@ -150,7 +150,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "md5",
-                PASSWORD_KEY: "HRIS1",
+                PASSWORD_KEY: "TESTK",
             });
             try {
                 const { CryptoVault } = freshVault();
@@ -175,7 +175,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "bcrypt",
-                PASSWORD_KEY: "HRIS1",
+                PASSWORD_KEY: "TESTK",
                 BCRYPT_SALT_ROUNDS: "10",
             });
             try {
@@ -191,7 +191,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "argon2",
-                PASSWORD_KEY: "HRIS1",
+                PASSWORD_KEY: "TESTK",
                 ARGON2_PEPPER: TEST_PEPPER,
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
@@ -242,7 +242,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "argon2",
-                PASSWORD_KEY: "HRIS1",
+                PASSWORD_KEY: "TESTK",
                 ARGON2_PEPPER: TEST_PEPPER,
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
@@ -259,7 +259,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "bcrypt",
-                PASSWORD_KEY: "HRIS1",
+                PASSWORD_KEY: "TESTK",
                 BCRYPT_SALT_ROUNDS: "10",
             });
             try {
@@ -281,7 +281,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 await expect(
                     CryptoVault.hashAdminPassword(""),
                 ).rejects.toThrow(TypeError);
-            } catch (err) {
+            } catch (_err) {
                 // Some chai versions don't have rejectedWith without chai-as-promised
                 // Fallback: call directly and check
                 const { CryptoVault: CV2 } = freshVault();
@@ -359,13 +359,13 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "argon2",
-                PASSWORD_KEY: "HRIS1",
+                PASSWORD_KEY: "TESTK",
                 ARGON2_PEPPER: TEST_PEPPER,
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
                 const { CryptoVault } = freshVault();
-                // Produce a TripleDES hash via CryptoVault.hashPassword (HRIS mode)
+                // Produce a TripleDES hash via CryptoVault.hashPassword (tripledes mode)
                 const tripleDesHash =
                     await CryptoVault.hashPassword("LegacyPass1!");
 
@@ -389,7 +389,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "argon2",
-                PASSWORD_KEY: "HRIS1",
+                PASSWORD_KEY: "TESTK",
                 ARGON2_PEPPER: TEST_PEPPER,
             });
             try {

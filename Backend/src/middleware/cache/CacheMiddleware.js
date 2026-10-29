@@ -42,6 +42,7 @@
 
 const { logger } = require("../../utils/logger");
 const { cacheMessages } = require("../../constants/messages/cache.messages");
+const { currentScope } = require("../../utils/progress/progress");
 
 class CacheMiddleware {
   // ─── Read-through (cache-aside) ───────────────────────────────────────────
@@ -65,7 +66,9 @@ class CacheMiddleware {
    *     Concurrent misses on the same key are coalesced: only the first
    *     request executes the controller; the rest wait and serve the cached
    *     result (X-Cache: COALESCED). If the leader fails (non-2xx / error),
-   *     waiting requests fall through to the controller themselves.
+   *     one waiting request becomes the new leader and the rest wait on it
+   *     (one extra controller run, not one per follower); a follower whose
+   *     second wait also fails runs the controller itself.
    *
    * @param {import('./CacheStore').CacheStore} store
    *   The target cache store (from `registry.resolve(...)`).
@@ -82,6 +85,15 @@ class CacheMiddleware {
    *   Attach X-Cache, X-Cache-Key headers to the response.
    * @param {boolean}  [options.coalesce=true]
    *   Coalesce concurrent misses on the same key (single-flight).
+   * @param {(req: import('express').Request, resBody: *) => boolean} [options.shouldCache]
+   *   Called with the outgoing response body just before a MISS would be
+   *   stored. Return false to skip caching this particular response even
+   *   though it was a 2xx — e.g. an in-flight/preview payload that must never
+   *   be served stale for the store's TTL. Defaults to `() => true` (cache
+   *   every successful response, the pre-existing behaviour).
+   *
+   * Stale-write guard: the store generation is captured at MISS and the
+   * response is NOT stored if the store was invalidated while the controller ran.
    *
    * @returns {import('express').RequestHandler}
    */
@@ -92,6 +104,7 @@ class CacheMiddleware {
     const setHeaders = options.setHeaders !== false;
     const ttl = options.ttl; // may be undefined → use store default
     const coalesce = options.coalesce !== false;
+    const shouldCache = options.shouldCache ?? (() => true);
 
     return async (req, res, next) => {
       // Skip write verbs — they should never be cached.
@@ -120,27 +133,60 @@ class CacheMiddleware {
       const flightKey = store.name + "|" + key;
 
       if (coalesce) {
+        const serveCoalesced = (value) => {
+          if (setHeaders) {
+            res.set("X-Cache", "COALESCED");
+            res.set("X-Cache-Key", key);
+          }
+          logger.info(cacheMessages.CACHE_COALESCED(store.name, key));
+          return res.json(value);
+        };
+
         const leader = CacheMiddleware._inflight.get(flightKey);
         if (leader) {
           // Follower: wait for the in-flight leader, then re-check the cache.
-          await leader; // resolve-only — never rejects
-          const after = store.get(key);
-          if (after !== undefined) {
-            if (setHeaders) {
-              res.set("X-Cache", "COALESCED");
-              res.set("X-Cache-Key", key);
-            }
-            logger.info(cacheMessages.CACHE_COALESCED(store.name, key));
-            return res.json(after);
+          // Waiting is not progress by itself: the follower's scope FOLLOWS the
+          // leader's, so it stays alive exactly while the leader progresses
+          // and is cut with it when the leader goes quiet (B-D9).
+          const myScope = currentScope();
+          if (leader.scope) myScope?.follow(leader.scope);
+          try {
+            await leader; // resolve-only — never rejects
+          } finally {
+            myScope?.unfollow();
+            myScope?.touch("coalesce-wake");
           }
-          // Leader failed to populate (error / non-2xx) — fall through and
-          // run the controller ourselves, becoming the new leader below.
+          const after = store.get(key);
+          if (after !== undefined) return serveCoalesced(after);
+
+          // Leader failed to populate (error / non-2xx). Every follower wakes
+          // together; if each became a leader at once, one failure would cost
+          // N controller runs. Re-check ONCE: if a sibling follower already
+          // became the new leader, wait on it instead. Bounded at two waits so
+          // a run of slow failures is never serialised across N followers.
+          const newLeader = CacheMiddleware._inflight.get(flightKey);
+          if (newLeader) {
+            if (newLeader.scope) myScope?.follow(newLeader.scope);
+            try {
+              await newLeader;
+            } finally {
+              myScope?.unfollow();
+              myScope?.touch("coalesce-wake");
+            }
+            const afterRetry = store.get(key);
+            if (afterRetry !== undefined) return serveCoalesced(afterRetry);
+          }
+          // Still nothing cached — fall through and run the controller
+          // ourselves, becoming the leader below.
         }
 
         let settle;
         const flight = new Promise((resolve) => {
           settle = resolve;
         });
+        // The leader's scope rides on the promise object (value stays a
+        // Promise) so followers can follow its progress.
+        flight.scope = currentScope();
         CacheMiddleware._inflight.set(flightKey, flight);
 
         const release = () => {
@@ -161,11 +207,21 @@ class CacheMiddleware {
       }
       logger.info(cacheMessages.CACHE_MISS(store.name, key));
 
+      const generation = store.generation;
       const originalJson = res.json.bind(res);
       res.json = function (data) {
-        // Only cache successful responses.
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          store.set(key, data, ttl);
+        // Only cache successful responses whose body passes shouldCache
+        // (e.g. never cache an in-flight/preview payload — see options.shouldCache).
+        if (
+          res.statusCode >= 200 &&
+          res.statusCode < 300 &&
+          shouldCache(req, data)
+        ) {
+          if (store.generation === generation) {
+            store.set(key, data, ttl);
+          } else {
+            logger.debug(cacheMessages.CACHE_SET_SKIPPED_STALE(store.name, key));
+          }
         }
         return originalJson(data);
       };
@@ -181,22 +237,22 @@ class CacheMiddleware {
    * handler responds successfully (2xx).
    *
    * The `keyFn` can return:
-   *   - A single key string        → exact delete
-   *   - An array of key strings    → multi-delete
+   *   - A single key string        → exact delete (or `delByPattern` in pattern mode)
+   *   - An array of key strings    → multi-delete (or one `delByPattern` call
+   *     PER entry in pattern mode — the same "invalidate several namespaces
+   *     in one route" shape `invalidateOnFinish()` already supports, e.g.
+   *     `(req) => [`userId=${req.user.userId}:`, "reports:downloadRequests"]`)
    *   - null / undefined           → no-op (useful when nothing needs invalidation)
-   *
-   * For pattern-based invalidation, call `store.delByPattern(pattern)` inside
-   * a custom middleware — or pass `{ usePattern: true }` and return a substring.
    *
    * @param {import('./CacheStore').CacheStore | import('./CacheStore').CacheStore[]} store
    *   One or multiple stores to invalidate from.
    *
    * @param {(req: import('express').Request, res: import('express').Response) => string | string[] | null} keyFn
-   *   Returns the key(s) to delete. Called after a successful response.
+   *   Returns the key(s)/pattern(s) to delete. Called after a successful response.
    *
    * @param {Object}  [options={}]
    * @param {boolean} [options.usePattern=false]
-   *   If true, treat the returned value as a pattern for `delByPattern()`.
+   *   If true, treat each returned value as a pattern for `delByPattern()`.
    *
    * @returns {import('express').RequestHandler}
    */
@@ -218,8 +274,12 @@ class CacheMiddleware {
 
               for (const s of stores) {
                 if (usePattern) {
-                  const count = s.delByPattern(String(target));
-                  logger.info(cacheMessages.CACHE_INVALIDATE_PATTERN(s.name, String(target), count));
+                  // One delByPattern() per entry; String(array) would build a comma-joined pattern that never matches.
+                  const patterns = Array.isArray(target) ? target : [target];
+                  for (const pattern of patterns) {
+                    const count = s.delByPattern(String(pattern));
+                    logger.info(cacheMessages.CACHE_INVALIDATE_PATTERN(s.name, String(pattern), count));
+                  }
                 } else {
                   const keys = Array.isArray(target) ? target : [target];
                   const count = s.del(keys);

@@ -46,7 +46,7 @@ function quoteIdentifier(name) {
 
 // ─── convertTypes ───────────────────────────────────────────────
 /**
- * ⚠ FENCED — DO NOT APPLY TO MONEY OR RATE VALUES (plan §3.0 rule 3b, §3.4).
+ * ⚠ FENCED — DO NOT APPLY TO MONEY OR RATE VALUES.
  *
  * This helper coerces numeric-looking strings back into JavaScript numbers so
  * that `{ age: "25" }` becomes `{ age: 25 }`. It is EXPORTED FOR API
@@ -82,7 +82,7 @@ function convertTypes(row) {
       val.trim() !== "" &&
       // FENCE: only whole-integer strings are safe to coerce. A decimal point,
       // exponent, or sign+fraction is money/rate territory — leave it a string
-      // so the money-safe fetch (§3.0 rule 3b) is never undone here.
+      // so the money-safe fetch is never undone here.
       /^[+-]?\d+$/.test(val.trim()) &&
       Number.isSafeInteger(Number(val))
     ) {

@@ -162,13 +162,13 @@ describe("MetricsStore — Oracle pool stats (recordPoolStats / USE method)", fu
     });
 
     it("computes utilization = inUse/open and capacity = open/poolMax", function () {
-        store.recordPoolStats("userAccount", {
+        store.recordPoolStats("appDb", {
             connectionsInUse: 17,
             connectionsOpen: 20,
             poolMax: 25,
             queueLength: 0,
         });
-        const dep = store.getSnapshot().dependencies.oracle.userAccount;
+        const dep = store.getSnapshot().dependencies.oracle.appDb;
         expect(dep.poolUtilization).toBe(0.85);
         expect(dep.capacity).toBe(0.8);
         expect(dep.connectionsInUse).toBe(17);
@@ -201,15 +201,15 @@ describe("MetricsStore — Oracle pool stats (recordPoolStats / USE method)", fu
     });
 
     it("unions per-query stats and pool stats under one pool name", function () {
-        store.recordDbQuery("userAccount", 12, true);
-        store.recordDbQuery("userAccount", 8, true);
-        store.recordPoolStats("userAccount", {
+        store.recordDbQuery("appDb", 12, true);
+        store.recordDbQuery("appDb", 8, true);
+        store.recordPoolStats("appDb", {
             connectionsInUse: 5,
             connectionsOpen: 10,
             poolMax: 20,
             queueLength: 0,
         });
-        const dep = store.getSnapshot().dependencies.oracle.userAccount;
+        const dep = store.getSnapshot().dependencies.oracle.appDb;
         expect(dep.queryCount).toBe(2);
         expect(dep.avgMs).toBe(10);
         expect(dep.poolUtilization).toBe(0.5);

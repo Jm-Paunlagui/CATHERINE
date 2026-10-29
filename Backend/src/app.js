@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 const express = require("express");
 const app = express();
@@ -47,6 +47,9 @@ const {
 const {
     defaultAuditLog,
 } = require("./middleware/traceability/AuditLogMiddleware");
+const {
+    defaultShutdownGate,
+} = require("./middleware/security/ShutdownGateMiddleware");
 
 // ─── Performance middleware ───────────────────────────────────────────────────
 const {
@@ -94,6 +97,11 @@ registry.registerAll({
     // harmless since role/active changes take effect on next refresh.
     authProfile: { ttl: 30, checkPeriod: 15, maxKeys: 10000 },
 
+    // ── Integrity Center (SUPER_ADMIN only) ───────────────────────────────────
+    // Caches per-(table, scope) tamper-sweep results; the Re-scan button
+    // invalidates the exact key on demand.
+    integrity: { ttl: 180, checkPeriod: 60, maxKeys: 500 },
+
     // ── Add project-specific cache stores below ───────────────────────────────────
     // Example:
     // myFeature: { ttl: 300, checkPeriod: 60, maxKeys: 200 },
@@ -118,19 +126,39 @@ app.use(defaultHelmet.handle.bind(defaultHelmet));
 // 2. Security filter — block scanners & malicious requests EARLY
 app.use(defaultSecurityFilter.handle.bind(defaultSecurityFilter));
 
-// 3. Request ID + request/response logging
+// 3. Request ID + ALS context + the "[Request Complete]" line.
+//    Deliberately ABOVE the body parsers: a malformed-JSON 400 is raised by the
+//    parser itself, and that request still needs an id, an ALS context, and an
+//    audit row. The "[Incoming Request]" line is split out to step 4a — see
+//    TraceabilityMiddleware.logIncoming.
 app.use(defaultTraceability.handle.bind(defaultTraceability)); // lgtm[js/missing-rate-limiting] Rate limiting is enforced by RateLimiterMiddleware (step 12)
 
 // 3a. Audit log DB persistence — fires after res.end via setImmediate
 app.use(defaultAuditLog.handle);
 
+// 3b. Shutdown gate — after Traceability+AuditLog (request id + audit row on the 503), before body parsing; CORS added by ErrorHandler
+app.use(defaultShutdownGate.handle);
+
 // 4. Body parsing — must be before route handlers so req.body is available
 app.use(defaultBodyParser.jsonHandler);
 app.use(defaultBodyParser.urlencodedHandler);
+//    Empty-body default — still step 4. Express 5 (body-parser 2) leaves
+//    req.body UNDEFINED when neither parser above matched the Content-Type
+//    (text/plain, a missing header) or the request had no body; every handler
+//    that destructures req.body then threw a TypeError → generic 500, including
+//    the unauthenticated POST /auth/login (API-REL-01). This restores the
+//    Express 4 contract — req.body is always an object — so those requests reach
+//    normal field validation and answer 400. It MUST sit after both parsers (it
+//    only fills the gap they leave and never overwrites a parsed body) and ABOVE
+//    4a, so the "[Incoming Request]" line logs the same body the handlers see.
+//    Route-level multer still replaces req.body with its own object on
+//    multipart requests.
+app.use(defaultBodyParser.defaultBodyHandler);
 
-// 4a. Incoming-request log line — mounted AFTER the body parsers so the
-//     "[Incoming Request]" trace carries the parsed [BODY @ …]. See
-//     TraceabilityMiddleware.logIncoming for why this is split from `handle`.
+// 4a. "[Incoming Request]" log line — MUST stay directly below the body parsers.
+//     Above them req.body does not exist yet, which is why this line used to read
+//     "[BODY @ req.body is undefined]" on every POST while the matching
+//     "[Request Complete]" line showed the real body.
 app.use(defaultTraceability.logIncoming);
 
 // 5. Response-time tracking (X-Response-Time header + per-route metrics)

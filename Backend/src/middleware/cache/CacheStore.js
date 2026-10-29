@@ -13,6 +13,7 @@
 
 const NodeCache = require("node-cache");
 const { logger } = require("../../utils/logger");
+const { cacheMessages } = require("../../constants/messages/cache.messages");
 const { SingleFlight } = require("./SingleFlight");
 const { ClusterCacheSync } = require("./ClusterCacheSync");
 
@@ -45,6 +46,9 @@ class CacheStore {
 
     // Coalesces concurrent getOrSet() misses on the same key (anti-stampede).
     this._flight = new SingleFlight();
+
+    // Monotonic invalidation counter — see _invalidateInFlight().
+    this._generation = 0;
 
     // Bind event listeners for observability
     this._store.on("set", (key) => this._log("SET", key));
@@ -89,6 +93,7 @@ class CacheStore {
   del(keys) {
     const list = Array.isArray(keys) ? keys : [keys];
     const count = this._store.del(list);
+    this._invalidateInFlight();
     ClusterCacheSync.broadcast(this._name, "del", list);
     return count;
   }
@@ -121,6 +126,7 @@ class CacheStore {
   delByPattern(pattern) {
     const matched = this._store.keys().filter((k) => k.includes(pattern));
     const count = matched.length === 0 ? 0 : this._store.del(matched);
+    this._invalidateInFlight();
     if (count > 0) {
       logger.info(
         `[Cache:${this._name}] DEL_PATTERN "${pattern}" → removed ${count} key(s)`,
@@ -143,6 +149,7 @@ class CacheStore {
   delWhere(predicate) {
     const matched = this._store.keys().filter(predicate);
     const count = matched.length === 0 ? 0 : this._store.del(matched);
+    this._invalidateInFlight();
     if (count > 0) {
       logger.info(`[Cache:${this._name}] DEL_WHERE → removed ${count} key(s)`);
     }
@@ -156,6 +163,7 @@ class CacheStore {
    */
   flush() {
     this._store.flushAll();
+    this._invalidateInFlight();
     ClusterCacheSync.broadcast(this._name, "flush");
   }
 
@@ -170,6 +178,10 @@ class CacheStore {
    * is pending awaits the same promise. This prevents a cache stampede — a
    * burst of identical requests on a cold key would otherwise each run the
    * full loader pipeline and saturate the DB connection pool.
+   *
+   * If the store is invalidated (del / delByPattern / delWhere / flush) while
+   * `loader()` is running, the loaded value is returned to the callers but is
+   * not stored, so a pre-invalidation read can never re-populate the cache.
    *
    * @param {string}            key
    * @param {() => Promise<*>}  loader  - Async function that produces the value.
@@ -186,9 +198,16 @@ class CacheStore {
       const again = this._store.get(key);
       if (again !== undefined) return again;
 
+      // Generation at load start: if an invalidation lands while loader() runs,
+      // the value may pre-date it, so it is returned but NOT stored.
+      const generation = this._generation;
       const value = await loader();
       if (value !== undefined && value !== null) {
-        this.set(key, value, ttl);
+        if (this._generation === generation) {
+          this.set(key, value, ttl);
+        } else {
+          logger.debug(cacheMessages.CACHE_SET_SKIPPED_STALE(this._name, key));
+        }
       }
       return value;
     });
@@ -221,7 +240,27 @@ class CacheStore {
     return this._name;
   }
 
+  /**
+   * Monotonic invalidation counter; bumped by del/delByPattern/delWhere/flush (local or cluster-relayed).
+   * @returns {number}
+   */
+  get generation() {
+    return this._generation;
+  }
+
   // ─── Internal ─────────────────────────────────────────────────────────────
+
+  /**
+   * Marks every value being built right now as stale: bumps the generation so a
+   * pending getOrSet() will not store its (pre-invalidation) result, and swaps in
+   * a fresh SingleFlight so new readers never join a pre-invalidation load.
+   * The old SingleFlight keeps resolving its own callers and cleans its own map.
+   * @private
+   */
+  _invalidateInFlight() {
+    this._generation += 1;
+    this._flight = new SingleFlight();
+  }
 
   _log(event, key) {
     logger.debug(`[Cache:${this._name}] ${event.padEnd(7)} ${key}`);

@@ -94,6 +94,9 @@ class SystemLogTailService {
 
         /** @type {number} */
         this._consecutiveErrors = 0;
+
+        /** True while a tick is in flight — a slow tick must not overlap the next. @type {boolean} */
+        this._ticking = false;
     }
 
     /**
@@ -151,10 +154,13 @@ class SystemLogTailService {
     _start() {
         if (this._timer !== null) return;
         this._consecutiveErrors = 0;
-        this._timer = setInterval(
-            () => this._tick().catch((err) => this._onTickError(err)),
-            this._pollIntervalMs(),
-        );
+        this._timer = setInterval(() => {
+            if (this._ticking) return;
+            this._ticking = true;
+            this._tick()
+                .catch((err) => this._onTickError(err))
+                .finally(() => { this._ticking = false; });
+        }, this._pollIntervalMs());
         this._timer.unref();
         logger.notice(auditLogMessages.SYSTEM_TAIL_STARTED());
     }

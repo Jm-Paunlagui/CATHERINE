@@ -217,12 +217,15 @@ class UploadOutcomeBuilder {
      * @param {*} label
      * @param {string} reason   - Human sentence shown in the detail table.
      * @param {string} [category=SKIP_REASON.NOT_ACTIONABLE] - One of SKIP_REASON.
+     * @param {object} [extra]  - Additional fields merged into the detail row
+     *   (e.g. `{ code: "LOCKED" }`). Never overrides key/label/reason/category.
      * @returns {this}
      */
-    skip(key, label, reason, category = SKIP_REASON.NOT_ACTIONABLE) {
+    skip(key, label, reason, category = SKIP_REASON.NOT_ACTIONABLE, extra = {}) {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.SKIPPED]++;
         this._rows[OUTCOME.SKIPPED].push({
+            ...extra,
             ...id,
             reason: reason ? String(reason) : "Not applicable for this upload.",
             category,

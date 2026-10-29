@@ -36,11 +36,16 @@ Production-grade Node.js Express API template. Class-based OOP architecture, cle
 ## Project Structure
 
 ```
-express-template/
-├── server.js                          # Entry point — HTTP/HTTPS, clustering, graceful shutdown
-├── package.json
+Backend/
+├── server.js                          # Entry point (surface root, NOT src/) — HTTP/HTTPS, clustering, scheduler, graceful shutdown
+├── package.json                       # catherine-backend; bin catherine_backend; pkg target node24-win-x64
 ├── .env.example                       # All env vars documented with safe defaults
-├── certs/                             # Drop server.key + server.crt here for HTTPS
+├── sql/                               # 01_schema, 02_seed_demo, 03_alter_admins_notification_columns, 04_platform_tables
+├── scripts/                           # seed-template, seed-changelog, dump-changelog, build-devdocs-freshness, postbuild-copy-natives
+├── deploy/                            # winsw/ (catherine-backend service), systemd/, runbooks
+├── dev-docs/                          # Developer docs served at /api/v1/dev-docs
+├── test/                              # Vitest: server/{unit,integration,security,performance,reliability}, unit/, encryption/
+├── certs/                             # PFX for HTTPS (PFX_FILENAME)
 ├── logs/                              # Auto-created rotating log files (YYYY/MM/DD/level.log)
 │
 └── src/
@@ -48,60 +53,41 @@ express-template/
     │
     ├── config/
     │   ├── index.js                   # Adapter factory — exports active DB adapter
-    │   ├── database.js                # Connection registry (named pools, credentials)
+    │   ├── database.js                # Connection registry: appDb + appDbBulk, POOL_NAMES, READINESS_GATING_POOLS
+    │   ├── bootGuard.js               # validateSecrets (weak secrets refused at boot)
+    │   ├── demoMode.js                # DEMO_MODE (no Oracle)
     │   └── adapters/
-    │       ├── oracle.js              # OracleDB adapter (pools, health monitor, retry)
-    │       └── mysql.js               # MySQL adapter (future)
+    │       └── oracle.js              # OracleDB adapter (pools, health monitor, retry, Thick mode)
     │
     ├── constants/
     │   ├── index.js                   # Re-exports HTTP_STATUS + all sub-modules
-    │   ├── errors/
-    │   │   └── index.js               # AppError class + static error message strings
-    │   ├── responses/
-    │   │   └── index.js               # sendSuccess / sendError helpers + response strings
-    │   └── messages/
-    │       ├── index.js               # Re-exports all message namespaces
-    │       ├── oracle.messages.js     # Oracle pool / driver log messages
-    │       ├── oracleWrapper.messages.js  # Oracle-Mongo-Wrapper validation messages
-    │       ├── auth.messages.js       # Authentication / authorization messages
-    │       ├── middleware.messages.js # Security filter, rate limit, IP filter messages
-    │       └── database.messages.js  # General DB operation messages
+    │   ├── authTokens.js              # Cookie names, token types, issuer/audiences, revoke reasons
+    │   ├── authRateLimits.js          # Limits for the four auth rate limiters
+    │   ├── errors/                    # AppError class + error message strings
+    │   ├── responses/                 # sendSuccess / sendError helpers + response strings
+    │   └── messages/                  # One <namespace>.messages.js per area (auth, admin, auditLog,
+    │                                  #   cache, cluster, dataPurge, integrity, metrics, server, watchdog, ...)
     │
     ├── middleware/
-    │   ├── security/
-    │   │   ├── CsrfMiddleware.js      # Class: double-submit cookie CSRF
-    │   │   ├── CorsMiddleware.js      # Class: network-aware CORS
-    │   │   ├── HelmetMiddleware.js    # Class: HTTP security headers
-    │   │   ├── IpFilterMiddleware.js  # Class: CIDR-aware IP allowlist
-    │   │   ├── RateLimiterMiddleware.js  # Class: Sliding Window Counter
-    │   │   ├── SecurityFilterMiddleware.js  # Class: scanner/traversal blocking
-    │   │   └── PreventRedirectsMiddleware.js # Class: prevent API redirects
-    │   │
-    │   ├── performance/
-    │   │   ├── CompressionMiddleware.js  # Class: gzip compression
-    │   │   └── ResponseTimeMiddleware.js  # Class: X-Response-Time header + metrics
-    │   │
-    │   ├── parsing/
-    │   │   ├── BodyParserMiddleware.js    # Class: JSON + URL-encoded parsing
-    │   │   └── CookieParserMiddleware.js  # Class: cookie parsing
-    │   │
-    │   ├── authentication/
-    │   │   └── AuthMiddleware.js      # Class: JWT auth + dynamic permission-based access
-    │   │
-    │   ├── traceability/
-    │   │   └── TraceabilityMiddleware.js  # Class: request ID injection + structured logging
-    │   │
-    │   └── errorHandling/
-    │       └── ErrorHandlerMiddleware.js  # Class: global error handler + 404 + body capture
+    │   ├── security/                  # Helmet, SecurityFilter, ShutdownGate, Cors, Csrf, IpFilter,
+    │   │                              #   RateLimiter (+ SlidingWindowCounter, SuspiciousIpTracker),
+    │   │                              #   authRateLimiters, Idempotency, PreventRedirects
+    │   ├── performance/               # Compression, ResponseTime
+    │   ├── parsing/                   # BodyParser (json, urlencoded, defaultBodyHandler), CookieParser
+    │   ├── authentication/            # AuthMiddleware, LoginLockout{Middleware,Policy,State}
+    │   ├── traceability/              # Traceability (handle + logIncoming), AuditLog
+    │   ├── metrics/                   # MetricsMiddleware, MetricsStore, metricsMerge
+    │   ├── cache/                     # CacheStore, CacheRegistry, CacheMiddleware, CacheKeyBuilder,
+    │   │                              #   ClusterCacheSync, SingleFlight
+    │   └── errorHandling/             # ErrorHandlerMiddleware, OraCode, NjsCode
     │
-    ├── routes/
-    │   ├── index.js                   # Route aggregator
-    │   ├── health.route.js            # GET /api/v1/health
-    │   └── csrf.route.js              # GET /api/v1/csrf/token etc.
-    │
+    ├── routes/                        # index.js + one *.route.js per mount (see Route Table)
     ├── controllers/                   # One class per resource, thin HTTP layer
-    ├── models/                        # DB schemas / query definitions
-    ├── services/                      # Business logic classes
+    ├── models/                        # admin, user, audit.log(.file), auth.refresh.token, backup-token,
+    │                                  #   backup-vote, changelog, data-purge, integrity, serverAlertLog/Ack,
+    │                                  #   system.config
+    ├── services/                      # Business logic classes (Auth, AdminManagement, AuditLog, Metrics,
+    │                                  #   Integrity, DataPurge/Restore, Backup*, Changelog, DevDocs, ...)
     └── utils/
         ├── logger.js                  # Custom logger (daily rotation, no truncation)
         ├── catchAsync.js              # Async error wrapper for controllers
@@ -248,11 +234,11 @@ module.exports = {
 
 ## Authentication & Authorization — Dynamic Permissions
 
-### Problem with the Old Design
+### Why predicates
 
-Old `auth.js` had hardcoded `AREAS` and `ROLES` constants. Every project had different permission models; hardcoding `INV_CON`, `INV_UNIT_SUP` etc. was wrong.
+Every project has a different permission model, so the gate is a **predicate**, not a hard-coded table of areas. The template ships three roles (`SUPER_ADMIN`, `ADMIN`, `USER`) because its own platform screens need them; project features add their own predicates.
 
-### New Design: Dynamic Permission Model
+### Dynamic Permission Model
 
 Permissions are **data-driven**, not hardcoded. JWT payload carries `permissions` array (or `userLevel` number). `requireAccess` factory accepts **predicate function** receiving decoded user, returns `true/false`.
 
@@ -291,13 +277,13 @@ router.get(
 
 // Project B: area/permission-based
 router.post(
-    "/inventory",
+    "/orders",
     AuthMiddleware.authenticate,
     AuthMiddleware.requireAccess((user) => {
         const areas = (user.area ?? "").split(",").map((a) => a.trim());
-        return areas.includes("INV_CON");
+        return areas.includes("ORDERS_WRITE");
     }),
-    InventoryController.create,
+    OrderController.create,
 );
 
 // Project C: combined
@@ -314,10 +300,59 @@ router.delete(
 
 **Why better:**
 
-- No `AREAS` or `ROLES` constants in template — belong to consuming application
-- Template ships **mechanism**, not hard-coded permission set
+- Project-specific areas and permissions belong to the consuming application, not the template
+- Template ships **mechanism** plus the three platform roles
 - Each route documents own access requirement inline — no mystery
-- Backwards-compatible: `user.userLevel >= N` still works for simple projects
+- `user.userLevel >= N` still works (`SUPER_ADMIN`=3, `ADMIN`=2, `USER`=1)
+
+### Roles
+
+| Role | `userLevel` | Source of truth |
+| --- | --- | --- |
+| `SUPER_ADMIN` | 3 | `T_ADMINS_DEV.ROLE` CHECK constraint (`sql/01_schema.sql`) |
+| `ADMIN` | 2 | same |
+| `USER` | 1 | same; frontend mirror is `ROLES` in `Frontend/src/App.jsx` |
+
+No other roles exist. `AuthService` checks admins (`T_ADMINS_DEV`) first, then users (`T_USERS_DEV`).
+
+### Tokens and cookies (`src/constants/authTokens.js`)
+
+| Constant | Value |
+| --- | --- |
+| `COOKIE_NAMES.ACCESS` / `.REFRESH` | `app.access-token` / `app.refresh-token` (signed cookies) |
+| `TOKEN_TYPES` | `access`, `refresh` |
+| `TOKEN_ISSUER` | `app-api` |
+| `TOKEN_AUDIENCES` | `app-api:access`, `app-api:refresh` |
+| `REFRESH_REVOKE_REASONS` | `LOGOUT`, `PASSWORD_CHANGE`, `PASSWORD_RESET`, `ADMIN_READD`, `REUSE` |
+| `ACCESS_TOKEN_DEFAULT_EXPIRES_IN` | `30m` (env `JWT_EXPIRES_IN`; refresh default `7d`) |
+
+### Authenticate flow (`AuthMiddleware._doAuthenticate`)
+
+1. Verify the access token (`verifyToken`).
+2. `utils/auth/tokenClaims.classifyAccessClaims` checks `typ`/`iss`/`aud`:
+   - all three absent → `legacy` → **440** (session expired; client re-logs in)
+   - present but wrong → `wrong-type` → **401** (e.g. a refresh token sent as access)
+3. `AccessRevocationService.isRevoked(user.fid)` → **440** when the credential epoch moved (password change/reset, revoke).
+4. `requiresPasswordChange` → **403** `PasswordChangeRequiredError`, except on routes mounted with `AuthMiddleware.authenticatePendingPasswordChange` (`POST /auth/logout`, `GET /auth/me`, `PATCH /auth/change-password`).
+
+Variants: `authenticate`, `authenticateForDownload` (HTML error page for file downloads), `authenticatePendingPasswordChange`.
+
+Refresh (`POST /auth/refresh`) reads **only** `req.signedCookies["app.refresh-token"]`. Rotation with reuse detection lives in `RefreshTokenService`; reuse revokes the family (`REUSE`). Logout clears the refresh cookie on path `/api/v1/auth/refresh`.
+
+> Known wart: a missing refresh cookie throws `AUTH_ERRORS.USER_NOT_FOUND` (401) in `AuthControllers.refresh` (~lines 47-56). The status is right; the message is misleading. Tracked in `plans/template-reimport-handover.md`.
+
+### Auth rate limiters (`src/middleware/security/authRateLimiters.js`)
+
+Limits live in `src/constants/authRateLimits.js`; all four are grouped in `authRateLimiters = new RateLimiterGroup([...])`.
+
+| Limiter | Limit | Counts |
+| --- | --- | --- |
+| `loginIpLimiter` | 30 / 15 min per IP | failures only |
+| `loginUserLimiter` | 5 / 15 min per username | failures only |
+| `refreshRateLimiter` | 20 / 15 min | all requests |
+| `changePasswordRateLimiter` | 5 / 15 min | all requests |
+
+Login lockout (`LoginLockoutMiddleware`, env `LOGIN_*`) is separate from these limiters.
 
 ---
 
@@ -366,7 +401,7 @@ router.delete(
 Examples:
 
 Server function call:
-[JmPaunlagui (S) 192.168.100.92] [2025-08-22 19:43:03] [INFO] [PID:23632] [initializePool @ src/config/adapters/oracle.js:234] [FUNC] - UserAccount pool created successfully
+[JmPaunlagui (S) 192.168.100.92] [2025-08-22 19:43:03] [INFO] [PID:23632] [initializePool @ src/config/adapters/oracle.js:234] [FUNC] - appDb pool created successfully
 
 Client incoming request:
 [paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.js:55] [Incoming Request] [POST] - [POST @ /api/v1/auth/login]
@@ -398,9 +433,9 @@ logger.alert(
 );
 logger.crit("Health check hard failure", {
     subsystem: "oracle",
-    pool: "userAccount",
+    pool: "appDb",
 });
-logger.error("Query failed", { table: "T_OPITS_USERS", err: err.message });
+logger.error("Query failed", { table: "T_USERS_DEV", err: err.message });
 logger.warning("Slow pool response", { connectionName, elapsed }); // ← NOT logger.warn()
 logger.notice("Server startup complete", { port: 3000, env: "production" });
 logger.info("Request handled", { route: "/api/v1/health", ms: 12 });
@@ -499,14 +534,19 @@ Verbose diagnostic (local dev only)              →  debug
 
 All env vars documented in `.env.example`. **Never import `dotenv` directly in feature files** — only `server.js` and compiled-env bootstrap. **Never hardcode values** that belong in `.env.example`.
 
-Complete `.env.example` categories:
+`.env.example` categories (the file is authoritative for order, defaults and comments). There are no product-specific variables (no `BILLING_*`, no per-product DB target switches); a project adds its own category with a safe default and a comment.
 
 ```
+DEMO_MODE                 # true = no Oracle; in-memory demo data
+
 # ── Server ──────────────────────────────────────────────────────────
-PORT, HOST, NODE_ENV, USE_HTTPS, APP_NAME
+PORT (2108), HOST, NODE_ENV, USE_HTTPS, APP_NAME (CATHERINE), FRONTEND_BASE_URL, TZ, APP_TZ,
+DB_TIMEZONE_OFFSET_MINUTES
+PFX_FILENAME, PFX_PASSPHRASE   # optional HTTPS certificate
 
 # ── Clustering ──────────────────────────────────────────────────────
-ENABLE_CLUSTERING, NUM_WORKERS
+ENABLE_CLUSTERING, NUM_WORKERS   # CRON_LEADER is stamped by the primary — never set it
+SNOWFLAKE_MACHINE_ID             # 0-1023; unset = derived from host IPv4 hash
 
 # ── JWT ─────────────────────────────────────────────────────────────
 JWT_SECRET, JWT_EXPIRES_IN, JWT_REFRESH_EXPIRES_IN
@@ -515,7 +555,7 @@ JWT_SECRET, JWT_EXPIRES_IN, JWT_REFRESH_EXPIRES_IN
 CSRF_SECRET
 
 # ── CORS ────────────────────────────────────────────────────────────
-CORS_ORIGINS
+CORS_ORIGINS, CORS_ALLOW_BROAD_PATTERNS
 
 # ── Cookies ─────────────────────────────────────────────────────────
 COOKIE_SECRET
@@ -530,27 +570,73 @@ RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS, TRUST_PROXY
 ENABLE_IP_FILTER, ALLOWED_IPS
 
 # ── Database (Oracle) ───────────────────────────────────────────────
-DB_TYPE, DB_HOST, DB_PORT, DB_SERVICE_NAME
-UA_DB_USERNAME, UA_DB_PASSWORD
-UI_DB_USERNAME, UI_DB_PASSWORD
-
-# ── Database (Test / Dev) ───────────────────────────────────────────
-DB_TEST_HOST, DB_TEST_PORT, DB_TEST_SID
-UI_TEST_DB_USERNAME, UI_TEST_DB_PASSWORD
-
-# ── Oracle Instant Client ───────────────────────────────────────────
-ORACLE_INSTANT_CLIENT
+DB_TYPE, DB_HOST, DB_PORT, DB_APP_SERVICE_NAME   # used as the SID in the TNS string
+APP_DB_USERNAME, APP_DB_PASSWORD                 # shared by appDb and appDbBulk
+APP_POOL_MIN, APP_POOL_MAX, APP_QUEUE_MAX, APP_POOL_TIMEOUT     # appDb (code defaults 5/20/40/30; .env.example 2/10/40/30)
+APP_BULK_POOL_MIN, APP_BULK_POOL_MAX, APP_BULK_QUEUE_MAX,
+APP_BULK_QUEUE_TIMEOUT, APP_BULK_CONNECT_TIMEOUT                # appDbBulk (defaults 1/6/24/30000/20000)
+UV_THREADPOOL_SIZE
+ORACLE_INSTANT_CLIENT                           # set = Thick mode; blank = Thin mode
 
 # ── Logging ─────────────────────────────────────────────────────────
 LOG_LEVEL, ENABLE_CONSOLE_LOGS, LOG_EXCLUDE_HEALTH, LOG_EXCLUDE_URLS
 LOG_MAX_SAFESTR_LENGTH    # Defaults to Infinity (no truncation). Set a number only if needed.
 LOG_CALLSITE              # true/false — capture function/file/line in logs (default: true)
+LOG_RETENTION_DAYS, LOG_MAX_QUEUE_LENGTH
 
 # ── Password Hashing ────────────────────────────────────────────────
-PASSWORD_HASH_MODE        # 'bcrypt' for production, 'plain' for development only
+PASSWORD_HASH_MODE        # argon2 (default) | bcrypt | tripledes | plain (dev only)
+PASSWORD_KEY, PASSWORD_ENCRYPTION_MODE, BCRYPT_SALT_ROUNDS (10-31, default 12)
+ARGON2_PEPPER, ARGON2_MEMORY_COST, ARGON2_TIME_COST, ARGON2_PARALLELISM,
+ARGON2_HASH_LENGTH, ARGON2_MAX_PASSWORD_BYTES
+DATA_SIGNING_SECRET       # ROW_HASH / SYSSIGNATURE HMAC
+CHANGELOG_ENCRYPTION_KEY
 
-# ── PKG ─────────────────────────────────────────────────────────────
-PFX_PASSPHRASE            # Passphrase for PFX certificate (HTTPS)
+# Audit / system logs / metrics
+AUDIT_LOG_ENABLED, AUDIT_LOG_EXCLUDE_HEALTH, AUDIT_LOG_EXCLUDE_PATHS,
+AUDIT_LOG_STORAGE (db | file | auto), AUDIT_LOG_TABLE
+SYSTEM_LOG_MAX_READ_BYTES, SYSTEM_LOG_STREAM_POLL_MS, METRICS_EXCLUDE_PATHS
+
+# Login lockout
+LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_MODE, LOGIN_LOCKOUT_DURATION_MS, LOGIN_LOCKOUT_MULTIPLIER,
+LOGIN_MAX_LOCKOUT_CYCLES (→ HTTP 423, administrator reset), LOGIN_RETRY_DECREMENT
+ADMIN_DEFAULT_PASSWORD    # retired, commented out — passwords are server-generated
+
+# Email / notifications / alerts
+SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_CA_FILE
+EMAIL_POOL, EMAIL_CONCURRENCY, EMAIL_MAX_MESSAGES, EMAIL_RATE_LIMIT, EMAIL_RATE_DELTA_MS
+ENABLE_SERVER_NOTIFICATIONS, SERVER_NOTIFY_TO, RECIPIENT_REFRESH_MIN
+ALERT_POLL_INTERVAL_MS, ALERT_EMAIL_COOLDOWN_MIN, ALERT_NOTIFY_RECOVERY, ALERT_RECOVERY_CONFIRM_POLLS,
+CRITICAL_DIGEST_WINDOW_MS, CRITICAL_MAX_EMAILS_PER_HOUR, ALERT_LOG_RETENTION_DAYS, ALERT_ACK_TTL_HOURS,
+SERVER_ALERT_LOG_TABLE, SERVER_ALERT_ACK_TABLE
+
+# Resilience
+DB_ROW_RETRY_MAX, DB_RETRY_BASE_DELAY_MS, DB_RETRY_MAX_DELAY_MS
+EMAIL_RETRY_ATTEMPTS, EMAIL_FALLBACK_RETRY_ATTEMPTS, EMAIL_RETRY_BASE_DELAY_MS
+SERVER_REQUEST_TIMEOUT_MS
+
+# Money (all optional)
+MONEY_BASE_CURRENCY, MONEY_FX_TABLE, MONEY_LEDGER_TABLES,
+MONEY_BASE_CURRENCY_PREVIOUS, MONEY_BASE_CURRENCY_MIGRATION
+
+# Graceful shutdown / request watchdog
+SERVER_RUN_MARKER_PATH (tests only), SHUTDOWN_FORCED_EXIT_MS (max 1834000)
+REQUEST_IDLE_TIMEOUT_MS, REQUEST_IDLE_TIMEOUT_LONG_MS, DB_CALL_PROGRESS_CAP_MS,
+WATCHDOG_ALERT_BURST, WATCHDOG_ALERT_WINDOW_MS, NOTIFY_DRAIN_MS
+
+# Health
+HEALTH_PROBE_TIMEOUT_MS, HEALTH_STREAM_HEARTBEAT_MS, HEALTH_STREAM_EVAL_MS,
+HEALTH_STREAM_MAX_PER_IP, HEALTH_STREAM_MAX_TOTAL
+
+# Data purge / backups
+BACKUP_TOKEN_TTL_MINUTES, BACKUP_UPLOAD_MAX_MB, BACKUP_XLSX_ROW_CAP, RESTORE_BATCH_SIZE, PURGE_RATE_LIMIT_MAX
+BACKUP_EMAIL_ENABLED      # purge-backup notification email (no attachment)
+DB_BACKUP_ENABLED, DB_BACKUP_DIR, DB_BACKUP_IDLE_TIMEOUT_MS, DB_BACKUP_EVENT_DELAY_MS,
+DB_BACKUP_LOCKOUT_WINDOW_MS, DB_BACKUP_CATCHUP_ON_BOOT, DB_BACKUP_CATCHUP_WINDOW_HOURS,
+DB_BACKUP_FULL_EVERY, DB_BACKUP_RETENTION_DAYS
+
+# Runtime environment
+DOCKER_CONTAINER
 ```
 
 ---
@@ -633,9 +719,13 @@ throw new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, HTTP_STATUS.FORBIDDEN, {
 ## Middleware Stack (order matters — do not reorder)
 
 **`src/app.js` is the authority — read the numbered comments there, do not trust a
-count from this file.** The chain is 13 numbered steps plus sub-steps `3a`, `4a` and
-`5a`, which is 17 `app.use` calls. A sub-step exists where a later addition had to
+count from this file.** The chain is 13 numbered steps plus sub-steps `3a`, `3b`, `4a`
+and `5a`; step 4 mounts three handlers. A sub-step exists where a later addition had to
 land *inside* an existing step's ordering constraint rather than after it.
+
+Before the chain, `TRUST_PROXY` is parsed into `app.set("trust proxy", ...)`. The
+request watchdog is **not** an `app.use` step: it attaches to the HTTP server's
+`request` event in `server.js`.
 
 ```js
 // app.js — numbered exactly as the file comments them
@@ -643,8 +733,10 @@ app.use(defaultHelmet.handle);            // 1.  Security headers
 app.use(defaultSecurityFilter.handle);    // 2.  Block scanners / traversal EARLY
 app.use(defaultTraceability.handle);      // 3.  Request ID + request/response logging
 app.use(defaultAuditLog.handle);          // 3a. Audit-log DB persistence (setImmediate after res.end)
+app.use(defaultShutdownGate.handle);      // 3b. Refuse new work while draining (health paths stay reachable)
 app.use(defaultBodyParser.jsonHandler);   // 4.  Body parsing — before route handlers
 app.use(defaultBodyParser.urlencodedHandler);
+app.use(defaultBodyParser.defaultBodyHandler); //  req.body = {} when no parser ran (Express 5 leaves it undefined; API-REL-01)
 app.use(defaultTraceability.logIncoming); // 4a. Incoming-request log line — AFTER body parsers so req.body is populated
 app.use(defaultResponseTime.handle);      // 5.  X-Response-Time header + per-route metrics
 app.use(defaultMetrics.handle);           // 5a. Metrics collection — after ResponseTime so both timings exist
@@ -654,12 +746,16 @@ app.use(defaultCookieParser.handle);      // 8.  Cookie parsing
 app.use(/* CSRF gate */);                 // 9.  CSRF — AFTER cookie-parser so the secret cookie is readable.
                                           //     /api/v1/csrf/* is exempt (catch-22: you cannot send a
                                           //     token header on the request that fetches the token).
+                                          //     POST /api/v1/metrics/frontend is exempt (unauthenticated
+                                          //     fetch keepalive telemetry sink with its own limiter).
 app.use(defaultErrorHandler.captureResponseBody); // 10. Capture body for logging
 app.use(defaultIpFilter.handle);          // 11. IP allowlist (ENABLE_IP_FILTER)
 app.use(defaultRateLimiter.handle);       // 12. Rate limiting — Sliding Window Counter over NodeCache
+                                          //     OPTIONS and HEALTH_PATH_RE (/^\/api\/v\d+\/health(\/|$)/) exempt
 app.use("/api", defaultPreventRedirects.handle); // 13. API-only redirect prevention
 
 // Then, after the chain:
+app.disable("x-powered-by");
 app.use("/api/v1", routes);
 app.use(defaultErrorHandler.notFoundHandler); // 404
 app.use(defaultErrorHandler.handle);          // global error handler — everything funnels here
@@ -667,16 +763,33 @@ app.use(defaultErrorHandler.handle);          // global error handler — everyt
 
 **Step 9 is a security step and must not be dropped when this list is summarised.**
 
+`HEALTH_PATH_RE` (`/^\/api\/v\d+\/health(\/|$)/`) is declared separately in
+`RateLimiterMiddleware.js:41` and `ShutdownGateMiddleware.js:27` — keep the two copies
+identical. Rate limiting exempts health paths; the shutdown gate lets probes answer during
+a drain so the orchestrator sees the state change. The request watchdog exempts health
+paths through its own `EXEMPT_RULES`.
+
+Cache stores are registered in `app.js` **before** `require("./routes")` (routes call
+`registry.resolve(name)` at module load), then `ClusterCacheSync.initWorker(registry)` runs:
+
+| Store | TTL / check / max keys |
+| --- | --- |
+| `adminList` | 600 s / 120 s / 50 |
+| `auditLog` | 120 s / 30 s / 200 |
+| `authProfile` | 30 s / 15 s / 10000 |
+| `integrity` | 180 s / 60 s / 500 |
+
 ---
 
 ## Auth Routes (Standard)
 
 ```
-POST  /api/v1/auth/login            public    rate-limited + validateRequiredFields(["userId","password"])
-POST  /api/v1/auth/refresh          public    rate-limited
-POST  /api/v1/auth/logout           auth
-GET   /api/v1/auth/me               auth
-PATCH /api/v1/auth/change-password  auth      rate-limited + validateRequiredFields(["currentPassword","newPassword"])
+POST  /api/v1/auth/login            public    loginIpLimiter + loginUserLimiter + validateRequiredFields(["userId","password"]) + validatePasswordFields
+POST  /api/v1/auth/refresh          public    refreshRateLimiter; signed refresh cookie only
+POST  /api/v1/auth/logout           authenticatePendingPasswordChange
+GET   /api/v1/auth/me               authenticatePendingPasswordChange
+PATCH /api/v1/auth/change-password  authenticatePendingPasswordChange + changePasswordRateLimiter
+                                    + adminList invalidation + validation
 ```
 
 **There is no `/auth/register`.** Self-registration is deliberately absent: accounts
@@ -692,9 +805,48 @@ Note the login credential field is **`userId`**, not `username`.
 ## Route Conventions
 
 - All routes prefixed with `/api/v1/`
-- Group by resource: `authRoutes`, `userRoutes`, etc.
-- Health check: `GET /api/v1/health` → always returns `200 OK`
-- Route files named `<resource>.route.js`
+- Group by resource; one `<resource>.route.js` per mount, aggregated in `src/routes/index.js`
+- Project feature routes mount at the placeholder comment `Project feature routes mount here.` in `src/routes/index.js`
+- Inside a router: auth gates first, then cache reads, then validation, then the controller
+
+### Route table (`src/routes/index.js`)
+
+| Mount | Access | Endpoints |
+| --- | --- | --- |
+| `/health` | public | `GET /`, `/live`, `/ready`, `/stream` |
+| `/csrf` | public | `GET /token`, `/status` |
+| `/auth` | see Auth Routes | `POST /login`, `/refresh`, `/logout`; `GET /me`; `PATCH /change-password` |
+| `/admin-management` | ADMIN + SUPER_ADMIN (router-level) | see Admin Management |
+| `/audit-logs` | admin | `GET /stats`, `/export/excel`, `/export/logs`, `/stream`, `/system-logs`, `/system-logs/stream`, `/`, `/:requestId/export/trace`, `/:requestId/logs`; `DELETE /` |
+| `/metrics` | admin (except `POST /frontend`) | `GET /`, `/summary`, `/alerts`, `/notifications/status`, `/alerts/history`; `POST /frontend`, `/notifications/test`, `/alerts/ack`; `DELETE /alerts/ack` |
+| `/client` | public | `POST /errors`, `/help-miss` |
+| `/changelog` | public reads, admin writes | `GET /public`, `/public/latest`, `/`, `/release/current`; `POST /`; `PUT /:id`; `DELETE /:id` |
+| `/dev-docs` | ADMIN + SUPER_ADMIN | `GET /tree`, `/search`, `/doc/:section/:name` |
+| `/architecture` | SUPER_ADMIN | `GET /`, `/runtime` |
+| `/integrity` | SUPER_ADMIN | `GET /tables`, `/stream`, `/:table/tamper`, `/:table/filter-options`, `/:table/browse`, `/:table/export`; `POST /:table/rescan` |
+| `/data-purge` | SUPER_ADMIN | `GET /scopes`, `/backups`, `/backups/:id/download`; `POST /preview`, `/backup`, `/authorise`, `/execute`, `/restore/preview`, `/restore`, `/backups/run`, `/backups/:id/verify`, `/backups/:id/delete-request`, `/backups/:id/vote`; `DELETE /backups/:id/delete-request` |
+
+Read the route file for exact per-endpoint gates; this table is a map, not a spec.
+
+### Admin Management (`/api/v1/admin-management`)
+
+Whole router: `AuthMiddleware.authenticate` + `requireAdmin` (ADMIN or SUPER_ADMIN).
+
+| Endpoint | Gate | Notes |
+| --- | --- | --- |
+| `GET /search?q=` | router | Live, not cached |
+| `GET /` | router | Cached (`adminList`) |
+| `POST /` | router | Body `{ username, role }` → **201** `ADMIN_CREATED`. Password is server-generated and emailed; valid **72 h**; forced change on first login |
+| `PUT /:username` | SUPER_ADMIN | Body `{ role }` |
+| `PATCH /:username/reset-password` | router + `credentialEmailRateLimiter` | Emails a new temporary password |
+| `PATCH /:username/reset-signature` | SUPER_ADMIN | Re-signs `SYSSIGNATURE` |
+| `PATCH /:username/permissions` | SUPER_ADMIN | Body `{ flags }` (Y/N notification flags) |
+| `POST /:username/revoke-backup` | SUPER_ADMIN | Streams a per-admin archive and issues a `backupToken` |
+| `POST /:username/revoke` | SUPER_ADMIN | Body `{ backupToken }`; deactivates |
+| `DELETE /:username` | SUPER_ADMIN | Body `{ backupToken }`; hard delete |
+| `POST /security/unblock-ip` | SUPER_ADMIN | Body `{ ip }`; lifts a SecurityFilter block |
+
+An ADMIN may create and reset only `USER` accounts (`AdminManagementService._assertCanManage`). Demoting, deactivating or deleting the last active SUPER_ADMIN fails with **409** `LAST_ACTIVE_SUPER_ADMIN` (`AdminModel.withLastSuperAdminGuard`).
 
 ---
 
@@ -715,7 +867,8 @@ Note the login credential field is **`userId`**, not `username`.
 
 ## Database — OracleDB Adapter Rules
 
-- **Dual-pool pattern**: separate pools per named connection (`userAccount`, `unitInventory`, etc.)
+- **Dual-pool pattern**: `appDb` (interactive; the only entry in `READINESS_GATING_POOLS`) and `appDbBulk` (bulk/long-running work). Same credentials (`APP_DB_USERNAME`/`APP_DB_PASSWORD`) and connect string (`DB_HOST`, `DB_PORT`, `DB_APP_SERVICE_NAME` as SID); separate sizing (`APP_POOL_*`, `APP_BULK_*`). Names are exported as `POOL_NAMES`.
+- `DEMO_MODE=true` skips Oracle entirely (`src/config/demoMode.js`)
 - New connection requires only new entry in `src/config/database.js` — no other file changes
 - `PoolHealthMonitor` runs every 30 seconds, marks unhealthy pools after 3 consecutive failures
 - Exponential backoff on pool init: 3 retries, delay `min(1000 * 2^n, 10000)ms`
@@ -724,7 +877,7 @@ Note the login credential field is **`userId`**, not `username`.
 ```js
 // Usage everywhere else in the app
 const db = require("../config");
-await db.withConnection("userAccount", async (conn) => {
+await db.withConnection("appDb", async (conn) => {
     const result = await conn.execute("SELECT 1 FROM DUAL");
     return result.rows;
 });
@@ -738,21 +891,56 @@ await db.withConnection("userAccount", async (conn) => {
 
 ```js
 const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
-const db = createDb("userAccount");
-const users = new OracleCollection("T_OPITS_USERS", db);
+const db = createDb("appDb");
+const users = new OracleCollection("T_USERS_DEV", db);
 
-const row = await users.findOne({ USERNAME: "jmpaunlagui" });
-await users.updateOne({ ID: row.ID }, { $set: { STATUS: "active" } });
+const row = await users.findOne({ USERNAME: "jdoe" });
+await users.updateOne({ ID: row.ID }, { $set: { IS_ACTIVE: "Y" } });
 ```
 
 Full API documented in `src/utils/oracle-mongo-wrapper/README.md`.
 
 ---
 
+## SQL (`Backend/sql/`)
+
+| File | Use |
+| --- | --- |
+| `01_schema.sql` | Fresh install. Section 0 drops, then creates: 1 `T_USERS_DEV`, 2 `T_ADMINS_DEV` (ROLE CHECK `SUPER_ADMIN`/`ADMIN`/`USER`, `EMAIL`, `CAN_RECEIVE_SRV_*`, `SYSSIGNATURE`, `IX_ADMINS_ACTIVE` on `IS_ACTIVE`), 3 `T_AUDIT_LOGS_DEV`, 4 `T_SERVER_ALERT_LOG_DEV`, 5 `T_SERVER_ALERT_ACK_DEV`, 6 `T_AUTH_REFRESH_TOKEN_DEV`, 7 `T_SERVER_BACKUP_TOKEN_CONSUMED_DEV`, 8 `T_SERVER_BACKUP_DELETE_VOTE_DEV`, 9 `T_SYSTEM_CONFIG_DEV` |
+| `02_seed_demo.sql` | Optional demo rows |
+| `03_alter_admins_notification_columns.sql` | Existing DB: adds the admin notification columns |
+| `04_platform_tables.sql` | Existing DB: additively creates the section 6-9 tables |
+
+Seed template accounts with `npm run db:seed:template`. Models use explicit projections, so apply SQL **before** deploying code that reads new columns (otherwise `ORA-00904`). Details in `sql/README.md`.
+
+## AdminModel (`src/models/admin.model.js`)
+
+| Method | Purpose |
+| --- | --- |
+| `findByUsername`, `findById`, `findByUsernames`, `findAll`, `existsByUsername` | Lookups |
+| `search(q, limit)` | Live search for the admin-management picker |
+| `countActiveByRole(role, excludeUsername = null)` | `null` omits the exclusion predicate |
+| `withLastSuperAdminGuard(excludeId, fn)` | `SELECT ... FOR UPDATE` on active SUPER_ADMINs; throws 409 `LAST_ACTIVE_SUPER_ADMIN` |
+| `findServerNotifyRecipients`, `getNamesByIds` | Notification recipients, display names |
+| `insertAdmin`, `setNotifyFlags`, `setEmail`, `updateCredentials`, `updateRole`, `setActive`, `deleteAdmin` | Writes (`_set` is the shared private updater) |
+
+## Deploy (`Backend/deploy/`)
+
+| Path | What |
+| --- | --- |
+| `winsw/catherine-backend-service.xml` | Service id `catherine-backend`, executable `%BASE%\catherine-backend.exe`, `stoptimeout` 1860 s, preshutdown enabled |
+| `winsw/install-service.ps1` / `uninstall-service.ps1` / `check-shutdown-readiness.ps1` | Install (default ExeName `catherine-backend.exe`), remove, verify |
+| `systemd/catherine-backend.service` | `User=catherine`, `ExecStart=/usr/bin/node server.js`, `TimeoutStopSec=1860` |
+| `DEPLOYMENT_RUNBOOK.md`, `DEPLOYMENT_CHECKLIST.md`, `RESTART_VERIFICATION.md` | Operator procedures |
+
+`SHUTDOWN_FORCED_EXIT_MS` (max 1834000) must stay below the service stop timeout.
+
+---
+
 ## Money — Representation, Schema, and Accounting Rules
 
 CATHERINE ships an **exact-decimal money capability**, not a money *feature*
-(no Wallet, no Transactions route, no Finance nav group). The rules below are
+(no balance ledger, no transactions route, no finance nav group). The rules below are
 **booking rules, not engineering preferences** — each has an audit consequence
 if broken. The worked reference lives at the `/about/money` page; this section is
 the enforced contract for backend code.
@@ -821,7 +1009,7 @@ the enforced contract for backend code.
 
 - `src/utils/integrity/signedFields.js` — one `makeSignedFields({ domain, fields,
   moneyFields })` factory produces **one** projection used by both signer and
-  verifier. MEAL's projection drifted into four copies; that drift made
+  verifier. A downstream app's projection once drifted into four copies; that drift made
   legitimately corrected rows read TAMPERED forever. There must be exactly one
   builder.
 - **Money fields are canonicalised** (`canonicalMoney` → `Money.toStorage()`,
@@ -980,6 +1168,8 @@ OPTISv2 backend at `D:\Web\OPTISv2\OPITS-BE` used as reference for advanced patt
 
 ## Test Directory Structure
 
+Baseline at the 2026-10-28 re-sync (user-reported, not re-run here): **77 test files / 1254 tests** green; lint clean; build OK. The tree below is the core layout — list the folder for the full set (it also has `test/unit/` for money/FX/idempotency, `test/encryption/`, `integration/{admin-management,audit-log,client,metrics,health}/`, `security/admin-management-auth.test.js` and `auth/change-password.test.js`).
+
 ```
 test/server/
 ├── setup.js                        # Global test setup: env loading, DB teardown helpers
@@ -1087,9 +1277,14 @@ npm run test:unit           # → vitest run test/server/unit
 npm run test:integration    # → vitest run test/server/integration
 npm run test:security       # → vitest run test/server/security
 npm run test:performance    # → vitest run test/server/performance
-npm run test:reliability    # → vitest run test/server/reliability
+npm run test:reliability    # → vitest run test/server/reliability (test:resilience is an alias)
 npm run test:chaos          # → vitest run test/server/chaos
+npm run test:purge          # → purge / restore / backup / adminRevoke suites by name filter
+npm run test:metrics        # → metrics store, route label and metrics integration suites
+npm run test:money          # → test/unit money, FX, signed-field and boot-guard suites
 ```
+
+`test:unit` runs both `test/server/unit` and `test/unit`.
 
 The `package.json` scripts:
 
@@ -1099,7 +1294,7 @@ The `package.json` scripts:
   "test:watch":       "vitest",
   "test:coverage":    "vitest run --coverage",
   "test:ui":          "vitest --ui",
-  "test:unit":        "vitest run test/server/unit",
+  "test:unit":        "vitest run test/server/unit test/unit",
   "test:integration": "vitest run test/server/integration",
   "test:security":    "vitest run test/server/security",
   "test:performance": "vitest run test/server/performance",
@@ -1473,21 +1668,36 @@ module.exports = request(app);
 ```
 
 ```js
-// test/helpers/auth.js
+// test/server/helpers/auth.js
 "use strict";
 
 const jwt = require("jsonwebtoken");
+const {
+    TOKEN_TYPES,
+    TOKEN_ISSUER,
+    TOKEN_AUDIENCES,
+} = require("../../../src/constants/authTokens");
+
+/** Claims AuthMiddleware requires on every access token (type/aud/iss). */
+const ACCESS_CLAIMS = Object.freeze({
+    type: TOKEN_TYPES.ACCESS,
+    aud: TOKEN_AUDIENCES.ACCESS,
+    iss: TOKEN_ISSUER,
+});
 
 function signToken(payload = {}, expiresIn = "1h") {
     return jwt.sign(
-        { sub: "test-user", userLevel: 1, ...payload },
+        { sub: "test-user", userLevel: 1, ...ACCESS_CLAIMS, ...payload },
         process.env.JWT_SECRET || "test-secret",
         { expiresIn },
     );
 }
 
-module.exports = { signToken };
+module.exports = { signToken, ACCESS_CLAIMS };
 ```
+
+A token **without** `ACCESS_CLAIMS` is classified `legacy` and rejected with 440, so
+every hand-rolled test token must spread them.
 
 ### Example — Health Route
 

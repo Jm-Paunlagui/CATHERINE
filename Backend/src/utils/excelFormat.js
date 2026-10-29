@@ -229,7 +229,7 @@ function addNormalizedRow(sheet, rowData) {
 }
 
 /**
- * Registry-driven Excel number format for a currency (plan §3.3). Pulls the
+ * Registry-driven Excel number format for a currency. Pulls the
  * display scale and symbol from `constants/currencies.js` so no export ever
  * hardcodes a peso/dollar format string. The symbol is presentation only — the
  * persisted value is a scale-4 number; this only decides how the cell RENDERS.
@@ -249,10 +249,10 @@ function moneyFmtFor(currencyCode) {
 }
 
 /**
- * The one-line basis stamp every money workbook carries in its header (plan
- * §3.3): which currency the figures are in, and — when values were converted —
- * the basis of that conversion. Converted values are NEVER persisted (§3.0
- * rule 4); an export that shows converted figures must therefore say so, and
+ * The one-line basis stamp every money workbook carries in its header:
+ * which currency the figures are in, and — when values were converted —
+ * the basis of that conversion. Converted values are NEVER persisted;
+ * an export that shows converted figures must therefore say so, and
  * name the as-of date the rates were taken from, so the numbers are
  * reproducible and auditable.
  *

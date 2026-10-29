@@ -116,14 +116,19 @@ describe("Rate Limiting", function () {
     });
 
     describe("integration — headers on real requests", function () {
-        it("RateLimit-Policy header is present on every response", async function () {
-            const res = await agent.get("/api/v1/health");
+        it("RateLimit-Policy header is present on rate-limited routes", async function () {
+            const res = await agent.get("/api/v1/csrf/token");
             expect(res.headers).toHaveProperty("ratelimit-policy");
         });
 
+        it("health probes bypass the limiter (no RateLimit-* headers)", async function () {
+            const res = await agent.get("/api/v1/health");
+            expect(res.headers).not.toHaveProperty("ratelimit-policy");
+        });
+
         it("RateLimit-Remaining decreases with each request", async function () {
-            const r1 = await agent.get("/api/v1/health");
-            const r2 = await agent.get("/api/v1/health");
+            const r1 = await agent.get("/api/v1/csrf/token");
+            const r2 = await agent.get("/api/v1/csrf/token");
             const rem1 = parseInt(r1.headers["ratelimit-remaining"], 10);
             const rem2 = parseInt(r2.headers["ratelimit-remaining"], 10);
             expect(rem2).toBeLessThanOrEqual(rem1);

@@ -96,7 +96,7 @@ describe("ErrorHandlerMiddleware — NJS + transient string classification", fun
         it("classifies an adapter-wrapped NJS message (DB_OP_FAILED prefix) without needing to unwrap originalError", function () {
             const err = Object.assign(
                 new Error(
-                    "DB op failed [userAccount]: NJS-040: connection request timeout",
+                    "DB op failed [appDb]: NJS-040: connection request timeout",
                 ),
                 { originalError: new Error("NJS-040: connection request timeout") },
             );
@@ -112,7 +112,7 @@ describe("ErrorHandlerMiddleware — NJS + transient string classification", fun
     describe("adapter-level transient string patterns", function () {
         it('"Timed out getting connection" → 504 DatabaseTimeoutError with a retryable hint', function () {
             const err = new Error(
-                'DB op failed [userAccount]: Timed out getting connection from "userAccount"',
+                'DB op failed [appDb]: Timed out getting connection from "appDb"',
             );
             const res = mockRes();
 

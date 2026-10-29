@@ -29,8 +29,8 @@ const ClientService = require("../../../../src/services/ClientService");
 
 const adminToken = () =>
     signToken({ userId: "ADM001", role: "ADMIN", userLevel: 2 });
-const approverToken = () =>
-    signToken({ userId: "APR001", role: "APPROVER", userLevel: 1 });
+const standardUserToken = () =>
+    signToken({ userId: "USR001", role: "USER", userLevel: 1 });
 const superToken = () =>
     signToken({ userId: "SA001", role: "SUPER_ADMIN", userLevel: 3 });
 
@@ -99,10 +99,10 @@ describe("POST /api/v1/client/errors", function () {
         expect(ClientService.logError).toHaveBeenCalledTimes(1);
     });
 
-    it("returns 200 for APPROVER role (no privilege escalation check — any role)", async function () {
+    it("returns 200 for USER role (no privilege escalation check — any role)", async function () {
         const res = await agent
             .post("/api/v1/client/errors")
-            .set("Authorization", `Bearer ${approverToken()}`)
+            .set("Authorization", `Bearer ${standardUserToken()}`)
             .set("x-csrf-token", csrfToken)
             .send(validPayload());
 

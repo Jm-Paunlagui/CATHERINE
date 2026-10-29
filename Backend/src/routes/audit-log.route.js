@@ -12,15 +12,17 @@
  * Store: `auditLog` (TTL 120s, maxKeys 200)
  *
  *   GET /stats
- *     key: auditLog:type=stats
+ *     key: auditLog:fromDate=<f|null>:toDate=<t|null>:type=stats
  *     Rationale: aggregate counts change on every new audit entry; 120s TTL
  *     prevents serving stale security telemetry while still absorbing repeated
- *     admin refreshes.
+ *     admin refreshes. Each date range gets its own slot.
  *
  *   GET /
- *     key: auditLog:page=<p|null>:pageSize=<s|null>:type=list
- *     Rationale: paginated list; page and pageSize encoded for isolation.
- *     Search/filter params (if added in future) must also be included here.
+ *     key: auditLog:endpoint=<e|null>:fromDate=<f|null>:method=<m|null>:
+ *          page=<p|null>:pageSize=<s|null>:search=<q|null>:
+ *          statusCategory=<c|null>:toDate=<t|null>:type=list
+ *     Rationale: every query dimension is encoded (CacheKeyBuilder sorts the
+ *     params alphabetically); a new query param MUST be added to the key.
  *
  *   GET /:requestId/logs
  *     key: auditLog:requestId=<id>:type=requestLogs
@@ -179,12 +181,16 @@ router.get(
 );
 
 /**
- * GET /api/v1/audit-logs?page=&pageSize=&fromDate=&toDate=&method=&statusCategory=&search=
+ * GET /api/v1/audit-logs?page=&pageSize=&fromDate=&toDate=&method=&statusCategory=&endpoint=&search=
  * Paginated audit log list.
  *
+ * `endpoint` is an EXACT canonical-route filter (index-backed); `search` is the
+ * substring box. They are independent and AND together.
+ *
  * Cache key encodes every query dimension so each unique filter/search/page
- * combination is stored independently. CacheKeyBuilder sorts params
- * alphabetically, so call-site order never matters.
+ * combination is stored independently — a new query param that is NOT added here
+ * would serve one filter's rows for another's request. CacheKeyBuilder sorts
+ * params alphabetically, so call-site order never matters.
  */
 router.get(
   "/",
@@ -194,6 +200,7 @@ router.get(
     auditStore,
     (req) =>
       CacheKeyBuilder.build("auditLog", {
+        endpoint:       req.query.endpoint       ?? null,
         fromDate:       req.query.fromDate       ?? null,
         method:         req.query.method         ?? null,
         page:           req.query.page           ?? null,

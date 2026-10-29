@@ -1,0 +1,6 @@
+# Linux service files always check out with LF, whatever core.autocrlf says on the Windows box.
+# systemd reads a CRLF unit's "TimeoutStopSec=1860\r" as invalid, and the shutdown failsafe
+# arithmetic test parses the unit with LF line breaks (2.1.6 re-release).
+deploy/systemd/** text eol=lf
+*.service text eol=lf
+*.sh text eol=lf

@@ -1,9 +1,9 @@
 "use strict";
 
 /**
- * FxRateService.test.js — the currency-conversion accounting rules (plan §5.2).
+ * FxRateService.test.js — the currency-conversion accounting rules.
  *
- * The load-bearing rule is §3.0 rule 4 / §3.7.10: a historical figure converts
+ * The load-bearing rule: a historical figure converts
  * with the rate that was EFFECTIVE ON ITS OWN DATE, so inserting a newer rate
  * never rewrites a past report. These tests drive the DEMO_MODE fixture path
  * (an in-memory, append-only rate table), which is exactly where the resolution
@@ -71,7 +71,7 @@ describe("FxRateService.rateAsOf — resolves the rate in force ON THE DATE", fu
         const june = new Date("2026-06-15T00:00:00Z");
         const before = await FxRateService.rateAsOf("USD", june);
 
-        // Append a brand-new, currently-effective rate (append-only, §3.7.9).
+        // Append a brand-new, currently-effective rate (append-only).
         await FxRateService.recordRate({
             currencyCode: "USD",
             rate: "60.00000000",
@@ -179,7 +179,7 @@ describe("FxRateService.recordRate — append-only, string rate only", function 
     });
 });
 
-describe("FxRateService — inert without a table when NOT in demo mode (§3.7.9)", function () {
+describe("FxRateService — inert without a table when NOT in demo mode", function () {
     beforeEach(function () {
         // Force the LIVE path with no table configured.
         if (ORIGINAL_DEMO === undefined) delete process.env.DEMO_MODE;

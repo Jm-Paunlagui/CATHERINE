@@ -16,11 +16,9 @@ process.env.LOG_EXCLUDE_HEALTH = "true";
 process.env.DB_TYPE = "oracle";
 process.env.DB_HOST = "127.0.0.1";
 process.env.DB_PORT = "1521";
-process.env.DB_SERVICE_NAME = "testdb";
-process.env.UA_DB_USERNAME = "test_ua";
-process.env.UA_DB_PASSWORD = "test_ua_pw";
-process.env.UI_DB_USERNAME = "test_ui";
-process.env.UI_DB_PASSWORD = "test_ui_pw";
+process.env.DB_APP_SERVICE_NAME = "testdb";
+process.env.APP_DB_USERNAME = "test_app";
+process.env.APP_DB_PASSWORD = "test_app_pw";
 // Set an effectively unlimited rate limit for tests — the full suite makes
 // 3 000+ HTTP requests from 127.0.0.1, exhausting any realistic per-IP cap.
 // Rate-limit behaviour is tested separately via RateLimiterMiddleware instances

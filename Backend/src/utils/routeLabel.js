@@ -12,7 +12,7 @@
  * HOW IT WORKS
  *   - In Express, `req.route.path` is only the path segment registered on the
  *     sub-router (e.g. "/save") — it EXCLUDES the mount prefix. The full templated
- *     path is `req.baseUrl + req.route.path` (e.g. "/api/v1/pay-period" + "/save").
+ *     path is `req.baseUrl + req.route.path` (e.g. "/api/v1/users" + "/save").
  *     Using `req.route.path` alone collapses every router's "/save" into one
  *     "POST /save" row — the bug this module fixes.
  *   - `req.route` / `req.baseUrl` are only populated AFTER the router has matched,
@@ -35,7 +35,7 @@
  *
  *   res.on("finish", () => {
  *     if (!shouldRecordRouteMetrics(req)) return;          // skip CORS preflights
- *     const route = buildRouteLabel(req);                  // "POST /api/v1/pay-period/save"
+ *     const route = buildRouteLabel(req);                  // "POST /api/v1/users/save"
  *     metricsStore.recordRequest(route, req.method, res.statusCode, durationMs);
  *   });
  */
@@ -178,7 +178,7 @@ function reconstructBaseUrl(req, routePath) {
  * @param {import('express').Request} req - The request.
  * @returns {string} Canonical label, e.g. "GET /api/v1/records/:gid/:cardNumber/history".
  * @example
- * buildRouteLabel(req); // → "POST /api/v1/pay-period/verify"
+ * buildRouteLabel(req); // → "POST /api/v1/users/verify"
  */
 function buildRouteLabel(req) {
   const matched = req.route?.path;
@@ -195,7 +195,7 @@ function buildRouteLabel(req) {
   let baseUrl = req.baseUrl || "";
   if (!baseUrl) baseUrl = reconstructBaseUrl(req, routePath);
 
-  // "/" on a mounted router would produce "/api/v1/pay-period/" — strip it so
+  // "/" on a mounted router would produce "/api/v1/users/" — strip it so
   // the label matches the mount path exactly. Keep "/" when mounted at app root.
   const fullPath = `${baseUrl}${routePath === "/" ? "" : routePath}`;
 

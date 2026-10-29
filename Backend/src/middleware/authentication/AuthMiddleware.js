@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 /**
  * @fileoverview Authentication & Authorization Middleware
@@ -17,6 +17,9 @@ const {
 const { logger } = require("../../utils/logger");
 const { authMessages } = require("../../constants/messages");
 const AuthService = require("../../services/auth.service");
+const { CryptoVault } = require("../../utils/encryption/CryptoVault");
+const { classifyAccessClaims } = require("../../utils/auth/tokenClaims");
+const AccessRevocationService = require("../../services/AccessRevocationService");
 
 class AuthMiddleware {
     /**
@@ -88,7 +91,7 @@ class AuthMiddleware {
      *
      * @param {import('express').Request} req
      * @param {object} outcome
-     * @param {string} outcome.result - verified | expired | not-before | missing | tampered | invalid
+     * @param {string} outcome.result - verified | expired | not-before | missing | tampered | invalid | legacy-token | wrong-type | revoked
      * @param {number} outcome.status - HTTP status this outcome maps to.
      * @param {object} [outcome.user]  - Decoded payload (success only).
      * @param {object} [outcome.err]   - jsonwebtoken error (failure only).
@@ -113,7 +116,6 @@ class AuthMiddleware {
             // what tell you whether a 440 was a genuine timeout or a clock skew.
             if (user.userId != null) parts.push(`user=${user.userId}`);
             if (user.role != null) parts.push(`role=${user.role}`);
-            if (user.gid != null) parts.push(`gid=${user.gid}`);
             if (user.iat != null)
                 parts.push(`iat=${new Date(user.iat * 1000).toISOString()}`);
             if (user.exp != null)
@@ -136,7 +138,6 @@ class AuthMiddleware {
         if (result === "verified") logger.info(message);
         else logger.warning(message);
     }
-
     /**
      * Middleware that authenticates JWT tokens from cookies or Authorization header.
      * Attaches decoded user payload to `req.user`.
@@ -163,6 +164,22 @@ class AuthMiddleware {
     }
 
     /**
+     * Same as authenticate, but ALSO admits a session that must change its
+     * password first (`requiresPasswordChange: true` — a temporary or legacy
+     * default password). Every other entry point refuses such a session with
+     * 403 PasswordChangeRequiredError, so the forced change is enforced by the server, not only the UI.
+     *
+     * Use ONLY on the routes a restricted session needs to finish the change:
+     * POST /auth/logout, GET /auth/me, PATCH /auth/change-password and
+     * POST /csrf/refresh (change-password is a CSRF-protected PATCH). The
+     * choice is made at route definition — never derived from the request
+     * path (CWE-807).
+     */
+    static authenticatePendingPasswordChange(req, res, next) {
+        AuthMiddleware._doAuthenticate(req, res, next, false, true);
+    }
+
+    /**
      * Shared authentication logic.
      *
      * Security: the token is read from `req.signedCookies` (HMAC-verified by
@@ -172,9 +189,11 @@ class AuthMiddleware {
      * (CWE-807 / CodeQL js/user-controlled-bypass).
      *
      * @param {boolean} isFileDownload - Server-controlled flag; never derived from user input.
+     * @param {boolean} [allowPendingPasswordChange=false] - Server-controlled;
+     *   true only via authenticatePendingPasswordChange.
      * @private
      */
-    static _doAuthenticate(req, res, next, isFileDownload) {
+    static _doAuthenticate(req, res, next, isFileDownload, allowPendingPasswordChange = false) {
         // Authorization header takes precedence (standard convention).
         // signedCookies are HMAC-verified by cookie-parser (server-controlled).
         // Both sources are validated by jwt.verify below.
@@ -257,7 +276,7 @@ class AuthMiddleware {
                         );
                         res.setHeader("Content-Disposition", "inline");
 
-                        logger.warning(`${title} - ${line1} ${line2}`);
+                        logger.warning(authMessages.AUTH_DOWNLOAD_REJECTED(title, `${line1} ${line2}`));
 
                         return res
                             .status(statusCode)
@@ -295,6 +314,35 @@ class AuthMiddleware {
                         }),
                     );
                 }
+                // Token-type gate. The signature is valid, but access and
+                // refresh tokens share JWT_SECRET/HS256, so only the claims say
+                // which kind this is. Runs BEFORE the password-change gate: a
+                // refresh token carries no requiresPasswordChange claim and
+                // would otherwise sail past it (CWE-287).
+                //   legacy     -> 440: minted by a legacy build; the UI does a
+                //                 clean re-login (downloads: "Session Expired").
+                //   wrong-type -> 401: a refresh (or foreign) token used as an
+                //                 access token (downloads: "Access Denied").
+                const claimClass = classifyAccessClaims(user);
+                if (claimClass !== "access") {
+                    return AuthMiddleware._rejectTokenClass(
+                        req,
+                        res,
+                        next,
+                        claimClass,
+                        isFileDownload,
+                    );
+                }
+
+                // Ended-session gate. A valid access token whose
+                // session family was ended (sign-out, password change/reset,
+                // admin re-add, refresh reuse) is refused at once instead of
+                // working until it expires (CWE-613). In-memory lookup, no DB.
+                // 440 so the UI ends the session cleanly, like a timeout.
+                if (AccessRevocationService.isRevoked(user.fid)) {
+                    return AuthMiddleware._rejectRevokedSession(req, res, next, user, isFileDownload);
+                }
+
                 // Success previously logged NOTHING, so a trace for an
                 // authenticated request had no evidence auth had happened at
                 // all — you could not tell "token verified" from "route is
@@ -305,6 +353,39 @@ class AuthMiddleware {
                     user,
                 });
 
+                // Forced password change, enforced server-side. The claim is
+                // inside the HS256-signed payload, so it cannot be stripped by
+                // the client; strict `=== true` so only a token this server
+                // issued as restricted is restricted.
+                if (user?.requiresPasswordChange === true && !allowPendingPasswordChange) {
+                    logger.warning(
+                        authMessages.PASSWORD_CHANGE_GATE_BLOCKED(
+                            user.userId,
+                            req.method,
+                            String(req.originalUrl ?? "").split("?")[0],
+                        ),
+                    );
+                    if (isFileDownload) {
+                        res.setHeader("Content-Type", "text/html; charset=utf-8");
+                        res.setHeader("Content-Disposition", "inline");
+                        return res
+                            .status(403)
+                            .send(
+                                AuthMiddleware._authHtmlError(
+                                    "Password Change Required",
+                                    "You signed in with a temporary password.",
+                                    "Set a new password, then try downloading the file again.",
+                                ),
+                            );
+                    }
+                    return next(
+                        new AppError(AUTH_ERRORS.PASSWORD_CHANGE_REQUIRED, 403, {
+                            type: "PasswordChangeRequiredError",
+                            hint: "Open Change Password and set a new password to continue.",
+                        }),
+                    );
+                }
+
                 req.user = user;
                 next();
             },
@@ -312,7 +393,100 @@ class AuthMiddleware {
     }
 
     /**
-     * Promise-based token verification.
+     * Refuses a signature-valid token whose claims are not those of an access
+     * token. See the call site in `_doAuthenticate` for the status mapping.
+     *
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
+     * @param {"legacy"|"wrong-type"} claimClass
+     * @param {boolean} isFileDownload - Server-controlled flag.
+     * @private
+     */
+    static _rejectTokenClass(req, res, next, claimClass, isFileDownload) {
+        const legacy = claimClass === "legacy";
+        const statusCode = legacy ? 440 : 401;
+        AuthMiddleware._traceAuth(req, {
+            result: legacy ? "legacy-token" : "wrong-type",
+            status: statusCode,
+        });
+
+        if (isFileDownload) {
+            const title = legacy ? "Session Expired" : "Access Denied";
+            const line1 = legacy
+                ? "Your session has expired."
+                : "Your authentication token is invalid or has expired.";
+            res.setHeader("Content-Type", "text/html; charset=utf-8");
+            res.setHeader("Content-Disposition", "inline");
+            logger.warning(authMessages.AUTH_DOWNLOAD_REJECTED(title, line1));
+            return res
+                .status(statusCode)
+                .send(
+                    AuthMiddleware._authHtmlError(
+                        title,
+                        line1,
+                        "Please log in again and try downloading the file.",
+                    ),
+                );
+        }
+
+        if (legacy) {
+            return next(
+                new AppError(AUTH_ERRORS.TOKEN_EXPIRED, 440, {
+                    type: "SessionTimeoutError",
+                    hint: "Your session has expired. Please sign in again.",
+                }),
+            );
+        }
+        return next(
+            new AppError(AUTH_ERRORS.TOKEN_TYPE_INVALID, 401, {
+                type: "AuthenticationError",
+                hint: "Present an access token.",
+            }),
+        );
+    }
+
+    /**
+     * Refuses an access token whose session was ended. 440 (JSON) or the HTML
+     * "Session Ended" page for downloads.
+     *
+     * @param {import('express').Request} req
+     * @param {import('express').Response} res
+     * @param {import('express').NextFunction} next
+     * @param {object} user - verified payload (only userId and an 8-char fid prefix are logged)
+     * @param {boolean} isFileDownload - Server-controlled flag.
+     * @private
+     */
+    static _rejectRevokedSession(req, res, next, user, isFileDownload) {
+        AuthMiddleware._traceAuth(req, { result: "revoked", status: 440 });
+        logger.warning(
+            authMessages.ACCESS_SESSION_REVOKED_REFUSED(user.userId, String(user.fid).slice(0, 8)),
+        );
+        if (isFileDownload) {
+            res.setHeader("Content-Type", "text/html; charset=utf-8");
+            res.setHeader("Content-Disposition", "inline");
+            return res
+                .status(440)
+                .send(
+                    AuthMiddleware._authHtmlError(
+                        "Session Ended",
+                        "This session was ended (signed out or password changed).",
+                        "Please log in again and try downloading the file.",
+                    ),
+                );
+        }
+        return next(
+            new AppError(AUTH_ERRORS.ACCESS_SESSION_REVOKED, 440, {
+                type: "SessionRevokedError",
+                hint: "Your session has ended. Please sign in again.",
+            }),
+        );
+    }
+
+    /**
+     * Promise-based token verification. Resolves ONLY for access tokens
+     * (signature valid AND access claims); a refresh token, a legacy token
+     * or any other kind is rejected 403.
      * @param {string} token
      * @returns {Promise<object>} decoded payload
      */
@@ -323,7 +497,11 @@ class AuthMiddleware {
                 process.env.JWT_SECRET,
                 { algorithms: ["HS256"] },
                 (err, payload) => {
-                    if (err)
+                    if (
+                        err ||
+                        classifyAccessClaims(payload) !== "access" ||
+                        AccessRevocationService.isRevoked(payload.fid)
+                    )
                         return reject(
                             new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, 403),
                         );
@@ -389,20 +567,17 @@ class AuthMiddleware {
     /**
      * Middleware factory — validates required fields in req.body or req.query.
      *
-     * Security (CWE-20 / H3 — operator injection):
-     * In addition to presence checks, all validated fields are coerced to strings.
-     * This prevents Mongo-style operator injection where an attacker sends
-     * `{"userId": {"$regex": ".*"}}` — the object would be passed verbatim to
-     * `parseFilter` and translated into `REGEXP_LIKE`. String coercion neutralises
-     * this by converting the object to "[object Object]" which fails authentication
-     * harmlessly.
-     *
      * @param {string[]} requiredFields
      * @param {object}   [options]
-     * @param {boolean}  [options.stringOnly=true] - Reject non-string/non-number values (objects, arrays)
+     * @param {boolean}  [options.stringOnly=true]  When true (default), objects and
+     *   arrays are rejected with a type error and all surviving values are coerced
+     *   to strings. When false, object/array values are passed through unchanged
+     *   (useful for structured payloads like permission-flags objects where the
+     *   service layer validates the shape). Primitive values are still coerced to
+     *   strings even when stringOnly is false.
      */
     static validateRequiredFields(requiredFields, options = {}) {
-        const stringOnly = options.stringOnly !== false; // default true
+        const stringOnly = options.stringOnly !== false;
 
         return (req, res, next) => {
             const source = req.method === "GET" ? req.query : req.body;
@@ -417,9 +592,7 @@ class AuthMiddleware {
                     continue;
                 }
 
-                // H3: reject objects/arrays — prevents operator injection via
-                // {"$regex":".*"}, {"$gt":""}, etc. Only strings and numbers are
-                // acceptable for identity/credential fields.
+                // H3: reject objects/arrays — prevents operator injection
                 if (stringOnly && typeof val === "object") {
                     typeErrors.push({
                         field: f,
@@ -428,9 +601,8 @@ class AuthMiddleware {
                     continue;
                 }
 
-                // Coerce surviving values to string in-place so downstream code
-                // never receives a non-primitive.
-                source[f] = String(val);
+                // Coerce primitives to strings; preserve objects when stringOnly is off
+                source[f] = typeof val === "object" ? val : String(val);
             }
 
             const allErrors = [...missing, ...typeErrors];
@@ -449,6 +621,55 @@ class AuthMiddleware {
                 );
             }
 
+            next();
+        };
+    }
+
+    /**
+     * Middleware factory — bounds password fields in req.body before they reach
+     * CryptoVault, whose hash/verify methods throw RangeError (over-length) or
+     * TypeError (non-string). Unchecked, those surfaced as 500s, and on login
+     * the 500-vs-401 split told a caller which ids are admins (CWE-204).
+     *
+     * Absent/empty fields are skipped — whether a field is required is
+     * `validateRequiredFields`' job. Run this after it.
+     *
+     * @param {object}   fields
+     * @param {string[]} [fields.verify=[]] - passwords checked against a stored hash
+     * @param {string[]} [fields.hash=[]]   - new passwords about to be hashed
+     */
+    static validatePasswordFields({ verify = [], hash = [] } = {}) {
+        const checks = [
+            ...verify.map((field) => [field, false]),
+            ...hash.map((field) => [field, true]),
+        ];
+
+        return (req, res, next) => {
+            const body = req.body ?? {};
+            const errors = [];
+
+            for (const [field, forHash] of checks) {
+                const value = body[field];
+                if (value === undefined || value === null || value === "") continue;
+
+                if (typeof value !== "string") {
+                    errors.push({ field, issue: "Must be a string." });
+                    continue;
+                }
+                const max = CryptoVault.maxPasswordBytes({ forHash });
+                if (Buffer.byteLength(value, "utf8") > max) {
+                    errors.push({ field, issue: `Too long: at most ${max} bytes.` });
+                }
+            }
+
+            if (errors.length > 0) {
+                return next(
+                    new AppError(VALIDATION_ERRORS.INVALID_INPUT, 400, {
+                        type: "ValidationError",
+                        details: errors,
+                    }),
+                );
+            }
             next();
         };
     }

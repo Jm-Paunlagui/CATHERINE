@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * moneyFetchTypeHandler.test.js — the driver-level read fence (plan §5.2, §3.0 rule 3b).
+ * moneyFetchTypeHandler.test.js — the driver-level read fence.
  *
  * node-oracledb returns a NUMBER as a JavaScript double by default, so a
  * NUMBER(19,4) money value or a NUMBER(19,8) rate is ALREADY ROUNDED before any

@@ -184,14 +184,14 @@ class OracleCollection {
      * Returns null if no match is found.
      *
      * @param {Object} filter - Filter to match (e.g. { id: 1 })
-     * @param {Object} [options] - Currently unused, reserved for future
+     * @param {Object} [_options] - Currently unused, reserved for future
      * @returns {Promise<Object|null>} The matching row or null
      *
      * @example
      *   const user = await users.findOne({ id: 42 });
      *   if (user) console.log(user.name);
      */
-    async findOne(filter, options = {}) {
+    async findOne(filter, _options = {}) {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
             const sql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
@@ -767,7 +767,7 @@ class OracleCollection {
      * @param {Array<Object>} documents - Array of documents to insert
      * @param {Object} [options]
      *   - returning: Array of column names to RETURN per inserted row
-     *     (e.g. ['WALLET_ID']). Defaults to ['ID'] for backward compatibility.
+     *     (e.g. ['ORDER_ID']). Defaults to ['ID'] for backward compatibility.
      *     Pass [] for tables without a returnable key column. RETURNING is
      *     intended for NUMBER key columns (IDENTITY / sequence values).
      *   - batchErrors: When true, row-level errors (e.g. ORA-00001) do NOT
@@ -793,10 +793,10 @@ class OracleCollection {
      *
      * @example
      *   // Custom key column + per-row error isolation
-     *   const r1 = await wallets.insertMany(rows, { returning: ["WALLET_ID"] });
-     *   console.log(r1.returning); // → [{ WALLET_ID: 7 }, { WALLET_ID: 8 }]
+     *   const r1 = await orders.insertMany(rows, { returning: ["ORDER_ID"] });
+     *   console.log(r1.returning); // → [{ ORDER_ID: 7 }, { ORDER_ID: 8 }]
      *
-     *   const r2 = await subsidies.insertMany(rows, {
+     *   const r2 = await auditRows.insertMany(rows, {
      *     returning: [],
      *     batchErrors: true,
      *   });
@@ -946,19 +946,19 @@ class OracleCollection {
      * @param {Array<Object>} rows - Key + value columns per row (same shape)
      * @param {Object} options
      *   - keys: Array of property names that identify the target row
-     *     (e.g. ['WALLET_ID'] or ['GID', 'CARD_NUMBER'])
+     *     (e.g. ['ORDER_ID'] or ['TENANT_ID', 'ITEM_CODE'])
      * @returns {Promise<{ acknowledged: boolean, modifiedCount: number }>}
      *
      * @example
-     *   // Stamp freshly signed ROW_HASH values onto 1,000 wallets at once
-     *   await wallets.bulkUpdateByKeys(
+     *   // Stamp freshly signed ROW_HASH values onto 1,000 orders at once
+     *   await orders.bulkUpdateByKeys(
      *     [
-     *       { WALLET_ID: 7, ROW_HASH: "ab…" },
-     *       { WALLET_ID: 8, ROW_HASH: "cd…" },
+     *       { ORDER_ID: 7, ROW_HASH: "ab…" },
+     *       { ORDER_ID: 8, ROW_HASH: "cd…" },
      *     ],
-     *     { keys: ["WALLET_ID"] },
+     *     { keys: ["ORDER_ID"] },
      *   );
-     *   // → UPDATE "TAP_WALLET" SET "ROW_HASH" = :s0 WHERE "WALLET_ID" = :k0
+     *   // → UPDATE "T_ORDERS" SET "ROW_HASH" = :s0 WHERE "ORDER_ID" = :k0
      */
     async bulkUpdateByKeys(rows, options = {}) {
         if (!Array.isArray(rows) || rows.length === 0) {
@@ -1175,7 +1175,7 @@ class OracleCollection {
      *
      * @param {Object} filter - Which rows to update (e.g. { status: "trial" })
      * @param {Object} update - Update operators (e.g. { $set: { status: "expired" } })
-     * @param {Object} [options] - returning (array of column names)
+     * @param {Object} [_options] - returning (array of column names)
      * @returns {Promise<{ acknowledged, matchedCount, modifiedCount }>}
      *
      * @example
@@ -1186,7 +1186,7 @@ class OracleCollection {
      *   );
      *   console.log(`Updated ${result.modifiedCount} users`);
      */
-    async updateMany(filter, update, options = {}) {
+    async updateMany(filter, update, _options = {}) {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const { setClause, binds: updateBinds } = parseUpdate(update);
@@ -1224,7 +1224,7 @@ class OracleCollection {
      *
      * @param {Object} filter - Which row to replace (e.g. { id: 1 })
      * @param {Object} replacement - Complete new document (ID column is excluded)
-     * @param {Object} [options] - Reserved for future use
+     * @param {Object} [_options] - Reserved for future use
      * @returns {Promise<{ acknowledged, matchedCount, modifiedCount }>}
      *
      * @example
@@ -1233,7 +1233,7 @@ class OracleCollection {
      *     { name: "New Name", email: "new@test.com", status: "active" }
      *   );
      */
-    async replaceOne(filter, replacement, options = {}) {
+    async replaceOne(filter, replacement, _options = {}) {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const cols = Object.keys(replacement).filter((c) => c !== "ID");
@@ -1641,7 +1641,7 @@ class OracleCollection {
                         { autoCommit: !this._conn },
                     );
                     dropped.push(row.INDEX_NAME);
-                } catch (err) {
+                } catch (_err) {
                     // Skip errors (e.g. system-generated indexes)
                 }
             }
@@ -1701,7 +1701,7 @@ class OracleCollection {
                         {},
                         { autoCommit: !this._conn },
                     );
-                } catch (err) {
+                } catch (_err) {
                     // Skip errors
                 }
             }

@@ -1,4 +1,4 @@
-﻿const { logger } = require("./logger");
+const { logger } = require("./logger");
 
 class ConsoleManager {
     constructor() {
@@ -125,6 +125,9 @@ class ConsoleManager {
      */
     clearConsole() {
         try {
+            // No TTY (e.g. WinSW redirecting stdout to a file): escape bytes would only pollute the log.
+            if (!process.stdout.isTTY) return;
+
             // Clear console for different platforms
             if (process.platform === "win32") {
                 // Windows

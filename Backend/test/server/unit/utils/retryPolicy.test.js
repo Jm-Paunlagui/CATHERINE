@@ -80,7 +80,7 @@ describe("RetryPolicy", function () {
             expect(
                 RetryPolicy.classifyDbError(
                     new Error(
-                        'Timed out getting connection from "userAccount"',
+                        'Timed out getting connection from "appDb"',
                     ),
                 ),
             ).toBe("TRANSIENT_DB");
@@ -90,7 +90,7 @@ describe("RetryPolicy", function () {
             expect(
                 RetryPolicy.classifyDbError(
                     new Error(
-                        'DB op failed [userAccount]: Timed out getting connection from "userAccount"',
+                        'DB op failed [appDb]: Timed out getting connection from "appDb"',
                     ),
                 ),
             ).toBe("TRANSIENT_DB");
@@ -120,7 +120,7 @@ describe("RetryPolicy", function () {
         it("unwraps err.originalError to find a transient ORA code (adapter-wrapped errors)", function () {
             const wrapped = Object.assign(
                 new Error(
-                    "DB op failed [userAccount]: ORA-03113: end-of-file on communication channel",
+                    "DB op failed [appDb]: ORA-03113: end-of-file on communication channel",
                 ),
                 { originalError: oraError(3113) },
             );
@@ -638,7 +638,7 @@ describe("RetryPolicy", function () {
 
         it("every logger.log call made during execute() carries the ALS requestId, including across the backoff sleep", async function () {
             const observedRequestIds = [];
-            vi.spyOn(logger, "log").mockImplementation(async (level, message, meta) => {
+            vi.spyOn(logger, "log").mockImplementation(async (_level, _message, _meta) => {
                 // Read the ALS store synchronously, exactly like logger.log()
                 // itself does internally — proves the context is still active
                 // at the moment each call happens, even after an `await`
@@ -673,7 +673,7 @@ describe("RetryPolicy", function () {
 
         it("logger.log observes no requestId when called outside any requestContext.run()", async function () {
             const observedRequestIds = [];
-            vi.spyOn(logger, "log").mockImplementation(async (level, message, meta) => {
+            vi.spyOn(logger, "log").mockImplementation(async (_level, _message, _meta) => {
                 observedRequestIds.push(requestContext.getStore()?.requestId ?? null);
             });
 

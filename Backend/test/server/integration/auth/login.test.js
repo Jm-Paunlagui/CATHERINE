@@ -16,9 +16,7 @@ const app = require("../../../../src/app");
 const AuthService = require("../../../../src/services/auth.service");
 const { AppError, AUTH_ERRORS } = require("../../../../src/constants/errors");
 const { HTTP_STATUS } = require("../../../../src/constants");
-const {
-    authRateLimiter,
-} = require("../../../../src/middleware/security/RateLimiterMiddleware");
+const { authRateLimiters: authRateLimiter } = require("../../../../src/middleware/security/authRateLimiters");
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
 

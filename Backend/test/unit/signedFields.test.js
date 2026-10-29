@@ -3,7 +3,7 @@
 /**
  * Tests for the integrity projection factory (src/utils/integrity/signedFields.js).
  *
- * The CENTRAL guarantee (plan §3.4): signer and verifier build byte-identical
+ * The CENTRAL guarantee: signer and verifier build byte-identical
  * payloads because they share ONE projection, and money spellings collapse to a
  * single canonical form so a value signed from a string verifies against the
  * same value fetched as an Oracle number. Both are the classes of failure that

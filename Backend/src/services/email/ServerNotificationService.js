@@ -34,7 +34,7 @@
  * `metricsStore.recordNotificationDelivery()` so the alert tab always
  * reflects delivery health (R7 — SMTP is itself a monitored dependency).
  * Failures log at `warning` (never above) with meta `{ _noNotify: true }` —
- * the mandatory loop guard (R1a/R1b, server-email-notifications-plan.md):
+ * the mandatory loop guard:
  * an email-path failure must never be able to trigger another email.
  *
  * EXAMPLE
@@ -62,9 +62,11 @@ const path = require("path");
 const os = require("os");
 
 const { logger } = require("../../utils/logger");
+const { dbTimezoneOffsetMinutes } = require("../../utils/dbTimezone");
 const { notificationMessages } = require("../../constants/messages");
 const { snowflake } = require("../../utils/snowflake");
 const { metricsStore } = require("../../middleware/metrics");
+const { maskEmail } = require("../../utils/logRedaction");
 const SharedTransporter = require("./SharedTransporter");
 const RecipientResolver = require("./RecipientResolver");
 
@@ -84,6 +86,16 @@ const CHANNELS = Object.freeze([
 const RECENT_SENDS_MAX = 100;
 
 /**
+ * Footer sentence of the system template (`{{detailsNote}}`). The default holds for
+ * every digest that writes SERVER_ALERT_LOG rows; a mail with no row (a NOTICE or a
+ * shutdown lifecycle email) must not point at the alert tab.
+ */
+const DETAILS_NOTE = Object.freeze({
+    ALERT_TAB: "Full details are in the server logs and the Logging & Observability alert tab.",
+    LOGS_ONLY: "Full details are in the server logs.",
+});
+
+/**
  * HTML-escapes a string to prevent HTML/email injection (CWE-79). Mirrors
  * `ResetRequestEmailService#_escapeHtml` — every dynamic value substituted
  * into a server-notification template MUST pass through this first.
@@ -99,27 +111,6 @@ function escapeHtml(value) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#x27;");
-}
-
-/**
- * Masks an email address for safe display (CWE-200 / CWE-312) — keeps the
- * first character of the local part and the full domain, replaces the rest
- * of the local part with asterisks. Pure function (no state), so it lives
- * at module scope rather than as a class method.
- *
- * @param {string} email
- * @returns {string} e.g. "j***@gmail.com"
- *
- * @example
- * maskEmail("johnmoisespaunlagui113@gmail.com"); // "j**********************@gmail.com"
- */
-function maskEmail(email) {
-    const str = String(email ?? "");
-    const at = str.indexOf("@");
-    if (at <= 0) return "***";
-    const local = str.slice(0, at);
-    const domain = str.slice(at);
-    return `${local[0]}${"*".repeat(Math.max(1, local.length - 1))}${domain}`;
 }
 
 class ServerNotificationService {
@@ -170,8 +161,8 @@ class ServerNotificationService {
 
     /**
      * Resolves the recipient list for a given notification channel:
-     * `env floor ∪ DB opt-ins`, deduplicated (Phase 2 — Access Control
-     * recipients, server-email-notifications-plan.md).
+     * `env floor ∪ DB opt-ins`, deduplicated (Access Control
+     * recipients).
      *
      * - Env floor: the parsed, deduplicated `SERVER_NOTIFY_TO` list — the
      *   ops floor/fallback, always included regardless of Access Control state.
@@ -239,13 +230,14 @@ class ServerNotificationService {
      *
      * @param {string} channel - One of `CHANNELS`
      * @param {object} payload
-     * @param {string} payload.severity        - "WARNING" | "CRITICAL" | "RESOLVED"
+     * @param {string} payload.severity        - "NOTICE" | "WARNING" | "CRITICAL" | "RESOLVED"
      * @param {string} payload.headline         - Short human-readable headline
      * @param {string} payload.summary          - 1-2 sentence summary (also used as the preheader)
      * @param {Array<object>} [payload.rows]     - Row data; shape depends on channel —
      *   critical: `{ level, module, message, requestId, time }`;
      *   dependencies/red/system: `{ rule, scope, description, severity }`
      * @param {string}  [payload.throttleNote]   - Cooldown/suppression sentence, or ""
+     * @param {string}  [payload.detailsNote]    - Footer sentence (system template); defaults to `DETAILS_NOTE.ALERT_TAB`
      * @param {object}  [payload.kv]             - Channel-specific KV placeholder values
      * @param {string}  [payload.notificationId] - Pre-built digest id; generated when omitted
      * @param {string}  [payload.firedAt]        - Pre-formatted local timestamp; computed when omitted
@@ -258,6 +250,7 @@ class ServerNotificationService {
             summary,
             rows = [],
             throttleNote = "",
+            detailsNote = DETAILS_NOTE.ALERT_TAB,
             kv = {},
             notificationId,
             firedAt,
@@ -305,6 +298,7 @@ class ServerNotificationService {
             hostname: os.hostname(),
             pid: String(process.pid),
             throttleNote,
+            detailsNote,
             ...kv,
         };
 
@@ -381,7 +375,7 @@ class ServerNotificationService {
      * @returns {string} e.g. "Jul 20, 2026, 10:30 AM UTC+08:00"
      */
     _formatLocalTime() {
-        const offsetMin = Number(process.env.DB_TIMEZONE_OFFSET_MINUTES ?? 480);
+        const offsetMin = dbTimezoneOffsetMinutes();
         const localMs = Date.now() + offsetMin * 60_000;
         const shifted = new Date(localMs);
         const sign = offsetMin >= 0 ? "+" : "-";
@@ -418,8 +412,8 @@ class ServerNotificationService {
         }
 
         return [
-            { filename: "AUMOVIO_Logo_orange_black_RGB.png", path: logoPathLight, cid: "meal-logo-light" },
-            { filename: "AUMOVIO_Logo_orange_white_RGB.png", path: logoPathDark, cid: "meal-logo-dark" },
+            { filename: "AUMOVIO_Logo_orange_black_RGB.png", path: logoPathLight, cid: "app-logo-light" },
+            { filename: "AUMOVIO_Logo_orange_white_RGB.png", path: logoPathDark, cid: "app-logo-dark" },
         ];
     }
 
@@ -570,4 +564,5 @@ const instance = new ServerNotificationService();
 module.exports = instance;
 module.exports.ServerNotificationService = ServerNotificationService;
 module.exports.CHANNELS = CHANNELS;
+module.exports.DETAILS_NOTE = DETAILS_NOTE;
 module.exports.maskEmail = maskEmail;

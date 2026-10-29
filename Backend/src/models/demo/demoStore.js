@@ -151,7 +151,7 @@ function auditInsert(record) {
 }
 
 // ── FX rates (append-only, effective-dated) ───────────────────────────────────
-// Mirrors the T_FX_RATE_DEV reference shape (plan §3.7.9). Rates are stored as
+// Mirrors the T_FX_RATE_DEV reference shape. Rates are stored as
 // fixed-scale STRINGS (never JS numbers) — a rate is NUMBER(19,8), higher scale
 // than a posted amount, and must never round-trip through a double. Rows are
 // append-only: a correction closes the current window and opens a new one, so
@@ -174,7 +174,7 @@ function fxRates() {
 }
 
 /**
- * Append a new rate row (never mutate an existing one — §3.7.9).
+ * Append a new rate row (never mutate an existing one).
  * @param {object} record
  * @returns {{rowsAffected: number, insertedId: number}}
  */
@@ -185,10 +185,10 @@ function fxRateInsert(record) {
 }
 
 // ── Money ledger (single-entry demo — DIRECTION + AMOUNT) ─────────────────────
-// A single-entry ledger (§3.7.5): it yields a correct running balance but cannot
+// A single-entry ledger: it yields a correct running balance but cannot
 // produce a trial balance or detect a missing counter-posting. That limitation is
 // documented, not hidden. AMOUNT is a fixed-scale STRING (Money.toStorage(), scale
-// 4). Rows are APPEND-ONLY (§3.7.4): a mistake is corrected with a reversing entry
+// 4). Rows are APPEND-ONLY: a mistake is corrected with a reversing entry
 // (equal-and-opposite), never an UPDATE — see reverseEntry below.
 const _ledger = [
     { ID: 1, DIRECTION: "CREDIT", AMOUNT: "10000.0000", MEMO: "Opening balance", REVERSES_ID: null, CREATED_AT: new Date("2026-07-01T09:00:00Z") },
@@ -203,7 +203,7 @@ function ledger() {
 }
 
 /**
- * Append a ledger posting. Never updates an existing row (§3.7.4).
+ * Append a ledger posting. Never updates an existing row.
  * @param {{DIRECTION: string, AMOUNT: string, MEMO?: string, REVERSES_ID?: number}} record
  * @returns {{rowsAffected: number, insertedId: number}}
  */
@@ -221,8 +221,8 @@ function ledgerInsert(record) {
 }
 
 /**
- * Post the equal-and-opposite of an existing row (the reversing-entry pattern,
- * §3.7.4) — the only correct way to "undo" a posting in an append-only ledger.
+ * Post the equal-and-opposite of an existing row (the reversing-entry pattern)
+ * — the only correct way to "undo" a posting in an append-only ledger.
  * Both the original and the reversal stay visible.
  * @param {number} originalId
  * @param {string} [memo]
@@ -326,9 +326,51 @@ function match(row, filter) {
     return true;
 }
 
+// ── Platform tables (empty at boot, mutated in place by the models) ──────────
+
+/** T_AUTH_REFRESH_TOKEN_DEV rows (refresh-token ledger). */
+const _refreshTokens = [];
+/** T_SERVER_BACKUP_TOKEN_CONSUMED_DEV — JTI → row. */
+const _backupTokensConsumed = new Map();
+/** T_SERVER_BACKUP_DELETE_VOTE_DEV rows. */
+const _backupVotes = [];
+let _backupVoteSeq = 0;
+/** T_SYSTEM_CONFIG_DEV — CONFIG_KEY → row. */
+const _systemConfig = new Map();
+
+/** @returns {object[]} live refresh-token ledger array */
+function refreshTokens() {
+    return _refreshTokens;
+}
+
+/** @returns {Map<string, object>} live consumed-backup-token map */
+function backupTokensConsumed() {
+    return _backupTokensConsumed;
+}
+
+/** @returns {object[]} live backup-delete vote array */
+function backupVotes() {
+    return _backupVotes;
+}
+
+/** @returns {number} next VOTE_ID (identity emulation) */
+function nextBackupVoteId() {
+    return ++_backupVoteSeq;
+}
+
+/** @returns {Map<string, object>} live system-config map */
+function systemConfig() {
+    return _systemConfig;
+}
+
 module.exports = {
     DEMO_PASSWORD,
     accounts,
+    refreshTokens,
+    backupTokensConsumed,
+    backupVotes,
+    nextBackupVoteId,
+    systemConfig,
     auditLogs,
     auditInsert,
     fxRates,

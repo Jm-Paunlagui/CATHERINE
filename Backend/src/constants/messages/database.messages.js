@@ -17,6 +17,8 @@ const databaseMessages = {
     `Transaction committed on "${name}" in ${ms}ms.`,
   TRANSACTION_ROLLED_BACK: (name, reason) =>
     `Transaction rolled back on "${name}": ${reason}`,
+  DB_TZ_OFFSET_INVALID: (raw, fallback) =>
+    `DB_TIMEZONE_OFFSET_MINUTES="${raw}" is not a whole number of minutes between -720 and 840 — using ${fallback}.`,
 };
 
 module.exports = { databaseMessages };

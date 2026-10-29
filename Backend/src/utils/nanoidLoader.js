@@ -1,4 +1,4 @@
-﻿const { logger } = require("./logger");
+const { logger } = require("./logger");
 
 // Check if we're running as a compiled executable
 const isCompiled = typeof process.pkg !== "undefined";
@@ -19,18 +19,14 @@ try {
         error: nanoidError.message,
       });
 
-      // Fallback to uuid v4
-      try {
-        const { v4: uuidv4 } = require("uuid");
-        nanoid = (size = 21) => {
-          // Generate uuid and remove dashes, then trim to requested size
-          const uuid = uuidv4().replace(/-/g, "");
-          return uuid.substring(0, size);
-        };
-        logger.warning("Successfully loaded uuid as nanoid fallback");
-      } catch (uuidError) {
-        throw uuidError; // Let it fall through to main catch
-      }
+      // Fallback to uuid v4 — a require failure falls through to the main catch
+      const { v4: uuidv4 } = require("uuid");
+      nanoid = (size = 21) => {
+        // Generate uuid and remove dashes, then trim to requested size
+        const uuid = uuidv4().replace(/-/g, "");
+        return uuid.substring(0, size);
+      };
+      logger.warning("Successfully loaded uuid as nanoid fallback");
     }
   } else {
     // Normal Node.js environment

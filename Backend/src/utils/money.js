@@ -2,8 +2,7 @@
 
 /**
  * @fileoverview `Money` — an EXACT decimal value type over a `BigInt`
- * coefficient with an explicit scale. NOTHING here ever rounds. (Plan §3.0
- * rule 3, §3.1.)
+ * coefficient with an explicit scale. NOTHING here ever rounds.
  *
  * ============================================================================
  * WHY A VALUE TYPE, NOT `Number` OR `roundTo`
@@ -18,42 +17,42 @@
  *   Money.from("1500.5000")  ->  { c: 15005000n, s: 4 }   (== 1500.5)
  *
  * ============================================================================
- * THE TWO OPERATIONS THAT CANNOT BE EXACT — MADE EXPLICIT (§3.0 rule 3)
+ * THE TWO OPERATIONS THAT CANNOT BE EXACT — MADE EXPLICIT
  * ============================================================================
  *   divide(d, { precision })  — `100 ÷ 3` has no finite decimal. `precision`
  *       is REQUIRED (no default), and the call returns `{ quotient, remainder }`
  *       so the residue is handed back, never silently dropped. A `divide` result
  *       is DERIVED (a unit cost / rate / display figure); nothing is posted, so
- *       nothing is owed (§3.7.1).
+ *       nothing is owed.
  *   allocate(weights)         — splitting a POSTED amount N ways. Uses
  *       largest-remainder so the parts sum to the original EXACTLY. This is
- *       exact partition, not rounding: no value is created or destroyed
- *       (§3.7.1). Tie-break is DETERMINISTIC on ascending index of the stable
- *       business key the caller supplies (§3.7.2) — never on floating remainder
+ *       exact partition, not rounding: no value is created or destroyed.
+ *       Tie-break is DETERMINISTIC on ascending index of the stable
+ *       business key the caller supplies — never on floating remainder
  *       comparison order — so re-running an allocation is byte-identical.
  *
  * ============================================================================
- * WIRE + STORAGE FORMAT IS A STRING, NEVER A JSON NUMBER (§3.0 rule 3)
+ * WIRE + STORAGE FORMAT IS A STRING, NEVER A JSON NUMBER
  * ============================================================================
  * `toStorage()` emits a fixed-scale-4 string (`"1500.0000"`). Serialising money
  * as a JSON number re-rounds it through a double at the transport layer no
  * matter how exact the arithmetic was. Bind it to Oracle as this string through
- * `parseUpdate` (§3.2).
+ * `parseUpdate`.
  *
  * ============================================================================
- * INPUT DISCIPLINE (§3.1)
+ * INPUT DISCIPLINE
  * ============================================================================
  * `Money.from` accepts a STRING (canonical) or a `BigInt`. It REJECTS a
  * JavaScript `Number` outright — by the time money is a double it is already
  * rounded, and accepting one would launder that loss. It rejects NaN, Infinity,
  * and more than four decimal places for a POSTED amount (`toStorage` throws
- * rather than truncate). A rate is a different value type (`NUMBER(19,8)`,
- * §3.7.3) and must NOT be passed through `toStorage`.
+ * rather than truncate). A rate is a different value type (`NUMBER(19,8)`)
+ * and must NOT be passed through `toStorage`.
  */
 
 const { AppError } = require("../constants/errors");
 
-/** Fixed STORAGE scale for a posted money amount — `NUMBER(19,4)` (§3.0 rule 2). */
+/** Fixed STORAGE scale for a posted money amount — `NUMBER(19,4)`. */
 const STORAGE_SCALE = 4;
 
 /** 15 integer digits + 4 decimals = `NUMBER(19,4)`. Coefficient bound at scale 4. */
@@ -108,12 +107,12 @@ class Money {
      * Accepts:
      *   - a **string** in the canonical form `"-123.4500"` (optional sign,
      *     integer part, optional fractional part). This is how an Oracle
-     *     `NUMBER` fetched as a string (§3.0 rule 3b) arrives.
+     *     `NUMBER` fetched as a string arrives.
      *   - a **BigInt**, interpreted as a whole number of units (scale 0).
      *
      * REJECTS a JavaScript `Number` (already rounded to a double), NaN, and
      * Infinity. Does NOT itself cap decimals — a rate may carry more than four
-     * (§3.7.3); `toStorage()` is where the scale-4 ceiling is enforced.
+     * decimals; `toStorage()` is where the scale-4 ceiling is enforced.
      *
      * @param {string|bigint} value
      * @returns {Money}
@@ -195,7 +194,7 @@ class Money {
      * Exact product. Result scale is `scale(a) + scale(b)` — the mathematics is
      * retained in full (a 4-decimal amount times an 8-decimal rate yields 12
      * decimals). It is never written to a money column at that scale; it is a
-     * read-time value (§3.0 rule 4).
+     * read-time value.
      * @param {Money} other
      * @returns {Money}
      */
@@ -244,7 +243,7 @@ class Money {
     /**
      * DERIVED division to an explicit working precision. There is NO default
      * precision and NO silent truncation — the residue is returned so the caller
-     * must account for it (§3.0 rule 3, §3.7.1).
+     * must account for it.
      *
      * The quotient is computed at exactly `precision` decimal places (truncated
      * toward zero, not rounded); the remainder is the exact leftover expressed
@@ -291,13 +290,13 @@ class Money {
 
     /**
      * EXACT partition of a POSTED amount into parts proportional to `weights`,
-     * by largest remainder, so the parts sum to `this` EXACTLY (§3.0 rule 3,
-     * §3.7.1). Distribution is done at the STORAGE scale (4) so the smallest
+     * by largest remainder, so the parts sum to `this` EXACTLY.
+     * Distribution is done at the STORAGE scale (4) so the smallest
      * indivisible unit is `0.0001` — the finest a posted amount can carry — and
      * every returned part is a scale-4 `Money`. (A posted amount is what is
      * split; a posted amount is stored at scale 4.)
      *
-     * Tie-break is DETERMINISTIC (§3.7.2): when two parts tie on remainder, the
+     * Tie-break is DETERMINISTIC: when two parts tie on remainder, the
      * extra smallest-unit goes to the one whose weight appears EARLIER in the
      * array. Callers MUST order `weights` by a stable business key (ID
      * ascending) so re-running the allocation is byte-identical — never rely on
@@ -400,7 +399,7 @@ class Money {
         const leftover = baseC - distributed; // number of 0.0001 units still to place
 
         // Order indices by remainder DESC, then by original index ASC (stable
-        // deterministic tie-break — §3.7.2).
+        // deterministic tie-break).
         const order = shares
             .map((sh, i) => ({ i, remainder: sh.remainder }))
             .sort((a, b) => {
@@ -426,7 +425,7 @@ class Money {
 
     /**
      * Throws `AppError` when `parts` do not sum to `total` EXACTLY. The
-     * invariant a split must uphold (§3.1); with no step rounding it is a real
+     * invariant a split must uphold; with no step rounding it is a real
      * guarantee, not a rounding-order convention.
      *
      * @param {Money[]} parts
@@ -448,10 +447,10 @@ class Money {
     // ── Serialisation ────────────────────────────────────────────────────────
 
     /**
-     * The fixed-scale-4 string written to Oracle and used in row hashing (§3.4).
+     * The fixed-scale-4 string written to Oracle and used in row hashing.
      * THROWS rather than truncate if the value carries more than four decimal
      * places — this is how a conversion product (higher scale) is stopped from
-     * reaching a `NUMBER(19,4)` money column (§3.0 rule 4, §3.1). A rate lives in
+     * reaching a `NUMBER(19,4)` money column. A rate lives in
      * `NUMBER(19,8)` and is a different value type — do NOT call this on one.
      *
      * @returns {string} e.g. `"1500.0000"`, `"-0.5000"`.
@@ -497,7 +496,7 @@ class Money {
     }
 
     /**
-     * Presentation string at a currency's display scale (§3.1). This is the ONE
+     * Presentation string at a currency's display scale. This is the ONE
      * place a value is shortened for a human — it NEVER feeds arithmetic or
      * storage. Uses `Intl.NumberFormat`; grouping and separators come from the
      * currency's locale. Rounding here is presentation only; the exact value is
@@ -543,7 +542,7 @@ class Money {
         return this.toStorage();
     }
 
-    /** JSON serialises as the scale-4 STRING, never a number (§3.0 rule 3). */
+    /** JSON serialises as the scale-4 STRING, never a number. */
     toJSON() {
         return this.toStorage();
     }

@@ -9,6 +9,7 @@
 const { logger } = require("../../utils/logger");
 const { snowflake } = require("../../utils/snowflake");
 const { requestContext } = require("../../utils/requestContext");
+const { RequestWatchdog } = require("../../utils/progress/RequestWatchdog");
 
 const SENSITIVE_PATTERNS = [
     "password",
@@ -45,6 +46,70 @@ function isSensitiveKey(key) {
 
 function redactValue(key, value) {
     return isSensitiveKey(key) ? "[REDACTED]" : value;
+}
+
+/**
+ * Deep-redact sensitive keys anywhere inside a request body value (F5).
+ *
+ * `isSensitiveKey` was applied to TOP-LEVEL `req.body` keys only, and any
+ * object-valued key was then written out with a bare `JSON.stringify` — so
+ * `{ credentials: { password } }` printed the password in full, untruncated,
+ * because `credentials` is not itself a sensitive key name. No route in this
+ * codebase currently posts a nested body object (verified by grep across
+ * `src/controllers/` — the only `req.body.x.y` hits are `.slice()` on a
+ * top-level string), so this is a guard against the NEXT such route rather
+ * than a live leak. It is here precisely because the failure is silent: the
+ * leak appears the moment someone adds a nested payload, with nothing to warn
+ * them.
+ *
+ * Truncation is still deliberately NOT applied — cutting a body defeats
+ * traceability, which is the whole point of this log line. Only sensitive
+ * VALUES are replaced; structure and every other value stay intact.
+ *
+ * ⚠ CIRCULAR BODIES MUST KEEP DEGRADING TO THE `[Complex Object]`
+ * PLACEHOLDER. Before this function existed, a cycle made `JSON.stringify`
+ * throw and the caller's catch printed that placeholder. A depth cap alone
+ * silently changes that: the walk terminates, `JSON.stringify` then SUCCEEDS,
+ * and a self-referential body prints eight levels of duplicated structure
+ * instead of one short marker. So a cycle is detected and rethrown as the same
+ * TypeError `JSON.stringify` would have raised, which lands in the existing
+ * catch and reproduces the old output exactly. Pinned by TRC-26.
+ *
+ * @param {*} value - Any body value.
+ * @param {number} [depth=0] - Current recursion depth.
+ * @param {WeakSet<object>} [seen] - Ancestors on the current path.
+ * @returns {*} A redacted copy. Primitives are returned unchanged.
+ * @throws {TypeError} On a circular reference.
+ */
+function deepRedact(value, depth = 0, seen = new WeakSet()) {
+    // Depth cap: a malicious or accidental deeply-nested payload must not turn
+    // a log line into a stack overflow. 8 is far past any real request shape.
+    if (depth > 8) return "[MAX_DEPTH]";
+    if (value === null || typeof value !== "object") return value;
+
+    if (seen.has(value)) {
+        throw new TypeError("Converting circular structure to JSON");
+    }
+    seen.add(value);
+
+    try {
+        if (Array.isArray(value)) {
+            return value.map((v) => deepRedact(v, depth + 1, seen));
+        }
+
+        const out = {};
+        for (const [k, v] of Object.entries(value)) {
+            out[k] = isSensitiveKey(k)
+                ? "[REDACTED]"
+                : deepRedact(v, depth + 1, seen);
+        }
+        return out;
+    } finally {
+        // Drop on the way back up: `seen` tracks ANCESTORS, not every node
+        // visited. The same object appearing twice as siblings is repetition,
+        // not a cycle, and must not be rejected as one.
+        seen.delete(value);
+    }
 }
 
 class TraceabilityMiddleware {
@@ -124,6 +189,7 @@ class TraceabilityMiddleware {
         // Format: "0078812966528-0448-0000" (Timestamp-MachineID-Sequence).
         req.id = snowflake.nextId();
         res.setHeader("X-Request-ID", req.id);
+
         const startTime = Date.now();
         const url = req.originalUrl || req.url;
         const isOptions = req.method === "OPTIONS";
@@ -132,7 +198,7 @@ class TraceabilityMiddleware {
         );
 
         // Inject requestId into every JSON response body so the frontend can
-        // display it in error toasts and the ErrorBoundary. This covers both
+        // display it in error alerts and the ErrorBoundary. This covers both
         // sendSuccess() and ErrorHandlerMiddleware responses without requiring
         // any controller changes. The header X-Request-ID is still set above
         // for non-JSON consumers (curl, load balancers, log correlation).
@@ -146,7 +212,11 @@ class TraceabilityMiddleware {
 
         // Run the entire request inside an AsyncLocalStorage context so every
         // downstream logger.info() call automatically includes [req_id].
-        requestContext.run({ requestId: req.id }, () => {
+        // `progress` is the request's ProgressScope (created by
+        // RequestWatchdog.attach on the server's "request" event, which runs
+        // BEFORE this middleware). Undefined under supertest / no server.js, so
+        // every touch() downstream is a no-op there.
+        requestContext.run({ requestId: req.id, progress: RequestWatchdog.scopeOf(req) }, () => {
             // The "[Incoming Request]" line is NOT emitted here — `logIncoming`
             // does it after the body parsers, so the body is populated. See that
             // method's docblock for why.
@@ -185,13 +255,16 @@ class TraceabilityMiddleware {
      * BEFORE requestContext.run() — so the ALS store is lost and every
      * logger.* call downstream of an upload middleware drops the [Request ID]
      * from its [FUNC] line. Mount this immediately AFTER any multer middleware
-     * to restore the context for the controller/service chain.
+     * to restore the context for the controller/service/email chain.
      *
      * @example router.post("/upload", auth, upload.any(), TraceabilityMiddleware.restoreContext, Controller.method)
      */
     static restoreContext(req, res, next) {
         if (requestContext.getStore()?.requestId === req.id) return next();
-        requestContext.run({ requestId: req.id }, next);
+        requestContext.run(
+            { requestId: req.id, progress: RequestWatchdog.scopeOf(req) },
+            next,
+        );
     }
 
     static createRequestMessage(req) {
@@ -224,7 +297,9 @@ class TraceabilityMiddleware {
                                 // Full value — never truncated. Cutting the body
                                 // defeats traceability; disk space is cheaper
                                 // than an unreproducible incident.
-                                return `${key}=${JSON.stringify(value)}`;
+                                // Nested sensitive keys ARE redacted (F5) —
+                                // see deepRedact.
+                                return `${key}=${JSON.stringify(deepRedact(value))}`;
                             } catch {
                                 return `${key}=[Complex Object]`;
                             }
@@ -250,4 +325,5 @@ module.exports = {
     // request logging, instead of re-implementing key-substring matching.
     isSensitiveKey,
     redactValue,
+    deepRedact,
 };

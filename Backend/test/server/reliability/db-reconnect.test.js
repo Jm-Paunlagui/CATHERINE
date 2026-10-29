@@ -99,7 +99,7 @@ describe("DB Reconnection & Resilience", function () {
         createPoolStub.mockResolvedValue(pool);
 
         try {
-            await config.withConnection(currentPoolName, async (conn) => {
+            await config.withConnection(currentPoolName, async (_conn) => {
                 throw new Error("ORA-00942: table does not exist");
             });
         } catch {

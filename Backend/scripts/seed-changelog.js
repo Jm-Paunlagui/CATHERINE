@@ -756,13 +756,13 @@ const SEED_ENTRIES = [
     "displayDate": "2026-06-30",
     "version": "1.0.0-dev.21",
     "title": "Template Decoupling and Cron-Leader Election",
-    "message": "Removed all hard-coded HRIS and Meal project references so the template ships as a clean, product-agnostic starting point. Added automatic cron-leader election for clustered deployments.",
+    "message": "Removed source-project references so the template ships as a clean, product-agnostic starting point. Added automatic cron-leader election for clustered deployments.",
     "whatChanged": [
       {
-        "text": "Removed legacy HRIS user-account model and Meal admin model"
+        "text": "Removed source-project user-account and admin models"
       },
       {
-        "text": "Renamed admin table references from T_EMP_MGMT_ADMIN to T_ADMINS_DEV"
+        "text": "Pointed all admin table references at the template table T_ADMINS_DEV"
       },
       {
         "text": "Renamed binary, IPC channels, and storage keys to generic names"

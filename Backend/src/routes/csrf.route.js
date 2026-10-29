@@ -24,10 +24,14 @@ router.get("/token", defaultCsrf.tokenHandler);
  * req.user is populated before the refresh handler executes. This ensures
  * the handler logs and audits the real user identity rather than
  * "anonymous@unknown", and limits token rotation to authenticated sessions.
+ *
+ * authenticatePendingPasswordChange, not authenticate: a session restricted to
+ * setting a new password must still be able to rotate its CSRF token, because
+ * PATCH /auth/change-password is CSRF-protected.
  */
 router.post(
   "/refresh",
-  AuthMiddleware.authenticate,
+  AuthMiddleware.authenticatePendingPasswordChange,
   defaultCsrf.refreshHandler,
 );
 
