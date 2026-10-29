@@ -32,7 +32,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-02T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0002-0000-0000-000000000002",
@@ -66,7 +66,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-06T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0003-0000-0000-000000000003",
@@ -100,7 +100,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-11T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0004-0000-0000-000000000004",
@@ -134,7 +134,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-16T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0005-0000-0000-000000000005",
@@ -165,7 +165,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-20T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0006-0000-0000-000000000006",
@@ -205,7 +205,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-27T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0007-0000-0000-000000000007",
@@ -236,7 +236,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-02T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0008-0000-0000-000000000008",
@@ -264,7 +264,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-08T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0009-0000-0000-000000000009",
@@ -289,7 +289,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-14T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0010-0000-0000-000000000010",
@@ -320,7 +320,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-20T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0011-0000-0000-000000000011",
@@ -345,7 +345,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-24T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0012-0000-0000-000000000012",
@@ -373,7 +373,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-28T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ca7e1100-0013-0000-0000-000000000013",
@@ -401,7 +401,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-05-04T08:00:00.000Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "3d64de09-948a-433a-8101-554250fcbea9",
@@ -441,7 +441,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-05T07:16:54.728Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "46d3d198-a38f-4717-ba4e-64374dca4053",
@@ -478,7 +478,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-05T08:55:44.509Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "9625a063-623e-4a7a-a5e1-7a4de817f3d7",
@@ -521,7 +521,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-08T04:01:36.924Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "3e6d718e-9a6c-40b5-a580-b94252d9c2a8",
@@ -565,7 +565,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-15T04:02:11.804Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "f82900ba-61c6-49a6-ae0b-e99ff74c3176",
@@ -614,7 +614,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-18T09:21:17.836Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "a8e93459-baa8-4d51-8296-96a4e7122763",
@@ -662,7 +662,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-19T09:14:49.047Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "3cf91049-f9de-4cf2-987d-4e55550ef850",
@@ -703,20 +703,20 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-20T10:23:56.750Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "c51b96a4-bd48-4b6f-8762-a8c4147b3563",
     "displayDate": "2026-06-30",
     "version": "1.0.0-dev.21",
     "title": "Template Decoupling and Cron-Leader Election",
-    "message": "Removed all hard-coded HRIS and Meal project references so the template ships as a clean, product-agnostic starting point. Added automatic cron-leader election for clustered deployments.",
+    "message": "Removed source-project references so the template ships as a clean, product-agnostic starting point. Added automatic cron-leader election for clustered deployments.",
     "whatChanged": [
       {
-        "text": "Removed legacy HRIS user-account model and Meal admin model"
+        "text": "Removed source-project user-account and admin models"
       },
       {
-        "text": "Renamed admin table references from T_EMP_MGMT_ADMIN to T_ADMINS_DEV"
+        "text": "Pointed all admin table references at the template table T_ADMINS_DEV"
       },
       {
         "text": "Renamed binary, IPC channels, and storage keys to generic names"
@@ -745,7 +745,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-30T08:30:59.784Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "cb17bfdf-2555-4f92-8cef-c93798b6c6e3",
@@ -778,7 +778,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-30T09:10:48.868Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "770b5810-989b-42c1-a240-a6e07911098f",
@@ -825,7 +825,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T00:20:30.228Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "ef5f5c55-3815-4b76-8110-927d280ef4c4",
@@ -854,7 +854,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T01:33:03.288Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "5490f376-b2a4-4ed6-bbd4-90359a29d30f",
@@ -894,7 +894,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T01:52:29.498Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "afff8915-9c09-4597-b459-5e57a39b71c5",
@@ -937,7 +937,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T04:10:52.569Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "22bca4f4-849a-4582-9dc6-13660c086aff",
@@ -998,7 +998,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-07-01T05:36:08.305Z",
-    "updatedAt": "2026-07-01T05:43:32.965Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "32f88a03-37e7-4a47-b3e2-d828d807e1b8",
@@ -1023,7 +1023,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T06:22:18.655Z",
-    "updatedAt": "2026-07-01T06:22:18.655Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "bc62a856-1b1b-41e8-8b6f-8a26db59daed",
@@ -1048,7 +1048,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T06:31:40.529Z",
-    "updatedAt": "2026-07-01T06:31:40.529Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "5a4a17ae-8a53-4f0a-91f8-8cd104dc2e59",
@@ -1076,10 +1076,10 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T07:28:46.715Z",
-    "updatedAt": "2026-07-01T07:28:46.715Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "84bb8943-0166-4a84-a0b7-44f0449a8ddd",
+    "id": "8e124c42-a212-4afe-b027-134d824b8d76",
     "displayDate": "2026-07-01",
     "version": "1.0.0-dev.31",
     "title": "Changelog Store Works in Compiled Builds",
@@ -1097,11 +1097,11 @@
       "John Moises Paunlagui"
     ],
     "coAuthors": [],
-    "createdAt": "2026-07-01T07:39:06.434Z",
-    "updatedAt": "2026-07-01T07:39:06.434Z"
+    "createdAt": "2026-07-14T09:35:45.800Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "a5604898-74a1-4767-af80-ac6451e29f10",
+    "id": "53684450-611d-42f2-b0bf-ee358c0a76b8",
     "displayDate": "2026-07-14",
     "version": "1.0.0-dev.32",
     "title": "Reliability Layer & Audit Log Fallback",
@@ -1140,11 +1140,11 @@
       "Claude Fable",
       "Claude Sonnet"
     ],
-    "createdAt": "2026-07-14T02:34:11.711Z",
-    "updatedAt": "2026-07-14T02:34:11.711Z"
+    "createdAt": "2026-07-14T09:36:28.634Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "c19eed09-6f17-4da0-8c50-e3edec218157",
+    "id": "9ae4c0ec-258c-4c8c-a496-d96980ea8617",
     "displayDate": "2026-07-14",
     "version": "1.0.0-dev.33",
     "title": "Docs & Home Pages Adapt to All Palettes",
@@ -1174,11 +1174,11 @@
       "Claude Fable",
       "Claude Sonnet"
     ],
-    "createdAt": "2026-07-14T04:33:23.251Z",
-    "updatedAt": "2026-07-14T04:33:23.251Z"
+    "createdAt": "2026-07-14T09:37:04.442Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "d3a8c50e-41f0-457b-86bd-142923799714",
+    "id": "5b80ffa9-f723-4cc1-94d1-e1df565649b3",
     "displayDate": "2026-07-14",
     "version": "1.0.0-dev.34",
     "title": "Windows Service Auto-Start for the Backend",
@@ -1204,11 +1204,11 @@
       "John Moises Paunlagui"
     ],
     "coAuthors": [],
-    "createdAt": "2026-07-14T06:48:02.820Z",
-    "updatedAt": "2026-07-14T06:48:02.820Z"
+    "createdAt": "2026-07-14T09:37:49.485Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "ca2cc9d6-fd95-4f96-ad1d-b401bd521c12",
+    "id": "61b7b2e2-ed63-4eae-86d4-723d94321099",
     "displayDate": "2026-07-14",
     "version": "1.0.0-dev.35",
     "title": "Server Deployment Compatibility Fix",
@@ -1239,11 +1239,11 @@
       "John Moises Paunlagui"
     ],
     "coAuthors": [],
-    "createdAt": "2026-07-14T09:32:35.440Z",
-    "updatedAt": "2026-07-14T09:32:35.440Z"
+    "createdAt": "2026-07-14T09:38:21.343Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "3a77b872-878d-4e09-8a6f-2ad040c2831e",
+    "id": "ae440085-707d-4ea6-9918-2bbdccf5c7d5",
     "displayDate": "2026-07-15",
     "version": "1.0.0-dev.36",
     "title": "Navigation Crash Recovery",
@@ -1270,11 +1270,11 @@
       "Claude Fable",
       "Claude Sonnet"
     ],
-    "createdAt": "2026-07-15T01:49:56.274Z",
-    "updatedAt": "2026-07-15T01:49:56.274Z"
+    "createdAt": "2026-07-15T01:45:25.388Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "252b492f-8046-4959-b4f6-1ab78b83b8e8",
+    "id": "2303681b-92db-402c-9cb7-37d050002545",
     "displayDate": "2026-07-15",
     "version": "1.0.0-dev.37",
     "title": "Copyable Request ID for Support Tracing",
@@ -1298,11 +1298,11 @@
       "John Moises Paunlagui"
     ],
     "coAuthors": [],
-    "createdAt": "2026-07-15T10:02:46.589Z",
-    "updatedAt": "2026-07-15T10:02:46.589Z"
+    "createdAt": "2026-07-15T10:01:03.447Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "7426b845-e1ca-4df6-a40a-eba0e96f2b6d",
+    "id": "f656fb19-d34e-4ccd-84c8-7eecfe311c29",
     "displayDate": "2026-07-16",
     "version": "1.0.0-dev.38",
     "title": "SMTP Custom CA Certificate Support",
@@ -1326,11 +1326,11 @@
       "John Moises Paunlagui"
     ],
     "coAuthors": [],
-    "createdAt": "2026-07-16T06:57:59.063Z",
-    "updatedAt": "2026-07-16T06:57:59.063Z"
+    "createdAt": "2026-07-16T06:54:09.602Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "2a4a1077-1061-415b-96b1-ad568a16963a",
+    "id": "0c9db1aa-1f83-4d4e-950b-346e008756b3",
     "displayDate": "2026-07-16",
     "version": "1.0.0-dev.39",
     "title": "Structured Error Alert Layout",
@@ -1360,11 +1360,11 @@
       "John Moises Paunlagui"
     ],
     "coAuthors": [],
-    "createdAt": "2026-07-16T06:58:41.316Z",
-    "updatedAt": "2026-07-16T06:58:41.316Z"
+    "createdAt": "2026-07-16T06:54:37.380Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
-    "id": "dc189cbd-37cb-484e-8841-e1aeff73fcc3",
+    "id": "f91fd1bc-6be5-4511-94cd-44075cb96d2d",
     "displayDate": "2026-07-16",
     "version": "1.0.0-dev.40",
     "title": "File-Based Audit Log Query Support",
@@ -1398,8 +1398,8 @@
       "John Moises Paunlagui"
     ],
     "coAuthors": [],
-    "createdAt": "2026-07-16T06:59:14.946Z",
-    "updatedAt": "2026-07-16T06:59:14.946Z"
+    "createdAt": "2026-07-16T06:56:01.561Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "4a2a4664-a680-4981-bacd-c7f724ad4173",
@@ -1433,7 +1433,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.930Z",
-    "updatedAt": "2026-09-03T09:03:40.930Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "90a881c2-4ec9-4b57-bd60-3f6eaac41ecb",
@@ -1495,7 +1495,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.945Z",
-    "updatedAt": "2026-09-03T09:03:40.945Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "d59ceb67-43b8-424d-b88e-51d158de0d01",
@@ -1550,7 +1550,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.951Z",
-    "updatedAt": "2026-09-03T09:03:40.951Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "520a7e81-d530-4fe3-b596-4c633b8382d6",
@@ -1595,7 +1595,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.960Z",
-    "updatedAt": "2026-09-03T09:03:40.960Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "294cbd53-6cc3-4a29-93d8-7e41204ed1dd",
@@ -1636,7 +1636,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.966Z",
-    "updatedAt": "2026-09-03T09:03:40.966Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   },
   {
     "id": "e8ef6610-c60f-481b-a1b0-c2071d7dbd49",
@@ -1690,6 +1690,66 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-04T16:19:53.630Z",
-    "updatedAt": "2026-09-04T16:19:53.630Z"
+    "updatedAt": "2026-10-29T04:39:22.300Z"
+  },
+  {
+    "id": "003b6a10-301d-4cdf-84c0-bb36f0d745e8",
+    "displayDate": "2026-10-29",
+    "version": "1.0.0-dev.47",
+    "title": "Hardened Platform Re-sync and Template Clean-up",
+    "message": "Brings the hardened backend runtime, security and admin tooling back into the template, removes every source-project reference, and rewrites the developer documentation against the actual code.",
+    "whatChanged": [
+      {
+        "text": "Re-synced the hardened platform runtime",
+        "items": [
+          "Cluster supervisor, graceful shutdown and server run marker",
+          "Live health stream, readiness probes and server alert e-mails",
+          "Backup, purge and restore with backup tokens and delete votes"
+        ]
+      },
+      {
+        "text": "Strengthened authentication",
+        "items": [
+          "Access tokens carry type, audience and issuer claims",
+          "Refresh-token rotation with reuse detection and revocation",
+          "A missing refresh cookie now reports REFRESH_TOKEN_MISSING",
+          "CHANGELOG_ENCRYPTION_KEY must be 64 hex characters at boot"
+        ]
+      },
+      {
+        "text": "Made admin management template-neutral",
+        "items": [
+          "Roles are SUPER_ADMIN, ADMIN and USER only",
+          "API fields renamed from empId/empRole to username/role",
+          "Unblock-IP validates the address before acting"
+        ]
+      },
+      {
+        "text": "Removed source-project code, wording and dead paths",
+        "items": [
+          "Domain features, tables, roles and version history stripped",
+          "Duplicate metrics page and calls to missing routes removed",
+          "Both .env.example files audited against the code; default port 2108"
+        ]
+      },
+      {
+        "text": "Rewrote all 13 developer guides from the current source"
+      },
+      {
+        "text": "Fixed the advancedChunks build warning and aligned licences to Apache-2.0",
+        "items": [
+          "1,269 backend tests and 555 frontend tests passing"
+        ]
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "GitHub Copilot"
+    ],
+    "createdAt": "2026-10-29T04:31:43.742Z",
+    "updatedAt": "2026-10-29T04:39:22.300Z"
   }
 ]

@@ -1,6 +1,6 @@
 {
     "name": "catherine-backend",
-    "version": "1.0.0-dev.46",
+    "version": "1.0.0-dev.47",
     "description": "CATHERINE Template — Production-grade Express 5 + OracleDB backend with JWT auth, RBAC, audit logging, exact-decimal money, and observability.",
     "homepage": "https://github.com/Jm-Paunlagui/NodeExpress-Template#readme",
     "bugs": {
@@ -10,36 +10,51 @@
         "type": "git",
         "url": "git+https://github.com/Jm-Paunlagui/NodeExpress-Template.git"
     },
-    "license": "ISC",
+    "keywords": [
+        "express",
+        "oracle",
+        "oracledb",
+        "template",
+        "jwt",
+        "rbac",
+        "audit-log",
+        "backend"
+    ],
+    "license": "Apache-2.0",
     "author": "Jm-Paunlagui",
     "type": "commonjs",
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
         "db:seed:template": "node scripts/seed-template.js",
         "changelog:dump": "node scripts/dump-changelog.js",
         "changelog:seed": "node scripts/seed-changelog.js",
-        "build": "pkg . --out-path dist --targets node18-win-x64 --no-bytecode --public --public-packages=* && node scripts/postbuild-copy-natives.js",
-        "build:debug": "pkg . --out-path dist --targets node18-win-x64 --no-bytecode --public --public-packages=* --debug && node scripts/postbuild-copy-natives.js",
+        "build": "node scripts/build-devdocs-freshness.js && pkg . --out-path dist --targets node24-win-x64 --no-bytecode --public --public-packages=* && node scripts/postbuild-copy-natives.js",
+        "build:debug": "node scripts/build-devdocs-freshness.js && pkg . --out-path dist --targets node24-win-x64 --no-bytecode --public --public-packages=* --debug && node scripts/postbuild-copy-natives.js",
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
         "test:ui": "vitest --ui",
-        "test:unit": "vitest run test/server/unit",
+        "test:unit": "vitest run test/server/unit test/unit",
         "test:integration": "vitest run test/server/integration",
         "test:security": "vitest run test/server/security",
         "test:performance": "vitest run test/server/performance",
         "test:reliability": "vitest run test/server/reliability",
-        "test:chaos": "vitest run test/server/chaos",
+        "test:resilience": "vitest run test/server/reliability",
+        "test:chaos": "vitest run chaos",
+        "test:purge": "vitest run purge dataPurge restore backup adminRevoke",
+        "test:metrics": "vitest run test/server/unit/middleware/metricsStore.test.js test/server/unit/middleware/metricsStore.memory.test.js test/server/unit/middleware/metricsRouteLabel.test.js test/server/integration/metrics.test.js test/server/integration/metrics/metrics.test.js",
         "test:money": "vitest run test/unit/money.test.js test/unit/moneyFetchTypeHandler.test.js test/unit/signedFields.test.js test/unit/constants/currencies.test.js test/unit/FxRateService.test.js test/unit/bootGuardMoney.test.js test/unit/convertTypesFence.test.js"
     },
     "dependencies": {
-        "archiver": "^8.0.0",
+        "archiver": "^6.0.2",
         "argon2": "^0.44.0",
         "axios": "^1.15.3",
         "bcryptjs": "^3.0.3",
         "blob-stream": "^0.1.3",
-        "body-parser": "^2.2.2",
+        "body-parser": "2.4.0",
         "compression": "^1.8.1",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.6",
@@ -51,11 +66,12 @@
         "express-validator": "^7.3.2",
         "helmet": "^8.1.0",
         "jsonwebtoken": "^9.0.3",
-        "multer": "^2.1.1",
+        "jszip": "^3.10.1",
+        "multer": "2.5.0",
         "nanoid": "^5.1.7",
         "node-cache": "^5.1.2",
         "node-cron": "^4.2.1",
-        "nodemailer": "^9.0.1",
+        "nodemailer": "10.2.1",
         "oracledb": "^6.10.0",
         "pdfkit": "^0.18.0",
         "uuid": "^11.1.1"
@@ -83,24 +99,26 @@
             "node_modules/fontkit/src/**/*",
             "node_modules/oracledb/package.json",
             "node_modules/oracledb/lib/**/*",
+            "node_modules/oracledb/build/Release/*.node",
             "node_modules/nanoid/index.js",
             "node_modules/nanoid/non-secure/index.js",
-            "node_modules/nanoid/package.json",
-            "node_modules/qrcode/lib/**/*",
-            "node_modules/qrcode/package.json",
-            "node_modules/dijkstrajs/**/*",
-            "node_modules/pngjs/**/*"
+            "node_modules/nanoid/package.json"
         ],
         "targets": [
-            "node18-win-x64"
+            "node24-win-x64"
         ],
         "outputPath": "dist"
     },
     "devDependencies": {
-        "@vitest/coverage-v8": "^4.1.9",
-        "@yao-pkg/pkg": "5.16.1",
+        "@eslint/js": "^9.39.5",
+        "@vitest/coverage-istanbul": "^4.1.12",
+        "@vitest/coverage-v8": "^4.1.12",
+        "@vitest/ui": "^4.1.12",
+        "@yao-pkg/pkg": "6.24.0",
+        "eslint": "^9.39.5",
+        "globals": "^17.12.0",
         "supertest": "^7.2.2",
-        "vitest": "^4.1.9"
+        "vitest": "^4.1.12"
     },
     "overrides": {
         "uuid": "^11.1.1"
