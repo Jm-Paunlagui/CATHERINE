@@ -92,7 +92,7 @@ describe("AuthRefreshTokenModel — DEMO_MODE", function () {
         expect(demo.refreshTokens()).toHaveLength(1);
     });
 
-    it("insert rejects a duplicate JTI_HASH like UQ_TART_JTI_HASH", async function () {
+    it("insert rejects a duplicate JTI_HASH like UQ_TARTD_JTI_HASH", async function () {
         await AuthRefreshTokenModel.insert(rec(1));
         await expect(AuthRefreshTokenModel.insert(rec(1))).rejects.toThrow(/ORA-00001/);
     });

@@ -38,6 +38,13 @@
 --
 -- Idempotent    : the DROP guards below let you re-run this script safely.
 --                 They IGNORE ORA-00942 (table does not exist) only.
+--
+-- Shared schema : Oracle constraint and index names are unique per SCHEMA, not
+--                 per table. Every name below carries a template-only prefix
+--                 (e.g. *_TARTD_*, *_SBDVD_*) so it cannot collide with another
+--                 application's tables in the same schema. Keep that rule for
+--                 new tables: a collision raises ORA-02264 / ORA-00955 and the
+--                 CREATE silently drops out of a script run (F5).
 --------------------------------------------------------------------------------
 
 SET DEFINE OFF;
@@ -308,14 +315,14 @@ CREATE TABLE T_AUTH_REFRESH_TOKEN_DEV (
   REVOKED_AT     TIMESTAMP,
   REVOKE_REASON  VARCHAR2(16),
   CONSTRAINT PK_T_AUTH_REFRESH_TOKEN_DEV PRIMARY KEY (ID),
-  CONSTRAINT UQ_TART_JTI_HASH     UNIQUE (JTI_HASH),
-  CONSTRAINT CHK_TART_HASH_LEN    CHECK (LENGTH(JTI_HASH) = 64),
-  CONSTRAINT CHK_TART_ROLE_SOURCE CHECK (ROLE_SOURCE IN ('admin', 'user')),
-  CONSTRAINT CHK_TART_EXPIRY      CHECK (EXPIRES_AT > ISSUED_AT),
-  CONSTRAINT CHK_TART_USED_PAIR   CHECK (
+  CONSTRAINT UQ_TARTD_JTI_HASH     UNIQUE (JTI_HASH),
+  CONSTRAINT CHK_TARTD_HASH_LEN    CHECK (LENGTH(JTI_HASH) = 64),
+  CONSTRAINT CHK_TARTD_ROLE_SOURCE CHECK (ROLE_SOURCE IN ('admin', 'user')),
+  CONSTRAINT CHK_TARTD_EXPIRY      CHECK (EXPIRES_AT > ISSUED_AT),
+  CONSTRAINT CHK_TARTD_USED_PAIR   CHECK (
        (USED_AT IS NULL     AND REPLACED_BY IS NULL)
     OR (USED_AT IS NOT NULL AND REPLACED_BY IS NOT NULL)),
-  CONSTRAINT CHK_TART_REVOKE_PAIR CHECK (
+  CONSTRAINT CHK_TARTD_REVOKE_PAIR CHECK (
        (REVOKED_AT IS NULL     AND REVOKE_REASON IS NULL)
     OR (REVOKED_AT IS NOT NULL AND REVOKE_REASON IN
           ('LOGOUT', 'PASSWORD_CHANGE', 'PASSWORD_RESET', 'ADMIN_READD', 'REUSE')))
@@ -326,9 +333,9 @@ COMMENT ON COLUMN T_AUTH_REFRESH_TOKEN_DEV.USER_ID     IS 'canonicalUserKey(USER
 COMMENT ON COLUMN T_AUTH_REFRESH_TOKEN_DEV.ROLE_SOURCE IS 'Issuing account table: admin | user.';
 
 -- FAMILY_ID: revokeFamily(); USER_ID: revokeUser(); EXPIRES_AT: purgeExpired().
-CREATE INDEX IDX_TART_FAMILY  ON T_AUTH_REFRESH_TOKEN_DEV (FAMILY_ID);
-CREATE INDEX IDX_TART_USER    ON T_AUTH_REFRESH_TOKEN_DEV (USER_ID);
-CREATE INDEX IDX_TART_EXPIRES ON T_AUTH_REFRESH_TOKEN_DEV (EXPIRES_AT);
+CREATE INDEX IDX_TARTD_FAMILY  ON T_AUTH_REFRESH_TOKEN_DEV (FAMILY_ID);
+CREATE INDEX IDX_TARTD_USER    ON T_AUTH_REFRESH_TOKEN_DEV (USER_ID);
+CREATE INDEX IDX_TARTD_EXPIRES ON T_AUTH_REFRESH_TOKEN_DEV (EXPIRES_AT);
 
 --------------------------------------------------------------------------------
 -- 7. T_SERVER_BACKUP_TOKEN_CONSUMED_DEV — single-use backup-token ledger.
@@ -347,7 +354,7 @@ CREATE TABLE T_SERVER_BACKUP_TOKEN_CONSUMED_DEV (
 
 COMMENT ON TABLE T_SERVER_BACKUP_TOKEN_CONSUMED_DEV IS 'Template: spent backup-token nonces (replay protection).';
 
-CREATE INDEX IDX_SBTC_EXPIRES_AT ON T_SERVER_BACKUP_TOKEN_CONSUMED_DEV (EXPIRES_AT);
+CREATE INDEX IDX_SBTCD_EXPIRES_AT ON T_SERVER_BACKUP_TOKEN_CONSUMED_DEV (EXPIRES_AT);
 
 --------------------------------------------------------------------------------
 -- 8. T_SERVER_BACKUP_DELETE_VOTE_DEV — majority vote gating archive deletion.
@@ -364,11 +371,11 @@ CREATE TABLE T_SERVER_BACKUP_DELETE_VOTE_DEV (
   VOTED_BY      NUMBER         NOT NULL,   -- T_ADMINS_DEV.ID of the voter
   VOTED_AT      TIMESTAMP      DEFAULT SYSTIMESTAMP NOT NULL,
   CONSTRAINT PK_T_SERVER_BACKUP_DELETE_VOTE_DEV PRIMARY KEY (VOTE_ID),
-  CONSTRAINT UIX_SBDV_ARCHIVE_VOTER UNIQUE (ARCHIVE_ID, VOTED_BY)
+  CONSTRAINT UIX_SBDVD_ARCHIVE_VOTER UNIQUE (ARCHIVE_ID, VOTED_BY)
 );
 
 COMMENT ON TABLE T_SERVER_BACKUP_DELETE_VOTE_DEV IS 'Template: per-admin votes to delete a backup archive.';
--- ARCHIVE_ID lookups are served by the leading column of UIX_SBDV_ARCHIVE_VOTER.
+-- ARCHIVE_ID lookups are served by the leading column of UIX_SBDVD_ARCHIVE_VOTER.
 
 --------------------------------------------------------------------------------
 -- 9. T_SYSTEM_CONFIG_DEV — ROW_HASH-signed key/value application config.

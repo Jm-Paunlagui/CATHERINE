@@ -756,7 +756,7 @@ live-database test gate and no write-capable seed-script guard in this repo.
 
 > **Q:** Does `DEMO_MODE=true` open any Oracle pool, and is it refused in production?
 > **A:** Per source, no pool is opened (`server.js` skips `db.initializePools()`), and `bootGuard` records a violation for `DEMO_MODE=true` with `NODE_ENV=production`. The in-memory refresh-token store behaves like the table (rotation, reuse detection, revoke, purge, unique `JTI_HASH`).
-> **Evidence:** source only — `Backend/server.js`, `Backend/src/config/demoMode.js`, `Backend/src/config/bootGuard.js`. `Backend/test/server/unit/models/authRefreshTokenDemo.test.js` → `"rotate: first wins, replay is 'reused', unknown is 'absent'"`, `"insert rejects a duplicate JTI_HASH like UQ_TART_JTI_HASH"`. _Status: not run for this revision._
+> **Evidence:** source only — `Backend/server.js`, `Backend/src/config/demoMode.js`, `Backend/src/config/bootGuard.js`. `Backend/test/server/unit/models/authRefreshTokenDemo.test.js` → `"rotate: first wins, replay is 'reused', unknown is 'absent'"`, `"insert rejects a duplicate JTI_HASH like UQ_TARTD_JTI_HASH"`. _Status: not run for this revision._
 > **Gap:** no test for the `bootGuard` DEMO_MODE rule or for what `/ready` answers in demo mode (`ReadinessService` still probes `POOL_NAMES`, so it is expected to report not-ready — unverified).
 > **Evidence (UI):** none — backend-only.
 

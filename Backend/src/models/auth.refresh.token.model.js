@@ -105,13 +105,13 @@ function demoRow(rec) {
 }
 
 /**
- * Demo insert honouring UQ_TART_JTI_HASH (a duplicate hash is rejected).
+ * Demo insert honouring UQ_TARTD_JTI_HASH (a duplicate hash is rejected).
  * @param {object} rec
  */
 function demoInsert(rec) {
     const rows = demo.refreshTokens();
     if (rows.some((r) => r.JTI_HASH === rec.jtiHash)) {
-        throw new Error("ORA-00001: unique constraint (UQ_TART_JTI_HASH) violated");
+        throw new Error("ORA-00001: unique constraint (UQ_TARTD_JTI_HASH) violated");
     }
     rows.push(demoRow(rec));
 }

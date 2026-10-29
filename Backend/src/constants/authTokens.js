@@ -7,7 +7,7 @@
  *
  * - Access and refresh tokens share JWT_SECRET/HS256, so they are told apart by
  *   `type` + `aud` + `iss` (CWE-287 token confusion).
- * - REFRESH_REVOKE_REASONS must match the CHK_TART_REVOKE_PAIR list in
+ * - REFRESH_REVOKE_REASONS must match the CHK_TARTD_REVOKE_PAIR list in
  *   sql/01_schema.sql (section 6) and sql/04_platform_tables.sql.
  *
  * @author senior-nodejs-engineer
@@ -45,7 +45,7 @@ const REFRESH_REVOKE_REASONS = Object.freeze({
 
 /**
  * Why an administrator's sessions were ended by Access Control.
- * Logged only: the CHK_TART_REVOKE_PAIR list is fixed (deliberately no
+ * Logged only: the CHK_TARTD_REVOKE_PAIR list is fixed (deliberately no
  * schema change), so these sessions are stored with REVOKE_REASON 'LOGOUT' - a
  * forced sign-out - and the cause below goes into the log line.
  */

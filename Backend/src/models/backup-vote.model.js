@@ -16,7 +16,7 @@
  * HOW IT WORKS
  * ------------
  * `castVote(archiveId, votedBy, requestedBy)` inserts a vote row. The
- * UIX_SBDV_ARCHIVE_VOTER unique constraint prevents double-voting.
+ * UIX_SBDVD_ARCHIVE_VOTER unique constraint prevents double-voting.
  * `findVotesByArchive(archiveId)` returns all votes for one archive.
  * `findAllPendingVotes()` returns all archives with at least one vote.
  * `cancelRequest(archiveId)` deletes all votes for one archive.
@@ -98,7 +98,7 @@ class BackupVoteModel {
     }
 
     /**
-     * Casts a vote for deleting an archive. The UIX_SBDV_ARCHIVE_VOTER
+     * Casts a vote for deleting an archive. The UIX_SBDVD_ARCHIVE_VOTER
      * unique constraint prevents double-voting — an ORA-00001 is caught
      * and returned as `{ inserted: false, reason: "already-voted" }`.
      *
@@ -109,7 +109,7 @@ class BackupVoteModel {
      */
     static async castVote(archiveId, votedBy, requestedBy) {
         if (isDemoMode()) {
-            // Emulates UIX_SBDV_ARCHIVE_VOTER (ARCHIVE_ID, VOTED_BY).
+            // Emulates UIX_SBDVD_ARCHIVE_VOTER (ARCHIVE_ID, VOTED_BY).
             const rows = demo.backupVotes();
             const voter = Number(votedBy);
             if (rows.some((r) => r.ARCHIVE_ID === archiveId && r.VOTED_BY === voter)) {

@@ -262,7 +262,7 @@ alert acknowledgements). Under `DEMO_MODE=true` all three are replaced by the in
 
 `T_AUTH_REFRESH_TOKEN_DEV` is the refresh-token ledger. It holds the SHA-256 of each refresh token's `jti`,
 never the token or the `jti` itself, and has no foreign key: a row describes a session, not an account.
-`CHK_TART_REVOKE_PAIR` lists exactly the application's revoke reasons. It is deliberately left out of
+`CHK_TARTD_REVOKE_PAIR` lists exactly the application's revoke reasons. It is deliberately left out of
 `purgeTables.js`: wiping it would un-revoke every ended session still inside its access-token lifetime.
 
 ### 2.5 Refresh rotation and revocation
@@ -1113,12 +1113,12 @@ AuthorizationError`.
 > **Q:** Is the refresh-token ledger one-time, with reuse and revocation detected?
 > **A:** Yes. `rotate` lets the first caller win; a replay of a consumed token is reported as `reused`, an
 > unknown one as `absent`, and a rotate after `revokeFamily` / `revokeUser` fails. `purgeExpired` deletes at
-> most `limit` rows, and a duplicate `JTI_HASH` is rejected like `UQ_TART_JTI_HASH`. These run against the
+> most `limit` rows, and a duplicate `JTI_HASH` is rejected like `UQ_TARTD_JTI_HASH`. These run against the
 > demo store; the Oracle SQL path is source only (`auth.refresh.token.model.js`).
 > **Evidence:** [authRefreshTokenDemo.test.js](Backend/test/server/unit/models/authRefreshTokenDemo.test.js) →
 > `"rotate: first wins, replay is 'reused', unknown is 'absent'"`, `"revokeFamily / revokeUser /
 > findRevokedSince / rotate-after-revoke"`, `"purgeExpired deletes at most \`limit\` expired rows"`, `"insert
-> rejects a duplicate JTI_HASH like UQ_TART_JTI_HASH"`. _Status: not run for this revision._
+> rejects a duplicate JTI_HASH like UQ_TARTD_JTI_HASH"`. _Status: not run for this revision._
 > **Evidence (UI):** none — backend-only; no screen shows this.
 
 > **Q:** Is there a self-registration endpoint?
@@ -1227,12 +1227,12 @@ AuthorizationError`.
 
 > **Q: Is any token material stored or logged?**
 > **A:** No. The ledger holds only the 64-hex SHA-256 of each `jti` and a UUID family; a full login → refresh →
-> reuse → logout flow logs no token, `jti` or full family id. `CHK_TART_REVOKE_PAIR` in `sql/01_schema.sql`
+> reuse → logout flow logs no token, `jti` or full family id. `CHK_TARTD_REVOKE_PAIR` in `sql/01_schema.sql`
 > pairs `REVOKED_AT` with `REVOKE_REASON`.
 > **Evidence:** source only — `utils/auth/tokenClaims.js` (`hashJti`), `RefreshTokenService`,
 > `sql/01_schema.sql`. The demo-store duplicate check is in
 > [authRefreshTokenDemo.test.js](Backend/test/server/unit/models/authRefreshTokenDemo.test.js) → `"insert
-> rejects a duplicate JTI_HASH like UQ_TART_JTI_HASH"`. _Status: not run for this revision._
+> rejects a duplicate JTI_HASH like UQ_TARTD_JTI_HASH"`. _Status: not run for this revision._
 > **Evidence (UI):** none — backend-only.
 
 > **Q: On a shared computer, can colleagues use up each other's sign-in attempts?**

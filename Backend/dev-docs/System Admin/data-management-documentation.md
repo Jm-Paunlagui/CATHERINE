@@ -152,7 +152,7 @@ sequenceDiagram
     end
     A2->>C: POST /backups/:id/vote
     C->>VM: castVote(id, A2, requestedBy)
-    alt duplicate voter (UIX_SBDV_ARCHIVE_VOTER)
+    alt duplicate voter (UIX_SBDVD_ARCHIVE_VOTER)
         C-->>A2: 409 BACKUP_DELETE_ALREADY_VOTED
     else threshold met
         C->>SS: deleteArchive(id)

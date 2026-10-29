@@ -27,6 +27,10 @@
 --  is missing. Existing tables are never altered or dropped. If a table exists
 --  with a different shape, fix it by hand — this script will not touch it.
 --
+--  Constraint and index names are schema-wide in Oracle, so they carry
+--  template-only prefixes (*_TARTD_*, *_SBDVD_*, *_SBTCD_*) that cannot clash
+--  with another application's tables sharing the schema.
+--
 --  HOW TO RUN
 --  ----------
 --    sqlplus  <user>/<password>@<host>:<port>/<service>  @04_platform_tables.sql
@@ -76,24 +80,24 @@ BEGIN
           REVOKED_AT     TIMESTAMP,
           REVOKE_REASON  VARCHAR2(16),
           CONSTRAINT PK_T_AUTH_REFRESH_TOKEN_DEV PRIMARY KEY (ID),
-          CONSTRAINT UQ_TART_JTI_HASH     UNIQUE (JTI_HASH),
-          CONSTRAINT CHK_TART_HASH_LEN    CHECK (LENGTH(JTI_HASH) = 64),
-          CONSTRAINT CHK_TART_ROLE_SOURCE CHECK (ROLE_SOURCE IN ('admin', 'user')),
-          CONSTRAINT CHK_TART_EXPIRY      CHECK (EXPIRES_AT > ISSUED_AT),
-          CONSTRAINT CHK_TART_USED_PAIR   CHECK (
+          CONSTRAINT UQ_TARTD_JTI_HASH     UNIQUE (JTI_HASH),
+          CONSTRAINT CHK_TARTD_HASH_LEN    CHECK (LENGTH(JTI_HASH) = 64),
+          CONSTRAINT CHK_TARTD_ROLE_SOURCE CHECK (ROLE_SOURCE IN ('admin', 'user')),
+          CONSTRAINT CHK_TARTD_EXPIRY      CHECK (EXPIRES_AT > ISSUED_AT),
+          CONSTRAINT CHK_TARTD_USED_PAIR   CHECK (
                (USED_AT IS NULL     AND REPLACED_BY IS NULL)
             OR (USED_AT IS NOT NULL AND REPLACED_BY IS NOT NULL)),
-          CONSTRAINT CHK_TART_REVOKE_PAIR CHECK (
+          CONSTRAINT CHK_TARTD_REVOKE_PAIR CHECK (
                (REVOKED_AT IS NULL     AND REVOKE_REASON IS NULL)
             OR (REVOKED_AT IS NOT NULL AND REVOKE_REASON IN
                   ('LOGOUT', 'PASSWORD_CHANGE', 'PASSWORD_RESET', 'ADMIN_READD', 'REUSE')))
         )]');
-    create_index_if_missing('IDX_TART_FAMILY',
-        'CREATE INDEX IDX_TART_FAMILY ON T_AUTH_REFRESH_TOKEN_DEV (FAMILY_ID)');
-    create_index_if_missing('IDX_TART_USER',
-        'CREATE INDEX IDX_TART_USER ON T_AUTH_REFRESH_TOKEN_DEV (USER_ID)');
-    create_index_if_missing('IDX_TART_EXPIRES',
-        'CREATE INDEX IDX_TART_EXPIRES ON T_AUTH_REFRESH_TOKEN_DEV (EXPIRES_AT)');
+    create_index_if_missing('IDX_TARTD_FAMILY',
+        'CREATE INDEX IDX_TARTD_FAMILY ON T_AUTH_REFRESH_TOKEN_DEV (FAMILY_ID)');
+    create_index_if_missing('IDX_TARTD_USER',
+        'CREATE INDEX IDX_TARTD_USER ON T_AUTH_REFRESH_TOKEN_DEV (USER_ID)');
+    create_index_if_missing('IDX_TARTD_EXPIRES',
+        'CREATE INDEX IDX_TARTD_EXPIRES ON T_AUTH_REFRESH_TOKEN_DEV (EXPIRES_AT)');
 
     -- 7. Spent backup-token nonces ------------------------------------------
     create_table_if_missing('T_SERVER_BACKUP_TOKEN_CONSUMED_DEV', q'[
@@ -104,8 +108,8 @@ BEGIN
           CONSUMED_AT  TIMESTAMP     DEFAULT SYSTIMESTAMP NOT NULL,
           CONSTRAINT PK_SBTC_JTI PRIMARY KEY (JTI)
         )]');
-    create_index_if_missing('IDX_SBTC_EXPIRES_AT',
-        'CREATE INDEX IDX_SBTC_EXPIRES_AT ON T_SERVER_BACKUP_TOKEN_CONSUMED_DEV (EXPIRES_AT)');
+    create_index_if_missing('IDX_SBTCD_EXPIRES_AT',
+        'CREATE INDEX IDX_SBTCD_EXPIRES_AT ON T_SERVER_BACKUP_TOKEN_CONSUMED_DEV (EXPIRES_AT)');
 
     -- 8. Backup deletion votes ----------------------------------------------
     create_table_if_missing('T_SERVER_BACKUP_DELETE_VOTE_DEV', q'[
@@ -116,7 +120,7 @@ BEGIN
           VOTED_BY      NUMBER         NOT NULL,
           VOTED_AT      TIMESTAMP      DEFAULT SYSTIMESTAMP NOT NULL,
           CONSTRAINT PK_T_SERVER_BACKUP_DELETE_VOTE_DEV PRIMARY KEY (VOTE_ID),
-          CONSTRAINT UIX_SBDV_ARCHIVE_VOTER UNIQUE (ARCHIVE_ID, VOTED_BY)
+          CONSTRAINT UIX_SBDVD_ARCHIVE_VOTER UNIQUE (ARCHIVE_ID, VOTED_BY)
         )]');
 
     -- 9. Signed key/value config --------------------------------------------
