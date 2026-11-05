@@ -19,7 +19,7 @@ Lower sources are hints for *where to look*. They are never evidence for a defec
 
 **This is not theoretical — both verified in this repo:**
 
-- `Backend/src/constants/responses/index.js` emits **five** keys on success: `status, code, message, requestId, data`. `Backend/CLAUDE.md` documents four; it omits `requestId`. `sendError` adds `title` on top of that. The code is right and the doc is stale. Anything typed, asserted, or reviewed against the four-key shape is wrong.
+- `Backend/src/constants/responses/index.js` emits **five** keys on success: `status, code, message, requestId, data`; `sendError` adds `title`. `Backend/CLAUDE.md` once documented four keys; as of the 2026-11-05 doctor run it documents five (success) and six (error) and matches the code. The lesson stands — the doc *was* stale for a while, and anything typed, asserted, or reviewed against the four-key shape is wrong.
 - `Backend/server.js` sits at the **surface root**, not `Backend/src/server.js`. Grepping the intuitive path finds nothing and reads as a missing boot invariant that is actually present.
 
 An agent that reports a defect on the strength of this file, without opening the code, is producing a false positive.
@@ -31,11 +31,11 @@ An agent that reports a defect on the strength of this file, without opening the
 | | |
 | - | - |
 | **Project** | CATHERINE — generic full-stack template: Express + Oracle backend with a React web client |
-| **Repo root** | `D:\LocalWeb\CATHERINE` |
-| **Surfaces** | `Backend`, `Frontend` — two surfaces, one fleet copy at the repo root |
-| **Version** | `1.0.0-dev.46`, kept in lockstep across both surfaces |
-| **VCS** | Git. Check the current branch with `git branch --show-current`; do not trust a recorded name |
-| **Fleet config** | `.claude/` at the repo root, covering both surfaces |
+| **Repo root** | `D:\Resp\CATHERINE` (this checkout). A second clone exists at `D:\LocalWeb\CATHERINE` (same HEAD `05ffeb9` at doctor time) — **do not read across clones**; resolve every relative path against the checkout you are running in. |
+| **Surfaces** | `Backend`, `Frontend` — two surfaces, one git repo (`git rev-parse --show-toplevel` → repo root from both) |
+| **Version** | `1.0.0-dev.47` in both `package.json` files at doctor time — read it from the manifests, lockstep is the intent |
+| **VCS** | Git, single repo at the root. Check the current branch with `git branch --show-current`; do not trust a recorded name. `Backend/.git/` and `Frontend/.git/` are **stray, ref-less leftovers** whose `config` points at the downstream eMeal repos — git ignores them, but never read remotes or branches from them. |
+| **Fleet config** | `.claude/` at the repo root, with identical copies in `Backend/.claude/` and `Frontend/.claude/` (and one at the workspace root `D:\Resp\.claude`). All four are the same repo, so identical profiles are correct here. Canonical copy for discipline: the repo-root `.claude/`. |
 
 **Relationship to downstream apps.** CATHERINE is the generic template; product apps are built from it and periodically re-synced back into it (see `plans/template-reimport-handover.md`). Conventions are near-identical across those repos, which makes assuming parity tempting and dangerous: **verify against CATHERINE's own files**, never against remembered facts from another app. Roles are `SUPER_ADMIN`, `ADMIN`, `USER` only; pools are `appDb` and `appDbBulk`.
 
@@ -72,8 +72,8 @@ An agent that reports a defect on the strength of this file, without opening the
 | Features | `src/features/{auth, dashboard, home, other, personalize, support, systemadmin}` |
 | Component tiers | `src/components/{ui, shared, charts, feedback, forms, layout, routing}` |
 | Charts | ApexCharts through `react-apexcharts` |
-| Tests | Vitest + Testing Library + MSW under `Frontend/test/{unit, integration, security, performance, reliability, chaos, helpers}`. |
-| Test command | `npm test` (`vitest run`) |
+| Tests | Vitest + Testing Library + MSW under `Frontend/test/{unit, integration, security, performance, reliability, chaos, helpers}`. E2E: Playwright under `Frontend/e2e/`, config `Frontend/playwright.config.js`. |
+| Test command | `npm test` (`vitest run`); `npm run test:e2e` (`playwright test`) — not part of `npm test` |
 | Security | `jose`, `js-cookie`. Suppressions live in `Frontend/audit-suppressions.md`. |
 
 **React Compiler is enabled.** `Frontend/vite.config.js:195` applies `reactCompilerPreset()` through `@rolldown/plugin-babel`. Memoisation is largely automatic — do **not** reflexively add `useMemo` or `useCallback`, and do not report their absence as a performance defect. Reach for manual memoisation only with a profile showing it is needed. This is a real divergence from ordinary React advice.
