@@ -13,6 +13,8 @@
  *   rounded  — boolean (pill shape)
  *   onClick, type, className, children
  *   ...rest  — any other prop (aria-*, title, data-*, etc.) is forwarded onto the rendered <button>
+ *   data-variant — always emitted with the RESOLVED variant (warn→warning, secondary→ghost, unknown→primary);
+ *              the server-lock CSS (index.css) keys on `[data-variant="gradient"]`. A caller's own data-variant wins.
  *
  * WHY BOTH `leftIcon` AND `icon`: the two icon systems in this codebase have
  * incompatible call shapes. Heroicons are passed as bare components and need a
@@ -59,6 +61,7 @@ const SOLID_VARIANTS = new Set(["gradient"]);
 VARIANTS.warn = VARIANTS.warning;
 // `secondary` is an alias of the neutral (ghost) look.
 VARIANTS.secondary = VARIANTS.ghost;
+const VARIANT_ALIASES = { warn: "warning", secondary: "ghost" };
 
 const SIZES = {
     xs: "px-3 py-1    text-xs rounded-md",
@@ -86,6 +89,8 @@ export default function Button({ variant = "primary", size = "md", loading = fal
     // reads as disabled; only an explicit `disabled` prop gets the disabled look.
     // The native attribute is still set while loading so the click cannot re-fire.
     const key = VARIANTS[variant] ? variant : "primary";
+    // data-variant carries the RESOLVED variant (aliases collapsed) so the server-lock CSS can target gradient buttons.
+    const resolvedVariant = VARIANT_ALIASES[key] ?? key;
     const stateClass = disabled ? (SOLID_VARIANTS.has(key) ? BTN_DISABLED_SOLID : BTN_DISABLED) : loading ? BTN_BUSY : "";
 
     return (
@@ -94,6 +99,7 @@ export default function Button({ variant = "primary", size = "md", loading = fal
             onClick={handleClick}
             disabled={disabled || loading}
             aria-busy={loading || undefined}
+            data-variant={resolvedVariant}
             className={`${BASE} ${RIPPLE_HOST} ${VARIANTS[key]} ${stateClass}
         ${SIZES[size] ?? SIZES.md}
         ${fullWidth ? "w-full" : ""}

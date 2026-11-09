@@ -10,9 +10,12 @@ import { http, HttpResponse } from "msw";
 
 const API = "http://localhost:3000/api/v1";
 
+/** The token the default handlers issue; exported so tests assert against it rather than a literal. */
+export const TEST_CSRF_TOKEN = "test-csrf-token";
+
 const tokenPayload = {
     success: true,
-    token: "test-csrf-token",
+    token: TEST_CSRF_TOKEN,
     expiresIn: 3_600_000,
     expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
     refreshIn: 3_000_000,

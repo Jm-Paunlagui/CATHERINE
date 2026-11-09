@@ -41,7 +41,7 @@ export function Gallery({ images = [], columns = 3, gap = "md", lightbox = true 
             {/* Lightbox */}
             {lightbox && selected !== null && (
                 <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 ${ANIMATE_FADE_IN}`} onClick={() => setSelected(null)}>
-                    <button onClick={() => setSelected(null)} className="absolute top-4 right-4 text-white/70 hover:text-white">
+                    <button data-lock-exempt="" onClick={() => setSelected(null)} className="absolute top-4 right-4 text-white/70 hover:text-white">
                         <XMarkIcon className="w-8 h-8" />
                     </button>
                     {selected > 0 && (

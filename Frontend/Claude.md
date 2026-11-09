@@ -83,6 +83,7 @@
 | Auth guard               | `ProtectedRoute`        | `components/routing/ProtectedRoute`   |
 | Error catch              | `ErrorBoundary`         | `components/feedback/ErrorBoundary`   |
 | Copyable Request ID      | `RequestIdTag`          | `components/feedback/RequestIdTag`    |
+| Outage lock + auto-redirect | `ServerLockGuard` | `components/shared/serverStatus` (renders `null`; mounted once in `App.jsx` after `ServerStatusWatch`; never mount it again). Reader hook: `useServerLock`. A control that must stay usable during an outage carries `data-lock-exempt` (see "Outage lock" below) |
 | Loading indicator        | `LoadingSpinner`        | `components/feedback/LoadingSpinner`  |
 | Toast utilities          | `toast`                 | `components/ui/toast.utils`           |
 
@@ -736,7 +737,9 @@ Canonical role source: `ROLES` and `ALL_ROLES` in `src/App.jsx` (mirrored by `VA
 | `/support/dev-docs` | `ADMIN`, `SUPER_ADMIN` |
 | `/support/{architecture,runtime}` | `SUPER_ADMIN` |
 
-`HelpAssistant`, `ServerStatusBanner` and `ServerStatusWatch` are mounted globally. The fixed-height shell scrolls inside `#app-main-scroll`; `BARE_ROUTES` render without chrome and `NAVBAR_ONLY_ROUTES` is currently empty. Sidebar groups (`nav.config.jsx`): Reference, System, Support.
+`HelpAssistant`, `ServerStatusBanner`, `ServerStatusWatch` and `ServerLockGuard` are mounted globally. The fixed-height shell scrolls inside `#app-main-scroll`; `BARE_ROUTES` render without chrome and `NAVBAR_ONLY_ROUTES` is currently empty. Sidebar groups (`nav.config.jsx`): Reference, System, Support.
+
+**Outage lock, countdown and auto-redirect.** `ServerLockGuard` (renders `null`, inside the Router) reads `useServerLock({ tick: false })`: `locked` = phase `restarting`|`unavailable` **and** `visible` (the banner's own reveal: restarting/OUTAGE at once, a network failure after `SERVER_SHOW_AFTER_MS`); `shouldRedirect` = store severity `danger` (the store's own `SERVER_DANGER_AFTER_MS` timer — never add a second timer). While locked and not on the 523 route (`outageRoute.js` `isOutageRoute`) a layout effect runs `serverLockDom.applyServerLock(document)`: `html[data-server-locked]` (dimming CSS in `index.css`), `inert` on each **control** (never on a container — inert is inherited and would kill exemptions and scrolling), a MutationObserver for late-mounted controls, a capture click blocker for non-semantic targets, and blur of a locked focused control; the returned release undoes exactly that. Locked controls carry `data-server-inert`; the dimming CSS keys on it, so dimmed = locked. Exempt (`LOCK_EXEMPT_SELECTOR`): `[data-lock-exempt]`, the banner, `.Toastify`. **Rule:** a control that must work during an outage — local-only actions and anything that closes an overlay — carries `data-lock-exempt` (today: `ThemeToggle` in `Navbar`/`SidebarHeader`, the `Modal` and `Drawer` ×, `ProfileModal`, the Gallery lightbox and Help Assistant close buttons). The lock is UX only, not an access control: the API stays authoritative. `useOutageRedirect`, on `shouldRedirect`, once per episode id: `handOffErrorPagePayload({ code: 523, …, returnTo: returnToFor(pathname, search) })` then `navigate(OUTAGE_ROUTE, { replace: true })`. The banner shows " · Redirecting in Ns" (`SERVER_LOCK_MESSAGES`; number `aria-hidden`, one sr-only sentence) while locked and not danger. WCAG 2.2.1: the forced redirect is an essential time limit. The 523 page's `available` latch is unchanged (Continue is required) except for paths in `useServiceRecovery` `AUTO_CONTINUE_PATHS` (empty in the template; add unattended public screens there).
 
 `ProtectedRoute` props: `role` (array of role strings), `check` (`(user) => boolean`),
 `redirectTo` (default `/unauthorized`).

@@ -20,6 +20,7 @@ import ProfileModal from "../feedback/ProfileModal";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
 import Logo from "../ui/Logo";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { Tooltip } from "../ui/Tooltip";
 import { VersionBadge } from "../ui/VersionBadge";
 import { canSeeVersion } from "./config/nav.config";
@@ -113,6 +114,8 @@ export default function SidebarHeader() {
 
                 {/* ── Right: Personalize + Avatar profile dropdown ── */}
                 <div className="flex items-center gap-2 shrink-0">
+                    {/* Theme toggle — exempt from the server lock */}
+                    <ThemeToggle size="sm" tone="chrome" />
                     {/* Personalize button — white on desktop gradient */}
                     <Tooltip content="Personalize" placement="bottom" delay={200}>
                         <button

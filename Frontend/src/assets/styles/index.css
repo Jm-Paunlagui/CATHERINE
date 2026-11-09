@@ -262,6 +262,8 @@
     --btn-neutral-bg-active: var(--color-grey-200);
     --btn-disabled-bg: var(--color-grey-200);
     --btn-disabled-fg: var(--color-grey-500);
+    /* Server lock: mirrors the opacity-50 of BTN_DISABLED / Input / Select / Textarea. */
+    --server-lock-opacity: 0.5;
     --btn-focus-ring: var(--color-grey-900);
     --tile-bg: var(--surface-4);
     --tile-border: var(--field-border);
@@ -424,6 +426,7 @@
     --btn-neutral-bg-active: rgba(255, 255, 255, 0.16);
     --btn-disabled-bg: rgba(255, 255, 255, 0.10);
     --btn-disabled-fg: var(--color-grey-400);
+    /* --server-lock-opacity (0.5) is inherited from :root; no dark override needed. */
     --btn-focus-ring: var(--color-grey-200);
     --tile-bg: rgba(255, 255, 255, 0.06);
     --tile-border: var(--field-border);
@@ -1839,6 +1842,40 @@ html[data-chrome-from="light"] .logo-on-chrome-light {
     .fab-hint::after {
         animation: none;
     }
+}
+
+/* ── Server lock: controls dim while the server is restarting/unavailable ──
+   ServerLockGuard sets `data-server-locked` on <html>; serverLockDom.js sets `inert` + `data-server-inert` on each
+   control. This block is only the LOOK and keys on `data-server-inert`, so it dims exactly what JS inerted
+   (never an element that was already inert for another reason, never a late-mounted control JS has not locked yet):
+   the existing disabled look (opacity 50%, no shadow), no overlay (the page
+   stays readable), no cursor rule (inert elements are not hit-testable) and no filter.
+   Exempt: [data-lock-exempt] (theme toggle, modal ×), the status banner and the toast container.
+   Layering matters:
+   - the dimming rule is in @layer base so utilities that set opacity themselves (opacity-0 on hidden file
+     inputs, disabled:opacity-50) still win;
+   - the gradient rule is UNLAYERED so it beats the BTN_GRADIENT utilities (a white label on a faded
+     gradient is the failure BTN_DISABLED_SOLID exists to prevent).
+   The opacity transition lives only under the lock attribute: it fades IN on lock and releases instantly. */
+@layer base {
+    html[data-server-locked] :where([data-server-inert]) {
+        opacity: var(--server-lock-opacity);
+        box-shadow: none;
+        transition: opacity var(--duration-normal) var(--ease-standard);
+    }
+    @media (prefers-reduced-motion: reduce) {
+        html[data-server-locked] :where([data-server-inert]) {
+            transition: none;
+        }
+    }
+}
+html[data-server-locked] :where(button[data-variant="gradient"]):where([data-server-inert]) {
+    background: var(--btn-disabled-bg);
+    background-image: none;
+    color: var(--btn-disabled-fg);
+    border-color: transparent;
+    box-shadow: none;
+    opacity: 1;
 }
 
 /* Each trigger below only (a) fades the arc in via opacity and (b) resumes the

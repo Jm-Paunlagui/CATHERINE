@@ -127,11 +127,25 @@ export function consumeErrorPagePayload() {
 /**
  * Drops the in-memory memo so the next `consumeErrorPagePayload()` re-reads
  * storage. Exists for tests, which run many navigations inside one document and
- * would otherwise all see the first payload. Production code never calls it —
- * a real hard navigation resets the module for free.
+ * would otherwise all see the first payload. A real hard navigation resets the module for free, so
+ * production only calls it through `handOffErrorPagePayload` (an in-app navigation to an error screen).
  *
  * @returns {void}
  */
 export function resetErrorPagePayloadCache() {
     _consumedPayload = undefined;
+}
+
+/**
+ * Stashes a payload for an error screen reached by SPA navigation (no new document).
+ * `consumeErrorPagePayload` memoises per document, so an error page shown earlier in this
+ * document would otherwise keep serving its stale (possibly null) payload and the fresh
+ * stash would never be read. Dropping the memo first makes the next mount read storage.
+ *
+ * @param {ErrorPagePayload} payload
+ * @returns {void}
+ */
+export function handOffErrorPagePayload(payload) {
+    resetErrorPagePayloadCache();
+    stashErrorPagePayload(payload);
 }

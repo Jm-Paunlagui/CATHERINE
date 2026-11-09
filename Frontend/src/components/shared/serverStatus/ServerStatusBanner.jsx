@@ -15,6 +15,12 @@
  * `role="status"`): that page owns the one polite live region, so nothing is announced twice. Full width (`contained={false}`):
  * the text starts at the page's left edge, aligned with the navbar logo.
  *
+ * Outage countdown: while amber or purple, " · Redirecting in Ns" follows the message inline
+ * (`useServerLock`). The ticking group is `aria-hidden`; a static sr-only sentence is announced once with
+ * the message, so the atomic live region never re-reads per tick. Not shown in red (the redirect is
+ * happening), on the 523 page, or in the exit latch. The banner (`data-testid`) is exempt from the
+ * server lock, so it and its toasts stay readable while every control is inert.
+ *
  * Motion (Aumovio animation presets only):
  *   - enter: the row height grows 0 -> auto (grid rows + `@starting-style`, --duration-moderate,
  *     decelerate) while the content fades in, so the page slides down instead of jumping;
@@ -33,16 +39,17 @@ import { useEffect, useState } from "react";
 import { useInRouterContext, useLocation } from "react-router-dom";
 import { ArrowPathIcon, CheckCircleIcon, SignalSlashIcon } from "@heroicons/react/24/outline";
 import { ANIMATE_BOUNCE_IN, ANIMATE_FADE_IN, ANIMATE_FADE_OUT, ANIMATE_PULSE, ANIMATE_SPIN_SLOW, TRANSITION_COLORS } from "../../../assets/styles/pre-set-styles";
-import { ERROR_PAGE_ROUTES } from "../../../constants/httpStatus";
 import Banner from "../../ui/Banner";
-import { SERVER_BANNER_EXIT_MS, useServerStatus } from "./useServerStatus";
+import { SERVER_BANNER_EXIT_MS, SERVER_LOCK_MESSAGES, SERVER_LOCK_NOTICE_SHORTLY_BELOW_MS, useServerStatus } from "./useServerStatus";
+import { isOutageRoute } from "./outageRoute";
+import { useServerLock } from "./useServerLock";
 
 const ICONS = { restarting: ArrowPathIcon, unavailable: SignalSlashIcon, recovered: CheckCircleIcon };
 const NO_MOTION = "motion-reduce:animate-none!";
 // The pulse is capped at 3 cycles (~4.5 s, WCAG 2.2.2 five-second limit); the spinner is a progress
 // indicator for the restart and keeps turning until the state changes.
 const ICON_MOTION = { restarting: ANIMATE_SPIN_SLOW, unavailable: `${ANIMATE_PULSE} [animation-iteration-count:3]!`, recovered: ANIMATE_BOUNCE_IN };
-const OUTAGE_ROUTE = ERROR_PAGE_ROUTES[523];
+const SERVER_COUNTDOWN_CLASS = "whitespace-nowrap";
 const HAIRLINE_FLOW = "after:animate-gradient motion-reduce:after:animate-none!";
 const COLLAPSE_BASE = "grid transition-[grid-template-rows] duration-(--duration-moderate) motion-reduce:transition-none!";
 const COLLAPSE_OPEN = `${COLLAPSE_BASE} grid-rows-[1fr] starting:grid-rows-[0fr] ease-(--ease-decelerate)`;
@@ -55,7 +62,7 @@ const COLLAPSE_CLOSED = `${COLLAPSE_BASE} grid-rows-[0fr] ease-(--ease-accelerat
  */
 function RouteAwareBanner() {
     const { pathname } = useLocation();
-    return <BannerBody silent={pathname === OUTAGE_ROUTE || pathname.startsWith(`${OUTAGE_ROUTE}/`)} />;
+    return <BannerBody silent={isOutageRoute(pathname)} />;
 }
 
 /** @returns {import("react").ReactElement} */
@@ -87,6 +94,24 @@ function BannerBody({ silent }) {
 
     const shown = visible ? current : latched;
     const exiting = !visible && !!latched;
+
+    // Outage countdown (amber / purple only; never red, never silent on the 523 page, never in the exit latch).
+    const { locked, shouldRedirect, redirectInMs } = useServerLock({ tick: !silent });
+    const countdown = !silent && visible && locked && !shouldRedirect && redirectInMs !== null;
+    // The sr-only sentence is chosen when the countdown first appears and re-picked ONLY when the message changes
+    // (cause swap) — never per tick, so there is no per-second announcement.
+    const [notice, setNotice] = useState(null);
+    const [noticeFor, setNoticeFor] = useState(null);
+    const messageNow = shown ? shown.message : null;
+    if (countdown && (notice === null || noticeFor !== messageNow)) {
+        setNotice(redirectInMs >= SERVER_LOCK_NOTICE_SHORTLY_BELOW_MS ? SERVER_LOCK_MESSAGES.noticeMinute : SERVER_LOCK_MESSAGES.noticeShortly);
+        setNoticeFor(messageNow);
+    }
+    if (!countdown && notice !== null) {
+        setNotice(null);
+        setNoticeFor(null);
+    }
+    const secs = countdown ? Math.ceil(redirectInMs / 1000) : 0;
     // Restarting is expected, not a fault: the palette-aware "info" fill. Every other state keeps its semantic colour.
     const variant = shown && (shown.phase === "restarting" && shown.severity !== "danger" ? "info" : shown.severity);
     const Icon = shown && (shown.severity === "danger" ? SignalSlashIcon : ICONS[shown.phase]);
@@ -98,7 +123,24 @@ function BannerBody({ silent }) {
                 <div data-part="collapse" className={exiting ? COLLAPSE_CLOSED : COLLAPSE_OPEN}>
                     <div data-part="clip" className={`min-h-0 overflow-hidden ${exiting ? ANIMATE_FADE_OUT : ANIMATE_FADE_IN} ${NO_MOTION}`}>
                         <Banner sticky contained={false} dismissible={false} tone="status" variant={variant} icon={Icon} className={`${TRANSITION_COLORS} ${shown.phase === "restarting" ? HAIRLINE_FLOW : ""}`.trim()} iconClassName={iconMotion}>
-                            {shown.message}
+                            <span>{shown.message}</span>
+                            {countdown && (
+                                <>
+                                    <span className="sr-only"> {notice}</span>
+                                    <span aria-hidden="true" data-testid="server-status-countdown" data-seconds={secs} className={SERVER_COUNTDOWN_CLASS}>
+                                        {" · "}
+                                        {secs > 0 ? (
+                                            <>
+                                                <span className="font-aumovio">{SERVER_LOCK_MESSAGES.redirectingIn} </span>
+                                                <span className="font-aumovio-bold tabular-nums inline-block min-w-[2ch] text-right">{secs}</span>
+                                                <span className="font-aumovio-bold">{SERVER_LOCK_MESSAGES.secondsUnit}</span>
+                                            </>
+                                        ) : (
+                                            <span className="font-aumovio">{SERVER_LOCK_MESSAGES.redirectingNow}</span>
+                                        )}
+                                    </span>
+                                </>
+                            )}
                         </Banner>
                     </div>
                 </div>

@@ -20,7 +20,8 @@
 
 import axios from "axios";
 import { API_BASE_URL as BASE_URL } from "../config/apiBase";
-import { ERROR_PAGE_ROUTES, SERVER_SHUTTING_DOWN_TYPE, resolveStatusHandling } from "../constants/httpStatus";
+import { returnToFor } from "../utils/returnTo";
+import { SERVER_SHUTTING_DOWN_TYPE, resolveStatusHandling } from "../constants/httpStatus";
 import { SHED_RETRY_MAX, extractRetryAfter, isShedRetryable, shedRetryDelayMs, sleepUnlessAborted } from "../utils/retryAfter";
 import { SERVER_STATUS_KIND, reportServerStatus } from "../utils/serverStatus";
 import { stashErrorPagePayload } from "../utils/storage";
@@ -106,8 +107,7 @@ class HttpClient {
      * @returns {string|null}
      */
     _currentReturnTo() {
-        const { pathname, search } = window.location;
-        return Object.values(ERROR_PAGE_ROUTES).some((r) => pathname === r || pathname.startsWith(`${r}/`)) ? null : `${pathname}${search}`;
+        return returnToFor(window.location.pathname, window.location.search);
     }
 
     /**

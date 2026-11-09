@@ -90,6 +90,7 @@ export default function ProfileModal({ open, onClose, user }) {
 
                 {/* Close button */}
                 <button
+                    data-lock-exempt=""
                     onClick={onClose}
                     aria-label="Close"
                     className={`absolute top-3 right-3 flex items-center justify-center w-8 h-8

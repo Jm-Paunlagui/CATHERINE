@@ -51,6 +51,17 @@ export const SERVER_STATUS_MESSAGES = Object.freeze({
 
 const FIRST_PROBE_JITTER_MS = 2000;
 
+/** Fixed copy for the outage countdown and its screen-reader notice (never server text). */
+export const SERVER_LOCK_MESSAGES = Object.freeze({
+    redirectingIn: "Redirecting in",
+    secondsUnit: "s",
+    redirectingNow: "Redirecting…",
+    noticeMinute: "You will be redirected in about a minute.",
+    noticeShortly: "You will be redirected shortly.",
+});
+/** Wording threshold only (which sr-only sentence to use); NOT a timer. */
+export const SERVER_LOCK_NOTICE_SHORTLY_BELOW_MS = 45000;
+
 /** @type {AbortController|null} Module guard: the single live probe loop. */
 let loopOwner = null;
 /** Mounted hook instances. When the loop owner unmounts, a remaining one must take the loop over. */

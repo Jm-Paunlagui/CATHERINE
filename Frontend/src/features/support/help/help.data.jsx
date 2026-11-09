@@ -476,6 +476,22 @@ export const HELP_CATEGORIES = [
                 },
                 tags: ["error", "troubleshooting", "what to do", "retry", "request id", "support"],
             },
+            {
+                id: "server-outage-lock",
+                question: "Why does the page fade, show 'Redirecting in', and then move me while the server is unavailable?",
+                answer: "That is on purpose. While the message at the top says the server is restarting or can't be reached, the buttons, links and boxes on the page are paused: they look faded and clicking them does nothing, so you don't fill in a form only to see Save fail. You can still read and scroll, and the message at the top, pop-up notices, the light/dark button and the × that closes an open window keep working. Next to the message a countdown ('Redirecting in 57s') runs to one minute after the problem started; at zero you are taken to the 'Service Unavailable' screen, which remembers the page you were on so Continue brings you back once the server recovers. If the server answers before the countdown ends, the message says 'Back online.' and everything works again without a refresh. The pause is only a visual aid: the server still checks every request on its own.",
+                answerRender: {
+                    chunk: true,
+                    highlight: [
+                        { phrase: "That is on purpose.", tone: "key" },
+                        { phrase: "You can still read and scroll", tone: "good" },
+                        { phrase: "one minute after the problem started", tone: "key" },
+                        { phrase: "Continue brings you back once the server recovers", tone: "good" },
+                        { phrase: "everything works again without a refresh", tone: "good" },
+                    ],
+                },
+                tags: ["greyed out", "faded", "can't click", "paused", "locked", "outage", "server unavailable", "redirecting", "countdown", "service unavailable", "back online"],
+            },
         ],
     },
 

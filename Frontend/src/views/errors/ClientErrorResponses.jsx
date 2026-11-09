@@ -3535,7 +3535,8 @@ const SERVICE_CONTENT_WIDTH = "max-w-sm sm:max-w-lg xl:max-w-xl";
 
 export function ServiceUnavailable({ title: titleProp, subtitle: subtitleProp } = {}) {
     const { title, subtitle, requestId, stored } = useErrorOverrides(SERVICE_PAGE_COPY.defaultTitle, SERVICE_PAGE_COPY.defaultSubtitle, titleProp, subtitleProp, SERVICE_UNAVAILABLE_PAGE_CODES);
-    // Mounting this page IS the outage signal (a takeover hard-navigates, so the store starts idle):
+    // Mounting this page IS the outage signal (a takeover hard-navigates so the store starts idle, OR the
+    // server-lock guard navigates in-app, with the store already in danger):
     // the hook reports it, joins the single probe loop and latches "available" on the first 200.
     const { status, cause, meta, checkNow, checkCooldown, continueToApp, returnTo } = useServiceRecovery({ returnTo: stored?.returnTo });
     const available = status === "available";

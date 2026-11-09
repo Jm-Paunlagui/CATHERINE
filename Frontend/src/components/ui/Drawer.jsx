@@ -122,6 +122,7 @@ export function Drawer({ open, onClose, side = "right", size = "md", title, back
                 <div className="flex items-center justify-between px-5 py-4 border-b border-grey-200 dark:border-grey-700 shrink-0">
                     <h2 id={titleId} className="text-base font-aumovio-bold text-black/85 dark:text-white/90">{title}</h2>
                     <button
+                        data-lock-exempt=""
                         onClick={onClose}
                         aria-label="Close drawer"
                         className={`p-2 rounded-lg text-grey-400 hover:text-grey-600 dark:hover:text-grey-300 hover:bg-grey-100

@@ -23,6 +23,7 @@ import ProfileModal from "../feedback/ProfileModal";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
 import Logo from "../ui/Logo";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { VersionBadge } from "../ui/VersionBadge";
 import { canSeeVersion } from "./config/nav.config";
 import { useNav } from "./config/useNav";
@@ -245,6 +246,7 @@ export default function Navbar() {
 
                                 {/* Right rail: Personalize + Avatar + Burger */}
                                 <div className="flex items-center gap-2">
+                                    <ThemeToggle size="sm" tone="nav" />
                                     <button onClick={() => setPersonalizeOpen(true)} aria-label="Personalize" title="Personalize" className={`p-2 border border-transparent rounded-lg text-grey-500 dark:text-grey-400 hover:text-(--nav-active-text) hover:bg-(--nav-hover-bg) hover:border-(--accent)/20 ${TRANSITION_COLORS}`}>
                                         <PaintBrushIcon className="w-4 h-4" />
                                     </button>

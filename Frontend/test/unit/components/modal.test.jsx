@@ -3,6 +3,8 @@
  * (src/components/ui/Modal.jsx): open/close lifecycle, every close affordance
  * the source actually implements, footer rendering, and the body-scroll-lock
  * side effect.
+ * Focus management (initial focus, Tab trap, focus return) is covered
+ * separately in modal.focus.test.jsx.
  *
  * NOT asserted, because it does not exist: there is no focus trap and no
  * initial-focus move in this component. A test for either would be asserting a

@@ -22,7 +22,7 @@ import Sidebar from "./components/layout/Sidebar";
 import SidebarHeader from "./components/layout/SidebarHeader";
 import ProtectedRoute from "./components/routing/ProtectedRoute";
 import { HelpAssistant } from "./components/shared/HelpAssistant";
-import { ServerStatusBanner, ServerStatusWatch } from "./components/shared/serverStatus";
+import { ServerLockGuard, ServerStatusBanner, ServerStatusWatch } from "./components/shared/serverStatus";
 import Breadcrumb from "./components/ui/Breadcrumb";
 import { useLayout } from "./contexts/layout/LayoutContext";
 import { useScrollportHeightVar } from "./hooks/useScrollportHeightVar";
@@ -171,6 +171,7 @@ function AppContent() {
             <ServerStatusBanner />
             {/* Keeps the banner told without user action: readiness push stream, poll fallback */}
             <ServerStatusWatch />
+            <ServerLockGuard />
 
             {/* ── Full-width top bars (header + breadcrumb) ── */}
             <ConditionalNavbar />

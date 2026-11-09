@@ -52,6 +52,10 @@ export function CsrfProvider({ children }) {
         const unsubscribe = csrfMiddleware.addListener((token) => {
             setCsrfToken(token);
         });
+        // Passive effects run after commit; a rotation that notified in the gap
+        // between init resolving and this subscribe is never replayed. Resync once.
+        const current = csrfMiddleware.getToken();
+        if (current) setCsrfToken(current);
         return unsubscribe;
     }, [isInitialized]);
 

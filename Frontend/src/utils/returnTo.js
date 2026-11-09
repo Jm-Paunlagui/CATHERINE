@@ -64,4 +64,18 @@ export function returnToPathname(value) {
     }
 }
 
+/**
+ * The "where was the user" hint to stash before a takeover: `pathname + search`, or null when the
+ * user is already on (or under) an error route. One rule shared by `HttpClient` (hard navigation)
+ * and the server-lock guard (SPA navigation). Still a HINT: consumers run it through `sanitizeReturnTo`.
+ *
+ * @param {string} pathname `location.pathname`.
+ * @param {string} [search] `location.search`.
+ * @returns {string|null}
+ */
+export function returnToFor(pathname, search = "") {
+    const onErrorRoute = Object.values(ERROR_PAGE_ROUTES).some((r) => pathname === r || pathname.startsWith(`${r}/`));
+    return onErrorRoute ? null : `${pathname}${search}`;
+}
+
 export default sanitizeReturnTo;

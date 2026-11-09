@@ -15,7 +15,9 @@
  *     danger        60 s+ of outage (store severity)
  *     offline       navigator.onLine === false (overrides every down state)
  *     available     LATCHED on the first healthy 200 until the user acts — the banner clearing 3 s
- *                   later, or a later network blip, never flips the page back (no auto-redirect).
+ *                   later, or a later network blip, never flips the page back. NO auto-redirect, except
+ *                   for `AUTO_CONTINUE_PATHS` (unattended public screens a project registers): there
+ *                   `returnTo` is followed once, automatically, on the latch.
  *
  *   Order matters: the recovery subscription is registered BEFORE the OUTAGE seed, so a 200 that
  *   lands immediately after mount cannot be missed.
@@ -23,16 +25,27 @@
  * SECURITY: CWE-601 — `returnTo` only ever navigates after `sanitizeReturnTo`; navigation goes
  *   through the `serviceRecoveryNavigation` test seam. CWE-209/CWE-79 — no server text is read here;
  *   only enums and timestamps. No JSX in this file.
+ *
+ * The page can also be entered by SPA navigation (ServerLockGuard) with the store ALREADY in
+ *   danger. The OUTAGE seed then takes the same-episode branch: it keeps `firstAt`, `danger` and the
+ *   episode id, sets strict, and turns restarting into unavailable with `firstAt` kept; `status`
+ *   resolves to "danger" at once (checked before `settled`). No code change was needed here.
  * Complexity: O(1) per render; one in-flight probe (see useServerStatus).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { SERVER_STATUS_KIND, getServerEpisode, onServerRecovered, reportServerStatus } from "../../../utils/serverStatus";
-import { sanitizeReturnTo } from "../../../utils/returnTo";
+import { returnToPathname, sanitizeReturnTo } from "../../../utils/returnTo";
 import { checkNow as restartProbeLoop, getProbeMeta, subscribeProbeMeta, useServerStatus } from "./useServerStatus";
 
 /** Minimum gap between two manual "Check again" presses. */
 export const CHECK_COOLDOWN_MS = 5000;
+
+/**
+ * Public unattended screens (e.g. a wall board) that auto-continue on recovery: exact pathname,
+ * query allowed. Empty in the template; a project adds its own routes here.
+ */
+export const AUTO_CONTINUE_PATHS = Object.freeze([]);
 
 /**
  * Navigation seam for "Continue". A hard navigation on purpose (drops every in-memory store after an
@@ -113,6 +126,16 @@ export function useServiceRecovery({ returnTo } = {}) {
     const continueToApp = useCallback(() => {
         serviceRecoveryNavigation.go(validReturnTo ?? "/");
     }, [validReturnTo]);
+
+    // Unattended public board: nobody is there to press Continue, so recovery goes straight back (once).
+    // Only an exact pathname match on a validated returnTo qualifies; everything else stays manual.
+    const autoContinued = useRef(false);
+    const autoContinue = validReturnTo !== null && AUTO_CONTINUE_PATHS.includes(returnToPathname(validReturnTo));
+    useEffect(() => {
+        if (!latched || !autoContinue || autoContinued.current) return;
+        autoContinued.current = true;
+        serviceRecoveryNavigation.go(validReturnTo);
+    }, [latched, autoContinue, validReturnTo]);
 
     const settled = probeMeta.attempt > 0 && probeMeta.lastProbeAt >= mountedAt;
     let status;
