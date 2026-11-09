@@ -1751,5 +1751,60 @@
     ],
     "createdAt": "2026-10-29T04:31:43.742Z",
     "updatedAt": "2026-10-29T04:39:22.300Z"
+  },
+  {
+    "id": "82e227f3-ba1b-4e03-beaf-0532c990a5c4",
+    "displayDate": "2026-11-09",
+    "version": "1.0.0-dev.48",
+    "title": "Outage Lock, Recipient Fix and Release Gate",
+    "message": "While the server is unavailable the page now pauses and fades its controls, counts down, and moves you to the Service Unavailable screen, which returns you to your page once the server is back. Alert e-mails now go to the right recipients during a database outage.",
+    "whatChanged": [
+      {
+        "text": "Added an outage lock with a countdown and auto-redirect",
+        "items": [
+          "Controls fade and pause while the server is restarting or unreachable",
+          "Theme toggle, close buttons, notices and the status banner stay usable",
+          "\"Redirecting in Ns\" countdown, then the 523 page with a safe return path",
+          "Help Center article explains the paused page"
+        ]
+      },
+      {
+        "text": "Fixed (proven): server alert recipients follow the database state (before: opt-ins and SERVER_NOTIFY_TO were mixed)",
+        "items": [
+          "Database opt-ins while the database answers; SERVER_NOTIFY_TO only when it is down",
+          "Recipient lookup is time-bounded and skips an unhealthy pool",
+          "Critical alert e-mails show the level and a readable timestamp"
+        ]
+      },
+      {
+        "text": "Hardened the alert notifier",
+        "items": [
+          "Acknowledgements are re-hydrated on each tick until the database answers",
+          "Boot logs a warning when the Oracle clock offset differs from DB_TIMEZONE_OFFSET_MINUTES"
+        ]
+      },
+      {
+        "text": "Added a release changelog gate",
+        "items": [
+          "verify-changelog-release script, pre-push hook and tag workflow",
+          "Rejects shared prerelease versions, a stale newest entry and out-of-order dates"
+        ]
+      },
+      {
+        "text": "No database update",
+        "items": [
+          "1,510 backend tests and 958 frontend tests passing"
+        ]
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "GitHub Copilot"
+    ],
+    "createdAt": "2026-11-09T03:53:26.516Z",
+    "updatedAt": "2026-11-09T03:53:26.516Z"
   }
 ]

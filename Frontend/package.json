@@ -1,7 +1,7 @@
 {
     "name": "catherine-frontend",
     "private": true,
-    "version": "1.0.0-dev.47",
+    "version": "1.0.0-dev.48",
     "description": "CATHERINE Template — React 19 + Vite + Tailwind CSS v4 web client (Aumovio Design System v3.1) for the CATHERINE Express + Oracle backend.",
     "license": "Apache-2.0",
     "type": "module",
