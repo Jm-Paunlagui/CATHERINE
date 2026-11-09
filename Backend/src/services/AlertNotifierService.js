@@ -74,6 +74,7 @@
 
 const v8 = require("v8");
 const { logger } = require("../utils/logger");
+const { dbTimezoneOffsetMinutes } = require("../utils/dbTimezone");
 const { notificationMessages } = require("../constants/messages");
 const { AppError, NOTIFICATION_ERRORS, CLUSTER_ERRORS } = require("../constants/errors");
 const { clusterRpc, ClusterRpcClient } = require("../utils/cluster/ClusterRpcClient");
@@ -140,6 +141,9 @@ const overflowNote = (n) =>
 
 /** Max in-memory alert-log rows queued while the DB is unreachable (drop-oldest past this). */
 const ALERT_LOG_QUEUE_MAX = 500;
+
+/** Longest a poll tick with active alerts waits on a retried SERVER_ALERT_ACK read. */
+const ACK_HYDRATE_WAIT_MS = 2000;
 
 /** DETAILS object keys matching this pattern are redacted before persistence (CWE-532). */
 const SENSITIVE_KEY_PATTERN = /password|token|secret|authorization|cookie/i;
@@ -210,6 +214,10 @@ class AlertNotifierService {
          * @type {Map<string, { ackedBy: number, ackedAt: number, expiresAt: number, severityAtAck: "WARNING"|"CRITICAL", note: string|null }>}
          */
         this._acks = new Map();
+        /** True once SERVER_ALERT_ACK was read successfully (a failed boot read is retried per poll). */
+        this._acksHydrated = false;
+        /** In-flight hydration shared by start() and poll ticks, or null. @type {Promise<void>|null} */
+        this._ackHydration = null;
     }
 
     // ─── Lifecycle ────────────────────────────────────────────────────────────
@@ -258,7 +266,7 @@ class AlertNotifierService {
         // for deterministic, awaited assertions instead of racing this call.
         InFlightTaskRegistry.track(
             "alert-notifier:hydrate-acks",
-            this._hydrateAcks(),
+            this._hydrateAcksShared(),
         ).catch(() => {
             /* _hydrateAcks never throws — defensive only */
         });
@@ -602,6 +610,24 @@ class AlertNotifierService {
             return;
         }
 
+        // A boot-time ack read that failed (appDb pool down) is retried here, so a
+        // restart mid-outage never re-sends FIRED for an incident acked in the DB.
+        // Bounded: a hung pool must not stall the alert itself.
+        if (!this._acksHydrated) {
+            const hydration = this._hydrateAcksShared();
+            if (alerts.length) {
+                let timer;
+                await Promise.race([
+                    hydration,
+                    new Promise((resolve) => {
+                        timer = setTimeout(resolve, ACK_HYDRATE_WAIT_MS);
+                        if (typeof timer.unref === "function") timer.unref();
+                    }),
+                ]);
+                clearTimeout(timer);
+            }
+        }
+
         const seenKeys = new Set();
         const activeByChannel = new Map();
         const recoveryByChannel = new Map();
@@ -777,7 +803,7 @@ class AlertNotifierService {
             summary,
             rows,
             throttleNote: "",
-            kv: this._buildChannelKv(channel, snapshot),
+            kv: this._buildChannelKv(channel, snapshot, events.length),
         });
 
         // Phase 3 — write one history row per event covered by this digest
@@ -894,9 +920,20 @@ class AlertNotifierService {
      *
      * @param {string} channel
      * @param {object} snapshot
+     * @param {number} [eventCount=0] - Rows in this digest (critical channel placeholders)
      * @returns {Record<string, string|number>}
      */
-    _buildChannelKv(channel, snapshot) {
+    _buildChannelKv(channel, snapshot, eventCount = 0) {
+        if (channel === "server-critical-notification") {
+            // Metric rules routed here (ORACLE_POOL_DOWN) fill the same
+            // placeholders the critical-log digest does.
+            return {
+                eventCount,
+                windowLabel: `${Math.round(this._pollIntervalMs() / 1000)}s metrics poll`,
+                firstEventAt: this._formatEmailStamp(new Date().toISOString()),
+            };
+        }
+
         if (channel === "server-dependencies-notification") {
             const pools = Object.values(snapshot?.dependencies?.oracle ?? {});
             const alertingPoolCount = pools.filter(
@@ -1160,7 +1197,7 @@ class AlertNotifierService {
      */
     async _dispatchCriticalDigest(events, suppressedNote, overflow = 0, { persist = true } = {}) {
         const windowLabel = `${Math.round(this._digestWindowMs() / 1000)}s`;
-        const firstEventAt = events[0]?.timestamp ?? new Date().toISOString();
+        const firstEventAt = this._formatEmailStamp(events[0]?.timestamp ?? new Date().toISOString());
         const rows = events.map((e) => ({
             level: e.level,
             module: e.meta?.function || e.meta?.file || "unknown",
@@ -1251,6 +1288,27 @@ class AlertNotifierService {
                 attempt: 1,
             },
         };
+    }
+
+    /**
+     * "First event" stamp for the critical email, in the same zone and style as the
+     * email's "sent" line (DB_TIMEZONE_OFFSET_MINUTES), e.g. "Nov 3, 2026, 2:32:05 PM UTC+08:00".
+     * @param {string} iso
+     * @returns {string}
+     */
+    _formatEmailStamp(iso) {
+        const ms = Date.parse(iso);
+        if (Number.isNaN(ms)) return String(iso ?? "");
+        const offsetMin = dbTimezoneOffsetMinutes();
+        const sign = offsetMin >= 0 ? "+" : "-";
+        const abs = Math.abs(offsetMin);
+        const label = `UTC${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
+        const text = new Date(ms + offsetMin * 60_000).toLocaleString("en-US", {
+            timeZone: "UTC",
+            dateStyle: "medium",
+            timeStyle: "medium",
+        });
+        return `${text} ${label}`;
     }
 
     _formatTimeOnly(iso) {
@@ -1626,6 +1684,20 @@ class AlertNotifierService {
     }
 
     /**
+     * Single-flight wrapper over {@link _hydrateAcks}: start() and every poll
+     * tick until the first successful read share one in-flight query.
+     * @returns {Promise<void>} never rejects
+     */
+    _hydrateAcksShared() {
+        if (!this._ackHydration) {
+            this._ackHydration = this._hydrateAcks().finally(() => {
+                this._ackHydration = null;
+            });
+        }
+        return this._ackHydration;
+    }
+
+    /**
      * Hydrates the in-memory ack Map from SERVER_ALERT_ACK. Called
      * fire-and-forget from start() (never awaited there — see the comment
      * at that call site) and directly/awaited from tests for deterministic
@@ -1665,6 +1737,7 @@ class AlertNotifierService {
                 });
                 loaded++;
             }
+            this._acksHydrated = true;
             logger.notice(notificationMessages.ACK_HYDRATED(loaded), {
                 _noNotify: true, // R1b loop guard
             });

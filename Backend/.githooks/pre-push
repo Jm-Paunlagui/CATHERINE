@@ -1,0 +1,23 @@
+#!/bin/sh
+# pre-push: refuse to push a release tag whose data/changelog.enc is wrong.
+# Git for Windows runs this with its bundled sh. Installed by `npm install` (scripts/install-git-hooks.js)
+# or once by hand (from the repository root): git config core.hooksPath Backend/.githooks
+# Bypass in an emergency: git push --no-verify
+
+cd "$(dirname "$0")/.." || exit 1   # Backend/, wherever git runs the hook from
+
+zero=0000000000000000000000000000000000000000
+status=0
+while read local_ref local_sha remote_ref remote_sha; do
+    case "$local_ref" in
+        refs/tags/*)
+            [ "$local_sha" = "$zero" ] && continue   # tag deletion
+            tag=${local_ref#refs/tags/}
+            node scripts/verify-changelog-release.js --ref "$local_sha" --tag "$tag" || status=1
+            ;;
+    esac
+done
+if [ "$status" -ne 0 ]; then
+    echo "pre-push: release changelog check failed; tag push blocked." >&2
+fi
+exit $status

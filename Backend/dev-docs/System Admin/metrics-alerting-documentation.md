@@ -167,7 +167,7 @@ Alert history is fetched only while `alertsView === "history"` and alerts are wa
 | `Backend/src/services/MetricsService.js` | `getSnapshot`, `getClusterSnapshot`, `getSummary`, `evaluateAlerts`, `evaluateAlertHolds`, `ingestFrontendMetrics`. Owns every threshold constant. |
 | `Backend/src/services/AlertNotifierService.js` | Poller, state machine, critical-log tap, storm ceiling, ack lifecycle, alert-log write-behind, retention purge, status/history/test-send. |
 | `Backend/src/services/email/ServerNotificationService.js` | Sender. Builds the subject, fills HTML templates with escaped values, resolves recipients, and sends through `SharedTransporter`. Never throws. |
-| `Backend/src/services/email/RecipientResolver.js` | Cached per-channel opt-in list (`RECIPIENT_REFRESH_MIN`, default 5) with last-known-good fallback. |
+| `Backend/src/services/email/RecipientResolver.js` | Cached per-channel opt-in list (`RECIPIENT_REFRESH_MIN`, default 5) ; `getDbRecipientsWithState` also reports whether the database answered (`dbUp`). |
 | `Backend/src/models/serverAlertLog.model.js` | Append-only history. `insertOne`, `findPage` (max 200 per page), `findRecent`, `purgeOlderThan`. `DETAILS` is bound as a CLOB. In DEMO_MODE it uses an in-memory ring of 500 rows. |
 | `Backend/src/models/serverAlertAck.model.js` | Live ack set. `upsert`, `remove`, `findAll`. In DEMO_MODE it uses an in-memory Map. |
 | `Backend/src/models/admin.model.js` | Maps each channel to its `CAN_RECEIVE_SRV_*` flag. `findServerNotifyRecipients`. |
@@ -211,8 +211,8 @@ A rule with no entry in the map falls back to `FALLBACK_CHANNEL = "server-system
 | `server-system-notification` | `CAN_RECEIVE_SRV_SYS` | rules 3–6, lifecycle mails |
 
 - **Subject:** `` `[${process.env.APP_NAME || "CATHERINE"}][${severity}] ${channel}: ${headline}` `` (`ServerNotificationService.sendChannelDigest`). Severity is `WARNING`, `CRITICAL`, `RESOLVED` or `NOTICE`.
-- **Recipients:** the union of the `SERVER_NOTIFY_TO` list (always included) and active admins whose channel flag is `'Y'`. Duplicates are removed. `AdminManagementService.updatePermissions` calls `RecipientResolver.invalidate()` when a flag changes. If the DB is down at cold start, only the env list is used.
-- **Templates:** `Backend/src/utils/email-templates/server-notification/server-{critical,dependencies,red-metrics,system}-notification.html`. Placeholders use a flat `{{key}}` format. Values are HTML-escaped and `{{alertRows}}` is pre-built from escaped rows.
+- **Recipients (by database state, never both):** `RecipientResolver.getDbRecipientsWithState(channel)` decides. Database up (`appDb` healthy and the opt-in lookup answered within `REFRESH_WAIT_MS` = 2 s) and the channel has opt-ins → active admins whose channel flag is `'Y'` only. Database down (pool unhealthy, lookup failed or timed out, or a cold boot before any lookup succeeded) → `SERVER_NOTIFY_TO` only; the cached opt-ins are not used. Database up but nobody opted in → `SERVER_NOTIFY_TO` (fallback). The pool check reads `db.isPoolHealthy`, so the switch happens on the same poll that marks the pool down. Duplicates are removed. `AdminManagementService.updatePermissions` calls `RecipientResolver.invalidate()` when a flag changes. Keep at least one on-call address in `SERVER_NOTIFY_TO`.
+- **Templates:** `Backend/src/utils/email-templates/server-notification/server-{critical,dependencies,red-metrics,system}-notification.html`. Placeholders use a flat `{{key}}` format. Values are HTML-escaped and `{{alertRows}}` is pre-built from escaped rows. `_buildRow` dispatches on row **shape**, not channel: a row with `level` gets the critical-log markup, any other row the metric markup, so `ORACLE_POOL_DOWN` and its RESOLVED on the critical channel render the rule + pool row. `AlertNotifierService._buildChannelKv` fills the critical template's `eventCount`, `windowLabel` and `firstEventAt` (local time, `_formatEmailStamp`) for metric digests too.
 
 ### 4.5 Critical-log tap
 
@@ -288,7 +288,7 @@ All of these are documented in `Backend/.env.example`. The notifier values use `
 - The note is cut to 500 characters. `SEVERITY_AT_ACK` is the current status.
 - `_checkAndUpdateAck` runs on **every tick**. It clears the ack when the TTL has expired (logged as `ALERT_ACK_EXPIRED`) or when severity has risen (`ALERT_ACK_ESCALATION_CLEARED`, a `notice` log that is deliberately not `_noNotify`).
 - Recovery always clears the ack.
-- `_hydrateAcks` reloads acks from the table at `start()` and skips (and deletes) rows that have already expired. Because `_alertStates` is in memory, the first tick after a restart sees `OK → active` for an incident that was already acknowledged. If a valid ack exists, that FIRED transition is suppressed (`ALERT_ACK_SUPPRESSED_AFTER_RESTART`) and `lastNotifiedAt` is set to now.
+- `_hydrateAcks` reloads acks from the table at `start()` and skips (and deletes) rows that have already expired. A failed read (database down at boot) is retried on every poll tick until the first success, through the single-flight `_hydrateAcksShared` (start and ticks share one query); a tick with active alerts waits for it at most `ACK_HYDRATE_WAIT_MS` (2 000 ms), so a hung pool cannot hold back the DOWN email. Because `_alertStates` is in memory, the first tick after a restart sees `OK → active` for an incident that was already acknowledged. If a valid ack exists, that FIRED transition is suppressed (`ALERT_ACK_SUPPRESSED_AFTER_RESTART`) and `lastNotifiedAt` is set to now.
 
 ### 6.4 Persistence (`Backend/sql/01_schema.sql`)
 
@@ -318,6 +318,8 @@ All of these are documented in `Backend/.env.example`. The notifier values use `
   - `flushForShutdown()` saves rows for buffered criticals.
   - `drainAndStop({ persist: false })` sends the final email.
   - `notifyCriticalNow` and `notifyLifecycleNow` are each bounded by `NOTIFY_NOW_TIMEOUT_MS = 5000`.
+- `beginShutdown()` stops the poll before the pools drain, so a database failure during graceful shutdown raises no false `ORACLE_POOL_DOWN`.
+- **Clock check:** once the pools are up, `server.js` calls `verifyDbClockOffset(db)` (`src/utils/dbTimezone.js`). It reads `EXTRACT(TIMEZONE_HOUR/MINUTE FROM SYSTIMESTAMP)` and logs one WARNING (`DB_CLOCK_OFFSET_MISMATCH`) when the Oracle server's zone differs from `DB_TIMEZONE_OFFSET_MINUTES` or the app process's offset. Every `DEFAULT SYSTIMESTAMP` column (Alert History "Created" included) uses the server's clock. Never throws, never blocks start-up.
 - The WinSW `stoptimeout` in `Backend/deploy/winsw/catherine-backend-service.xml` (1860 s) is sized to include the time for that forced-exit alert email.
 
 ---
@@ -360,7 +362,7 @@ Yes. The rationale is in `MetricsStore.computeRates` and the `evaluateAlerts` do
 `[APP_NAME][SEVERITY] channel: headline` (`ServerNotificationService.sendChannelDigest`). *Tests:* none found. Source only.
 
 **Q6. Who receives the emails?**
-The `SERVER_NOTIFY_TO` list combined with active admins whose `CAN_RECEIVE_SRV_*` flag is `'Y'` (`ServerNotificationService.resolveRecipients`, `Backend/src/models/admin.model.js` channel→flag map). *Tests:* none found.
+By database state, never both: active admins whose `CAN_RECEIVE_SRV_*` flag is `'Y'` while the database answers, `SERVER_NOTIFY_TO` while it is down or when nobody opted in. *Tests:* `Backend/test/server/unit/services/serverNotification.recipientsByDbState.test.js`. Source (`ServerNotificationService.resolveRecipients`, `Backend/src/models/admin.model.js` channel→flag map). *Tests:* none found.
 
 **Q7. Can an acknowledgement hide a worsening incident?**
 No. `_checkAndUpdateAck` clears the ack when severity rises above `severityAtAck` or the TTL expires, and ESCALATED always sends. *Tests:* the HTTP contract for ack/unack is in `Backend/test/server/integration/metrics/metrics-notifications.test.js` ("POST /api/v1/metrics/alerts/ack", "DELETE /api/v1/metrics/alerts/ack"), with the service stubbed. The escalation-override logic itself has no test.
@@ -386,9 +388,12 @@ Per source, yes: `HealthStreamHub.canAccept` (429 above 50 per IP or 2000 in tot
 **Q14. Are alert tables environment-specific and overridable?**
 Yes. `resolveTableName()` in `serverAlertLog.model.js` and `serverAlertAck.model.js` uses `SERVER_ALERT_*_TABLE` when set, otherwise `T_SERVER_ALERT_*` in production and `*_DEV` elsewhere. *Tests:* none found.
 
+**Q15a. Do outage emails render, retry the ack read and stay quiet during shutdown?**
+Yes. *Tests:* `Backend/test/server/unit/services/alertNotifier.outageEmailFixes.test.js`, `Backend/test/server/integration/metrics/oracleOutageEmailLifecycle.integration.test.js`, `Backend/test/server/reliability/oracleOutageDuringShutdown.reliability.test.js`, `Backend/test/server/security/oraclePoolOutageEmail.security.test.js` (hostile pool name escaped, CWE-79), `Backend/test/server/performance/oraclePoolOutagePoll.perf.test.js`. Real server: `node scripts/sim-server/runner.js` (outage-recovery section, `flakyOracle` preload).
+
 **Q15. Is the frontend side tested?**
 No test in `Frontend/test/` references `useMetrics`, `metricsApi`, `useServerStatusStream` or `frontendMetrics`. UI behaviour is backed by source only.
 
 ---
 
-_End of document. Updated 2026-10-29._
+_End of document. Updated 2026-11-09._

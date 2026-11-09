@@ -161,18 +161,21 @@ class ServerNotificationService {
 
     /**
      * Resolves the recipient list for a given notification channel:
-     * `env floor ∪ DB opt-ins`, deduplicated (Access Control
-     * recipients).
+     * DB opt-ins while the database answers, otherwise the env fallback —
+     * never both, so nobody is emailed twice.
      *
-     * - Env floor: the parsed, deduplicated `SERVER_NOTIFY_TO` list — the
-     *   ops floor/fallback, always included regardless of Access Control state.
+     * - Database answering and at least one opt-in → DB opt-ins only.
+     * - Database answering, nobody opted into this channel → `SERVER_NOTIFY_TO`.
+     * - Database down (last opt-in lookup failed or outlived its 2 s wait, or a
+     *   cold boot before any lookup succeeded) → `SERVER_NOTIFY_TO` only; the
+     *   last-known opt-in cache is not used.
+     *
+     * - Env fallback: the parsed, deduplicated `SERVER_NOTIFY_TO` list.
      * - DB opt-ins: admins with `IS_ACTIVE='Y'` and the channel's
      *   `CAN_RECEIVE_SRV_*` flag `='Y'` (`AdminModel.findServerNotifyRecipients`,
      *   which already resolves and de-duplicates addresses, dropping admins
      *   with no address on file) — served from `RecipientResolver`'s short-TTL
-     *   last-known-good cache so a DB outage never mutes a channel. Cold
-     *   boot with the DB down contributes `[]` from this half — the env
-     *   floor alone still gets through.
+     *   cache.
      *
      * Never throws — `RecipientResolver.getDbRecipients` swallows its own
      * failures internally; this method also does not let ANY DB error stop
@@ -188,9 +191,14 @@ class ServerNotificationService {
             .map((part) => part.trim())
             .filter(Boolean);
 
+        // SERVER_NOTIFY_TO is the outage fallback, not an extra recipient.
+        // With the database answering it is left out (an admin whose opt-in address
+        // differs from it was emailed twice); with the database down, or with
+        // nobody opted in, it is the only recipient.
         let dbOptIns = [];
+        let dbUp = false;
         try {
-            dbOptIns = await RecipientResolver.getDbRecipients(channel);
+            ({ dbUp, emails: dbOptIns } = await RecipientResolver.getDbRecipientsWithState(channel));
         } catch (err) {
             // Defense-in-depth — RecipientResolver already swallows its own
             // refresh failures, but resolveRecipients must never propagate
@@ -201,9 +209,10 @@ class ServerNotificationService {
             );
         }
 
+        const source = dbUp && dbOptIns.length > 0 ? dbOptIns : envFloor;
         const seen = new Set();
         const out = [];
-        for (const email of [...envFloor, ...dbOptIns]) {
+        for (const email of source) {
             if (!email || seen.has(email)) continue;
             seen.add(email);
             out.push(email);
@@ -481,7 +490,9 @@ class ServerNotificationService {
      * @returns {string}
      */
     _buildRow(channel, row, isLast) {
-        return channel === "server-critical-notification"
+        // The critical channel also carries metric-rule rows (ORACLE_POOL_DOWN
+        // and its RESOLVED); dispatch on row shape like _buildPlainText does.
+        return channel === "server-critical-notification" && row.level
             ? this._buildCriticalRow(row, isLast)
             : this._buildMetricRow(row, isLast);
     }

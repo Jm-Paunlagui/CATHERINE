@@ -656,6 +656,10 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
                     // Boot email: pools are up, so DB opt-in recipients resolve.
                     announceBoot();
 
+                    // Warn when the database clock zone differs from the app's, which
+                    // shifts every DEFAULT SYSTIMESTAMP column (Alert History "Created").
+                    require("./src/utils/dbTimezone").verifyDbClockOffset(db);
+
                     // ── Ended sessions ─────────────────────────────────
                     // EVERY process, not only the leader: each keeps its own
                     // in-memory set of ended session families, and a full restart

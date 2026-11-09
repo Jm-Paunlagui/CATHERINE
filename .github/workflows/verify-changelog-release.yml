@@ -1,0 +1,40 @@
+name: Verify release changelog
+
+# Runs when a release tag is pushed (or by hand). Checks that Backend/data/changelog.enc at the tag
+# — the file inside the release's "Source code" zip / tar.gz — has one entry per prerelease
+# version and that its newest entry is the tag's own version.
+# Needs the repository secret CHANGELOG_ENCRYPTION_KEY (same 64-hex value as the server .env).
+
+on:
+    push:
+        tags:
+            - "v[0-9]+.[0-9]+.[0-9]+*"
+            - "[0-9]+.[0-9]+.[0-9]+*"
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: "Tag to verify (blank = every release tag)"
+                required: false
+
+permissions:
+    contents: read
+
+jobs:
+    verify:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  fetch-tags: true
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+            - name: Verify changelog in the release
+              working-directory: Backend
+              env:
+                  CHANGELOG_ENCRYPTION_KEY: ${{ secrets.CHANGELOG_ENCRYPTION_KEY }}
+                  TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+              run: |
+                  if [ -z "$CHANGELOG_ENCRYPTION_KEY" ]; then echo "::error::Repository secret CHANGELOG_ENCRYPTION_KEY is not set"; exit 1; fi
+                  node scripts/verify-changelog-release.js $TAG

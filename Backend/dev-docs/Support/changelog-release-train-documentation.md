@@ -133,6 +133,8 @@ Every write generates a fresh 12-byte IV. The GCM auth tag provides both confide
 
 An unknown type falls back to `TYPE_META.feat` for display. The backend allow-list (`VALID_TYPES` in `ChangelogService.js`) is the same 11 values.
 
+**Rule — `release` is a stage marker, never a container for changes.** `release` is used only for a cycle's opening entry, "promoted to Alpha / Beta / Release Candidate", "released (Stable)" and re-releases. Every actual change is its own typed entry (`feat`, `fix`, `patch`, `perf`, `security`, `refactor`, `docs`, `test`, `chore`, `breaking`) in the stage it shipped in, and every entry gets its own increment (`-dev.N`, `-alpha.N`, `-beta.N`, `-rc.N`): two entries never share a prerelease version. Only a stable version may repeat (released + re-released).
+
 ## 4. Backend Implementation
 
 | Method & Path                           | Handler / File                   | Purpose                                                              |
@@ -368,6 +370,8 @@ Old entries with a `summary` field (pre-structured format) are auto-migrated to 
 ### SemVer Precedence
 
 Version comparison follows SemVer 2.0.0: pre-release versions (`-dev.1`, `-alpha.1`, etc.) have lower precedence than the bare release (`1.20.0-rc.1 < 1.20.0`). Within pre-release, stages are ordered by the ladder (`dev < alpha < beta < rc`), then by iteration number.
+
+**Date order equals version order.** Inside one core version, entries sorted by `displayDate` then `createdAt` must never step back in version (no `-alpha.3` dated after `-beta.1`). `scripts/verify-changelog-release.js` (`npm run audit:changelog-release`) fails such a changelog; the `.githooks/pre-push` hook (installed by `npm install` through `scripts/install-git-hooks.js`) runs it on every pushed tag, and `.github/workflows/verify-changelog-release.yml` runs it on tag push (needs the repository secret `CHANGELOG_ENCRYPTION_KEY`).
 
 ### Maintenance scripts — dump → seed
 

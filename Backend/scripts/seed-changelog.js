@@ -5,6 +5,11 @@ require("../src/utils/encodingPolyfill");
 
 /**
  * Seed (or reset) the changelog encrypted store.
+ *   • type "release" marks a stage only (opened / promoted / released); every
+ *     change is its own typed entry (feat, fix, patch, docs, test, …), and every
+ *     entry gets its own increment (-dev.N / -alpha.N …); only a stable version
+ *     may repeat (released + re-released). See
+ *     dev-docs/Support/changelog-release-train-documentation.md.
  *
  * This script wipes the existing data/changelog.enc file and writes a fresh
  * copy from the SEED_ENTRIES constant below.

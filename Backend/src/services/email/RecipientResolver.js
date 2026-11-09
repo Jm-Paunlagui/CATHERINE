@@ -60,6 +60,26 @@ class RecipientResolver {
         this._lastRefreshAt = 0;
         /** @type {Promise<void>|null} in-flight refresh, shared by concurrent callers */
         this._refreshPromise = null;
+        /** @type {boolean} whether the most recent refresh attempt reached the database */
+        this._lastRefreshOk = false;
+    }
+
+    /**
+     * Resolves the opt-in list AND whether the database answered.
+     * `dbUp` is false on a cold boot, after a failed refresh, or when the refresh
+     * outlives REFRESH_WAIT_MS — the caller then mails SERVER_NOTIFY_TO instead.
+     * Never throws.
+     *
+     * @param {string} channel
+     * @returns {Promise<{ dbUp: boolean, emails: string[] }>}
+     */
+    async getDbRecipientsWithState(channel) {
+        // A cached success can be up to RECIPIENT_REFRESH_MIN old; the pool
+        // health monitor knows sooner that the database stopped answering.
+        if (!this._poolsHealthy()) return { dbUp: false, emails: [] };
+        const { timedOut } = await this._refreshBounded();
+        const dbUp = !timedOut && this._lastRefreshOk;
+        return { dbUp, emails: dbUp ? (this._cache.get(channel) ?? []) : [] };
     }
 
     /**
@@ -70,6 +90,33 @@ class RecipientResolver {
      * @returns {Promise<string[]>}
      */
     async getDbRecipients(channel) {
+        await this._refreshBounded();
+        return this._cache.get(channel) ?? [];
+    }
+
+    /**
+     * Whether the pool the opt-in lookup reads (appDb) passes its health check.
+     * Lazy require (load order, see _doRefresh); a missing adapter function
+     * counts as healthy so standalone tests are unaffected.
+     * @returns {boolean}
+     * @private
+     */
+    _poolsHealthy() {
+        try {
+            const db = require("../../config");
+            if (typeof db.isPoolHealthy !== "function") return true;
+            return db.isPoolHealthy("appDb");
+        } catch {
+            return true;
+        }
+    }
+
+    /**
+     * Runs {@link _maybeRefresh} for at most REFRESH_WAIT_MS.
+     * @returns {Promise<{ timedOut: boolean }>}
+     * @private
+     */
+    async _refreshBounded() {
         // Bounded: when the database is the thing that hung (a
         // stop's failsafe, a pool outage) the refresh can hang too, and an
         // unbounded wait made the whole send lose its 5 s race, env floor
@@ -88,7 +135,7 @@ class RecipientResolver {
         if (timedOut) {
             logger.warning(notificationMessages.RECIPIENT_REFRESH_WAIT_EXCEEDED(waitMs), { _noNotify: true }); // R1b loop guard
         }
-        return this._cache.get(channel) ?? [];
+        return { timedOut };
     }
 
     /**
@@ -165,7 +212,9 @@ class RecipientResolver {
             });
 
             this._cache = next;
+            this._lastRefreshOk = true;
         } catch (err) {
+            this._lastRefreshOk = false;
             logger.warning(
                 notificationMessages.EMAIL_FAILED(
                     "recipient-resolver",

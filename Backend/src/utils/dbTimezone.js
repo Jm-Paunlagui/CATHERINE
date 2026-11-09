@@ -52,4 +52,42 @@ function dbTimezoneOffsetMinutes() {
     return DEFAULT_DB_TZ_OFFSET_MINUTES;
 }
 
-module.exports = { dbTimezoneOffsetMinutes, DEFAULT_DB_TZ_OFFSET_MINUTES };
+const CLOCK_OFFSET_SQL =
+    "SELECT EXTRACT(TIMEZONE_HOUR FROM SYSTIMESTAMP) * 60 + EXTRACT(TIMEZONE_MINUTE FROM SYSTIMESTAMP) AS OFF_MIN FROM dual";
+
+/**
+ * Start-up check: compares the Oracle server's own clock offset (what
+ * every `DEFAULT SYSTIMESTAMP` column is stamped in) with
+ * DB_TIMEZONE_OFFSET_MINUTES and with this process's offset. A database
+ * container left on UTC while the app runs on UTC+8 stores Alert History rows
+ * 8 hours early, silently. Logs one WARNING on mismatch; never throws.
+ *
+ * @param {{ withConnection: Function, oracledb?: object }} db - src/config adapter
+ * @param {{ appOffsetMinutes?: number }} [opts]
+ * @returns {Promise<{ dbOffsetMinutes: number, configuredMinutes: number, appOffsetMinutes: number, match: boolean } | null>}
+ *          null when the clock could not be read
+ */
+async function verifyDbClockOffset(db, { appOffsetMinutes = -new Date().getTimezoneOffset() } = {}) {
+    try {
+        const raw = await db.withConnection("appDb", async (conn) => {
+            const r = await conn.execute(CLOCK_OFFSET_SQL, [], { outFormat: db.oracledb?.OUT_FORMAT_OBJECT });
+            const row = r.rows?.[0];
+            return Array.isArray(row) ? row[0] : row?.OFF_MIN;
+        });
+        const dbOffsetMinutes = raw == null || raw === "" ? NaN : Number(raw);
+        if (!Number.isInteger(dbOffsetMinutes)) throw new Error(`unexpected offset value ${raw}`);
+        const configuredMinutes = dbTimezoneOffsetMinutes();
+        const match = dbOffsetMinutes === configuredMinutes && dbOffsetMinutes === appOffsetMinutes;
+        if (!match) {
+            logger.warning(
+                databaseMessages.DB_CLOCK_OFFSET_MISMATCH(dbOffsetMinutes, configuredMinutes, appOffsetMinutes),
+            );
+        }
+        return { dbOffsetMinutes, configuredMinutes, appOffsetMinutes, match };
+    } catch (err) {
+        logger.warning(databaseMessages.DB_CLOCK_OFFSET_CHECK_FAILED(err.message));
+        return null;
+    }
+}
+
+module.exports = { dbTimezoneOffsetMinutes, verifyDbClockOffset, DEFAULT_DB_TZ_OFFSET_MINUTES };
