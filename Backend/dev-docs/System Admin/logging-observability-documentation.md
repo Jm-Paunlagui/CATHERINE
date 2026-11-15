@@ -181,6 +181,7 @@ The level filter options come from `SYSTEM_LOG_LEVEL_OPTIONS` in the hook: `"5"`
 
 | Step | Middleware | Why there |
 | --- | --- | --- |
+| 2 | `defaultSecurityFilter.handle` | Logs blocked requests; 400 for GET/HEAD with a body. Above Traceability, so it mints its own `req.id` for refusals. |
 | 3 | `defaultTraceability.handle` | Mints `req.id`, sets `X-Request-ID`, opens the ALS context, writes `[Request Complete]`. Above the body parsers so a malformed-JSON 400 still has an id, a context and an audit row. |
 | 3a | `defaultAuditLog.handle` | Wraps `res.end`; persists the audit row after the response. |
 | 3b | `defaultShutdownGate.handle` | After 3/3a, so a 503 during shutdown still has a request id and an audit row. |
@@ -188,6 +189,8 @@ The level filter options come from `SYSTEM_LOG_LEVEL_OPTIONS` in the hook: `"5"`
 | 4a | `defaultTraceability.logIncoming` | Writes `[Incoming Request]` **after** parsing so the body is visible. |
 
 `TraceabilityMiddleware.restoreContext` re-enters the ALS context after multer, which loses it.
+
+**Security filter — GET/HEAD body guard (CVE-2026-123864).** As its last check, `SecurityFilterMiddleware` refuses any GET or HEAD request that has a `Transfer-Encoding` header (any value) or a `Content-Length` above 0. The response is a 400 `BodyNotAllowedError` with `Connection: close`, sent before the body parsers, auth or any SSE handler run. It logs one `GET_BODY_REFUSED` warning with the fields method, path (no query string) and ip. No header or body values are logged. There is **no strike** toward the IP block, because a misbehaving proxy would otherwise lock out every user behind it. The method whitelist does not exempt it. Refusals that already happen keep their status and strike (a `GET /.env` with a body is still a 404 plus a strike). Switch: `SECURITY_FILTER_REJECT_GET_BODY` (default on; only the exact value `"false"` disables it; restart to apply). Evidence: `Backend/test/server/unit/middleware/securityFilter.bodyless.test.js` (U1–U14) and `Backend/test/server/security/securityFilter.bodylessMethods.security.test.js` (I1–I7, raw socket).
 
 ### 4.2 Line format
 

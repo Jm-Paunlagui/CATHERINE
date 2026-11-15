@@ -42,6 +42,9 @@ const middlewareMessages = {
     `Security filter: HTTP method blocked — ${method} ${path} from ${ip}.`,
   IP_BLOCKED_SUSPICIOUS: (ip, method, path) =>
     `Security filter: request from blocked IP — ${method} ${path} from ${ip}.`,
+  // CVE-2026-123864 guard — method, path (no query) and ip only; never header or body values.
+  GET_BODY_REFUSED: (ip, method, path) =>
+    `Security filter: ${method} with a request body refused — ${path} from ${ip}.`,
 
   // ── Cluster cron-leader election (server.js primary process) ─────────────
   // ClusterRole.isCronLeader fails CLOSED (see src/utils/clusterRole.js);

@@ -252,7 +252,7 @@ const INTEGRITY_ERRORS = {
         "Invalid date range. Provide ISO dates with 'from' on or before 'to'.",
 };
 
-// ─── Request watchdog ───────────────────────────────────────────────────────────
+// ─── Request-level errors (watchdog, body guard) ────────────────────────────────
 
 const REQUEST_ERRORS = {
     /** 504 — the request made no progress for longer than its idle limit. */
@@ -261,6 +261,8 @@ const REQUEST_ERRORS = {
     /** Hint sent with the 504. */
     STALLED_HINT:
         "Check whether the action completed before retrying it, especially for bulk actions.",
+    /** 400 — GET/HEAD carried a body (Transfer-Encoding, or Content-Length > 0). SecurityFilterMiddleware, CVE-2026-123864 guard. */
+    BODY_NOT_ALLOWED: "GET and HEAD requests must not include a request body.",
 };
 
 // ─── Data Purge & Restore error messages (SUPER_ADMIN only) ─────────────────

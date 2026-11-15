@@ -1,6 +1,6 @@
 {
     "name": "catherine-backend",
-    "version": "1.0.0-dev.48",
+    "version": "1.0.0-dev.50",
     "description": "CATHERINE Template — Production-grade Express 5 + OracleDB backend with JWT auth, RBAC, audit logging, exact-decimal money, and observability.",
     "homepage": "https://github.com/Jm-Paunlagui/NodeExpress-Template#readme",
     "bugs": {
@@ -24,6 +24,9 @@
     "author": "Jm-Paunlagui",
     "type": "commonjs",
     "main": "server.js",
+    "engines": {
+        "node": ">=26.13.1"
+    },
     "scripts": {
         "prepare": "node scripts/install-git-hooks.js",
         "audit:changelog-release": "node scripts/verify-changelog-release.js",

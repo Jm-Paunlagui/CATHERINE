@@ -28,7 +28,7 @@ Package: `catherine-backend` `1.0.0-dev.46`, kept in lockstep with the frontend.
 
 ## Requirements
 
-- Node.js 24 (production builds target `node24-win-x64`)
+- Node.js 26 LTS for development and CI (26.13.1 or later). Production builds still target `node24-win-x64` until pkg-fetch on npm ships a 26.13.1 build, at which point they move to `node26-win-x64`
 - Oracle Database, plus Oracle Instant Client for thick mode (`ORACLE_INSTANT_CLIENT`). Not needed with `DEMO_MODE=true`.
 - An SMTP server for notifications (optional in development)
 

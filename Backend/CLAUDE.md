@@ -16,7 +16,7 @@ Production-grade Node.js Express API template. Class-based OOP architecture, cle
 - JWT-based authentication with dynamic, permission-based authorization
 - Sliding Window Counter rate limiting (in-memory, no Redis)
 - IP filtering middleware (CIDR-aware)
-- Security filter (blocks scanners, path traversal, script injection)
+- Security filter (blocks scanners, path traversal, script injection, refuses GET/HEAD requests carrying a body (CVE-2026-123864 guard))
 - Standardized API response shape (`sendSuccess` / `sendError`)
 - Structured AppError class with operational error handling
 - Global error handler — all errors funnel through one place
@@ -569,6 +569,9 @@ RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS, TRUST_PROXY
 # ── IP Filtering ────────────────────────────────────────────────────
 ENABLE_IP_FILTER, ALLOWED_IPS
 
+# ── Security filter ─────────────────────────────────────────────────
+SECURITY_FILTER_REJECT_GET_BODY   # default true; only "false" disables the GET/HEAD body guard (CVE-2026-123864)
+
 # ── Database (Oracle) ───────────────────────────────────────────────
 DB_TYPE, DB_HOST, DB_PORT, DB_APP_SERVICE_NAME   # used as the SID in the TNS string
 APP_DB_USERNAME, APP_DB_PASSWORD                 # shared by appDb and appDbBulk
@@ -730,7 +733,7 @@ request watchdog is **not** an `app.use` step: it attaches to the HTTP server's
 ```js
 // app.js — numbered exactly as the file comments them
 app.use(defaultHelmet.handle);            // 1.  Security headers
-app.use(defaultSecurityFilter.handle);    // 2.  Block scanners / traversal EARLY
+app.use(defaultSecurityFilter.handle);    // 2.  Block scanners / traversal EARLY; refuses GET/HEAD with a body (400 BodyNotAllowedError, no strike, `SECURITY_FILTER_REJECT_GET_BODY`)
 app.use(defaultTraceability.handle);      // 3.  Request ID + request/response logging
 app.use(defaultAuditLog.handle);          // 3a. Audit-log DB persistence (setImmediate after res.end)
 app.use(defaultShutdownGate.handle);      // 3b. Refuse new work while draining (health paths stay reachable)
@@ -1083,6 +1086,7 @@ PKG compatibility requirements:
 2. `src/utils/nanoidLoader.js` handles nanoid's ESM-only issue in compiled environments
 3. `src/config/adapters/oracle.js` handles Thick mode init for compiled Oracle client
 4. `src/utils/consoleManager.js` sets process title for compiled exe window
+5. **Dev/CI baseline:** development and CI use Node.js 26 LTS (26.13.1 or later, the 2026-11-11 security release; `engines.node` `>=26.13.1`, CI `node-version: 26`). The production exe still targets `node24-win-x64` until pkg-fetch on npm ships a 26.13.1 build, at which point it moves to `node26-win-x64`. The Node that runs `npm test` is not the Node inside the exe.
 
 ---
 
@@ -1187,7 +1191,8 @@ test/server/
 │   │   ├── ipFilter.test.js
 │   │   ├── cors.test.js
 │   │   ├── csrf.test.js
-│   │   └── securityFilter.test.js
+│   │   ├── securityFilter.test.js
+│   │   └── securityFilter.bodyless.test.js   # GET/HEAD body guard (CVE-2026-123864)
 │   ├── utils/
 │   │   ├── catchAsync.test.js
 │   │   ├── logger.test.js
@@ -1212,7 +1217,8 @@ test/server/
 │   ├── rate-limit.test.js          # Flood attack simulation
 │   ├── cors.test.js                # Disallowed origins
 │   ├── csrf.test.js                # Missing / replayed tokens
-│   └── headers.test.js             # Helmet header presence and values
+│   ├── headers.test.js             # Helmet header presence and values
+│   └── securityFilter.bodylessMethods.security.test.js  # raw-socket GET/HEAD-with-body refusal (CVE-2026-123864)
 │
 ├── performance/                    # Timing and throughput assertions
 │   ├── response-time.test.js       # P95 latency under normal load
@@ -2423,7 +2429,7 @@ jobs:
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
-                  node-version: "18"
+                  node-version: "26"
                   cache: "npm"
 
             - name: Install dependencies

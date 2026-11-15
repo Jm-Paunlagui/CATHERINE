@@ -32,7 +32,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-02T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0002-0000-0000-000000000002",
@@ -66,7 +66,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-06T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0003-0000-0000-000000000003",
@@ -100,7 +100,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-11T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0004-0000-0000-000000000004",
@@ -134,7 +134,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-16T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0005-0000-0000-000000000005",
@@ -165,7 +165,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-20T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0006-0000-0000-000000000006",
@@ -205,7 +205,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-03-27T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0007-0000-0000-000000000007",
@@ -236,7 +236,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-02T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0008-0000-0000-000000000008",
@@ -264,7 +264,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-08T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0009-0000-0000-000000000009",
@@ -289,7 +289,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-14T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0010-0000-0000-000000000010",
@@ -320,7 +320,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-20T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0011-0000-0000-000000000011",
@@ -345,7 +345,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-24T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0012-0000-0000-000000000012",
@@ -373,7 +373,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-04-28T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ca7e1100-0013-0000-0000-000000000013",
@@ -401,7 +401,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-05-04T08:00:00.000Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "3d64de09-948a-433a-8101-554250fcbea9",
@@ -441,7 +441,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-05T07:16:54.728Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "46d3d198-a38f-4717-ba4e-64374dca4053",
@@ -478,7 +478,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-05T08:55:44.509Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "9625a063-623e-4a7a-a5e1-7a4de817f3d7",
@@ -521,7 +521,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-08T04:01:36.924Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "3e6d718e-9a6c-40b5-a580-b94252d9c2a8",
@@ -565,7 +565,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-06-15T04:02:11.804Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "f82900ba-61c6-49a6-ae0b-e99ff74c3176",
@@ -614,7 +614,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-18T09:21:17.836Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "a8e93459-baa8-4d51-8296-96a4e7122763",
@@ -662,7 +662,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-19T09:14:49.047Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "3cf91049-f9de-4cf2-987d-4e55550ef850",
@@ -703,7 +703,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-20T10:23:56.750Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "c51b96a4-bd48-4b6f-8762-a8c4147b3563",
@@ -745,7 +745,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-30T08:30:59.784Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "cb17bfdf-2555-4f92-8cef-c93798b6c6e3",
@@ -778,7 +778,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-06-30T09:10:48.868Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "770b5810-989b-42c1-a240-a6e07911098f",
@@ -825,7 +825,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T00:20:30.228Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ef5f5c55-3815-4b76-8110-927d280ef4c4",
@@ -854,7 +854,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T01:33:03.288Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "5490f376-b2a4-4ed6-bbd4-90359a29d30f",
@@ -894,7 +894,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T01:52:29.498Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "afff8915-9c09-4597-b459-5e57a39b71c5",
@@ -937,7 +937,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T04:10:52.569Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "22bca4f4-849a-4582-9dc6-13660c086aff",
@@ -998,7 +998,7 @@
       "Claude Opus"
     ],
     "createdAt": "2026-07-01T05:36:08.305Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "32f88a03-37e7-4a47-b3e2-d828d807e1b8",
@@ -1023,7 +1023,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T06:22:18.655Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "bc62a856-1b1b-41e8-8b6f-8a26db59daed",
@@ -1048,7 +1048,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T06:31:40.529Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "5a4a17ae-8a53-4f0a-91f8-8cd104dc2e59",
@@ -1076,7 +1076,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-01T07:28:46.715Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "8e124c42-a212-4afe-b027-134d824b8d76",
@@ -1098,7 +1098,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-14T09:35:45.800Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "53684450-611d-42f2-b0bf-ee358c0a76b8",
@@ -1141,7 +1141,7 @@
       "Claude Sonnet"
     ],
     "createdAt": "2026-07-14T09:36:28.634Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "9ae4c0ec-258c-4c8c-a496-d96980ea8617",
@@ -1175,7 +1175,7 @@
       "Claude Sonnet"
     ],
     "createdAt": "2026-07-14T09:37:04.442Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "5b80ffa9-f723-4cc1-94d1-e1df565649b3",
@@ -1205,7 +1205,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-14T09:37:49.485Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "61b7b2e2-ed63-4eae-86d4-723d94321099",
@@ -1240,7 +1240,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-14T09:38:21.343Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "ae440085-707d-4ea6-9918-2bbdccf5c7d5",
@@ -1271,7 +1271,7 @@
       "Claude Sonnet"
     ],
     "createdAt": "2026-07-15T01:45:25.388Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "2303681b-92db-402c-9cb7-37d050002545",
@@ -1299,7 +1299,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-15T10:01:03.447Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "f656fb19-d34e-4ccd-84c8-7eecfe311c29",
@@ -1327,7 +1327,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-16T06:54:09.602Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "0c9db1aa-1f83-4d4e-950b-346e008756b3",
@@ -1361,7 +1361,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-16T06:54:37.380Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "f91fd1bc-6be5-4511-94cd-44075cb96d2d",
@@ -1399,7 +1399,7 @@
     ],
     "coAuthors": [],
     "createdAt": "2026-07-16T06:56:01.561Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "4a2a4664-a680-4981-bacd-c7f724ad4173",
@@ -1433,7 +1433,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.930Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "90a881c2-4ec9-4b57-bd60-3f6eaac41ecb",
@@ -1495,7 +1495,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.945Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "d59ceb67-43b8-424d-b88e-51d158de0d01",
@@ -1550,7 +1550,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.951Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "520a7e81-d530-4fe3-b596-4c633b8382d6",
@@ -1595,7 +1595,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.960Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "294cbd53-6cc3-4a29-93d8-7e41204ed1dd",
@@ -1636,7 +1636,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-03T09:03:40.966Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "e8ef6610-c60f-481b-a1b0-c2071d7dbd49",
@@ -1690,7 +1690,7 @@
       "Claude Opus 5"
     ],
     "createdAt": "2026-09-04T16:19:53.630Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "003b6a10-301d-4cdf-84c0-bb36f0d745e8",
@@ -1750,7 +1750,7 @@
       "GitHub Copilot"
     ],
     "createdAt": "2026-10-29T04:31:43.742Z",
-    "updatedAt": "2026-10-29T04:39:22.300Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   },
   {
     "id": "82e227f3-ba1b-4e03-beaf-0532c990a5c4",
@@ -1805,6 +1805,68 @@
       "GitHub Copilot"
     ],
     "createdAt": "2026-11-09T03:53:26.516Z",
-    "updatedAt": "2026-11-09T03:53:26.516Z"
+    "updatedAt": "2026-11-15T03:14:00.704Z"
+  },
+  {
+    "id": "050c93d1-8696-4998-8e76-a62b11e484b2",
+    "displayDate": "2026-11-16",
+    "version": "1.0.0-dev.49",
+    "title": "Development and Checks Use Node.js 26 LTS",
+    "message": "Development and the automatic release check now run on Node.js 26 LTS (26.13.1 or later), the November 11, 2026 security release. The packaged server still runs Node.js 24 for now.",
+    "whatChanged": [
+      {
+        "text": "Moved development and CI to Node.js 26 LTS",
+        "items": [
+          "The release check on GitHub runs on Node.js 26 instead of 24",
+          "Backend and Frontend both require Node.js 26.13.1 or later for development",
+          "Setup guides and developer notes name Node.js 26 LTS, and explain that the packaged server moves to Node.js 26 once its build tool offers 26.13.1 on npm"
+        ]
+      },
+      {
+        "text": "The packaged server (backend.exe) still targets Node.js 24; that changes in a later release"
+      },
+      {
+        "text": "No database update"
+      }
+    ],
+    "type": "chore",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-11-15T03:14:00.696Z",
+    "updatedAt": "2026-11-15T03:14:00.704Z"
+  },
+  {
+    "id": "9275f4b1-7473-411c-8439-5ed092c72ebd",
+    "displayDate": "2026-11-16",
+    "version": "1.0.0-dev.50",
+    "title": "Read Requests Carrying a Body Are Refused",
+    "message": "The server now refuses a page read (GET or HEAD) that carries a request body, before sign-in is checked. This closes the part of the November Node.js HTTPS memory leak (CVE-2026-123864) that live-updating pages could trigger.",
+    "whatChanged": [
+      {
+        "text": "Fixed (proven): a GET or HEAD with a request body is answered 400 (BodyNotAllowedError) and the connection is closed (before: the health live-update stream, which needs no sign-in, opened while the body was still arriving)",
+        "items": [
+          "Checked in the first security filter step, before sign-in, the body readers and every page, so all live-updating pages and file downloads are covered; the middleware order is unchanged",
+          "Requests already refused for other reasons keep their answer and strike; this refusal adds no strike, so users behind one shared proxy address cannot be locked out together",
+          "Normal reads are unaffected; \"Content-Length: 0\" still passes",
+          "The warning line names the method, path and address only, never header or body values",
+          "Can be turned off without a rebuild: SECURITY_FILTER_REJECT_GET_BODY=false, then restart (documented in .env.example)"
+        ]
+      },
+      {
+        "text": "Tests: 24 new (14 unit cases, 7 over a raw connection); 15 failed before the fix, all pass after. Backend suite 1534/1534"
+      },
+      {
+        "text": "No database update"
+      }
+    ],
+    "type": "security",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [],
+    "createdAt": "2026-11-15T03:14:01.696Z",
+    "updatedAt": "2026-11-15T03:14:00.704Z"
   }
 ]

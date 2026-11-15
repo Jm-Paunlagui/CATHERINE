@@ -12,6 +12,15 @@
  *   _injectionPatterns   — checked against req.originalUrl (path + query string)
  *                          to catch XSS, SQLi, traversal, and command injection
  *                          payloads regardless of where they appear in the URL
+ *
+ * GET/HEAD body guard (defence-in-depth for CVE-2026-123864 — the zero-length
+ * TLS write from `flushHeaders()` while the request body is still streaming):
+ * a GET or HEAD carrying Transfer-Encoding (any value) or Content-Length > 0 is
+ * refused 400 BodyNotAllowedError with `Connection: close`. It runs last (after
+ * every strike-counting check), records NO strike, ignores the method
+ * whitelist, and never reads the body. Switch: `SECURITY_FILTER_REJECT_GET_BODY`
+ * (only the exact value "false" disables it) or the
+ * `rejectBodyOnBodylessMethods` constructor option.
  */
 
 const { logger } = require("../../utils/logger");
@@ -26,6 +35,34 @@ const { clusterRpc } = require("../../utils/cluster/ClusterRpcClient");
 const { isIp } = require("../../utils/cluster/ipcSchemas");
 const { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS } = require("../../constants/clusterIpc");
 const { clusterMessages } = require("../../constants/messages/cluster.messages");
+const { REQUEST_ERRORS } = require("../../constants/errors");
+
+/** Methods that must never carry a request body (CVE-2026-123864 guard). Module-private. */
+const BODYLESS_METHODS = Object.freeze(new Set(["GET", "HEAD"]));
+
+/** Content-Length shape accepted as numeric: digits with optional surrounding whitespace. */
+const CONTENT_LENGTH_RE = /^\s*\d+\s*$/;
+
+/**
+ * Whether request headers declare a body. Pure; reads two header keys only and
+ * never touches the request stream.
+ *
+ * Returns `true` when `transfer-encoding` is present with ANY value (including
+ * an empty string), or when `content-length` is all digits (whitespace allowed)
+ * and `Number(value) > 0`. `Number`, not `parseInt`, so "5abc" is not 5. A
+ * missing or nullish `headers` object means no body.
+ *
+ * Complexity: O(1) time and space.
+ *
+ * @param {Record<string, string | string[] | undefined> | null | undefined} headers
+ * @returns {boolean}
+ */
+function hasDeclaredBody(headers) {
+    if (headers == null) return false;
+    if (headers["transfer-encoding"] !== undefined) return true;
+    const cl = headers["content-length"];
+    return typeof cl === "string" && CONTENT_LENGTH_RE.test(cl) && Number(cl) > 0;
+}
 
 class SecurityFilterMiddleware {
     constructor(options = {}) {
@@ -135,6 +172,12 @@ class SecurityFilterMiddleware {
         this._blockedMethods =
             options.blockedMethods ??
             new Set(["TRACE", "TRACK", "PROPFIND", "SEARCH"]);
+
+        // CVE-2026-123864 guard: refuse GET/HEAD carrying a body. Default ON;
+        // only SECURITY_FILTER_REJECT_GET_BODY="false" (exact) disables it.
+        this._rejectBodyOnBodylessMethods =
+            options.rejectBodyOnBodylessMethods ??
+            process.env.SECURITY_FILTER_REJECT_GET_BODY !== "false";
 
         // Strike/block bookkeeping lives in SuspiciousIpTracker. `_suspiciousIPs`
         // stays the SAME Map (tests and ops tooling read and clear it directly).
@@ -365,6 +408,38 @@ class SecurityFilterMiddleware {
                             method,
                             fullUrl,
                         ),
+                    ),
+            );
+        }
+
+        // CVE-2026-123864 guard — GET/HEAD must not carry a body. Removes the
+        // "request body still streaming when a handler flushes headers" half of
+        // the Node HTTPS trigger before any SSE handler can run.
+        // LAST on purpose: every refusal above keeps its status and strike, so a
+        // scanner cannot dodge strike counting by adding a body.
+        // NO strike on purpose: the likely cause is a misbehaving client/proxy;
+        // behind a shared proxy IP, strikes would lock out the whole site.
+        // Method whitelist ignored: it only exempts the blocked-method check.
+        if (
+            this._rejectBodyOnBodylessMethods &&
+            BODYLESS_METHODS.has(method) &&
+            hasDeclaredBody(req.headers)
+        ) {
+            try {
+                // Free the socket instead of waiting for the rest of the body.
+                res.setHeader("Connection", "close");
+            } catch {
+                // Headers already sent / mock without setHeader — keep refusing.
+            }
+            return this._refuse(
+                req,
+                res,
+                400,
+                REQUEST_ERRORS.BODY_NOT_ALLOWED,
+                "BodyNotAllowedError",
+                () =>
+                    logger.warning(
+                        middlewareMessages.GET_BODY_REFUSED(ip, method, reqPath),
                     ),
             );
         }
