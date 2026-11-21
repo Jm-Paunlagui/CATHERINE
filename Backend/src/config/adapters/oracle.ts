@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 /**
  * Oracle Adapter
  * Merges: oracleEnvironment.js + oracleLoader.js + oracleConnectionPool.js
@@ -831,7 +830,7 @@ async function _acquireConnection(connectionName: string, pool: Record<string, a
     // pool object, so the timer must read the value back from the registry.
     // Fall back to the POOL_DEFAULTS floor when a pool declares none.
     const cfg = getConnectionConfig(connectionName);
-    const connectTimeoutMs = cfg.connectTimeout ?? POOL_DEFAULTS.connectTimeout;
+    const connectTimeoutMs = ("connectTimeout" in cfg ? cfg.connectTimeout : undefined) ?? POOL_DEFAULTS.connectTimeout;
 
     for (let attempt = 1; attempt <= ACQUIRE_MAX_ATTEMPTS; attempt++) {
         const pending = pool.getConnection();
@@ -900,16 +899,23 @@ async function _acquireConnection(connectionName: string, pool: Record<string, a
 // cut request can never write or commit afterwards), and touch the scope when
 // the call returns. Outside a watched context the scope is undefined and the
 // wrappers are pass-throughs.
-const kInstrumented = Symbol.for("app.progress.instrumented");
-const kScope = Symbol.for("app.progress.scope");
-const kInflight = Symbol.for("app.progress.inflight");
+const kInstrumented: unique symbol = Symbol.for("app.progress.instrumented");
+const kScope: unique symbol = Symbol.for("app.progress.scope");
+const kInflight: unique symbol = Symbol.for("app.progress.inflight");
+
+/** A node-oracledb connection plus the progress bookkeeping this adapter hangs on it. */
+type InstrumentedConnection = Record<string, any> & {
+    [kInstrumented]?: boolean;
+    [kScope]?: import("../../utils/progress/ProgressScope").ProgressScope;
+    [kInflight]?: number;
+};
 
 /**
  * Wrap `execute` / `executeMany` / `commit` on one connection (idempotent).
  * @param {object} conn - node-oracledb Connection.
  * @returns {object} the same connection.
  */
-function _instrumentConnection(conn: Record<string, any>): Record<string, any> {
+function _instrumentConnection(conn: InstrumentedConnection): InstrumentedConnection {
     if (!conn || conn[kInstrumented] || !Object.isExtensible(conn)) return conn;
     for (const method of ["execute", "executeMany", "commit"]) {
         const original = conn[method];
@@ -952,11 +958,11 @@ function _instrumentConnection(conn: Record<string, any>): Record<string, any> {
  * @param {import("../../utils/progress/ProgressScope").ProgressScope|undefined} scope
  * @returns {() => void}
  */
-function _bindScope(conn: Record<string, any>, scope: import("../../utils/progress/ProgressScope").ProgressScope | undefined): () => void {
+function _bindScope(conn: InstrumentedConnection, scope: import("../../utils/progress/ProgressScope").ProgressScope | undefined): () => void {
     if (!scope || !Object.isExtensible(conn)) return () => {};
     conn[kScope] = scope;
     const off = scope.onAbort(() => {
-        if (conn[kInflight] > 0 && typeof conn.break === "function") {
+        if ((conn[kInflight] ?? 0) > 0 && typeof conn.break === "function") {
             Promise.resolve(conn.break()).catch(() => {});
         }
     });
@@ -1091,7 +1097,7 @@ async function withTransaction(connectionName: string, callback: ((...args: any[
  * @param {Function[]} operations  array of async (conn) => result
  * @returns {Promise<Array<{ success, result?, error?, index }>>}
  */
-async function withBatchConnection(connectionName: string, operations: ((...args: any[]) => any)[]): Promise<Array<{ success; result?; error?; index; }>> {
+async function withBatchConnection(connectionName: string, operations: ((...args: any[]) => any)[]): Promise<Array<{ success: boolean; result?: unknown; error?: string; index: number }>> {
     if (!Array.isArray(operations) || !operations.length)
         throw new TypeError(
             "withBatchConnection: operations must be a non-empty array.",
@@ -1131,7 +1137,7 @@ async function getPoolStats() {
     const stats = {
         timestamp: new Date().toISOString(),
         healthMetrics: healthMonitor.getMetrics(),
-        pools: {},
+        pools: {} as Record<string, unknown>,
     };
     for (const [name, poolPromise] of poolRegistry) {
         try {

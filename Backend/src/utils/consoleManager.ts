@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 import { logger } from "./logger";
 
 class ConsoleManager {

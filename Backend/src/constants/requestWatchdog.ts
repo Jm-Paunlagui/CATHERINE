@@ -157,7 +157,7 @@ function resolveDbCallProgressCap(env: NodeJS.ProcessEnv = process.env): { capMs
  * @param {string} url
  * @returns {string}
  */
-function normalizePath(url: string): string {
+function normalizePath(url: string | undefined): string {
     let p = String(url || "/").split("?")[0].toLowerCase();
     if (p.startsWith(API_PREFIX)) p = p.slice(API_PREFIX.length) || "/";
     if (p.length > 1 && p.endsWith("/")) p = p.replace(/\/+$/, "") || "/";
@@ -177,7 +177,7 @@ function _matches(rules: any, method: any, path: any) {
  * @param {string} url - Raw request URL (query allowed, prefix allowed).
  * @returns {"default"|"long"|"exempt"}
  */
-function classifyRoute(method: string, url: string): "default" | "long" | "exempt" {
+function classifyRoute(method: string | undefined, url: string | undefined): "default" | "long" | "exempt" {
     const m = String(method || "GET").toUpperCase();
     const path = normalizePath(url);
     if (_matches(EXEMPT_RULES, m, path)) return "exempt";

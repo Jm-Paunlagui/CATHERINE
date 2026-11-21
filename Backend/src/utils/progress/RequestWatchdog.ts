@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -49,6 +48,17 @@ import { EXEMPT, resolveIdleLimits, classifyRoute } from "../../constants/reques
 import { metricsStore } from "../../middleware/metrics/MetricsStore";
 import { buildRouteLabel } from "../routeLabel";
 import { ProgressScope } from "./ProgressScope";
+
+/**
+ * The watchdog attaches at the http.Server "request" event, before Express has
+ * decorated the request; by the time it terminates one, Express usually has.
+ * Express's fields are therefore optional here.
+ */
+type WatchedRequest = import("http").IncomingMessage & Partial<Pick<Request, "originalUrl" | "route" | "baseUrl" | "id">>;
+type WatchedResponse = import("http").ServerResponse & Partial<Pick<Response, "locals" | "status" | "json">> & {
+    /** Node's internal flushed-header string (set once writeHead ran). */
+    _header?: string | null;
+};
 import { defaultIdleWatchdog } from "./IdleWatchdog";
 import { defaultBurstDetector } from "./WatchdogBurstDetector";
 
@@ -152,7 +162,7 @@ class RequestWatchdog {
      * @param {import("http").IncomingMessage} req
      * @param {import("http").ServerResponse} res
      */
-    _watch(req: import("http").IncomingMessage, res: import("http").ServerResponse) {
+    _watch(req: WatchedRequest, res: WatchedResponse) {
         const scope = new ProgressScope({
             label: `${req.method} request`,
             idleLimitMs: this._limitFor(req),
@@ -207,7 +217,7 @@ class RequestWatchdog {
      * @param {ProgressScope} scope
      * @param {number} idleMs
      */
-    _terminate(req: import("http").IncomingMessage, res: import("http").ServerResponse, scope: ProgressScope, idleMs: number) {
+    _terminate(req: WatchedRequest, res: WatchedResponse, scope: ProgressScope, idleMs: number) {
         const method = req.method || "GET";
         const rawPath = String(req.originalUrl || req.url || "/").split("?")[0];
         const template = req.route?.path;
@@ -239,7 +249,7 @@ class RequestWatchdog {
                 // at step 4) would otherwise reach the browser as a network error.
                 this._corsPolicy().applyToErrorResponse(req, res, () => {
                     if (typeof res.status === "function" && typeof res.json === "function") {
-                        res.status(HTTP_STATUS.GATEWAY_TIMEOUT).json(body);
+                        res.status(HTTP_STATUS.GATEWAY_TIMEOUT).json!(body);
                     } else {
                         res.statusCode = HTTP_STATUS.GATEWAY_TIMEOUT;
                         res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -271,7 +281,7 @@ class RequestWatchdog {
             ),
         );
         try {
-            metricsStore.recordWatchdogTermination(buildRouteLabel(req));
+            metricsStore.recordWatchdogTermination(buildRouteLabel(req as Request)); // terminated requests have been routed
         } catch {
             /* metrics must never break a termination */
         }

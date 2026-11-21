@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -29,20 +28,23 @@ import { AppError } from "../../constants/errors";
 import { HTTP_STATUS } from "../../constants";
 import { validateArgs, validateResult, validateTopic, isPlainObject } from "./ipcSchemas";
 
-const METHOD_SET = new Set(Object.values(CLUSTER_RPC_METHODS));
+const METHOD_SET: ReadonlySet<string> = new Set(Object.values(CLUSTER_RPC_METHODS));
 const E = CLUSTER_RPC_ERROR_CODES;
 const KNOWN_STATUS = new Set(Object.values(HTTP_STATUS));
 
 /** Error thrown by `call()`; `code` is one of CLUSTER_RPC_ERROR_CODES. */
+/** The leader's AppError fields, carried back across IPC. */
+type RpcAppError = { statusCode: number; message: string; type: string };
+
 class ClusterRpcError extends Error {
-    declare appError: { statusCode: number; message: string; type: string; };
+    declare appError: RpcAppError | undefined;
     declare code: string;
     /**
      * @param {string} code
      * @param {string} message
      * @param {{statusCode: number, message: string, type: string}} [appError]
      */
-    constructor(code: string, message: string, appError: { statusCode: number; message: string; type: string; }) {
+    constructor(code: string, message: string, appError?: RpcAppError) {
         super(message);
         this.name = "ClusterRpcError";
         this.code = code;
@@ -64,7 +66,7 @@ class ClusterRpcClient {
     #active = false;
     #isLeader = false;
     #seq = 0;
-    #listener = null;
+    #listener: ((msg: unknown) => void) | null = null;
     declare _proc: NodeJS.Process;
     declare _canSend: () => boolean;
 
@@ -195,7 +197,7 @@ class ClusterRpcClient {
      * @param {string} fallbackMessage - Message from `constants/errors`.
      * @returns {AppError}
      */
-    static toAppError(err: Error, fallbackMessage: string): AppError {
+    static toAppError(err: Error & { appError?: RpcAppError }, fallbackMessage: string): AppError {
         const a = err?.appError;
         if (a && KNOWN_STATUS.has(a.statusCode) && typeof a.message === "string") {
             // Built with a catalogued literal, then re-stamped: the status was
@@ -211,7 +213,7 @@ class ClusterRpcClient {
 
     #trySend(message: any) {
         try {
-            this._proc.send(message);
+            this._proc.send!(message); // a cluster worker always has the IPC channel
             return true;
         } catch {
             return false;
@@ -263,8 +265,8 @@ class ClusterRpcClient {
     #onCall(msg: any) {
         const { callId, method } = msg;
         if (typeof callId !== "string" || callId.length > CLUSTER_RPC_LIMITS.MAX_ID_LENGTH) return;
-        const reply = (ok: any, result: any, error: any) => {
-            const out = { cmd: CLUSTER_IPC.RPC_RETURN, callId, ok };
+        const reply = (ok: boolean, result?: unknown, error?: unknown) => {
+            const out: { cmd: string; callId: string; ok: boolean; result?: unknown; error?: unknown } = { cmd: CLUSTER_IPC.RPC_RETURN, callId, ok };
             if (ok) out.result = result === undefined ? null : result;
             else out.error = error;
             if (!this.#trySend(out) && ok) {
@@ -286,7 +288,7 @@ class ClusterRpcClient {
             .then(
                 (result) => reply(true, result),
                 (err) => {
-                    const error = { code: E.HANDLER_ERROR, message: err?.isOperational ? String(err.message).slice(0, 500) : "handler failed" };
+                    const error: { code: string; message: string; appError?: RpcAppError } = { code: E.HANDLER_ERROR, message: err?.isOperational ? String(err.message).slice(0, 500) : "handler failed" };
                     if (err?.isOperational === true && Number.isInteger(err.statusCode)) {
                         error.appError = {
                             statusCode: err.statusCode,

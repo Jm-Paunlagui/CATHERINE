@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { IS_COMPILED, APP_ROOT } from "../utils/runtimePaths";
 
@@ -321,7 +320,7 @@ class AuditLogService {
      * _normalizeEndpointFilter("GET /api/v1/auth/login"); // → "/api/v1/auth/login"
      * _normalizeEndpointFilter("/api/v1/auth/login");     // → "/api/v1/auth/login"
      */
-    static _normalizeEndpointFilter(value: string): string | null {
+    static _normalizeEndpointFilter(value: string | undefined): string | null {
         if (typeof value !== "string") return null;
 
         let path = value.trim();
@@ -427,7 +426,7 @@ class AuditLogService {
             const numericId = /^\d+$/.test(search.trim())
                 ? parseInt(search.trim(), 10)
                 : null;
-            if (numericId !== null) orClauses.push({ USER_ID: numericId });
+            if (numericId !== null) (orClauses as Array<Record<string, unknown>>).push({ USER_ID: numericId });
             filter.$or = orClauses;
         }
 
@@ -785,7 +784,7 @@ class AuditLogService {
 
         let normalizedLevel = null;
         if (level != null && level !== "") {
-            normalizedLevel = SYSTEM_LOG_LEVEL_NAMES[String(level).toLowerCase()];
+            normalizedLevel = (SYSTEM_LOG_LEVEL_NAMES as Record<string, string>)[String(level).toLowerCase()];
             if (!normalizedLevel) {
                 throw new AppError(AUDIT_LOG_ERRORS.SYSTEM_LOG_INVALID_LEVEL, 400);
             }
@@ -842,9 +841,9 @@ class AuditLogService {
         const truncatedFiles = [];
 
         for (const filename of filenames) {
-            const fileLevelKey = filename.match(SYSTEM_LOG_FILENAME_RE)[1];
-            const fileLevel = SYSTEM_LOG_LEVEL_NAMES[fileLevelKey];
-            const filePriority = SYSTEM_LOG_PRIORITY[fileLevel];
+            const fileLevelKey = filename.match(SYSTEM_LOG_FILENAME_RE)![1]; // listed files matched the RE
+            const fileLevel = (SYSTEM_LOG_LEVEL_NAMES as Record<string, string>)[fileLevelKey];
+            const filePriority = (SYSTEM_LOG_PRIORITY as Record<string, number>)[fileLevel];
 
             if (normalizedLevel) {
                 if (fileLevel !== normalizedLevel) continue;
@@ -941,7 +940,7 @@ class AuditLogService {
      * @returns {Promise<Buffer>} Excel file as a Buffer.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async exportToExcel({ fromDate, toDate }: string): Promise<Buffer> {
+    static async exportToExcel({ fromDate, toDate }: { fromDate: string; toDate: string }): Promise<Buffer> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }
@@ -1181,7 +1180,7 @@ class AuditLogService {
      * @returns {Promise<Buffer>} ZIP buffer.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async exportToZip({ fromDate, toDate }: string): Promise<Buffer> {
+    static async exportToZip({ fromDate, toDate }: { fromDate: string; toDate: string }): Promise<Buffer> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }
@@ -1288,7 +1287,7 @@ class AuditLogService {
      *          could not be removed.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async deleteRange({ fromDate, toDate }: string): Promise<{ deletedRows: number; deletedDays: number; failedDays: string[]; }> {
+    static async deleteRange({ fromDate, toDate }: { fromDate: string; toDate: string }): Promise<{ deletedRows: number; deletedDays: number; failedDays: string[]; }> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }
