@@ -164,30 +164,75 @@ const RETENTION_SWEEP_CHECK_MS = 15 * 60 * 1000;
 
 
 /** Outcome of an immediate ("send now") notification. */
+/** An operator's acknowledgement of one alert key (mirrors SERVER_ALERT_ACK rows). */
+type AckEntry = { ackedBy: number; ackedAt: number; expiresAt: number; severityAtAck: "CRITICAL" | "WARNING"; note: string | null };
+/** One alert from MetricsService.evaluateAlerts(), as carried through the digest. */
+type MetricAlert = Record<string, unknown> & { rule?: string; severity?: string; description?: string; route?: string; pool?: string };
+/** A row written to SERVER_ALERT_LOG. */
+type AlertLogRow = Parameters<typeof ServerAlertLogModel.insertOne>[0];
+/** Per-alert-key state machine (OK / FIRING / ...), one per rule::scope. */
+type AlertState = {
+    /** "OK" | "WARNING" | "CRITICAL"; an unexpected severity is kept as-is (upper-cased) and never sends. */
+    status: string;
+    clearPollCount: number;
+    lastNotifiedAt: number | null;
+    channel: string;
+    rule: string;
+    scope: string;
+    lastAlert: MetricAlert | null;
+};
+/** A CRIT-or-worse log record captured by the logger level tap. */
+type CriticalRecord = { level: string; message: string; meta: Record<string, unknown>; requestId: string | null; timestamp: string; rowSaved?: boolean };
+/** Outcome of draining the critical digest at shutdown. */
+type DrainResult = { events: number; outcome: "error" | "empty" | "done" | "timeout" | "skipped" };
+type Timer = ReturnType<typeof setTimeout>;
+/**
+ * The snapshot the alert rules ran against: MetricsStore.getSnapshot() OR the cluster
+ * merge (metricsMerge), whose route rows are not typed the same yet. Kept `any` until
+ * the two shapes are unified (plans/ts-conversion-open-items.md).
+ */
+type AlertSnapshot = Record<string, any>;
+/** One transition queued for a channel digest: an active alert, or a recovered state. */
+type MetricEvent = { alert?: MetricAlert; state?: AlertState; key: string; transitionType?: AlertLogRow["transition"] | null };
+
+/** An ack entry received from the leader over IPC (CWE-20: shape checked before use). */
+function isAckEntry(v: unknown): v is AckEntry & { alertKey: string } {
+    if (v === null || typeof v !== "object") return false;
+    const e = v as Record<string, unknown>;
+    return (
+        typeof e.alertKey === "string" &&
+        Number.isFinite(e.ackedBy) &&
+        Number.isFinite(e.ackedAt) &&
+        Number.isFinite(e.expiresAt) &&
+        (e.severityAtAck === "CRITICAL" || e.severityAtAck === "WARNING") &&
+        (e.note === null || e.note === undefined || typeof e.note === "string")
+    );
+}
+
 type NotifySendResult = { sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number };
 class AlertNotifierService {
     declare AlertNotifierService: typeof AlertNotifierService;
     declare _shutdownFlushed: boolean;
-    declare _ackHydration: any;
+    declare _ackHydration: Promise<void> | null;
     declare _acksHydrated: boolean;
-    declare _acks: Map<unknown, any>;
+    declare _acks: Map<string, AckEntry>;
     declare _lastPurgeDay: unknown;
-    declare _retentionSweepTimer: any;
+    declare _retentionSweepTimer: Timer | null;
     declare _pollInFlight: boolean;
-    declare _alertLogFlushing: any;
-    declare _alertLogQueue: any[];
+    declare _alertLogFlushing: Promise<void> | null;
+    declare _alertLogQueue: AlertLogRow[];
     declare _criticalSuppressedSinceLastSend: number;
-    declare _criticalSentTimestamps: any[];
-    declare _criticalWindowTimer: any;
+    declare _criticalSentTimestamps: number[];
+    declare _criticalWindowTimer: Timer | null;
     declare _criticalOverflowInWindow: number;
-    declare _criticalBuffer: any[];
-    declare _deliveryWaiters: Map<any, any>;
-    declare _drainPromise: any;
+    declare _criticalBuffer: CriticalRecord[];
+    declare _deliveryWaiters: Map<string, { resolve: (ok: boolean) => void; timer: Timer }>;
+    declare _drainPromise: Promise<DrainResult> | null;
     declare _shuttingDown: boolean;
     declare _running: boolean;
-    declare _unsubscribeTap: any;
-    declare _pollTimer: any;
-    declare _alertStates: Map<any, any>;
+    declare _unsubscribeTap: (() => void) | null;
+    declare _pollTimer: Timer | null;
+    declare _alertStates: Map<string, AlertState>;
     constructor() {
         /**
          * Per-alert-identity state. Key = `rule::scope`.
@@ -467,8 +512,8 @@ class AlertNotifierService {
             return Promise.resolve({ events: 0, outcome: "error" });
         }
 
-        this._drainPromise = (async () => {
-            let outcome = "empty";
+        const drain = (async (): Promise<DrainResult> => {
+            let outcome: DrainResult["outcome"] = "empty";
             try {
                 if (events > 0) {
                     const work = this._flushCriticalDigest({ persist });
@@ -490,7 +535,8 @@ class AlertNotifierService {
             }
             return { events, outcome };
         })();
-        return this._drainPromise;
+        this._drainPromise = drain;
+        return drain;
     }
 
     /**
@@ -702,7 +748,7 @@ class AlertNotifierService {
             const ackInfo = this._checkAndUpdateAck(key, newStatus);
 
             let shouldSend = false;
-            let transitionType = null;
+            let transitionType: AlertLogRow["transition"] | null = null;
             if (prevStatus === "OK" && newStatus !== "OK") {
                 transitionType = "FIRED";
                 if (ackInfo.suppress) {
@@ -797,7 +843,7 @@ class AlertNotifierService {
      * @param {boolean} isRecovery
      * @returns {Promise<void>}
      */
-    async _dispatchMetricDigest(channel: string, events: Array<{ alert?: Record<string, any>; state?: Record<string, any>; key: string; transitionType?: string; }>, snapshot: Record<string, unknown>, isRecovery: boolean): Promise<void> {
+    async _dispatchMetricDigest(channel: string, events: MetricEvent[], snapshot: Record<string, unknown>, isRecovery: boolean): Promise<void> {
         const rows = events.map(({ alert, state }) => {
             const source = alert || state?.lastAlert || {};
             return {
@@ -885,7 +931,7 @@ class AlertNotifierService {
      * @param {{ sent: boolean, cause?: string }} sendResult
      * @returns {object}
      */
-    _buildMetricAlertDetails(alert: Record<string, any>, scope: string, snapshot: Record<string, any>, sendResult: {
+    _buildMetricAlertDetails(alert: MetricAlert, scope: string, snapshot: AlertSnapshot, sendResult: {
         recipientCount?: number; sent: boolean; cause?: string;
 }): Record<string, unknown> {
         const details: Record<string, unknown> = {
@@ -924,18 +970,20 @@ class AlertNotifierService {
         return details;
     }
 
-    _buildActiveHeadline(events: any) {
+    _buildActiveHeadline(events: MetricEvent[]) {
+        // Active digests always carry `alert` (see _evaluateTick).
         if (events.length === 1) {
-            return events[0].alert.description || events[0].alert.rule;
+            return events[0].alert?.description || events[0].alert?.rule || "";
         }
-        const worst = events.reduce((best: any, e: any) =>
-            this._severityRank(e.alert.severity) > this._severityRank(best.alert.severity) ? e : best,
+        const worst = events.reduce((best, e) =>
+            this._severityRank(e.alert?.severity) > this._severityRank(best.alert?.severity) ? e : best,
         );
-        return `${events.length} alerts active — most severe: ${worst.alert.rule} (${(worst.alert.severity || "").toUpperCase()})`;
+        return `${events.length} alerts active — most severe: ${worst.alert?.rule} (${(worst.alert?.severity || "").toUpperCase()})`;
     }
 
-    _buildRecoveryHeadline(events: any) {
-        if (events.length === 1) return `${events[0].state.rule} back to normal`;
+    _buildRecoveryHeadline(events: MetricEvent[]) {
+        // Recovery digests always carry `state`.
+        if (events.length === 1) return `${events[0].state?.rule} back to normal`;
         return `${events.length} alert(s) recovered`;
     }
 
@@ -952,7 +1000,7 @@ class AlertNotifierService {
      * @param {number} [eventCount=0] - Rows in this digest (critical channel placeholders)
      * @returns {Record<string, string|number>}
      */
-    _buildChannelKv(channel: string, snapshot: Record<string, any>, eventCount: number = 0): Record<string, string | number> {
+    _buildChannelKv(channel: string, snapshot: AlertSnapshot, eventCount: number = 0): Record<string, string | number> {
         if (channel === "server-critical-notification") {
             // Metric rules routed here (ORACLE_POOL_DOWN) fill the same
             // placeholders the critical-log digest does.
@@ -1198,19 +1246,19 @@ class AlertNotifierService {
     }
 
     /** Settles every waiter whose token is on one of `events`. */
-    _settleDeliveries(events: any, ok: any) {
+    _settleDeliveries(events: Array<{ meta?: Record<string, unknown> }>, ok: boolean) {
         for (const e of events) {
             const token = e?.meta?._deliveryToken;
-            if (token) this._settleDelivery(token, ok);
+            if (typeof token === "string" && token) this._settleDelivery(token, ok);
         }
     }
 
     /** Settles every remaining waiter (the notifier is stopping). */
-    _settleAllDeliveries(ok: any) {
+    _settleAllDeliveries(ok: boolean) {
         for (const token of [...this._deliveryWaiters.keys()]) this._settleDelivery(token, ok);
     }
 
-    _pruneHourly(now: any) {
+    _pruneHourly(now: number) {
         const cutoff = now - 3_600_000;
         this._criticalSentTimestamps = this._criticalSentTimestamps.filter((t) => t > cutoff);
     }
@@ -1225,13 +1273,13 @@ class AlertNotifierService {
      * @returns {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string, recipientCount?: number }>}
      */
     async _dispatchCriticalDigest(events: Array<{
-        rowSaved?: boolean; level: string; message: string; meta: Record<string, any>; requestId: string | null; timestamp: string; 
+        rowSaved?: boolean; level: string; message: string; meta: Record<string, unknown>; requestId: string | null; timestamp: string; 
 }>, suppressedNote: string, overflow: number = 0, { persist = true }: { persist?: boolean; } = {}): Promise<NotifySendResult> {
         const windowLabel = `${Math.round(this._digestWindowMs() / 1000)}s`;
         const firstEventAt = this._formatEmailStamp(events[0]?.timestamp ?? new Date().toISOString());
         const rows = events.map((e) => ({
             level: e.level,
-            module: e.meta?.function || e.meta?.file || "unknown",
+            module: String(e.meta?.function || e.meta?.file || "unknown"),
             message: e.message,
             requestId: e.requestId,
             time: this._formatTimeOnly(e.timestamp),
@@ -1338,7 +1386,7 @@ class AlertNotifierService {
         return `${text} ${label}`;
     }
 
-    _formatTimeOnly(iso: any) {
+    _formatTimeOnly(iso: string | number | Date) {
         try {
             const d = new Date(iso);
             const hh = String(d.getHours()).padStart(2, "0");
@@ -1408,10 +1456,12 @@ class AlertNotifierService {
         severity: "NOTICE" | "WARNING" | "CRITICAL"; headline: string; summary: string;
         rows?: Array<{ rule: string; scope?: string; description: string; severity: string; }>; persist?: boolean;
     }): Promise<NotifySendResult> {
-        const record = persist === true && LIFECYCLE_LOG_SEVERITIES.has(severity) && rows.length > 0;
+        // NOTICE is never persisted (CK_SAL_SEVERITY allows WARNING / CRITICAL / RESOLVED only).
+        const logSeverity = severity === "NOTICE" ? null : severity;
+        const record = persist === true && logSeverity !== null && LIFECYCLE_LOG_SEVERITIES.has(logSeverity) && rows.length > 0;
         if (!ServerNotificationService.isEnabled()) {
             const disabled = { sent: false, reason: "disabled" };
-            if (record) this._recordLifecycleRows({ severity, headline, summary, rows }, Promise.resolve(disabled));
+            if (record && logSeverity) this._recordLifecycleRows({ severity: logSeverity, headline, summary, rows }, Promise.resolve(disabled));
             return disabled;
         }
 
@@ -1432,7 +1482,7 @@ class AlertNotifierService {
             },
         }).catch((err) => ({ sent: false, reason: "error", cause: err?.message ?? String(err) }));
         // Rows follow the real send, not the 5 s race below, so EMAIL_STATUS is the truth.
-        if (record) this._recordLifecycleRows({ severity, headline, summary, rows }, sendPromise);
+        if (record && logSeverity) this._recordLifecycleRows({ severity: logSeverity, headline, summary, rows }, sendPromise);
         const timeoutPromise = new Promise<NotifySendResult>((resolve) => {
             const t = setTimeout(() => resolve({ sent: false, reason: "timeout" }), NOTIFY_NOW_TIMEOUT_MS);
             if (typeof t.unref === "function") t.unref();
@@ -1449,7 +1499,7 @@ class AlertNotifierService {
      * @param {{ severity: string, headline: string, summary: string, rows: Array<object> }} payload
      * @param {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string }>} sendPromise - never rejects
      */
-    _recordLifecycleRows({ severity, headline, summary, rows }: { severity: string; headline: string; summary: string; rows: Array<Record<string, unknown>>; }, sendPromise: Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; }>) {
+    _recordLifecycleRows({ severity, headline, summary, rows }: { severity: AlertLogRow["severity"]; headline: string; summary: string; rows: Array<Record<string, unknown> & { rule: string; scope?: string }>; }, sendPromise: Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; }>) {
         const work = Promise.resolve(sendPromise)
             .then((result) => {
                 const res = result ?? { sent: false };
@@ -1493,10 +1543,10 @@ class AlertNotifierService {
      * @param {object[]} rows - Pre-built SERVER_ALERT_LOG row objects (unsanitized DETAILS)
      * @returns {Promise<void>}
      */
-    async _writeAlertLogRows(rows: Record<string, any>[]): Promise<void> {
+    async _writeAlertLogRows(rows: AlertLogRow[]): Promise<void> {
         let dropped = 0;
         for (const row of rows) {
-            this._alertLogQueue.push({ ...row, details: this._sanitizeDetails(row.details) });
+            this._alertLogQueue.push({ ...row, details: this._sanitizeDetails(row.details ?? null) });
             if (this._alertLogQueue.length > ALERT_LOG_QUEUE_MAX) {
                 // drop-oldest, but never the head row an in-flight flush is
                 // inserting (its post-insert shift() would then drop the NEXT row).
@@ -1828,7 +1878,11 @@ class AlertNotifierService {
                 type: "NotFoundError",
             });
         }
-        if (state.status === "OK") {
+        // Only a WARNING / CRITICAL alert can be acknowledged: SERVER_ALERT_ACK's
+        // CK_SAA_SEVERITY allows nothing else, so an OK or unexpected status is
+        // refused here instead of failing at the database.
+        const status = state.status;
+        if (status !== "WARNING" && status !== "CRITICAL") {
             throw new AppError(NOTIFICATION_ERRORS.ALERT_NOT_ACTIVE, 400, {
                 type: "ValidationError",
             });
@@ -1836,7 +1890,7 @@ class AlertNotifierService {
 
         const ackedAtMs = Date.now();
         const expiresAtMs = ackedAtMs + this._ackTtlHours() * 3_600_000;
-        const severityAtAck = state.status; // "WARNING" | "CRITICAL"
+        const severityAtAck = status;
         const normalizedNote = note != null && note !== "" ? String(note).slice(0, 500) : null;
 
         try {
@@ -1955,18 +2009,18 @@ class AlertNotifierService {
      *   a cluster worker that is not the leader (the name lookup still runs here).
      * @returns {Promise<Array<object>>}
      */
-    async decorateAlertsWithAckState(alerts: Array<Record<string, unknown>>, acks: Map<string, Record<string, unknown>> | null = null): Promise<Array<Record<string, unknown>>> {
+    async decorateAlertsWithAckState(alerts: Array<Record<string, unknown>>, acks: Map<string, AckEntry> | null = null): Promise<Array<Record<string, unknown>>> {
         if (!alerts || alerts.length === 0) return alerts ?? [];
 
         if (acks === null && AlertNotifierService._forwardsToLeader()) {
             const list = await this._forwardToLeader(CLUSTER_RPC_METHODS.ALERTS_ACKS, {});
-            acks = new Map((Array.isArray(list) ? list : []).map(({ alertKey, ...entry }) => [alertKey, entry]));
+            acks = new Map((Array.isArray(list) ? list : []).filter(isAckEntry).map(({ alertKey, ...entry }) => [alertKey, entry]));
         }
         const ackMap = acks ?? this._acks;
 
-        const keyFor = (alert: any) => `${alert.rule}::${alert.route ?? alert.pool ?? "global"}`;
+        const keyFor = (alert: Record<string, unknown>) => `${alert.rule}::${alert.route ?? alert.pool ?? "global"}`;
 
-        const ackedAdminIds = [];
+        const ackedAdminIds: number[] = [];
         for (const alert of alerts) {
             const entry = ackMap.get(keyFor(alert));
             if (entry) ackedAdminIds.push(entry.ackedBy);
@@ -2052,10 +2106,10 @@ class AlertNotifierService {
      * @returns {Promise<object>} same shape as `getStatus`
      */
     async _getStatusLocal(): ReturnType<AlertNotifierService["getStatus"]> {
-        const recipients: Record<string, any> = {};
+        const recipients: Record<string, string[]> = {};
         for (const channel of ServerNotificationService.CHANNELS) {
             const emails = await ServerNotificationService.resolveRecipients(channel);
-            recipients[channel] = emails.map(ServerNotificationService.maskEmail);
+            recipients[channel] = emails.map((email) => ServerNotificationService.maskEmail(email));
         }
 
         const activeAlerts = [...this._alertStates.values()]
@@ -2229,9 +2283,10 @@ class AlertNotifierService {
      * @throws {AppError}
      * @private
      */
-    async _forwardToLeader(method: string, args: Record<string, unknown>): Promise<any> {
+    // The leader runs the same AlertNotifierService method, so its result has the caller's declared shape.
+    async _forwardToLeader<T = unknown>(method: string, args: Record<string, unknown>): Promise<T> {
         try {
-            return await clusterRpc.call("leader", method, args, { timeoutMs: CLUSTER_RPC_TIMEOUTS.LEADER_FORWARD_MS });
+            return (await clusterRpc.call("leader", method, args, { timeoutMs: CLUSTER_RPC_TIMEOUTS.LEADER_FORWARD_MS })) as T;
         } catch (err) {
             throw ClusterRpcClient.toAppError(err, CLUSTER_ERRORS.LEADER_UNAVAILABLE);
         }
