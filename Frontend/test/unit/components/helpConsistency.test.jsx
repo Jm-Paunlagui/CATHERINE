@@ -106,7 +106,7 @@ describe("Help content — plain-language guard (no internal identifiers leak to
         /CWE-\d/i, // security taxonomy ids
         /\bORA-\d/i, // Oracle error codes
         /dangerouslySetInnerHTML/, // React HTML sink
-        /\bnpm run\b/i, // build commands
+        /\b(?:npm|bun) run\b/i, // build commands
         /process\.env/i, // env access
         /httpClient\b/, // internal module name
         /AuthMiddleware\b/, // internal class name

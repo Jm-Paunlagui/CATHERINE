@@ -20,7 +20,7 @@
 
 .PARAMETER ExeName
   Backend executable filename inside DistDir. Default: catherine-backend.exe
-  (the `npm run build` output, named after package.json "name").
+  (the `bun run build` output, named after package.json "name").
 
 .EXAMPLE
   .\install-service.ps1 -WinSW C:\tools\WinSW-x64.exe
@@ -48,7 +48,7 @@ if (-not (Test-Path $WinSW)) {
     throw "WinSW binary not found: $WinSW`nDownload WinSW-x64.exe from https://github.com/winsw/winsw/releases/tag/v2.12.0 and pass its path via -WinSW."
 }
 if (-not (Test-Path $backendExe)) {
-    throw "Backend exe not found: $backendExe`nBuild it first (npm run build) or pass -DistDir/-ExeName."
+    throw "Backend exe not found: $backendExe`nBuild it first (bun run build) or pass -DistDir/-ExeName."
 }
 if (-not (Test-Path (Join-Path $DistDir ".env"))) {
     Write-Warning "No .env found in $DistDir - the backend reads its config from a .env NEXT TO THE EXE. Place one there before starting the service."

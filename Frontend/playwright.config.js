@@ -5,7 +5,7 @@
  *
  * reducedMotion is left at the BROWSER DEFAULT (not forced to `reduce`).
  *
- * webServer runs `npm run dev` on :5173 with reuseExistingServer:true, so it
+ * webServer runs `bun run dev` on :5173 with reuseExistingServer:true, so it
  * ATTACHES to an already-running dev server if you have one, and only spawns a
  * fresh one otherwise. Every spec mocks the API, so no backend is needed.
  */
@@ -32,7 +32,7 @@ export default defineConfig({
         },
     ],
     webServer: {
-        command: "npm run dev",
+        command: "bun run dev",
         url: "http://localhost:5173",
         reuseExistingServer: true,
         timeout: 60_000,

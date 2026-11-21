@@ -3,7 +3,7 @@
 > **Scope:** the changelog + release-train capability — the encrypted on-disk store (`Backend/data/changelog.enc`), the thin controllers (`ChangelogController`, `ReleaseController`), the validation/business layer (`ChangelogService`, `ReleaseService`) and the encrypted model (`changelog.model.js`), the public read / SUPER_ADMIN write route surface, and the frontend Version History page (`Frontend/src/features/support/changelog/`) plus the version badge it feeds.
 > **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/models/changelog.model.js`, `Backend/src/services/{ChangelogService,ReleaseService}.js`, `Backend/src/controllers/{ChangelogController,ReleaseController}.js`, `Backend/src/routes/changelog.route.js`; the frontend is `Frontend/src/features/support/changelog/` and `Frontend/src/contexts/version/VersionContext.jsx`.
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block or a source comment disagrees with the code, the code wins and the disagreement is recorded in [§7.4](#74-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 

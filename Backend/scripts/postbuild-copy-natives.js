@@ -22,7 +22,7 @@
  * compiled exe — eager require("oracledb") throws → exit 1 → WinSW
  * restart-loops the service every 10 s — so it must never be a warning.
  *
- * Run automatically after `npm run build` / `npm run build:debug`.
+ * Run automatically after `bun run build` / `bun run build:debug`.
  */
 
 "use strict";

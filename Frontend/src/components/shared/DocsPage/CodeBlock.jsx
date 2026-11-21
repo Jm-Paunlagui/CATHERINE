@@ -17,7 +17,7 @@ import { TRANSITION_SMOOTH } from "../../../assets/styles/pre-set-styles";
  * @param {string}  [props.language] Fallback header label. Default "bash".
  * @returns {JSX.Element}
  * @example
- * <CodeBlock title="Terminal">{`npm install`}</CodeBlock>
+ * <CodeBlock title="Terminal">{`bun install`}</CodeBlock>
  */
 export function CodeBlock({ children, title, language = "bash" }) {
     const [copied, setCopied] = useState(false);

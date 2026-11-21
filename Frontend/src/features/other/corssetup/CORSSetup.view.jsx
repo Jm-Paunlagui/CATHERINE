@@ -108,7 +108,7 @@ PORT=2108`}</CodeBlock>
                 <p className={`mb-6 ${BASE_COLOR_TEXT} opacity-75`}>
                     Easiest: start the frontend — Vite prints the <strong>Network</strong> URL. Or look it up directly.
                 </p>
-                <CodeBlock title="npm run dev — Vite output">{`  VITE v7  ready
+                <CodeBlock title="bun run dev — Vite output">{`  VITE v7  ready
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: http://192.168.0.193:5173/   ←  your LAN IP`}</CodeBlock>

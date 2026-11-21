@@ -3,7 +3,7 @@
 > **Scope:** the template's per-user appearance capability — colour-scheme mode (light / dark / system), the transparency toggle, the shell layout preference (sidebar / top bar), and the accent-palette system that regenerates the entire design-system colour vocabulary at runtime from five anchor colours, including the WCAG-driven contrast tokens that keep text and icons legible on every palette.
 > **Source:** `Frontend/` (React 19 + Vite SPA). Core is `Frontend/src/features/personalize/personalize.palettes.js`, `Frontend/src/features/personalize/personalize.hook.js`, `Frontend/src/features/personalize/PersonalizeModal.jsx`, `Frontend/src/contexts/theme/ThemeContext.jsx`, `Frontend/src/contexts/theme/useTheme.js`, and `Frontend/src/contexts/layout/LayoutContext.jsx`.
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block or a source comment disagrees with the code, the code wins and the disagreement is recorded in [§6.4](#64-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") will print them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") will print them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 

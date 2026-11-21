@@ -35,9 +35,9 @@ Package: `catherine-backend` `1.0.0-dev.46`, kept in lockstep with the frontend.
 ## Getting started
 
 ```bash
-npm install
+bun install
 cp .env.example .env        # then fill in the values (see below)
-npm start                   # http://localhost:2106/api/v1/health
+bun run start                   # http://localhost:2106/api/v1/health
 ```
 
 Every setting is documented in [`.env.example`](.env.example). The main ones:
@@ -65,14 +65,14 @@ Every setting is documented in [`.env.example`](.env.example). The main ones:
 See [`sql/README.md`](sql/README.md). Then seed the template accounts:
 
 ```bash
-npm run db:seed:template
+bun run db:seed:template
 ```
 
 ## Testing
 
 ```bash
-npm test                  # everything (vitest run)
-npm run test:unit         # also: test:integration, test:security, test:performance,
+bun run test                  # everything (vitest run)
+bun run test:unit         # also: test:integration, test:security, test:performance,
                           #       test:reliability, test:resilience, test:chaos,
                           #       test:purge, test:metrics, test:money
 ```
@@ -83,16 +83,16 @@ Suites live under `test/server/{unit,integration,security,performance,reliabilit
 
 | Command | Does |
 | --- | --- |
-| `npm start` | Starts `server.js` |
-| `npm run lint` | ESLint |
-| `npm run db:seed:template` | Seeds the template accounts (`scripts/seed-template.js`) |
-| `npm run changelog:dump` / `changelog:seed` | Export / import the encrypted changelog store |
-| `npm run build` | Dev-docs freshness index, PKG build, then native-addon copy |
+| `bun run start` | Starts `server.js` |
+| `bun run lint` | ESLint |
+| `bun run db:seed:template` | Seeds the template accounts (`scripts/seed-template.js`) |
+| `bun run changelog:dump` / `changelog:seed` | Export / import the encrypted changelog store |
+| `bun run build` | Dev-docs freshness index, PKG build, then native-addon copy |
 
 ## Build and deploy
 
 ```bash
-npm run build          # dist/catherine-backend.exe, plus native modules (oracledb, argon2)
+bun run build          # dist/catherine-backend.exe, plus native modules (oracledb, argon2)
 ```
 
 See [`deploy/`](deploy/):

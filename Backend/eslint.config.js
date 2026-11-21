@@ -73,7 +73,7 @@ module.exports = defineConfig([
     },
   },
 
-  // BLOCK 5 — oracle-mongo-wrapper suites are mocha/chai (run via `npx mocha`),
+  // BLOCK 5 — oracle-mongo-wrapper suites are mocha/chai (run via `bunx mocha`),
   // not vitest. They use mocha's `after`/`before` lifecycle globals, which BLOCK 4
   // does not inject. Add the mocha global set for these two files only so they lint
   // cleanly without touching the (correct, runtime-tested) source.

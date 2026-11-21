@@ -8,7 +8,7 @@
 -- DB (DEMO_MODE=false). Re-run safe — it only INSERTs; truncate first if you want
 -- a clean set:  TRUNCATE TABLE T_AUDIT_LOGS_DEV;
 --
--- Demo user/admin ACCOUNTS are seeded separately (Argon2id):  npm run db:seed:template
+-- Demo user/admin ACCOUNTS are seeded separately (Argon2id):  bun run db:seed:template
 --------------------------------------------------------------------------------
 
 SET DEFINE OFF;

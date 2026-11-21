@@ -15,7 +15,7 @@
  *
  * Usage:
  *   cd Backend
- *   npm run db:seed:template
+ *   bun run db:seed:template
  *
  * Safe to re-run: skips accounts that already exist.
  */

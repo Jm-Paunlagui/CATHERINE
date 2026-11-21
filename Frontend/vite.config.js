@@ -197,7 +197,7 @@ export default defineConfig(({ command, mode }) => {
             ...(apiOrigin ? [cspWebConfigPlugin(apiOrigin)] : []),
         ],
         // Loopback only: `host: true` exposed /__open-in-editor (launch-editor)
-        // to the LAN. Use `npm run dev -- --host` to test from another device.
+        // to the LAN. Use `bun run dev -- --host` to test from another device.
         server: {
             host: "localhost",
             port: 5173,

@@ -13,7 +13,7 @@ after a crash.
 
     | Item                              | Required | Notes                                                                                                                              |
     | --------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-    | `catherine-backend.exe`           | always   | `npm run build` output.                                                                                                            |
+    | `catherine-backend.exe`           | always   | `bun run build` output.                                                                                                            |
     | `.env`                            | always   | All six bootGuard secrets set (≥32 chars, non-placeholder) or the service exits → 10 s restart loop. `DEMO_MODE=false`.            |
     | `node_modules\oracledb\...`       | always   | Native addons staged by the build's postbuild step (fails the build if missing). Verify `oracledb` + `argon2` folders exist.       |
     | `node_modules\argon2\prebuilds\`  | always   | Same postbuild step. A boot-time preflight logs an ALERT if argon2 cannot load.                                                    |

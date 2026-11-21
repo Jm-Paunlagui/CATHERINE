@@ -767,10 +767,10 @@ live-database test gate and no write-capable seed-script guard in this repo.
 > **Evidence (UI):** none — backend-only.
 
 Command to run the suites cited in this document (Backend, from `Backend/`):
-`npx vitest run test/server/integration/health test/server/integration/health.test.js test/server/integration/csrf.test.js test/server/security/csrf.test.js test/server/unit/middleware/csrf.test.js test/server/integration/client test/server/reliability/graceful-shutdown.test.js test/server/unit/middleware/cache test/unit/config/database.poolConfig.test.js test/server/unit/models/authRefreshTokenDemo.test.js`
+`bunx vitest run test/server/integration/health test/server/integration/health.test.js test/server/integration/csrf.test.js test/server/security/csrf.test.js test/server/unit/middleware/csrf.test.js test/server/integration/client test/server/reliability/graceful-shutdown.test.js test/server/unit/middleware/cache test/unit/config/database.poolConfig.test.js test/server/unit/models/authRefreshTokenDemo.test.js`
 
 Frontend (from `Frontend/`):
-`npx vitest run test/reliability/csrf-retry.test.jsx test/security/csrf-injection-invariants.test.jsx test/reliability/error-boundary.test.jsx test/unit/components/select.test.jsx test/unit/components/modal.test.jsx`
+`bunx vitest run test/reliability/csrf-retry.test.jsx test/security/csrf-injection-invariants.test.jsx test/reliability/error-boundary.test.jsx test/unit/components/select.test.jsx test/unit/components/modal.test.jsx`
 
 ---
 

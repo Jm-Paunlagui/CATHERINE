@@ -54,7 +54,7 @@ An agent that reports a defect on the strength of this file, without opening the
 | Authority doc | `Backend/CLAUDE.md` |
 | Source layout | `src/{app.js, config, constants, controllers, middleware, models, routes, services, utils}` |
 | Tests | Vitest + Supertest under `Backend/test/{server, unit, encryption, oracle-mongo-wrapper}`. Main server suites sit under `test/server/{unit,integration,security,performance,reliability}` — check which tree a suite belongs in before adding to it. |
-| Test command | `npm test` (`vitest run`); category scripts `test:unit`, `test:integration`, `test:security`, `test:performance`, `test:reliability`, `test:resilience`, `test:chaos`, `test:purge`, `test:metrics`, `test:money` |
+| Test command | `bun run test` (`vitest run`); category scripts `test:unit`, `test:integration`, `test:security`, `test:performance`, `test:reliability`, `test:resilience`, `test:chaos`, `test:purge`, `test:metrics`, `test:money` |
 | Build | `scripts/build-devdocs-freshness.js`, then PKG via `@yao-pkg/pkg` into `dist`, target `node24-win-x64`, then `scripts/postbuild-copy-natives.js`. Native Oracle binaries are copied post-build; a compiled artefact that cannot find them is a build-step failure, not a code defect. |
 | Validation | `express-validator` is a direct dependency here |
 | Security | `helmet`, `csrf-csrf`, `argon2`, `jsonwebtoken`. Suppressions live in `Backend/audit-suppressions.md`. |
@@ -73,7 +73,7 @@ An agent that reports a defect on the strength of this file, without opening the
 | Component tiers | `src/components/{ui, shared, charts, feedback, forms, layout, routing}` |
 | Charts | ApexCharts through `react-apexcharts` |
 | Tests | Vitest + Testing Library + MSW under `Frontend/test/{unit, integration, security, performance, reliability, chaos, helpers}`. E2E: Playwright under `Frontend/e2e/`, config `Frontend/playwright.config.js`. |
-| Test command | `npm test` (`vitest run`); `npm run test:e2e` (`playwright test`) — not part of `npm test` |
+| Test command | `bun run test` (`vitest run`); `bun run test:e2e` (`playwright test`) — not part of `bun run test` |
 | Security | `jose`, `js-cookie`. Suppressions live in `Frontend/audit-suppressions.md`. |
 
 **React Compiler is enabled.** `Frontend/vite.config.js:195` applies `reactCompilerPreset()` through `@rolldown/plugin-babel`. Memoisation is largely automatic — do **not** reflexively add `useMemo` or `useCallback`, and do not report their absence as a performance defect. Reach for manual memoisation only with a profile showing it is needed. This is a real divergence from ordinary React advice.

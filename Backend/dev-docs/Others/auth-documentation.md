@@ -22,7 +22,7 @@
 > **Rendering note:** The `mermaid` blocks below render in GitHub, GitLab, Obsidian, and VS Code preview.
 > They do **not** render in a plain Markdown→PDF path (e.g. Chrome "print to PDF") — there they print as
 > code. If you need a PDF with pictures, pre-render the diagrams with `mermaid-cli`
-> (`npx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg`) and embed the SVG/PNG, or view in a
+> (`bunx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg`) and embed the SVG/PNG, or view in a
 > Mermaid-aware renderer. Ask and I'll generate the images.
 
 ---
@@ -964,10 +964,10 @@ isolated.
 
 > **Evidence mode:** test files and titles were checked against the repository on 2026-10-29; none of the
 > suites was run for this revision, so no pass counts are claimed. To run them:
-> `cd Backend; npx vitest run test/server/integration/auth test/server/security/auth-bypass.test.js
+> `cd Backend; bunx vitest run test/server/integration/auth test/server/security/auth-bypass.test.js
 > test/server/unit/middleware/loginLockout.test.js test/server/unit/utils/cryptoVault.adminMode.test.js
 > test/server/unit/models/authRefreshTokenDemo.test.js` and
-> `cd Frontend; npx vitest run test/integration/auth-login-flow.test.jsx test/reliability/session-expiry.test.jsx
+> `cd Frontend; bunx vitest run test/integration/auth-login-flow.test.jsx test/reliability/session-expiry.test.jsx
 > test/unit/middleware/httpClientStatusHandling.test.js test/reliability/csrf-retry.test.jsx`.
 
 > **Q:** Do login tokens travel only in HttpOnly cookies, and never leak into the JSON body?

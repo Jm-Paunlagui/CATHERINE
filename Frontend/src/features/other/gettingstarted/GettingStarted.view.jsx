@@ -135,7 +135,7 @@ function GettingStartedContent() {
                         <h2 className={`text-2xl font-extrabold mb-6 ${TITLE_COLOR_TEXT}`}>Prerequisites</h2>
                         <div className="grid gap-3 sm:grid-cols-2">
                             <PrereqRow name="Node.js" version="18+" note="LTS recommended. The backend builds a node18 pkg target." />
-                            <PrereqRow name="npm" version="Ships with Node" note="Package manager for both frontend and backend." />
+                            <PrereqRow name="Bun" version="1.4+" note="Package manager and script runner for both frontend and backend; the server still runs on Node." />
                             <PrereqRow name="Oracle Database" version="12c+" note="Oracle XE 21c is ideal for local dev. Not needed in Demo Mode." />
                             <PrereqRow name="Oracle Instant Client" version="23.x" note="Required for node-oracledb Thick mode. Not needed in Demo Mode." required={false} />
                             <PrereqRow name="Git" version="Any" note="To clone the repository." />
@@ -154,9 +154,9 @@ function GettingStartedContent() {
                             <CodeBlock title="Terminal">{`git clone https://github.com/Jm-Paunlagui/CATHERINE.git
 cd CATHERINE`}</CodeBlock>
                             <CodeBlock title="Terminal — Backend">{`cd Backend
-npm install`}</CodeBlock>
+bun install`}</CodeBlock>
                             <CodeBlock title="Terminal — Frontend">{`cd ../Frontend
-npm install`}</CodeBlock>
+bun install`}</CodeBlock>
                         </StepCard>
 
                         <StepCard number={2} title="Create .env files">
@@ -205,8 +205,8 @@ cp .env.example .env`}</CodeBlock>
                                         label: "Two terminals",
                                         content: (
                                             <div className="space-y-3 mt-4">
-                                                <CodeBlock title="Terminal 1 — Backend">{`cd Backend && npm start`}</CodeBlock>
-                                                <CodeBlock title="Terminal 2 — Frontend">{`cd Frontend && npm run dev`}</CodeBlock>
+                                                <CodeBlock title="Terminal 1 — Backend">{`cd Backend && bun run start`}</CodeBlock>
+                                                <CodeBlock title="Terminal 2 — Frontend">{`cd Frontend && bun run dev`}</CodeBlock>
                                             </div>
                                         ),
                                     },
@@ -216,9 +216,9 @@ cp .env.example .env`}</CodeBlock>
                                         content: (
                                             <div className="mt-4">
                                                 <CodeBlock title="Terminal (from root)">{`# Install concurrently globally first:
-npm i -g concurrently
+bun add -g concurrently
 
-concurrently "cd Backend && npm start" "cd Frontend && npm run dev"`}</CodeBlock>
+concurrently "cd Backend && bun run start" "cd Frontend && bun run dev"`}</CodeBlock>
                                             </div>
                                         ),
                                     },
@@ -240,7 +240,7 @@ concurrently "cd Backend && npm start" "cd Frontend && npm run dev"`}</CodeBlock
 
                         <StepCard number={1} title="Install dependencies">
                             <CodeBlock title="Terminal">{`cd Backend
-npm install`}</CodeBlock>
+bun install`}</CodeBlock>
                         </StepCard>
 
                         <StepCard number={2} title="Create your .env">
@@ -342,7 +342,7 @@ sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1
                                 Creates the <code className="font-mono text-xs">admin</code> and <code className="font-mono text-xs">user</code> accounts with Argon2id-hashed passwords and HMAC-signed admin rows. Must run through the app (not raw SQL).
                             </p>
                             <CodeBlock title="Terminal">{`cd Backend
-npm run db:seed:template`}</CodeBlock>
+bun run db:seed:template`}</CodeBlock>
                         </StepCard>
                     </section>
 
@@ -352,7 +352,7 @@ npm run db:seed:template`}</CodeBlock>
 
                         <StepCard number={1} title="Install & configure">
                             <CodeBlock title="Terminal">{`cd Frontend
-npm install
+bun install
 cp .env.example .env`}</CodeBlock>
                         </StepCard>
 
@@ -388,10 +388,10 @@ cp .env.example .env`}</CodeBlock>
                         <h2 className={`text-2xl font-extrabold mb-2 ${TITLE_COLOR_TEXT}`}>Running the App</h2>
                         <p className={`mb-6 ${BASE_COLOR_TEXT} opacity-75`}>Open two terminals:</p>
 
-                        <CodeBlock title="Terminal 1 — Backend">{`cd Backend && npm start
+                        <CodeBlock title="Terminal 1 — Backend">{`cd Backend && bun run start
 # HOST=0.0.0.0 → reachable at http://192.168.0.193:2108`}</CodeBlock>
                         <div className="h-4" />
-                        <CodeBlock title="Terminal 2 — Frontend">{`cd Frontend && npm run dev
+                        <CodeBlock title="Terminal 2 — Frontend">{`cd Frontend && bun run dev
 # Vite prints the Network URL → http://192.168.0.193:5173`}</CodeBlock>
 
                         <p className={`mt-6 text-sm ${BASE_COLOR_TEXT} opacity-75`}>
@@ -403,7 +403,7 @@ cp .env.example .env`}</CodeBlock>
                     <section id="demo-accounts" className="mb-14 scroll-mt-24">
                         <h2 className={`text-2xl font-extrabold mb-6 ${TITLE_COLOR_TEXT}`}>Demo Accounts</h2>
                         <p className={`mb-6 ${BASE_COLOR_TEXT} opacity-75`}>
-                            Available in Demo Mode (or after running <code className="font-mono text-xs">npm run db:seed:template</code>):
+                            Available in Demo Mode (or after running <code className="font-mono text-xs">bun run db:seed:template</code>):
                         </p>
 
                         <div className="overflow-x-auto rounded-xl border border-grey-200/30 dark:border-grey-700/30">
@@ -529,11 +529,11 @@ cp .env.example .env`}</CodeBlock>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <EnvRow name="npm start" purpose="Start the API (node server.js)." />
-                                                    <EnvRow name="npm test" purpose="Run the full test suite." />
-                                                    <EnvRow name="npm run test:unit" purpose="Unit tests only." />
-                                                    <EnvRow name="npm run db:seed:template" purpose="Seed demo admin + user accounts (Argon2id)." />
-                                                    <EnvRow name="npm run build" purpose="Compile a standalone .exe with pkg." />
+                                                    <EnvRow name="bun run start" purpose="Start the API (node server.js)." />
+                                                    <EnvRow name="bun run test" purpose="Run the full test suite." />
+                                                    <EnvRow name="bun run test:unit" purpose="Unit tests only." />
+                                                    <EnvRow name="bun run db:seed:template" purpose="Seed demo admin + user accounts (Argon2id)." />
+                                                    <EnvRow name="bun run build" purpose="Compile a standalone .exe with pkg." />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -552,10 +552,10 @@ cp .env.example .env`}</CodeBlock>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <EnvRow name="npm run dev" purpose="Vite dev server." />
-                                                    <EnvRow name="npm run build" purpose="Production build." />
-                                                    <EnvRow name="npm run lint" purpose="ESLint." />
-                                                    <EnvRow name="npm run preview" purpose="Preview the production build." />
+                                                    <EnvRow name="bun run dev" purpose="Vite dev server." />
+                                                    <EnvRow name="bun run build" purpose="Production build." />
+                                                    <EnvRow name="bun run lint" purpose="ESLint." />
+                                                    <EnvRow name="bun run preview" purpose="Preview the production build." />
                                                 </tbody>
                                             </table>
                                         </div>

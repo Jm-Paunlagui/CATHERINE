@@ -14,7 +14,7 @@ skipped.
 ## 0. Automated check (any OS with Node)
 
 ```sh
-npm run test:reliability     # includes test/server/reliability/graceful-shutdown.test.js; 0 failed
+bun run test:reliability     # includes test/server/reliability/graceful-shutdown.test.js; 0 failed
 ```
 
 Every check must pass (0 failed) before the manual steps. The automated suite

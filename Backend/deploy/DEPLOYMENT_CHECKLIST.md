@@ -35,7 +35,7 @@ schema and functional checks to sections B and D.
       Do **not** change it as part of a deploy: it invalidates every stored credential and locks
       out every admin. If it needs to change, that is its own migration.
 
-- [ ] **A5 — `npm audit --omit=dev` is clean**, or every remaining line appears in
+- [ ] **A5 — `bun audit --prod` is clean**, or every remaining line appears in
       `audit-suppressions.md` with a reachability analysis.
 
 ---

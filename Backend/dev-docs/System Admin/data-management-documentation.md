@@ -188,7 +188,7 @@ sequenceDiagram
 | Component | Purpose |
 | --- | --- |
 | `PurgeScopeSelector.jsx` | Group cards from `GET /scopes`, per-table compact row counts, auto-included hints |
-| `PurgeStepperModal.jsx` | `STEPS`: Scope Review → Backup → Authorise → Final Confirm → Processing. `ANIMATE_SHAKE` on phrase mismatch; red lockout panel and `acknowledgeLockout` checkbox when `T_ADMINS_DEV` is in scope; shows `RECOVERY_COMMAND` (`cd Backend && npm run db:seed:template`) |
+| `PurgeStepperModal.jsx` | `STEPS`: Scope Review → Backup → Authorise → Final Confirm → Processing. `ANIMATE_SHAKE` on phrase mismatch; red lockout panel and `acknowledgeLockout` checkbox when `T_ADMINS_DEV` is in scope; shows `RECOVERY_COMMAND` (`cd Backend && bun run db:seed:template`) |
 | `BackupPanel.jsx` | Archive list (auto vs pre-purge columns), "Back Up Now", download, verify, delete-request / vote / cancel |
 | `BackupChainBadge.jsx` | FULL / INCREMENTAL / chain-broken badge |
 | `RestorePanel.jsx` | Dropzone → `/restore/preview` report → password + phrase → `/restore` |
@@ -426,7 +426,7 @@ Base path `/api/v1/data-purge`. Every route: `authenticate` → `requireSuperAdm
 | Fail-closed registry | Module-load self-check + per-call pool assertion | CWE-1188 |
 | Audit trail | Post-commit audit row survives purging `T_AUDIT_LOGS_DEV`; `logger.alert` on commit and lockout ack | CWE-778 |
 | Sensitive archives | `.env.example` warns archives hold password hashes — keep `DB_BACKUP_DIR` outside served paths | CWE-538 |
-| Self-lockout | `acknowledgeLockout` required when `T_ADMINS_DEV` is in scope; recovery = `npm run db:seed:template` (`Backend/scripts/seed-template.js`) | — |
+| Self-lockout | `acknowledgeLockout` required when `T_ADMINS_DEV` is in scope; recovery = `bun run db:seed:template` (`Backend/scripts/seed-template.js`) | — |
 
 **Residual risks.** `/backup` (a heavy table stream), `/backups/:id/download` and `/backups/:id/verify` are not behind the strict limiter. The limiter keys by IP (`keyBy` default `"ip"` in `RateLimiterMiddleware`), not by user. The vote-request TOCTOU from §6.6 remains open.
 

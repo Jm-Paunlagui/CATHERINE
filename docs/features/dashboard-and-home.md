@@ -3,7 +3,7 @@
 > **Scope:** the two landing surfaces of the CATHERINE template — the public **Home** page (a long-form, section-based introduction to the template with a live security demo) and the authenticated **Dashboard** (a role-aware landing that renders a greeting and the feature shortcuts the signed-in role is allowed to reach).
 > **Source:** `Frontend/` (React 19 + Vite SPA). Core is `Frontend/src/features/dashboard/Dashboard.view.jsx`, `Frontend/src/features/dashboard/dashboard.hook.js`, `Frontend/src/features/home/Home.view.jsx`, `Frontend/src/features/home/home.hook.js`, `Frontend/src/features/home/securityDemo.hook.js`, `Frontend/src/features/home/securityDemo.api.js`, and the `Frontend/src/features/home/components/` section components. Routing is in `Frontend/src/App.jsx`.
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block or a source comment disagrees with the code, the code wins and the disagreement is recorded in [§5.4](#54-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") will print them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") will print them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 

@@ -28,9 +28,9 @@ cookie policy first).
 
 ## B. Backend build (on the build machine)
 
-1. `npm ci --include=dev` — the PKG builder (`@yao-pkg/pkg`, pinned in
+1. `bun install --frozen-lockfile` — the PKG builder (`@yao-pkg/pkg`, pinned in
    devDependencies) installs locally; no global `pkg` needed.
-2. `npm run build` → `dist\catherine-backend.exe` + `dist\node_modules\{oracledb,argon2}`
+2. `bun run build` → `dist\catherine-backend.exe` + `dist\node_modules\{oracledb,argon2}`
    native addons. **The postbuild step fails the build (exit 1) if any native
    stages zero files** — never deploy a dist folder from a failed build.
 3. Stage alongside the exe: `.env` (see C), `data\changelog.enc` (from the
@@ -98,7 +98,7 @@ the README's ACL example); never deploy under `C:\Program Files`.
 ## E. Frontend build + IIS
 
 1. Set `VITE_API_BASE_URL=https://<SERVER>:3000/api/v1/` in `.env.production`
-   **before** `npm run build`. The build now **fails** when the variable is
+   **before** `bun run build`. The build now **fails** when the variable is
    unset in production mode, and also fails on a plain `http://` value (an
    HTTPS-served page cannot call an HTTP API — browsers block it as mixed
    content). Deliberate plain-HTTP test builds: set

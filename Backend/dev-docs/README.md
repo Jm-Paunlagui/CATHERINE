@@ -103,7 +103,7 @@ Current map (`Backend/src/services/DevDocsService.js`):
 > which cannot speak to it. The `> **Verified …**` blocks in each document's
 > header remain the authoritative record of what was re-checked.
 >
-> A build step (`scripts/build-devdocs-freshness.js`, run by `npm run build`)
+> A build step (`scripts/build-devdocs-freshness.js`, run by `bun run build`)
 > precomputes the freshness index for the PKG artefact, where git is unavailable.
 
 **When you update a doc, add a `Verified` block** to its header blockquote in

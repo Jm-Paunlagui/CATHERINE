@@ -3,7 +3,7 @@
 > **Scope:** the backend cache subsystem (`Backend/src/middleware/cache/`) — the named-store registry, the read-through / invalidate Express middleware, deterministic key building, cross-worker invalidation over cluster IPC, and single-flight stampede protection — plus the small, deliberately independent caches on the frontend (the `useRequest` TTL cache, the version context cache, and the auth-verify cache).
 > **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/middleware/cache/`; the frontend caches are `Frontend/src/hooks/useRequest.js`, `Frontend/src/contexts/version/VersionContext.jsx`, and `Frontend/src/middleware/authentication/AuthMiddleware.js`.
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block or a source comment disagrees with the code, the code wins and the disagreement is recorded in [§7.4](#74-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 
@@ -276,7 +276,7 @@ The code is the authority. These are places where prose disagrees with it.
 
 ## 9. Verification Q&A
 
-Evidence is cited, not executed — every entry is marked **not run** unless stated otherwise. Backend suites are Vitest (`npm test` → `vitest run`).
+Evidence is cited, not executed — every entry is marked **not run** unless stated otherwise. Backend suites are Vitest (`bun run test` → `vitest run`).
 
 > **Q:** Are error responses ever cached?
 > **A:** No — `read` only `store.set`s when `res.statusCode` is 2xx. **Evidence:** `CacheMiddleware.js:165-171`. _Status: not run._

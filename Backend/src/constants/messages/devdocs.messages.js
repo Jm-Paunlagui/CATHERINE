@@ -87,7 +87,7 @@ const devDocsMessages = {
     /**
      * Live `git log` returned no dates and the build-time snapshot is missing
      * or unreadable, so every document reads "Age unknown". In a compiled exe
-     * this means it was built without `npm run build` (which writes the
+     * this means it was built without `bun run build` (which writes the
      * snapshot first).
      *
      * @param {string} snapshotPath

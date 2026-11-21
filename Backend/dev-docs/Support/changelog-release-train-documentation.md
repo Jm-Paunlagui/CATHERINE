@@ -371,16 +371,16 @@ Old entries with a `summary` field (pre-structured format) are auto-migrated to 
 
 Version comparison follows SemVer 2.0.0: pre-release versions (`-dev.1`, `-alpha.1`, etc.) have lower precedence than the bare release (`1.20.0-rc.1 < 1.20.0`). Within pre-release, stages are ordered by the ladder (`dev < alpha < beta < rc`), then by iteration number.
 
-**Date order equals version order.** Inside one core version, entries sorted by `displayDate` then `createdAt` must never step back in version (no `-alpha.3` dated after `-beta.1`). `scripts/verify-changelog-release.js` (`npm run audit:changelog-release`) fails such a changelog; the `.githooks/pre-push` hook (installed by `npm install` through `scripts/install-git-hooks.js`) runs it on every pushed tag, and `.github/workflows/verify-changelog-release.yml` runs it on tag push (needs the repository secret `CHANGELOG_ENCRYPTION_KEY`).
+**Date order equals version order.** Inside one core version, entries sorted by `displayDate` then `createdAt` must never step back in version (no `-alpha.3` dated after `-beta.1`). `scripts/verify-changelog-release.js` (`bun run audit:changelog-release`) fails such a changelog; the `.githooks/pre-push` hook (installed by `bun install` through `scripts/install-git-hooks.js`) runs it on every pushed tag, and `.github/workflows/verify-changelog-release.yml` runs it on tag push (needs the repository secret `CHANGELOG_ENCRYPTION_KEY`).
 
 ### Maintenance scripts — dump → seed
 
-The app writes the store only through `ChangelogService` → `ChangelogModel` (the CRUD routes above). Two offline scripts in `Backend/scripts/` exist for capturing and re-seeding it, wired as `npm run changelog:dump` and `npm run changelog:seed`. Each reads the same key `ChangelogModel` uses (`CHANGELOG_ENCRYPTION_KEY`, else `DATA_SIGNING_SECRET`) from `.env`. (`scripts/seed-template.js` is unrelated — it seeds the demo accounts.)
+The app writes the store only through `ChangelogService` → `ChangelogModel` (the CRUD routes above). Two offline scripts in `Backend/scripts/` exist for capturing and re-seeding it, wired as `bun run changelog:dump` and `bun run changelog:seed`. Each reads the same key `ChangelogModel` uses (`CHANGELOG_ENCRYPTION_KEY`, else `DATA_SIGNING_SECRET`) from `.env`. (`scripts/seed-template.js` is unrelated — it seeds the demo accounts.)
 
 | Step | Script | Reads | Writes |
 |---|---|---|---|
-| 1. Dump | `dump-changelog.js` (`npm run changelog:dump`) | `data/changelog.enc` via `ChangelogModel.listAll()` (`.env` loaded by absolute path, so any cwd works) | `scripts/changelog-dump.json` — **decrypted plaintext**, oldest → newest |
-| 2. Seed | `seed-changelog.js` (`npm run changelog:seed`) | the in-file `SEED_ENTRIES` array (oldest → newest; `.env` loaded relative to the **current directory**, so run it from `Backend/`) | `data/changelog.enc` via `ChangelogModel.resetStore(SEED_ENTRIES)` — **wipes and rewrites the whole store** under the same lockfile |
+| 1. Dump | `dump-changelog.js` (`bun run changelog:dump`) | `data/changelog.enc` via `ChangelogModel.listAll()` (`.env` loaded by absolute path, so any cwd works) | `scripts/changelog-dump.json` — **decrypted plaintext**, oldest → newest |
+| 2. Seed | `seed-changelog.js` (`bun run changelog:seed`) | the in-file `SEED_ENTRIES` array (oldest → newest; `.env` loaded relative to the **current directory**, so run it from `Backend/`) | `data/changelog.enc` via `ChangelogModel.resetStore(SEED_ENTRIES)` — **wipes and rewrites the whole store** under the same lockfile |
 
 The seed does not read the dump file; to carry UI-written entries into a re-seed, copy them from the dump into `SEED_ENTRIES` by hand. Run `dump-changelog.js` immediately before any seed, because the seed overwrites everything written through the UI.
 

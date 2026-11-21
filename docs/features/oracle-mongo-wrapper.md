@@ -3,7 +3,7 @@
 > **Scope:** `oracle-mongo-wrapper` — the MongoDB-shaped query layer the template puts over Oracle SQL — plus the pool adapter it runs on.
 > **Source:** `Backend/src/utils/oracle-mongo-wrapper/` and `Backend/src/config/adapters/oracle.js`. Backend-only; there is no frontend half (see [§3](#3-frontend-implementation)).
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, the library's own `README.md` or a JSDoc block disagrees with the code, the code wins and the disagreement is recorded in [§6.12](#612-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 
@@ -678,7 +678,7 @@ The code is the authority. These are places where prose currently disagrees with
 
 ## 8. Verification Q&A
 
-Evidence is cited, not executed — every entry is marked **not run** unless stated otherwise. Backend suites are Vitest (`npm test` → `vitest run`); the library's own end-to-end suite is mocha/chai and is **excluded** from Vitest (`test/oracle-mongo-wrapper/test.js:16-27`).
+Evidence is cited, not executed — every entry is marked **not run** unless stated otherwise. Backend suites are Vitest (`bun run test` → `vitest run`); the library's own end-to-end suite is mocha/chai and is **excluded** from Vitest (`test/oracle-mongo-wrapper/test.js:16-27`).
 
 > **Q:** Does a filter value ever reach the SQL string?
 > **A:** No — every supported operator binds. The one exception is the documented `$inSelect` raw-string arm.
@@ -740,4 +740,4 @@ Evidence is cited, not executed — every entry is marked **not run** unless sta
 
 ---
 
-*Diagrams render in GitHub, GitLab, Obsidian and VS Code preview. For a PDF, pre-render the ```mermaid blocks with `npx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg` and embed the images.*
+*Diagrams render in GitHub, GitLab, Obsidian and VS Code preview. For a PDF, pre-render the ```mermaid blocks with `bunx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg` and embed the images.*

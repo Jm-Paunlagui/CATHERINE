@@ -1,6 +1,6 @@
 #!/bin/sh
 # pre-push: refuse to push a release tag whose data/changelog.enc is wrong.
-# Git for Windows runs this with its bundled sh. Installed by `npm install` (scripts/install-git-hooks.js)
+# Git for Windows runs this with its bundled sh. Installed by `bun install` (scripts/install-git-hooks.js)
 # or once by hand (from the repository root): git config core.hooksPath Backend/.githooks
 # Bypass in an emergency: git push --no-verify
 

@@ -201,15 +201,15 @@ Coverage targets: middleware 90% branch · services 85% branch · utils 95% line
 ```bash
 # Backend
 cd Backend
-npm install
+bun install
 cp .env.example .env        # fill in Oracle creds + secrets, or set DEMO_MODE=true
-npm start                   # http://localhost:2108/api/v1/health; npm run build → dist/catherine-backend.exe
+bun run start                   # http://localhost:2108/api/v1/health; bun run build → dist/catherine-backend.exe
 
 # Frontend
 cd Frontend
-npm install
+bun install
 cp .env.example .env        # set VITE_API_BASE_URL=http://localhost:2108/api/v1/
-npm run dev
+bun run dev
 ```
 
 Step-by-step setup (database scripts, seeding, secrets) is in **`GETTING_STARTED.md`**.

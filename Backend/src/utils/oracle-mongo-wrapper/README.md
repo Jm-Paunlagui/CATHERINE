@@ -32,7 +32,7 @@ Oracle Database
 ## Setup
 
 ```bash
-npm install oracledb  # peer dependency — should already be in parent project
+bun add oracledb  # peer dependency — should already be in parent project
 ```
 
 ### Prerequisites — Database Configuration

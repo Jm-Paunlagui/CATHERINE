@@ -3,7 +3,7 @@
 > **Scope:** the ordered stack of Express middleware every HTTP request passes through in the CATHERINE template — what each numbered step does, why it sits where it sits, and what it adds to the request or the response — from the first security header to the global error handler.
 > **Source:** `Backend/` (Node.js + Express v5 API). The authoritative file is `Backend/src/app.js`; the step implementations live under `Backend/src/middleware/` (`security/`, `traceability/`, `performance/`, `metrics/`, `parsing/`, `cache/`, `errorHandling/`, plus `authentication/` which mounts per-route, not in this chain).
 > **Generated:** 2026-09-04. **Authority:** the code. Where `Backend/CLAUDE.md` disagrees with `app.js`, the code wins and the disagreement is recorded in [§8.1](#81-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") prints them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 

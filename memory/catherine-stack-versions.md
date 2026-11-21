@@ -12,7 +12,7 @@ CATHERINE template stack (verify in package.json before relying on a specific mi
 - Password hashing: both argon2 ^0.44 and bcryptjs ^3 present; `PASSWORD_HASH_MODE` env (`bcrypt` prod, `plain` dev only).
 - Excel/PDF: exceljs, pdfkit, archiver. Email: nodemailer.
 - Tests: mocha ^11 + chai ^6 + sinon ^21 + supertest ^7. Suites under `test/server/**` split unit/integration/security/performance/reliability/chaos.
-- Build: **pkg** → standalone Windows `.exe`, target `node18-win-x64`, `npm run build` → `dist/`.
+- Build: **pkg** → standalone Windows `.exe`, target `node18-win-x64`, `bun run build` → `dist/`.
 
 **Frontend** (`Frontend/package.json`, ESM, Vite):
 - react ^19.2, react-dom ^19.2, **vite ^8**, tailwindcss ^4.2 (`@tailwindcss/vite`).

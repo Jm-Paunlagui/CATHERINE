@@ -16,7 +16,7 @@
  * this script exists to stop, and a shallow clone or missing git would
  * otherwise produce it silently.
  *
- * Run automatically first by `npm run build` / `npm run build:debug`.
+ * Run automatically first by `bun run build` / `bun run build:debug`.
  */
 
 "use strict";
