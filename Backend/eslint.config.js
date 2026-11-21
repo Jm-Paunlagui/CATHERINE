@@ -80,7 +80,7 @@ module.exports = defineConfig([
 
   // BLOCK 3 — scripts (CLI tools; console allowed)
   {
-    files: ["scripts/**/*.js"],
+    files: ["scripts/**/*.ts"],
     languageOptions: { globals: { ...globals.node } },
     rules: { "no-console": "off" },
   },

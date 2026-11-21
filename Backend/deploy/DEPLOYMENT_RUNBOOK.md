@@ -29,7 +29,7 @@ cookie policy first).
 ## B. Backend build (on the build machine)
 
 1. `bun install --frozen-lockfile` (Bun 1.4.5+, see `packageManager` in `package.json`).
-2. `bun run build` (`scripts/build.js`) → `dist\catherine-backend.exe` (Windows x64; it
+2. `bun run build` (`scripts/build.ts`) → `dist\catherine-backend.exe` (Windows x64; it
    cross-compiles from macOS/Linux too) plus what the exe reads from disk:
    `dist\src\utils\email-templates\`, `dist\src\generated\`,
    `dist\node_modules\oracledb\build\Release\` and `dist\prebuilds\win32-x64\` (argon2).

@@ -1,6 +1,6 @@
 "use strict";
 
-const { checkChangelog, TAG_RE } = require("../../../../scripts/verify-changelog-release.js");
+const { checkChangelog, TAG_RE } = require("../../../../scripts/verify-changelog-release.ts");
 
 const e = (version, title, createdAt, type = "release", displayDate = "2026-11-02") => ({ version, title, createdAt, type, displayDate });
 
