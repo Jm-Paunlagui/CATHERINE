@@ -97,7 +97,7 @@ const dataBackupMessages = {
 
     // ── Path safety (CWE-22) ───────────────────────────────────────────────────
     /** @param {string} rawId */
-    PATH_SAFETY_REJECTED: (rawId: string) =>
+    PATH_SAFETY_REJECTED: (rawId: unknown) =>
         `Backup archive id rejected — fails path-safety validation before any index lookup or path join: "${String(rawId).slice(0, 200)}".`,
 
     // ── BackupScheduleService — date-gated detector ────────

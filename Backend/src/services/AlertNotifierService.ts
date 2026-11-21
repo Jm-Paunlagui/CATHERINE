@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 import { formatUtcStamp } from "../utils/formatUtcStamp";
@@ -163,6 +162,9 @@ const MAX_STACK_CHARS = 2000;
  */
 const RETENTION_SWEEP_CHECK_MS = 15 * 60 * 1000;
 
+
+/** Outcome of an immediate ("send now") notification. */
+type NotifySendResult = { sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number };
 class AlertNotifierService {
     declare AlertNotifierService: typeof AlertNotifierService;
     declare _shutdownFlushed: boolean;
@@ -500,12 +502,12 @@ class AlertNotifierService {
      */
     async _raceBudget(work: Promise<any>, timeoutMs: number): Promise<"done" | "timeout" | "error"> {
         let timer;
-        const timeout = new Promise((resolve) => {
+        const timeout = new Promise<"timeout">((resolve) => {
             timer = setTimeout(() => resolve("timeout"), Math.max(0, Math.min(timeoutMs, NOTIFY_NOW_TIMEOUT_MS)));
             if (typeof timer.unref === "function") timer.unref();
         });
         try {
-            return await Promise.race([work.then(() => "done"), timeout]);
+            return await Promise.race([work.then(() => "done" as const), timeout]);
         } catch {
             return "error";
         } finally {
@@ -795,7 +797,7 @@ class AlertNotifierService {
      * @param {boolean} isRecovery
      * @returns {Promise<void>}
      */
-    async _dispatchMetricDigest(channel: string, events: Array<{ alert?: Record<string, any>; state?: Record<string, any>; key: string; }>, snapshot: Record<string, any>, isRecovery: boolean): Promise<void> {
+    async _dispatchMetricDigest(channel: string, events: Array<{ alert?: Record<string, any>; state?: Record<string, any>; key: string; transitionType?: string; }>, snapshot: Record<string, any>, isRecovery: boolean): Promise<void> {
         const rows = events.map(({ alert, state }) => {
             const source = alert || state?.lastAlert || {};
             return {
@@ -884,9 +886,9 @@ class AlertNotifierService {
      * @returns {object}
      */
     _buildMetricAlertDetails(alert: Record<string, any>, scope: string, snapshot: Record<string, any>, sendResult: {
-        recipientCount: number; sent: boolean; cause?: string; 
+        recipientCount?: number; sent: boolean; cause?: string;
 }): Record<string, any> {
-        const details = {
+        const details: Record<string, unknown> = {
             value: typeof alert.value === "number" ? alert.value : null,
             description: alert.description ?? null,
             uptime: snapshot?.uptime ?? null,
@@ -962,7 +964,7 @@ class AlertNotifierService {
         }
 
         if (channel === "server-dependencies-notification") {
-            const pools = Object.values(snapshot?.dependencies?.oracle ?? {});
+            const pools = Object.values((snapshot?.dependencies?.oracle ?? {}) as Record<string, { poolUtilization?: number | null }>);
             const alertingPoolCount = pools.filter(
                 (p) => typeof p.poolUtilization === "number" && p.poolUtilization > 0.8,
             ).length;
@@ -974,7 +976,7 @@ class AlertNotifierService {
 
         if (channel === "server-red-metrics-notification") {
             const totals = snapshot?.totals ?? {};
-            const entries = Object.entries(snapshot?.red ?? {});
+            const entries = Object.entries((snapshot?.red ?? {}) as Record<string, { p95: number }>);
             let topRoute = "n/a";
             let topRouteP95 = "n/a";
             if (entries.length) {
@@ -1223,8 +1225,8 @@ class AlertNotifierService {
      * @returns {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string, recipientCount?: number }>}
      */
     async _dispatchCriticalDigest(events: Array<{
-        rowSaved: any; level: string; message: string; meta: Record<string, any>; requestId: string | null; timestamp: string; 
-}>, suppressedNote: string, overflow: number = 0, { persist = true }: { persist?: boolean; } = {}): Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number; }> {
+        rowSaved?: boolean; level: string; message: string; meta: Record<string, any>; requestId: string | null; timestamp: string; 
+}>, suppressedNote: string, overflow: number = 0, { persist = true }: { persist?: boolean; } = {}): Promise<NotifySendResult> {
         const windowLabel = `${Math.round(this._digestWindowMs() / 1000)}s`;
         const firstEventAt = this._formatEmailStamp(events[0]?.timestamp ?? new Date().toISOString());
         const rows = events.map((e) => ({
@@ -1349,7 +1351,7 @@ class AlertNotifierService {
         }
     }
 
-    _truncate(str: any, n: any) {
+    _truncate(str: unknown, n: number): string {
         const s = String(str ?? "");
         return s.length > n ? `${s.slice(0, n - 1)}…` : s;
     }
@@ -1364,7 +1366,7 @@ class AlertNotifierService {
      * @param {{ level?: string, message: string, meta?: object }} opts
      * @returns {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string, recipientCount?: number }>}
      */
-    async notifyCriticalNow({ level = "EMERGENCY", message, meta = {} }: { level?: string; message: string; meta?: Record<string, any>; } = {}): Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number; }> {
+    async notifyCriticalNow({ level = "EMERGENCY", message, meta = {} }: { level?: string; message: string; meta?: Record<string, any>; }): Promise<NotifySendResult> {
         if (!ServerNotificationService.isEnabled()) return { sent: false, reason: "disabled" };
 
         const record = {
@@ -1376,7 +1378,7 @@ class AlertNotifierService {
         };
 
         const sendPromise = this._dispatchCriticalDigest([record], "");
-        const timeoutPromise = new Promise((resolve) => {
+        const timeoutPromise = new Promise<NotifySendResult>((resolve) => {
             const t = setTimeout(() => resolve({ sent: false, reason: "timeout" }), NOTIFY_NOW_TIMEOUT_MS);
             if (typeof t.unref === "function") t.unref();
         });
@@ -1405,7 +1407,7 @@ class AlertNotifierService {
     async notifyLifecycleNow({ severity, headline, summary, rows = [], persist = false }: {
         severity: "NOTICE" | "WARNING" | "CRITICAL"; headline: string; summary: string;
         rows?: Array<{ rule: string; scope?: string; description: string; severity: string; }>; persist?: boolean;
-    } = {}): Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number; }> {
+    }): Promise<NotifySendResult> {
         const record = persist === true && LIFECYCLE_LOG_SEVERITIES.has(severity) && rows.length > 0;
         if (!ServerNotificationService.isEnabled()) {
             const disabled = { sent: false, reason: "disabled" };
@@ -1431,7 +1433,7 @@ class AlertNotifierService {
         }).catch((err) => ({ sent: false, reason: "error", cause: err?.message ?? String(err) }));
         // Rows follow the real send, not the 5 s race below, so EMAIL_STATUS is the truth.
         if (record) this._recordLifecycleRows({ severity, headline, summary, rows }, sendPromise);
-        const timeoutPromise = new Promise((resolve) => {
+        const timeoutPromise = new Promise<NotifySendResult>((resolve) => {
             const t = setTimeout(() => resolve({ sent: false, reason: "timeout" }), NOTIFY_NOW_TIMEOUT_MS);
             if (typeof t.unref === "function") t.unref();
         });
@@ -1555,7 +1557,7 @@ class AlertNotifierService {
     _sanitizeDetails(details: Record<string, any> | null): Record<string, any> | null {
         if (details == null) return null;
 
-        const redact = (value: any) => {
+        const redact = (value: unknown): unknown => {
             if (Array.isArray(value)) return value.map(redact);
             if (value && typeof value === "object") {
                 const out: Record<string, any> = {};
@@ -1573,7 +1575,7 @@ class AlertNotifierService {
             return value;
         };
 
-        const redacted = redact(details);
+        const redacted = redact(details) as Record<string, any>; // redact maps an object to an object
         const json = JSON.stringify(redacted);
         if (Buffer.byteLength(json, "utf8") <= MAX_DETAILS_BYTES) return redacted;
 
@@ -1813,7 +1815,7 @@ class AlertNotifierService {
      * @param {string} [note]
      * @returns {Promise<object>}
      */
-    async _acknowledgeLocal(alertKey: string, ackedBy: string | number, note: string): Promise<Record<string, any>> {
+    async _acknowledgeLocal(alertKey: string, ackedBy: string | number, note: string): ReturnType<AlertNotifierService["acknowledge"]> {
         if (!alertKey || typeof alertKey !== "string") {
             throw new AppError(NOTIFICATION_ERRORS.ALERT_KEY_REQUIRED, 400, {
                 type: "ValidationError",
@@ -2049,7 +2051,7 @@ class AlertNotifierService {
      *
      * @returns {Promise<object>} same shape as `getStatus`
      */
-    async _getStatusLocal(): Promise<Record<string, any>> {
+    async _getStatusLocal(): ReturnType<AlertNotifierService["getStatus"]> {
         const recipients: Record<string, any> = {};
         for (const channel of ServerNotificationService.CHANNELS) {
             const emails = await ServerNotificationService.resolveRecipients(channel);
@@ -2264,8 +2266,8 @@ class AlertNotifierService {
      */
     ingestRelayedCritical(record: { level?: string; message?: string; meta?: Record<string, any>; requestId?: string | null; timestamp?: string; pid?: number; }): boolean {
         if (!this._running || !record || typeof record !== "object") return false;
-        const level = ["EMERGENCY", "ALERT", "CRITICAL"].includes(record.level) ? record.level : "CRITICAL";
-        const ts = new Date(record.timestamp);
+        const level = record.level && ["EMERGENCY", "ALERT", "CRITICAL"].includes(record.level) ? record.level : "CRITICAL";
+        const ts = new Date(record.timestamp ?? Number.NaN); // absent -> Invalid Date -> now (below)
         const meta = record.meta && typeof record.meta === "object" ? { ...record.meta } : {};
         if (Number.isFinite(record.pid)) meta.relayedFromPid = record.pid;
         this._onCriticalLog({

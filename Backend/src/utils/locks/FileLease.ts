@@ -64,7 +64,7 @@ class FileLease {
     declare _token: any;
     declare _heartbeatMs: number;
     declare _pollMs: number;
-    declare _scope: import("../progress/ProgressScope").ProgressScope | null;
+    declare _scope: import("../progress/ProgressScope").ProgressScope | null | undefined;
     declare _staleMs: number;
     declare _path: string;
     declare _name: string;
@@ -123,7 +123,7 @@ class FileLease {
      * work scope is created after the lease is taken).
      * @param {import("../progress/ProgressScope").ProgressScope|null} scope
      */
-    bindScope(scope: import("../progress/ProgressScope").ProgressScope | null) {
+    bindScope(scope: import("../progress/ProgressScope").ProgressScope | null | undefined) {
         this._scope = scope;
         this._lastBeatProgressAt = 0;
     }

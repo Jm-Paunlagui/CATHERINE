@@ -82,7 +82,7 @@ class BackupVoteModel {
      *
      * @returns {Promise<Array<{ archiveId: string, requestedBy: number, votes: Array<{ votedBy: number, votedAt: string }> }>>}
      */
-    static async findAllPendingVotes(): Promise<Array<{ archiveId: string; requestedBy: number; votes: Array<{ votedBy: number; votedAt: string; }>; }>> {
+    static async findAllPendingVotes(): Promise<Array<{ archiveId: string; requestedBy: number; votes: Array<{ votedBy: number; votedAt: Date; }>; }>> {
         const rows = isDemoMode()
             ? demoVotes()
             : await _votes.find({}).sort({ VOTED_AT: 1 }).toArray();

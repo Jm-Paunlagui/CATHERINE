@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -117,7 +116,7 @@ function resetBindCounter() {
  * Maps MongoDB comparison operator names to their SQL equivalents.
  * Used by _parseFieldExpr to translate operators like $gt → ">".
  */
-const COMPARISON_OPS = {
+const COMPARISON_OPS: Record<string, string> = {
   $eq: "=", // Equal
   $ne: "<>", // Not equal
   $gt: ">", // Greater than
@@ -160,7 +159,7 @@ const COMPARISON_OPS = {
  *   _parseFieldExpr("age", { $gte: 18, $lt: 65 }, binds, null, counter)
  *   // → '("age" >= :where_age_0 AND "age" < :where_age_1)'
  */
-function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, outerAlias: string, counter: Record<string, any>): string {
+function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, outerAlias: string | null | undefined, counter: Record<string, any>): string {
   const qField = quoteIdentifier(field);
 
   // Simple equality: { field: value }
@@ -186,7 +185,9 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, o
   // Operator object: { field: { $gt: 5, $lt: 10 } }
   const conditions = [];
 
-  for (const [op, val] of Object.entries(expr)) {
+  // An operand's shape depends on its operator (Mongo-style DSL), so it stays
+  // loosely typed here; each branch below checks what it needs.
+  for (const [op, val] of Object.entries(expr as Record<string, any>)) {
     if (COMPARISON_OPS[op]) {
       // Check if val is a correlated $subquery object
       if (
@@ -376,7 +377,7 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, o
       op === "$lteAny"
     ) {
       const cmpOp = op.replace(/Any/g, "").replace(/\$/g, "");
-      const cmpMap = { gt: ">", lt: "<", gte: ">=", lte: "<=" };
+      const cmpMap: Record<string, string> = { gt: ">", lt: "<", gte: ">=", lte: "<=" };
       const subCollection = quoteIdentifier(val.collection);
       const subField = quoteIdentifier(val.field);
       conditions.push(
@@ -389,7 +390,7 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, o
       op === "$lteAll"
     ) {
       const cmpOp = op.replace(/All/g, "").replace(/\$/g, "");
-      const cmpMap = { gt: ">", lt: "<", gte: ">=", lte: "<=" };
+      const cmpMap: Record<string, string> = { gt: ">", lt: "<", gte: ">=", lte: "<=" };
       const subCollection = quoteIdentifier(val.collection);
       const subField = quoteIdentifier(val.field);
       conditions.push(
@@ -439,7 +440,7 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, o
  *   }, binds, "t0", counter)
  *   // → '(SELECT AVG("salary") FROM "employees" WHERE "dept_id" = t0."dept_id")'
  */
-function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, binds: Record<string, any>, outerAlias: string, counter: Record<string, any>): string {
+function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, binds: Record<string, any>, outerAlias: string | null | undefined, counter: Record<string, any>): string {
   const collection = quoteIdentifier(spec.collection);
   const aggFn = spec.aggregate
     ? spec.aggregate.replace("$", "").toUpperCase()
@@ -524,7 +525,7 @@ function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, bind
  *   // → { whereClause: 'WHERE "status" = :where_status_0 AND ("age" >= :where_age_1 OR "vip" = :where_vip_2)',
  *   //     binds: { where_status_0: "active", where_age_1: 18, where_vip_2: true } }
  */
-function parseFilter(filter: Record<string, any>, tableAlias?: string, _counter?: Record<string, any>): { whereClause: string; binds: Record<string, any>; } {
+function parseFilter(filter: Record<string, any>, tableAlias?: string | null, _counter?: Record<string, any>): { whereClause: string; binds: Record<string, any>; } {
   if (
     !filter ||
     typeof filter !== "object" ||

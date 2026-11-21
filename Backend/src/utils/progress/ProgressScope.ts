@@ -24,6 +24,9 @@
  * Complexity: touch O(depth), idleMs O(follow chain), abort O(children+hooks).
  */
 
+/** Anything a scope can follow: only its effective last-progress time is read. */
+export type ProgressSource = { readonly lastProgressAt: number };
+
 class ProgressScope {
     declare createdAt: number;
     declare _abortError: Error | null;
@@ -32,7 +35,7 @@ class ProgressScope {
     declare _children: Set<ProgressScope>;
     /** Busy markers (one object identity per markBusy call) -> when marked. */
     declare _busy: Map<object, number>;
-    declare _followed: ProgressScope | null;
+    declare _followed: ProgressSource | null;
     declare _lastSource: string;
     declare _ownAt: number;
     declare _now: () => number;
@@ -114,7 +117,7 @@ class ProgressScope {
      * Treat `scope`'s progress as our own until `unfollow()`.
      * @param {ProgressScope} scope
      */
-    follow(scope: ProgressScope) {
+    follow(scope: ProgressSource) {
         this._followed = scope && scope !== this ? scope : null;
     }
 

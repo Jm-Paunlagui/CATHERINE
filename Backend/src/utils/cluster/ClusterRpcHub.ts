@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -32,7 +31,7 @@ const M = CLUSTER_RPC_METHODS;
 const T = CLUSTER_RPC_TARGETS;
 
 /** Which target each method may use (a request naming another target is rejected). */
-const METHOD_TARGET = new Map([
+const METHOD_TARGET: Map<string, string> = new Map([
     [M.RL_HIT, T.PRIMARY],
     [M.RL_CLEAR, T.PRIMARY],
     [M.RL_REFUND, T.PRIMARY],
@@ -52,7 +51,7 @@ const METHOD_TARGET = new Map([
 ]);
 
 /** Notify-capable methods (no reply, primary handlers only). */
-const NOTIFY_METHODS = new Set([
+const NOTIFY_METHODS: ReadonlySet<string> = new Set([
     M.RL_CLEAR,
     M.RL_REFUND,
     M.SF_STRIKE,
@@ -71,9 +70,12 @@ const E = CLUSTER_RPC_ERROR_CODES;
  * @param {Error} [err]
  * @returns {{code: string, message: string, appError?: object}}
  */
-function buildError(code: string, message: string, err: Error): { code: string; message: string; appError?: Record<string, any>; } {
-    const out = { code, message: String(message).slice(0, CLUSTER_RPC_LIMITS.MAX_ERROR_MESSAGE) };
-    if (err && err.isOperational === true && Number.isInteger(err.statusCode)) {
+/** An error envelope sent back over IPC; appError carries an operational AppError's fields. */
+type RpcError = { code: string; message: string; appError?: { statusCode: number; message: string; type: string } };
+
+function buildError(code: string, message: string, err?: Error & { isOperational?: boolean; statusCode?: number }): RpcError {
+    const out: RpcError = { code, message: String(message).slice(0, CLUSTER_RPC_LIMITS.MAX_ERROR_MESSAGE) };
+    if (err && err.isOperational === true && typeof err.statusCode === "number" && Number.isInteger(err.statusCode)) {
         out.appError = {
             statusCode: err.statusCode,
             message: String(err.message).slice(0, CLUSTER_RPC_LIMITS.MAX_ERROR_MESSAGE),
@@ -88,11 +90,35 @@ function buildError(code: string, message: string, err: Error): { code: string; 
  * @description Primary-side RPC router. Holds the pending leader calls and
  * gathers plus the registered primary handlers.
  */
+
+/** One fan-out gather: a worker's request answered by every live worker. */
+type Gather = {
+    fromId: number;
+    reqId: string;
+    parts: unknown[];
+    missing: Set<number>;
+    outstanding: number;
+    callIds: Set<string>;
+    done: boolean;
+    timer?: ReturnType<typeof setTimeout>;
+};
+
+/** An in-flight call the hub forwarded to a worker. */
+type PendingCall = {
+    kind: "leader" | "gather";
+    targetId: number;
+    fromId: number;
+    reqId: string;
+    gather?: Gather;
+    pid?: number | null;
+    isLeader?: boolean;
+    timer?: ReturnType<typeof setTimeout>;
+};
 class ClusterRpcHub {
     /** @type {Map<string, Function>} method -> (args, ctx) => result | Promise */
     #handlers: Map<string, ((...args: any[]) => any)> = new Map();
     /** @type {Map<string, {kind: "leader"|"gather", targetId: number, fromId: number, reqId: string, gather?: object, timer?: any}>} */
-    #calls: Map<string, { kind: "leader" | "gather"; targetId: number; fromId: number; reqId: string; gather?: Record<string, any>; timer?: any; }> = new Map();
+    #calls: Map<string, PendingCall> = new Map();
     /** @type {Set<Function>} */
     #listeningHooks: Set<((...args: any[]) => any)> = new Set();
     /** @type {Set<Function>} */
@@ -248,7 +274,7 @@ class ClusterRpcHub {
             return;
         }
         const { id, target, method, args } = v.value;
-        const reply = (ok: any, result: any, error: any) => this.#respond(worker, id, ok, result, error);
+        const reply = (ok: boolean, result?: unknown, error?: RpcError) => this.#respond(worker, id, ok, result, error);
         if (METHOD_TARGET.get(method) !== target) {
             this.#reject(worker, "method-target-mismatch");
             reply(false, undefined, buildError(E.REJECTED, "method-target-mismatch"));
@@ -320,7 +346,7 @@ class ClusterRpcHub {
             return this.#respond(worker, reqId, false, undefined, buildError(E.OVERLOAD, "too many leader calls"));
         }
         const callId = this.#nextCallId();
-        const call = { kind: "leader", targetId: leader.id, fromId: worker.id, reqId };
+        const call: PendingCall = { kind: "leader", targetId: leader.id, fromId: worker.id, reqId };
         call.timer = this.#timer(() => {
             if (!this.#calls.has(callId)) return;
             this.#dropCall(callId, call);
@@ -340,11 +366,11 @@ class ClusterRpcHub {
             return this.#respond(worker, reqId, false, undefined, buildError(E.OVERLOAD, "too many gathers"));
         }
         const leader = this._getLeader();
-        const g = {
+        const g: Gather = {
             fromId: worker.id,
             reqId,
             parts: [],
-            missing: new Set(live.map((w) => w.id)),
+            missing: new Set<number>(live.map((w) => w.id)),
             outstanding: 0,
             callIds: new Set(),
             done: false,
@@ -353,7 +379,7 @@ class ClusterRpcHub {
         g.timer = this.#timer(() => this.#finishGather(g), CLUSTER_RPC_TIMEOUTS.GATHER_MS);
         for (const w of live) {
             const callId = this.#nextCallId();
-            const call = {
+            const call: PendingCall = {
                 kind: "gather",
                 targetId: w.id,
                 fromId: worker.id,
@@ -436,14 +462,14 @@ class ClusterRpcHub {
         return out;
     }
 
-    #respond(worker: any, id: any, ok: any, result: any, error: any) {
-        const msg = { cmd: CLUSTER_IPC.RPC_RESPONSE, id, ok };
+    #respond(worker: any, id: any, ok: boolean, result?: unknown, error?: RpcError) {
+        const msg: { cmd: string; id: unknown; ok: boolean; result?: unknown; error?: RpcError } = { cmd: CLUSTER_IPC.RPC_RESPONSE, id, ok };
         if (ok) msg.result = result === undefined ? null : result;
         else msg.error = error;
         this.#send(worker, msg);
     }
 
-    #respondTo(workerId: any, id: any, ok: any, result: any, error: any) {
+    #respondTo(workerId: any, id: any, ok: boolean, result?: unknown, error?: RpcError) {
         const w = this._getLiveWorkers().find((x) => x.id === workerId);
         if (w) this.#respond(w, id, ok, result, error);
     }

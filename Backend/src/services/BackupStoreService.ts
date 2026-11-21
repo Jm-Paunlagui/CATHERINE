@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { IS_COMPILED, APP_ROOT } from "../utils/runtimePaths";
 
@@ -129,6 +128,9 @@ const BACKUP_LEASE_NAME = ".backup-run.lease";
  */
 const ARCHIVE_ID_PATTERN = /^[A-Za-z0-9_:-]+$/;
 
+
+/** One table's entry in a backup manifest. */
+type ManifestTableState = { state: "INCLUDED" | "UNCHANGED"; rows: number; sha256: string; sourceArchiveId?: string };
 class BackupStoreService {
     /** @type {Array<object>|null} */
     static _indexCache: Array<Record<string, any>> | null = null;
@@ -472,7 +474,7 @@ class BackupStoreService {
      * @returns {Promise<Array<object>>}
      */
     static async listArchives(): Promise<Array<Record<string, any>>> {
-        const BackupVoteModel = require("../models/backup-vote.model").default;
+        const BackupVoteModel: typeof import("../models/backup-vote.model").default = require("../models/backup-vote.model").default;
 
         const index = await BackupStoreService._loadIndex();
         const sorted = index
@@ -484,7 +486,7 @@ class BackupStoreService {
         const activeSuperAdmins = await BackupStoreService.countActiveSuperAdmins();
         const votesNeeded = Math.floor(activeSuperAdmins / 2) + 1;
 
-        const voteMap = new Map(pendingVotes.map((v: any) => [v.archiveId, v]));
+        const voteMap = new Map(pendingVotes.map((v) => [v.archiveId, v]));
 
         return sorted.map((entry) => {
             const pending = voteMap.get(entry.archiveId);
@@ -559,7 +561,7 @@ class BackupStoreService {
             for (const name of dataFileNames) {
                 // Sequential zip entry extraction, archives are small in entry count.
                 dataBuffers[name] = Buffer.from(
-                    await zip.file(name).async("nodebuffer"),
+                    await zip.file(name)!.async("nodebuffer"), // name came from zip.files
                 );
             }
 
@@ -707,7 +709,7 @@ class BackupStoreService {
         // present and signature-valid — its own file (INCLUDED tables live
         // there) plus every distinct sourceArchiveId an UNCHANGED table names.
         const referencedIds = new Set([head.archiveId]);
-        for (const state of Object.values(head.tables ?? {})) {
+        for (const state of Object.values((head.tables ?? {}) as Record<string, ManifestTableState>)) {
             if (state.state === "UNCHANGED" && state.sourceArchiveId)
                 referencedIds.add(state.sourceArchiveId);
         }
@@ -735,7 +737,7 @@ class BackupStoreService {
         }
 
         const previousTableState: Record<string, any> = {};
-        for (const [table, state] of Object.entries(head.tables ?? {})) {
+        for (const [table, state] of Object.entries((head.tables ?? {}) as Record<string, ManifestTableState>)) {
             previousTableState[table] = {
                 sha256: state.sha256,
                 sourceArchiveId:
@@ -969,8 +971,8 @@ class BackupStoreService {
         // The stall callback only RECORDS the cut; the outcome is logged by
         // `_resolveCut` once it is known whether a publish raced the cut (a
         // complete .zip can land after the watchdog fired).
-        const stall = { error: null, idleMs: 0, lastSource: "unknown" };
-        const onStall = (scope: any, idleMs: any) => {
+        const stall: { error: AppError | null; idleMs: number; lastSource: string } = { error: null, idleMs: 0, lastSource: "unknown" };
+        const onStall = (scope: import("../utils/progress/ProgressScope").ProgressScope, idleMs: number) => {
             stall.idleMs = idleMs;
             stall.lastSource = scope.lastSource;
             stall.error = new AppError(PURGE_ERRORS.BACKUP_STALLED, HTTP_STATUS.SERVICE_UNAVAILABLE, {
@@ -1139,8 +1141,8 @@ class BackupStoreService {
             logger.info(
                 dataBackupMessages.CHAIN_INCREMENTAL(
                     archiveId,
-                    decision.chain.baseArchiveId,
-                    decision.chain.generation,
+                    decision.chain!.baseArchiveId, // incremental decisions always carry a chain
+                    decision.chain!.generation,
                 ),
             );
         }
@@ -1532,7 +1534,7 @@ class BackupStoreService {
             }
         }
 
-        return workbook.xlsx.writeBuffer();
+        return Buffer.from(await workbook.xlsx.writeBuffer()); // exceljs declares its own Buffer type
     }
 
     /**
@@ -1598,7 +1600,7 @@ class BackupStoreService {
         const dependents = index
             .filter((e) => e.archiveId !== archiveId)
             .filter((e) =>
-                Object.values(e.tables ?? {}).some(
+                Object.values((e.tables ?? {}) as Record<string, ManifestTableState>).some(
                     (s) =>
                         s.state === "UNCHANGED" &&
                         s.sourceArchiveId === archiveId,
@@ -1666,10 +1668,10 @@ class BackupStoreService {
         const signatureValid =
             await BackupStoreService._verifyArchiveFile(entry);
 
-        const chainHealth = { valid: true, missing: [], invalid: [] };
+        const chainHealth: { valid: boolean; missing: string[]; invalid: string[] } = { valid: true, missing: [], invalid: [] };
         if (entry.tables) {
-            const referencedIds = new Set();
-            for (const state of Object.values(entry.tables)) {
+            const referencedIds = new Set<string>();
+            for (const state of Object.values(entry.tables as Record<string, ManifestTableState>)) {
                 if (state.state === "UNCHANGED" && state.sourceArchiveId) {
                     referencedIds.add(state.sourceArchiveId);
                 }
