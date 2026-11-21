@@ -1,6 +1,3 @@
-// Apply encoding polyfills first (mirrors server.js startup order)
-require("../src/utils/encodingPolyfill");
-
 ("use strict");
 
 /**
@@ -25,10 +22,10 @@ require("../src/utils/encodingPolyfill");
  *     version ladder strictly monotonic oldest→newest and semantically honest.
  *
  * Usage:
- *   node scripts/seed-changelog.js
+ *   bun scripts/seed-changelog.js
  *
  * WARNING: Running this script OVERWRITES data/changelog.enc completely.
- *   Always run `node scripts/dump-changelog.js` first to capture live state.
+ *   Always run `bun scripts/dump-changelog.js` first to capture live state.
  *
  * Prerequisites:
  *   CHANGELOG_ENCRYPTION_KEY (64-char hex)  OR  DATA_SIGNING_SECRET (≥32 chars)

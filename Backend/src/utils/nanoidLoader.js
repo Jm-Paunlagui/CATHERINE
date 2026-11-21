@@ -1,7 +1,7 @@
 const { logger } = require("./logger");
 
 // Check if we're running as a compiled executable
-const isCompiled = typeof process.pkg !== "undefined";
+const { IS_COMPILED: isCompiled } = require("./runtimePaths");
 
 let nanoid;
 

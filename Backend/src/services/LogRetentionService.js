@@ -1,4 +1,5 @@
 "use strict";
+const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
 
 /**
  * @fileoverview Real, unattended retention sweep for the RFC 5424 file logs
@@ -114,15 +115,14 @@ const { logRetentionMessages } = require("../constants/messages");
 
 /**
  * Log directory base — MUST match `logger.js`'s `LOG_BASE_DIR` resolution:
- * in compiled (pkg) builds logs live NEXT TO THE EXE (a Windows service may
+ * in the compiled exe logs live NEXT TO THE EXE (a Windows service may
  * start with cwd = System32); in normal Node they live under the cwd.
  * Reading from `process.cwd()` here while the logger writes next to the exe
  * would make this sweep silently target an empty directory. Re-derived
  * locally (not imported from `AuditLogService`) to keep this service's
  * import graph limited to `fs`/`path`/`logger`/`logRetentionMessages`.
  */
-const LOG_BASE_DIR = process.pkg
-    ? path.join(path.dirname(process.execPath), "logs")
+const LOG_BASE_DIR = IS_COMPILED ? path.join(APP_ROOT, "logs")
     : path.join(process.cwd(), "logs");
 
 /** Sweep check cadence — mirrors `AlertNotifierService._armRetentionSweep`'s 15-min interval (R6: never node-cron). */

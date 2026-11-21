@@ -134,8 +134,7 @@ function GettingStartedContent() {
                     <section id="prerequisites" className={`mb-14 scroll-mt-24 ${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_100}`}>
                         <h2 className={`text-2xl font-extrabold mb-6 ${TITLE_COLOR_TEXT}`}>Prerequisites</h2>
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <PrereqRow name="Node.js" version="18+" note="LTS recommended. The backend builds a node18 pkg target." />
-                            <PrereqRow name="Bun" version="1.4+" note="Package manager and script runner for both frontend and backend; the server still runs on Node." />
+                            <PrereqRow name="Bun" version="1.4+" note="Runtime, package manager and test runner for both frontend and backend." />
                             <PrereqRow name="Oracle Database" version="12c+" note="Oracle XE 21c is ideal for local dev. Not needed in Demo Mode." />
                             <PrereqRow name="Oracle Instant Client" version="23.x" note="Required for node-oracledb Thick mode. Not needed in Demo Mode." required={false} />
                             <PrereqRow name="Git" version="Any" note="To clone the repository." />
@@ -529,11 +528,11 @@ cp .env.example .env`}</CodeBlock>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <EnvRow name="bun run start" purpose="Start the API (node server.js)." />
+                                                    <EnvRow name="bun run start" purpose="Start the API (bun server.js)." />
                                                     <EnvRow name="bun run test" purpose="Run the full test suite." />
                                                     <EnvRow name="bun run test:unit" purpose="Unit tests only." />
                                                     <EnvRow name="bun run db:seed:template" purpose="Seed demo admin + user accounts (Argon2id)." />
-                                                    <EnvRow name="bun run build" purpose="Compile a standalone .exe with pkg." />
+                                                    <EnvRow name="bun run build" purpose="Compile a standalone .exe with bun build --compile." />
                                                 </tbody>
                                             </table>
                                         </div>

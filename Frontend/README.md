@@ -27,7 +27,7 @@ Roles: `SUPER_ADMIN`, `ADMIN`, `USER` (`ROLES` in `src/App.jsx`). The backend en
 
 ## Getting started
 
-Requirements: Node.js 26 LTS (26.13.1 or later) for development and CI, and a running backend from [`../Backend`](../Backend).
+Requirements: Bun 1.4.5 or later (runtime, package manager and test runner), and a running backend from [`../Backend`](../Backend).
 
 ```bash
 bun install

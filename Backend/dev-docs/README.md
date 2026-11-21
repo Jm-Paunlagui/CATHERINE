@@ -104,7 +104,7 @@ Current map (`Backend/src/services/DevDocsService.js`):
 > header remain the authoritative record of what was re-checked.
 >
 > A build step (`scripts/build-devdocs-freshness.js`, run by `bun run build`)
-> precomputes the freshness index for the PKG artefact, where git is unavailable.
+> precomputes the freshness index for the compiled exe, where git is unavailable.
 
 **When you update a doc, add a `Verified` block** to its header blockquote in
 the house style, e.g.:

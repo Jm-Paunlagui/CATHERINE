@@ -143,7 +143,7 @@ flowchart TD
 
 ### 3.2 The store path in dev vs compiled builds
 
-In a pkg build `__dirname` points to the read-only snapshot (`C:\snapshot\...`), where `mkdir`/`writeFile` fail. So `PROJECT_ROOT` is `path.dirname(process.execPath)` under `process.pkg`, and `path.resolve(__dirname, "../..")` otherwise — the encrypted store always lives in a writable `data/` next to the running artifact.
+In the compiled exe `__dirname` is the build machine's path baked into the binary, so `PROJECT_ROOT` is `APP_ROOT` from `utils/runtimePaths.js` (the exe folder when compiled, the Backend folder otherwise) — the encrypted store always lives in a writable `data/` next to the running artifact.
 
 ### 3.3 Entry shape and migration
 
@@ -227,7 +227,7 @@ The feature follows the three-layer pattern: `changelog.api.js` (HTTP through `H
 
 ### 7.1 Seeding and inspecting the store
 
-`node scripts/seed-changelog.js` wipes and re-seeds via `ChangelogModel.resetStore(entries)`; the store is created empty on first read if the file is absent. `scripts/dump-changelog.js` decrypts and dumps the store for inspection (`scripts/changelog-dump.json`). Both need the same key material the runtime uses.
+`bun scripts/seed-changelog.js` wipes and re-seeds via `ChangelogModel.resetStore(entries)`; the store is created empty on first read if the file is absent. `scripts/dump-changelog.js` decrypts and dumps the store for inspection (`scripts/changelog-dump.json`). Both need the same key material the runtime uses.
 
 ### 7.2 Environment variables this feature depends on
 
@@ -273,7 +273,7 @@ The code is the authority. These are places where prose disagrees with it.
 | SemVer input is anchored | the version regex rejects arbitrary pre-release tags | CWE-20 (improper input validation) |
 | Single write path | release transitions go through the same validated `POST` — no unvalidated back door | logic integrity |
 | Failures never leak internals | all errors funnel through `AppError` + the global handler | CWE-209 (information exposure) |
-| Store path is pkg-safe | resolved next to the executable, never the read-only snapshot | availability / write-integrity |
+| Store path is compiled-exe-safe | resolved next to the executable (`APP_ROOT`), never the baked `__dirname` | availability / write-integrity |
 
 ### 8.2 Residual risks and things to know before shipping
 

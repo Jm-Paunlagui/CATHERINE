@@ -1,4 +1,7 @@
 "use strict";
+const { appPath } = require("../utils/runtimePaths");
+
+const { formatUtcStamp } = require("../utils/formatUtcStamp");
 
 /**
  * @fileoverview Purge Backup — notification-only email.
@@ -50,20 +53,14 @@ const SharedTransporter = require("./email/SharedTransporter");
 const PRODUCT_NAME = process.env.APP_NAME || "CATHERINE";
 
 /** Absolute path to this feature's single HTML template. */
-const TEMPLATE_PATH = path.join(
-    __dirname,
-    "..",
-    "utils",
+const TEMPLATE_PATH = appPath("src", "utils",
     "email-templates",
     "db-backup",
     "db-backup-notification.html",
 );
 
 /** Absolute path to the shared logo assets directory (reused across every email service). */
-const ASSETS_DIR = path.join(
-    __dirname,
-    "..",
-    "utils",
+const ASSETS_DIR = appPath("src", "utils",
     "email-templates",
     "assets",
 );
@@ -281,11 +278,7 @@ class BackupEmailService {
         const mm = String(absMin % 60).padStart(2, "0");
         const label = `UTC${sign}${hh}:${mm}`;
         return (
-            shifted.toLocaleString("en-US", {
-                timeZone: "UTC",
-                dateStyle: "medium",
-                timeStyle: "short",
-            }) + ` ${label}`
+            formatUtcStamp(shifted) + ` ${label}`
         );
     }
 

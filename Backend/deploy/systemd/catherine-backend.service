@@ -24,8 +24,9 @@ Group=catherine
 # EDIT: the Backend checkout. server.js loads .env from here, and the
 # restart marker lives in <this>/data/server-run.json (never delete it).
 WorkingDirectory=/opt/catherine-backend
-# EDIT: the node binary (Node 24, the major version the release was tested on).
-ExecStart=/usr/bin/node server.js
+# EDIT: the bun binary (the version in package.json "packageManager").
+# `bun build --compile --target=bun-linux-x64` output works too: ExecStart=/opt/catherine-backend/catherine-backend
+ExecStart=/usr/local/bin/bun server.js
 Environment=NODE_ENV=production
 
 # Crash supervision, same as WinSW <onfailure action="restart" delay="10 sec"/>:

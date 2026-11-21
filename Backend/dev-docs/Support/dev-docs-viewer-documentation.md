@@ -206,9 +206,9 @@ Logging, via `devdocs.messages.js`:
 
 ### 4.3 `DevDocsService.js`
 
-`CORPUS_ROOT = path.join(REPO_ROOT, "dev-docs")`, where `REPO_ROOT = process.pkg ? path.dirname(process.execPath) : path.resolve(__dirname, "..", "..")`. Everything served is inside it.
+`CORPUS_ROOT = path.join(REPO_ROOT, "dev-docs")`, where `REPO_ROOT = APP_ROOT` (`utils/runtimePaths.js`: the exe folder when compiled, the Backend folder otherwise). Everything served is inside it.
 
-> **Why not `__dirname`.** In the pkg-compiled exe `__dirname` is the read-only `C:\snapshot\…` bundle. `dev-docs` is deliberately **not** a pkg asset (§7 — never a static asset), so a corpus resolved there would not exist and every request would return `CORPUS_UNAVAILABLE`, even with `dev-docs\` deployed beside `backend.exe`. It resolves next to the executable — the same rule `changelog.model.js` and the logger follow. **Deploy `dev-docs\` as a sibling of `backend.exe`.**
+> **Why not `__dirname`.** In the compiled exe `__dirname` is the build machine's path baked into the binary. `dev-docs` is deliberately **not** bundled (§7 — never a static asset), so a corpus resolved there would not exist and every request would return `CORPUS_UNAVAILABLE`, even with `dev-docs\` deployed beside `backend.exe`. It resolves next to the executable — the same rule `changelog.model.js` and the logger follow. **Deploy `dev-docs\` as a sibling of `backend.exe`.**
 
 **The manifest.** `_buildManifest()` walks the corpus one directory level deep plus root-level files — the shape the corpus actually has. Each `.md` file yields an entry:
 
@@ -231,7 +231,7 @@ Building the manifest costs one `stat` per document plus **two** `git log` spawn
 
 A `git` failure (no git, not a repo, a shallow clone) yields an **empty index**. Freshness is advisory: it must never fail a documentation read.
 
-**Build-time snapshot.** A deployed exe has no git checkout, so the live index is always empty there — without a fallback every document would read `UNKNOWN` ("Age unknown") in production, exactly where readers are. `bun run build` / `build:debug` run `scripts/build-devdocs-freshness.js` **before** `pkg`. It calls the same `_commitDateIndex` over the same two pathspecs and writes `src/generated/devDocsFreshness.json` (`{ generatedAt, docs, sources }`, repo-relative path → `YYYY-MM-DD`, sorted keys), which pkg bundles via the `src/**/*.json` asset glob. It is gitignored (`src/generated/` in `Backend/.gitignore`), and it **fails the build** (exit 1) when either index is empty — shipping an exe without dates is the defect it exists to stop.
+**Build-time snapshot.** A deployed exe has no git checkout, so the live index is always empty there — without a fallback every document would read `UNKNOWN` ("Age unknown") in production, exactly where readers are. `bun run build` / `build:host` run `scripts/build-devdocs-freshness.js` **before** the compile step. It calls the same `_commitDateIndex` over the same two pathspecs and writes `src/generated/devDocsFreshness.json` (`{ generatedAt, docs, sources }`, repo-relative path → `YYYY-MM-DD`, sorted keys), which `scripts/build.js` stages beside the exe as `src/generated/`. It is gitignored (`src/generated/` in `Backend/.gitignore`), and it **fails the build** (exit 1) when either index is empty — shipping an exe without dates is the defect it exists to stop.
 
 `_resolveDateIndexes()` prefers live git and falls back **per index** to `_loadFreshnessSnapshot()` only when git returns nothing, so a dev checkout never reads a stale snapshot. The snapshot path resolves off `__dirname` on purpose — it lives inside the exe, not beside it. A missing or malformed snapshot degrades to `UNKNOWN` and logs `FRESHNESS_SNAPSHOT_UNAVAILABLE` at warning; it never fails the tree.
 
@@ -462,7 +462,7 @@ Yes, by the map. `Support` maps to `ChangelogService`, `ArchitectureService`, `a
 _Status: no test in this repo._
 
 **Q: Does the compiled exe find `dev-docs\` beside it?**
-By design, yes — `REPO_ROOT` is `path.dirname(process.execPath)` under pkg (§4.3). Not verified for this revision on a deployed exe. There is no automated test: `process.pkg` is undefined under vitest, so that arm is `c8 ignore`d.
+By design, yes — `REPO_ROOT` is `APP_ROOT`, the exe folder when compiled (§4.3). Verified 2026-11-21 on a host-compiled exe run from a clean folder (`GET /dev-docs/tree` → 200); not yet on a deployed Windows exe. `runtimePaths.test.js` covers the compiled-entry detection; the compiled arm itself only runs inside the exe.
 **Evidence:** source only — `DevDocsService.js` → `REPO_ROOT`.
 _Status: no test in this repo._
 

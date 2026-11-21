@@ -1,4 +1,5 @@
 "use strict";
+const { APP_ROOT, appPath } = require("../utils/runtimePaths");
 
 /**
  * DevDocsService — reads the `dev-docs` corpus for the in-app viewer.
@@ -50,36 +51,27 @@ const execFileAsync = promisify(execFile);
 /**
  * Repo root — the cwd every `git log` runs in, and what its paths are relative to.
  *
- * In a pkg build `__dirname` is the read-only `C:\snapshot\...` bundle, which
- * holds no `dev-docs` (not a pkg asset — see ACCESS POSTURE), so the corpus
- * resolved there reported CORPUS_UNAVAILABLE even with `dev-docs/` deployed
- * beside `backend.exe`. Resolve next to the executable instead, the same rule
- * changelog.model.js and the logger follow. `git log` then fails outside a
- * checkout; freshness falls back to FRESHNESS_SNAPSHOT_PATH, never an error.
+ * APP_ROOT: the exe's folder when compiled (dev-docs/ is deployed beside it), the
+ * Backend folder otherwise. `git log` fails outside a checkout; freshness then
+ * falls back to FRESHNESS_SNAPSHOT_PATH, never an error.
  */
-/* c8 ignore next 3 -- the process.pkg arm runs ONLY inside the PKG-compiled
-   binary (process.pkg is undefined under Node/vitest), so the true branch is
-   structurally unreachable in the test runtime — same rationale as changelog.model.js. */
-const REPO_ROOT = process.pkg
-    ? path.dirname(process.execPath)
-    : path.resolve(__dirname, "..", "..");
+const REPO_ROOT = APP_ROOT;
 
 /** Absolute path to the corpus. Everything served is inside this directory. */
 const CORPUS_ROOT = path.join(REPO_ROOT, "dev-docs");
 
 /**
  * Build-time commit-date snapshot, written by `scripts/build-devdocs-freshness.js`
- * before `pkg` runs and bundled as an asset (`src/**\/*.json`).
+ * before the compile step and staged beside the exe as `src/generated/` (scripts/build.js).
  *
  * WHY IT EXISTS: a deployed exe has no git checkout, so the live `git log`
  * yields nothing and every document read UNKNOWN ("Age unknown") in
  * production. The snapshot carries the dates the build was made from. The
  * source dates are exact for this exe (those sources ARE what it runs); the
  * document dates are as of the build, so deploy `dev-docs/` from the same
- * commit as the exe. Resolved off `__dirname` on purpose: it lives inside the
- * snapshot, not beside the executable. Gitignored — a build artefact.
+ * commit as the exe. Gitignored — a build artefact.
  */
-const FRESHNESS_SNAPSHOT_PATH = path.join(__dirname, "..", "generated", "devDocsFreshness.json");
+const FRESHNESS_SNAPSHOT_PATH = appPath("src", "generated", "devDocsFreshness.json");
 
 /** Record separator `git log --format=%x1e...` stamps in front of each commit line. */
 const RECORD_SEPARATOR = String.fromCharCode(0x1e);

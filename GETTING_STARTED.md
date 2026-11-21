@@ -1,7 +1,7 @@
 # Getting Started — CATHERINE Template
 
 A production-grade full-stack starter: **React 19 + Vite + Tailwind v4** frontend and
-**Node.js + Express 5 + OracleDB** backend, with JWT auth, RBAC, request audit logging,
+**Bun + Express 5 + OracleDB** backend, with JWT auth, RBAC, request audit logging,
 an observability dashboard, admin management, and a version-history (changelog) feature.
 
 > 📖 **The full interactive Getting Started guide is available in the app itself.**
@@ -13,7 +13,7 @@ an observability dashboard, admin management, and a version-history (changelog) 
 ## 0. First thing to do
 
 ```
-1. Install prerequisites (Node 24, Oracle Instant Client, an Oracle DB)
+1. Install prerequisites (Bun 1.4+, Oracle Instant Client, an Oracle DB)
    — OR just use Demo Mode (DEMO_MODE=true) to skip the database entirely.
 2. Backend:  copy .env.example → .env  and generate the secrets
 3. Frontend: copy .env.example → .env
@@ -31,8 +31,7 @@ Each step is detailed below. If you only want to look around the UI, set
 
 | Requirement               | Version / Notes                                                                 |
 | ------------------------- | ------------------------------------------------------------------------------- |
-| **Node.js**               | **24.x** (the backend builds a `node24-win-x64` pkg target).                    |
-| **Bun**                   | **1.4+** — package manager and script runner (`bun install`, `bun run …`). The server itself still runs on Node. |
+| **Bun**                   | **1.4+** — runtime, package manager and test runner for both apps. No Node.js install needed. |
 | **Oracle Database**       | 12c+ for the sample schema. **Oracle XE 21c** is ideal for local dev.           |
 | **Oracle Instant Client** | Required — `node-oracledb` runs in **Thick mode**. Set `ORACLE_INSTANT_CLIENT`. |
 | **Git**                   | To clone.                                                                       |
@@ -131,7 +130,7 @@ defaults in `.env.example`; tune it later.
 ### 3.5 Start the backend
 
 ```bash
-bun run start          # node server.js  →  http://localhost:2108
+bun run start          # bun server.js  →  http://localhost:2108
 ```
 
 Health check: open `http://localhost:2108/api/v1/health` — it should return
@@ -234,7 +233,7 @@ Features to explore as `admin`:
   (seed `02_seed_demo.sql` for instant data).
 - **Admin Management** — create accounts (temporary password emailed, valid 72 h), change roles, reset passwords, revoke.
 - **Version History (Changelog)** — encrypted file store; seed with the changelog
-  script (`node scripts/seed-changelog.js`).
+  script (`bun scripts/seed-changelog.js`).
 
 ---
 
@@ -244,12 +243,12 @@ Features to explore as `admin`:
 
 | Command                    | What it does                                  |
 | -------------------------- | --------------------------------------------- |
-| `bun run start`                | Start the API (`node server.js`).             |
+| `bun run start`                | Start the API (`bun server.js`).              |
 | `bun run test`                 | Run the Vitest suite.                         |
 | `bun run test:unit`        | Unit tests only (also `test:integration`, `test:security`, …). |
 | `bun run lint`             | ESLint.                                       |
 | `bun run db:seed:template` | Seed demo `admin`/`manager`/`user` accounts (Argon2id). |
-| `bun run build`            | Compile `dist/catherine-backend.exe` with `@yao-pkg/pkg`. |
+| `bun run build`            | Compile `dist/catherine-backend.exe` with `bun build --compile` (`build:host` = this machine). |
 
 ### Frontend (`Frontend/`)
 

@@ -1,6 +1,3 @@
-// Apply encoding polyfills for compiled environment (must be first)
-require("./src/utils/encodingPolyfill");
-
 // ─── libuv thread pool sizing (must run before any async I/O) ────────────────
 // node-oracledb (Thick mode) executes EVERY database call on a libuv worker
 // thread. The default pool of 4 threads serialises concurrent Oracle work:
@@ -25,18 +22,15 @@ if (!process.env.UV_THREADPOOL_SIZE) {
     process.env.UV_THREADPOOL_SIZE = "48";
 }
 
-// NOTE: "use strict" cannot precede the polyfill require above, so each module
-// declares its own strict mode via the "use strict" directive at the top.
 
-// In compiled (pkg) builds resolve .env NEXT TO THE EXE, not the working
+// In the compiled exe resolve .env NEXT TO THE EXE, not the working
 // directory — a service/scheduled-task can start the exe with cwd anywhere
 // (e.g. System32), and bootGuard reads process.env immediately below.
 const path = require("path");
 const dotenv = require("dotenv");
+const { IS_COMPILED, APP_ROOT, appPath } = require("./src/utils/runtimePaths");
 dotenv.config({
-    path: process.pkg
-        ? path.join(path.dirname(process.execPath), ".env")
-        : ".env",
+    path: IS_COMPILED ? appPath(".env") : ".env",
 });
 
 // ─── Process timezone (must run before ANYTHING constructs a Date) ───────────
@@ -49,7 +43,7 @@ dotenv.config({
 //
 // Pinning it here rather than relying on the launch environment means the app
 // is correct however it is started — a service, a scheduled task, a bare
-// `node server.js`, or a PKG exe on a machine whose clock is set to anything.
+// `bun server.js`, or the compiled exe on a machine whose clock is set to anything.
 // Set APP_TZ to the zone the database's wall-clock values are written in.
 //
 // Order matters twice over. dotenv runs FIRST so an APP_TZ written in the
@@ -409,10 +403,10 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     const db = require("./src/config");
     const { isDemoMode } = require("./src/config/demoMode");
 
-    // ── Native-module preflight (pkg builds) ──────────────────────────────
-    // argon2 loads its prebuilt .node via node-gyp-build, which resolves
-    // OUTSIDE the pkg snapshot — a missing/mislocated
-    // node_modules\argon2\prebuilds\win32-x64 copy next to the exe would
+    // ── Native-module preflight (compiled exe) ────────────────────────────
+    // argon2 loads its prebuilt .node via node-gyp-build, which the compiled
+    // exe resolves from disk beside itself — a missing/mislocated
+    // prebuilds\win32-x64 copy next to the exe would
     // otherwise only surface at the FIRST admin password verify. Surface it
     // at boot instead. Alert-not-exit: the rest of the API still works; only
     // argon2-hashed credential paths would fail.
@@ -423,8 +417,8 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         logger.alert(
             "Native-module preflight FAILED: argon2 could not be loaded — " +
                 "argon2-hashed admin credential verification WILL fail. " +
-                "Ensure node_modules\\argon2\\prebuilds\\win32-x64 sits next " +
-                `to the executable (postbuild-copy-natives). ${err.message}`,
+                "Ensure prebuilds\\win32-x64 sits next to the executable " +
+                `(staged by scripts/build.js). ${err.message}`,
         );
     }
 
@@ -434,16 +428,12 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
 
     if (USE_HTTPS) {
         const https = require("https");
-        // Resolve cert directory at runtime — NOT at pkg snapshot time.
-        // For compiled (pkg) builds, certs/ sits next to the executable.
-        // For normal Node, certs/ sits next to server.js.
-        const certDir = path.resolve(
-            process.pkg ? path.dirname(process.execPath) : __dirname,
-            "certs",
-        );
+        // certs/ sits next to the compiled exe, or next to server.js in a
+        // source run (APP_ROOT covers both).
+        const certDir = path.join(APP_ROOT, "certs");
 
-        // PFX (PKCS#12) certificate — filename from env to avoid pkg
-        // snapshotting a hardcoded path that may not exist at compile time.
+        // PFX (PKCS#12) certificate — filename from env, read from disk at
+        // runtime (never a path fixed at compile time).
         const pfxFile = process.env.PFX_FILENAME || "server.pfx";
         const pfxPath = path.join(certDir, pfxFile);
 

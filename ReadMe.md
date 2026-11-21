@@ -4,7 +4,7 @@
 
 ### A production-grade full-stack template — secure by default, fast under load, and beautiful out of the box.
 
-**React 19 + Tailwind v4** on the front · **Node.js + Express v5 + OracleDB** on the back
+**React 19 + Tailwind v4** on the front · **Bun + Express v5 + OracleDB** on the back
 Powered by **Mira** — a MongoDB-style query wrapper that compiles to safe, bind-variable Oracle SQL.
 
 </div>
@@ -24,7 +24,7 @@ Most templates give you a folder layout and a "hello world" route. CATHERINE shi
 | 🎨 **Designed** | 50+ components · full animation system · WCAG-checked dark mode parity |
 | 🎛️ **Personal** | 40 accent palettes + custom-hex generator · light/dark/transparency · layout modes · contrast-safe per-palette tokens |
 | 🩺 **Observable** | Request tracing (`X-Request-Id`) · audit log · RED + system + Oracle metrics · changelog/release surface |
-| 📦 **Portable** | Compiles to a single standalone Windows `.exe` via `pkg` |
+| 📦 **Portable** | Compiles to a single standalone Windows `.exe` via `bun build --compile` |
 
 ---
 
@@ -190,7 +190,7 @@ Coverage targets: middleware 90% branch · services 85% branch · utils 95% line
 
 ## 🧰 Tech Stack
 
-**Backend** — Node.js · Express 5 · OracleDB 6 (Thick mode) · `node-cache` · `csrf-csrf` · Helmet 8 · `jsonwebtoken` · `argon2`/`bcryptjs` · `nanoid` · ExcelJS · PDFKit · Nodemailer · Vitest/Supertest · packaged with `@yao-pkg/pkg` (Node 24) → standalone `.exe`
+**Backend** — Bun · Express 5 · OracleDB 6 (Thick mode) · `node-cache` · `csrf-csrf` · Helmet 8 · `jsonwebtoken` · `argon2`/`bcryptjs` · `nanoid` · ExcelJS · PDFKit · Nodemailer · Vitest/Supertest · packaged with `bun build --compile` → standalone `.exe`
 
 **Frontend** — React 19 · Vite 8 · Tailwind CSS v4 · React Compiler · React Router 7 · ApexCharts · FontAwesome 7 · `react-dropzone` · `jose` · ExcelJS · Mermaid · Vitest/Testing Library/MSW · Playwright
 

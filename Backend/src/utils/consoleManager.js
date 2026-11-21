@@ -13,7 +13,7 @@ class ConsoleManager {
     initialize() {
         if (this.isInitialized) return;
 
-        // Set process title for compiled PKG applications
+        // Set process title (visible in Task Manager for the compiled exe)
         this.setProcessTitle();
 
         // Display ASCII art on startup
@@ -30,7 +30,7 @@ class ConsoleManager {
     }
 
     /**
-     * Set the process title for PKG compiled applications
+     * Set the process title (shown for the compiled exe)
      */
     setProcessTitle() {
         try {

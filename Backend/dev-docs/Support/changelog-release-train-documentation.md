@@ -166,7 +166,7 @@ An unknown type falls back to `TYPE_META.feat` for display. The backend allow-li
 - **IV:** 12 random bytes per write (`crypto.randomBytes(12)`)
 - **Key resolution:** `CHANGELOG_ENCRYPTION_KEY` (64-char hex) → `DATA_SIGNING_SECRET` (≥32 chars, SHA-256 hashed)
 - **Auth tag:** GCM authentication tag (integrity verification)
-- **File location:** `Backend/data/changelog.enc` (resolved beside the executable under pkg: `PROJECT_ROOT = process.pkg ? path.dirname(process.execPath) : path.resolve(__dirname, "../..")`)
+- **File location:** `Backend/data/changelog.enc` (resolved beside the compiled exe: `PROJECT_ROOT = APP_ROOT` from `utils/runtimePaths.js`)
 - **File format:** `{ iv: "<hex>", authTag: "<hex>", ciphertext: "<hex>" }`
 
 ### Cross-Process File Lock

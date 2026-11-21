@@ -443,7 +443,7 @@ Commit/rollback is not the `Session`'s job. `adapters/oracle.js:694-711` commits
 
 **Driver load and Thick mode** (`oracle.js:150-171`). `_initOracleClient` is called unconditionally at module load — not only for compiled builds. If `ORACLE_INSTANT_CLIENT` validates (`oci.dll` plus `oraociei23.dll` *or* `oraociei.dll`) it calls `initOracleClient({ libDir })`; otherwise it tries the system `PATH`. `NJS-077` ("already initialised") is swallowed. The chosen mode is logged: `oracledb.oracleClientVersion` truthy ⇒ Thick, else Thin. This matters because Thin mode rejects some Oracle password verifiers (the `NJS-116` hint at `:487-488` says exactly that).
 
-Under `pkg`, `_loadEnvForCompiled` (`:91-128`) reads `.env` from `process.cwd()` then from the exe's directory — deliberately **never** via `path.join(__dirname, ".env")`, because pkg's static analyser resolves that pattern and bakes the build machine's `.env` into the binary (CWE-798/CWE-540; the comment records that this was confirmed by byte-scanning a built exe).
+In the compiled exe, `_loadEnvForCompiled` (`:91-128`) reads `.env` from `process.cwd()` then from the exe's directory — deliberately **never** via `path.join(__dirname, ".env")`, because pkg's static analyser resolves that pattern and bakes the build machine's `.env` into the binary (CWE-798/CWE-540; the comment records that this was confirmed by byte-scanning a built exe).
 
 **Pool defaults** (`:182-195`): `poolMin 10`, `poolMax 50`, `poolIncrement 5`, `poolTimeout 30`, `queueTimeout 15000`, `poolPingInterval 30`, `connectTimeout 15000`, `callTimeout 60000`, `stmtCacheSize 50`, `homogeneous true`. `database.js` overrides `poolMin`/`poolMax` for `appDb` from `APP_POOL_MIN` / `APP_POOL_MAX`, defaulting to **5 / 20**. `oracledb.fetchArraySize` is raised globally to 1000 (`:173`).
 
@@ -657,7 +657,7 @@ The code is the authority. These are places where prose currently disagrees with
 | Savepoint names are allow-listed | `^[A-Za-z_][A-Za-z0-9_]*$` before the only unbindable identifier in the transaction path | CWE-89 |
 | PIVOT literals escaped | `.replace(/'/g, "''")` on the one position Oracle forbids binds, and the exception is documented in the file header | CWE-89 |
 | Credentials never logged | `_createPool` deletes `password` and `user` from every log object (`:386-388`); `initializePools` does the same (`:469-471`) | CWE-532 |
-| Compiled-build secret leak closed | `.env` is read from disk paths only, never `path.join(__dirname, …)`, so pkg cannot bake the build machine's secrets into the exe | CWE-798, CWE-540 |
+| Compiled-build secret leak closed | `.env` is read from disk paths only, never `path.join(__dirname, …)`, so a compile step cannot bake the build machine's secrets into the exe | CWE-798, CWE-540 |
 | Connection leak closed | `_acquireConnection`'s orphan guard closes a connection that resolves after the race timeout | CWE-404 |
 | Operational errors survive the adapter | `if (err.isOperational) throw err` keeps a deliberate 4xx from being downgraded to an opaque 500 | CWE-754 |
 | Boot-time input validation upstream | `AuthMiddleware.validateRequiredFields` rejects objects and arrays before they reach `parseFilter` — the defence against `{"userId": {"$regex": ".*"}}` | CWE-943 |

@@ -8,11 +8,11 @@ metadata:
 CATHERINE template stack (verify in package.json before relying on a specific minor):
 
 **Backend** (`Backend/package.json`, CommonJS, `main: server.js`):
-- express ^5.2.1, oracledb ^6.10.0 (Thick mode), node-cache ^5.1.2 (rate-limit + cache stores), csrf-csrf ^4.0.3, helmet ^8.1.0, jsonwebtoken ^9, nanoid ^5 (ESM — needs `nanoidLoader.js` for PKG).
+- express ^5.2.1, oracledb ^6.10.0 (Thick mode), node-cache ^5.1.2 (rate-limit + cache stores), csrf-csrf ^4.0.3, helmet ^8.1.0, jsonwebtoken ^9, nanoid ^5 (loaded through `nanoidLoader.js`).
 - Password hashing: both argon2 ^0.44 and bcryptjs ^3 present; `PASSWORD_HASH_MODE` env (`bcrypt` prod, `plain` dev only).
 - Excel/PDF: exceljs, pdfkit, archiver. Email: nodemailer.
 - Tests: mocha ^11 + chai ^6 + sinon ^21 + supertest ^7. Suites under `test/server/**` split unit/integration/security/performance/reliability/chaos.
-- Build: **pkg** → standalone Windows `.exe`, target `node18-win-x64`, `bun run build` → `dist/`.
+- Runtime: **Bun** (dev, tests, scripts, prod). Build: `bun build --compile` → standalone Windows `.exe` (`bun-windows-x64`), `bun run build` → `dist/`.
 
 **Frontend** (`Frontend/package.json`, ESM, Vite):
 - react ^19.2, react-dom ^19.2, **vite ^8**, tailwindcss ^4.2 (`@tailwindcss/vite`).

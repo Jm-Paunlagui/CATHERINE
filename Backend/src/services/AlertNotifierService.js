@@ -1,5 +1,7 @@
 "use strict";
 
+const { formatUtcStamp } = require("../utils/formatUtcStamp");
+
 /**
  * @fileoverview Server Email Notifications — state machine, poller, and
  * critical-log tap subscriber. Owns ALL dedup/throttle/hysteresis logic so
@@ -1303,11 +1305,7 @@ class AlertNotifierService {
         const sign = offsetMin >= 0 ? "+" : "-";
         const abs = Math.abs(offsetMin);
         const label = `UTC${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
-        const text = new Date(ms + offsetMin * 60_000).toLocaleString("en-US", {
-            timeZone: "UTC",
-            dateStyle: "medium",
-            timeStyle: "medium",
-        });
+        const text = formatUtcStamp(new Date(ms + offsetMin * 60_000), { seconds: true });
         return `${text} ${label}`;
     }
 

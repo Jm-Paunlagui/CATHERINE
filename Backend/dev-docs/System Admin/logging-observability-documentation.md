@@ -221,7 +221,7 @@ Helpers: `cache()` and `database()` log at DEBUG, `performance()` at WARNING whe
 
 ### 4.4 Directory layout
 
-`Logger.CONFIG.LOG_BASE_DIR` is `<dir of exe>/logs` in a PKG build (`process.pkg`) and `<cwd>/logs` otherwise. `AuditLogService`, `LogRetentionService` and `AuditLogFileModel` repeat the same resolution, so reads and writes always target the same tree.
+`Logger.CONFIG.LOG_BASE_DIR` is `<dir of exe>/logs` in the compiled exe (`IS_COMPILED`, `utils/runtimePaths.js`) and `<cwd>/logs` otherwise. `AuditLogService`, `LogRetentionService` and `AuditLogFileModel` repeat the same resolution, so reads and writes always target the same tree.
 
 ```text
 logs/

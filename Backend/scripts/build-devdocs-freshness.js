@@ -1,8 +1,8 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * build-devdocs-freshness.js
  *
- * Writes the dev-docs commit-date snapshot that `pkg` bundles into the exe.
+ * Writes the dev-docs commit-date snapshot that scripts/build.js stages beside the exe.
  *
  * A deployed backend.exe has no git checkout, so DevDocsService's live
  * `git log` returns nothing and every document reads "Age unknown". This
@@ -11,12 +11,12 @@
  * `_commitDateIndex` the service uses live, so the two can never disagree on
  * how a date is derived.
  *
- * FAIL-LOUD CONTRACT (same as postbuild-copy-natives.js): an empty index
+ * FAIL-LOUD CONTRACT (same as scripts/build.js): an empty index
  * fails the build (exit 1). Shipping an exe without dates is the exact defect
  * this script exists to stop, and a shallow clone or missing git would
  * otherwise produce it silently.
  *
- * Run automatically first by `bun run build` / `bun run build:debug`.
+ * Run automatically first by `bun run build` / `bun run build:host`.
  */
 
 "use strict";

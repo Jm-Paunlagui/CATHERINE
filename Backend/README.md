@@ -19,16 +19,16 @@ Package: `catherine-backend` `1.0.0-dev.46`, kept in lockstep with the frontend.
 
 ## Tech stack
 
-- **Node.js** and **Express 5**, class-based controllers, services and middleware
+- **Bun** and **Express 5**, class-based controllers, services and middleware
 - **Oracle Database** through `node-oracledb` (thick mode), with the in-house **MongoDB-style query wrapper** (`src/utils/oracle-mongo-wrapper/`)
 - Security: JWT auth, double-submit CSRF, Helmet, CORS, rate limiting, IP filter and security filter, argon2 (default) / bcrypt / tripledes / plain password modes
 - RFC 5424 logger with daily rotation, request IDs, SSE, scheduler
 - ExcelJS for imports and exports, Nodemailer for email
-- Vitest and Supertest for tests; `@yao-pkg/pkg` produces a single Windows `.exe`
+- Vitest and Supertest for tests; `bun build --compile` produces a single Windows `.exe`
 
 ## Requirements
 
-- Node.js 26 LTS for development and CI (26.13.1 or later). Production builds still target `node24-win-x64` until pkg-fetch on npm ships a 26.13.1 build, at which point they move to `node26-win-x64`
+- Bun 1.4.5 or later (runtime, package manager and test runner). The compiled exe embeds Bun, so the server host needs nothing installed.
 - Oracle Database, plus Oracle Instant Client for thick mode (`ORACLE_INSTANT_CLIENT`). Not needed with `DEMO_MODE=true`.
 - An SMTP server for notifications (optional in development)
 
@@ -87,7 +87,7 @@ Suites live under `test/server/{unit,integration,security,performance,reliabilit
 | `bun run lint` | ESLint |
 | `bun run db:seed:template` | Seeds the template accounts (`scripts/seed-template.js`) |
 | `bun run changelog:dump` / `changelog:seed` | Export / import the encrypted changelog store |
-| `bun run build` | Dev-docs freshness index, PKG build, then native-addon copy |
+| `bun run build` | Dev-docs freshness index, `bun build --compile` (Windows x64), then stages templates and native addons beside the exe. `build:host` builds for this machine |
 
 ## Build and deploy
 

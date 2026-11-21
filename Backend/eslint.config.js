@@ -14,7 +14,7 @@ module.exports = defineConfig([
       // ES2022: logger.js uses private class methods (#foo). 2020 would parse-error.
       ecmaVersion: 2022,
       sourceType: "commonjs", // repo uses require/module.exports throughout
-      globals: { ...globals.node },
+      globals: { ...globals.node, Bun: "readonly" }, // runtime is Bun
     },
     rules: {
       "no-console": "error", // enforce CLAUDE.md logger-not-console going forward

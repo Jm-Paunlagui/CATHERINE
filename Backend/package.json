@@ -1,6 +1,6 @@
 {
     "name": "catherine-backend",
-    "version": "1.0.0-dev.50",
+    "version": "1.0.0-dev.51",
     "description": "CATHERINE Template — Production-grade Express 5 + OracleDB backend with JWT auth, RBAC, audit logging, exact-decimal money, and observability.",
     "homepage": "https://github.com/Jm-Paunlagui/NodeExpress-Template#readme",
     "bugs": {
@@ -25,34 +25,34 @@
     "type": "commonjs",
     "main": "server.js",
     "engines": {
-        "node": ">=26.13.1"
+        "bun": ">=1.4.5"
     },
     "packageManager": "bun@1.4.5",
     "scripts": {
-        "prepare": "node scripts/install-git-hooks.js",
-        "audit:changelog-release": "node scripts/verify-changelog-release.js",
-        "start": "node server.js",
-        "lint": "eslint .",
-        "lint:fix": "eslint . --fix",
-        "db:seed:template": "node scripts/seed-template.js",
-        "changelog:dump": "node scripts/dump-changelog.js",
-        "changelog:seed": "node scripts/seed-changelog.js",
-        "build": "node scripts/build-devdocs-freshness.js && pkg . --out-path dist --targets node24-win-x64 --no-bytecode --public --public-packages=* && node scripts/postbuild-copy-natives.js",
-        "build:debug": "node scripts/build-devdocs-freshness.js && pkg . --out-path dist --targets node24-win-x64 --no-bytecode --public --public-packages=* --debug && node scripts/postbuild-copy-natives.js",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage",
-        "test:ui": "vitest --ui",
-        "test:unit": "vitest run test/server/unit test/unit",
-        "test:integration": "vitest run test/server/integration",
-        "test:security": "vitest run test/server/security",
-        "test:performance": "vitest run test/server/performance",
-        "test:reliability": "vitest run test/server/reliability",
-        "test:resilience": "vitest run test/server/reliability",
-        "test:chaos": "vitest run chaos",
-        "test:purge": "vitest run purge dataPurge restore backup adminRevoke",
-        "test:metrics": "vitest run test/server/unit/middleware/metricsStore.test.js test/server/unit/middleware/metricsStore.memory.test.js test/server/unit/middleware/metricsRouteLabel.test.js test/server/integration/metrics.test.js test/server/integration/metrics/metrics.test.js",
-        "test:money": "vitest run test/unit/money.test.js test/unit/moneyFetchTypeHandler.test.js test/unit/signedFields.test.js test/unit/constants/currencies.test.js test/unit/FxRateService.test.js test/unit/bootGuardMoney.test.js test/unit/convertTypesFence.test.js"
+        "prepare": "bun scripts/install-git-hooks.js",
+        "audit:changelog-release": "bun scripts/verify-changelog-release.js",
+        "start": "bun server.js",
+        "lint": "bun --bun eslint .",
+        "lint:fix": "bun --bun eslint . --fix",
+        "db:seed:template": "bun scripts/seed-template.js",
+        "changelog:dump": "bun scripts/dump-changelog.js",
+        "changelog:seed": "bun scripts/seed-changelog.js",
+        "build": "bun scripts/build.js",
+        "build:host": "bun scripts/build.js --target=host",
+        "test": "bun --bun vitest run",
+        "test:watch": "bun --bun vitest",
+        "test:coverage": "bun --bun vitest run --coverage",
+        "test:ui": "bun --bun vitest --ui",
+        "test:unit": "bun --bun vitest run test/server/unit test/unit",
+        "test:integration": "bun --bun vitest run test/server/integration",
+        "test:security": "bun --bun vitest run test/server/security",
+        "test:performance": "bun --bun vitest run test/server/performance",
+        "test:reliability": "bun --bun vitest run test/server/reliability",
+        "test:resilience": "bun --bun vitest run test/server/reliability",
+        "test:chaos": "bun --bun vitest run chaos",
+        "test:purge": "bun --bun vitest run purge dataPurge restore backup adminRevoke",
+        "test:metrics": "bun --bun vitest run test/server/unit/middleware/metricsStore.test.js test/server/unit/middleware/metricsStore.memory.test.js test/server/unit/middleware/metricsRouteLabel.test.js test/server/integration/metrics.test.js test/server/integration/metrics/metrics.test.js",
+        "test:money": "bun --bun vitest run test/unit/money.test.js test/unit/moneyFetchTypeHandler.test.js test/unit/signedFields.test.js test/unit/constants/currencies.test.js test/unit/FxRateService.test.js test/unit/bootGuardMoney.test.js test/unit/convertTypesFence.test.js"
     },
     "dependencies": {
         "archiver": "^6.0.2",
@@ -85,42 +85,11 @@
     "bin": {
         "catherine_backend": "./server.js"
     },
-    "pkg": {
-        "scripts": [
-            "src/**/*.js",
-            "server.js"
-        ],
-        "assets": [
-            "src/**/*.js",
-            "src/**/*.json",
-            "src/**/*.png",
-            "src/**/*.ttf",
-            "src/**/*.html",
-            "node_modules/axios/dist/node/axios.cjs",
-            "node_modules/axios/package.json",
-            "node_modules/axios/lib/**/*",
-            "node_modules/axios/dist/**/*",
-            "node_modules/pdfkit/js/**/*",
-            "node_modules/fontkit/dist/**/*",
-            "node_modules/fontkit/src/**/*",
-            "node_modules/oracledb/package.json",
-            "node_modules/oracledb/lib/**/*",
-            "node_modules/oracledb/build/Release/*.node",
-            "node_modules/nanoid/index.js",
-            "node_modules/nanoid/non-secure/index.js",
-            "node_modules/nanoid/package.json"
-        ],
-        "targets": [
-            "node24-win-x64"
-        ],
-        "outputPath": "dist"
-    },
     "devDependencies": {
         "@eslint/js": "^9.39.5",
         "@vitest/coverage-istanbul": "^4.1.12",
         "@vitest/coverage-v8": "^4.1.12",
         "@vitest/ui": "^4.1.12",
-        "@yao-pkg/pkg": "6.24.0",
         "eslint": "^9.39.5",
         "globals": "^17.12.0",
         "supertest": "^7.2.2",

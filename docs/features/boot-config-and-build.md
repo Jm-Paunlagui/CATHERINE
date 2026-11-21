@@ -1,25 +1,23 @@
-# Boot Sequence, Configuration & the PKG Build — Technical Documentation
+# Boot Sequence, Configuration & the Bun Build — Technical Documentation
 
-> **Scope:** how the CATHERINE template starts — from the first `require` in `server.js`, through env loading and the fail-fast boot guard, clustering and cron-leader election, server creation and graceful shutdown — and how it is compiled to a single Windows executable with `@yao-pkg/pkg`, including the native binaries copied in after the build.
-> **Source:** `Backend/server.js` (the surface-root entry point — **not** `src/`), `Backend/src/config/` (`index.js`, `bootGuard.js`, `database.js`, `demoMode.js`, `adapters/oracle.js`), the PKG configuration in `Backend/package.json`, and `Backend/scripts/postbuild-copy-natives.js`.
-> **Generated:** 2026-09-04. **Authority:** the code. Where `Backend/CLAUDE.md` disagrees with the code, the code wins and the disagreement is recorded in [§10.1](#101-known-documentation-drift).
+> **Scope:** how the CATHERINE template starts — from the first `require` in `server.js`, through env loading and the fail-fast boot guard, clustering and cron-leader election, server creation and graceful shutdown — and how it is compiled to a single Windows executable with `bun build --compile`, including the templates and native binaries staged beside it.
+> **Source:** `Backend/server.js` (the surface-root entry point — **not** `src/`), `Backend/src/config/` (`index.js`, `bootGuard.js`, `database.js`, `demoMode.js`, `adapters/oracle.js`), `Backend/src/utils/runtimePaths.js`, and `Backend/scripts/build.js`.
+> **Generated:** 2026-09-04; build and runtime sections revised 2026-11-21 for the move from Node + pkg to Bun. **Authority:** the code. Where `Backend/CLAUDE.md` disagrees with the code, the code wins and the disagreement is recorded in [§9.1](#91-known-documentation-drift).
 > **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 
 ## 1. Overview
 
-`Backend/server.js` is the process entry point (`package.json` `"main": "server.js"`, `"bin"` → `./server.js`, `pkg` scripts list `server.js`). It is deliberately at the surface root, not under `src/`, and the very first thing it does is not obvious application setup — it is two ordering-critical preludes that must happen before anything else touches an I/O path.
+`Backend/server.js` is the process entry point (`package.json` `"main": "server.js"`, `"bin"` → `./server.js`, `scripts/build.js` compiles from `server.js`). It runs on Bun (`bun server.js`). It is deliberately at the surface root, not under `src/`. (Until 2026-11 a pkg-only `encodingPolyfill` was required first; Bun ships full ICU, so it was removed.)
 
-First it `require("./src/utils/encodingPolyfill")` — the comment states this **must be first**, applying encoding polyfills for the compiled environment. Because that require has to precede everything, `server.js` intentionally does **not** open with a `"use strict"` directive (a strict-mode directive cannot precede the polyfill require); each module under `src/` declares its own `"use strict"` instead.
+The first ordering-critical step: before any async I/O can create the libuv thread pool, it sizes that pool: if `UV_THREADPOOL_SIZE` is unset it is set to `"48"`. This is because `node-oracledb` in Thick mode runs **every** database call on a libuv worker thread, and the default pool of four threads would serialise concurrent Oracle work no matter how large the connection pool is. The value must be set before the first async I/O creates the pool, which is why it lives in code and not `.env` — a real OS environment variable can override it.
 
-Second, before any async I/O can create the libuv thread pool, it sizes that pool: if `UV_THREADPOOL_SIZE` is unset it is set to `"48"`. This is because `node-oracledb` in Thick mode runs **every** database call on a libuv worker thread, and the default pool of four threads would serialise concurrent Oracle work no matter how large the connection pool is. The value must be set before the first async I/O creates the pool, which is why it lives in code and not `.env` — a real OS environment variable can override it.
-
-Only then does `server.js` load `.env` — from **next to the executable** in compiled builds (`process.pkg ? path.join(path.dirname(process.execPath), ".env") : ".env"`), because a service or scheduled task can launch the exe with its working directory anywhere (e.g. `System32`). Immediately after `dotenv.config()` it runs the **boot guard** (`validateSecrets()`), which fails the process closed in production if any secret is missing, too short, or still a template placeholder.
+Only then does `server.js` load `.env` — from **next to the executable** in the compiled exe (`IS_COMPILED ? appPath(".env") : ".env"`, from `src/utils/runtimePaths.js`), because a service or scheduled task can launch the exe with its working directory anywhere (e.g. `System32`). Immediately after `dotenv.config()` it runs the **boot guard** (`validateSecrets()`), which fails the process closed in production if any secret is missing, too short, or still a template placeholder.
 
 From there the process either forks a cluster of workers (with a single elected cron leader) or boots a single worker directly: it initialises the console manager, requires the Express `app` and the config adapter, runs a native-module preflight for `argon2`, creates an HTTP or HTTPS server, listens, eagerly initialises the Oracle pools (lazily-retried on failure), and installs graceful-shutdown and fatal-error handlers.
 
-The whole thing is shipped as one `.exe` via `@yao-pkg/pkg` targeting `node18-win-x64` into `dist/`, after which `scripts/postbuild-copy-natives.js` copies the native `.node` addons (`oracledb`, `argon2`) that `pkg` cannot embed into the snapshot so the exe resolves them at runtime.
+The whole thing is shipped as one `.exe` via `bun build --compile --target=bun-windows-x64` into `dist/` (`scripts/build.js`), which then stages beside the exe the email templates, the dev-docs freshness snapshot and the native `.node` addons (`oracledb`, `argon2`) the exe reads from disk at runtime.
 
 ---
 
@@ -29,9 +27,8 @@ The whole thing is shipped as one `.exe` via `@yao-pkg/pkg` targeting `node18-wi
 
 ```mermaid
 flowchart TD
-    start(["node server.js / catherine_backend.exe"]) --> poly["require('./src/utils/encodingPolyfill')<br/>(MUST be first — no 'use strict' before it)"]
-    poly --> uv["if !UV_THREADPOOL_SIZE → set '48'<br/>(before first async I/O)"]
-    uv --> env["dotenv.config()<br/>path = pkg ? next-to-exe/.env : ./.env"]
+    start(["bun server.js / catherine-backend.exe"]) --> uv["if !UV_THREADPOOL_SIZE → set '48'<br/>(before first async I/O)"]
+    uv --> env["dotenv.config()<br/>path = compiled ? next-to-exe/.env : ./.env"]
     env --> guard["validateSecrets() — boot guard"]
     guard -->|"prod + violation"| exit1["stderr banner + logger.crit → process.exit(1)"]
     guard -->|"dev + violation"| warn["logger.warning (startup continues)"]
@@ -48,7 +45,7 @@ flowchart TD
     console --> reqapp["require('./src/app')<br/>require('./src/config')"]
     reqapp --> preflight["native preflight: require('argon2')<br/>(alert-not-exit on failure)"]
     preflight --> httpsQ{"USE_HTTPS?"}
-    httpsQ -->|"yes"| pfx["resolve certs/ next to exe (pkg) or server.js<br/>read PFX_FILENAME → https.createServer"]
+    httpsQ -->|"yes"| pfx["resolve certs/ under APP_ROOT (exe dir or Backend)<br/>read PFX_FILENAME → https.createServer"]
     httpsQ -->|"no"| http["http.createServer(app)"]
     pfx --> timeout["server.requestTimeout = SERVER_REQUEST_TIMEOUT_MS || 330000"]
     http --> timeout
@@ -95,29 +92,26 @@ sequenceDiagram
 
 ## 3. `server.js` — the entry point
 
-### 3.1 The two preludes (order is mandatory)
+### 3.1 The prelude (order is mandatory)
 
 ```js
-require("./src/utils/encodingPolyfill");            // must be first
 if (!process.env.UV_THREADPOOL_SIZE) {
     process.env.UV_THREADPOOL_SIZE = "48";          // before any async I/O
 }
 ```
 
-- **Encoding polyfill first.** Applied for the compiled (pkg) environment. Because it must precede everything, `server.js` cannot open with `"use strict"`; the file comment records this and notes each `src/` module declares its own strict directive.
 - **libuv thread pool sizing.** `node-oracledb` (Thick mode) executes every DB call on a libuv worker thread; the default four threads serialise concurrent Oracle work (with `poolMax=20`, only four queries run at once). Sizing to `48` covers the sum of pool maxima plus headroom for `fs`/`crypto`/`dns`. It must be set before the pool is created (first async I/O) — hence it is code, not `.env` — and can be overridden by a real OS env var.
 
 ### 3.2 Env loading — next to the exe in compiled builds
 
 ```js
+const { IS_COMPILED, APP_ROOT, appPath } = require("./src/utils/runtimePaths");
 dotenv.config({
-    path: process.pkg
-        ? path.join(path.dirname(process.execPath), ".env")
-        : ".env",
+    path: IS_COMPILED ? appPath(".env") : ".env",
 });
 ```
 
-In a `pkg` build the working directory is unreliable (a service/scheduled task can start the exe from anywhere), so `.env` is resolved next to the executable. In normal Node it is the current directory's `.env`. This must happen before the boot guard, which reads `process.env` immediately.
+In the compiled exe the working directory is unreliable (a service/scheduled task can start the exe from anywhere), so `.env` is resolved next to the executable. In a source run (`bun server.js`) it is the current directory's `.env`. This must happen before the boot guard, which reads `process.env` immediately.
 
 ### 3.3 The boot guard call site
 
@@ -149,7 +143,7 @@ const NUM_WORKERS = parseInt(process.env.NUM_WORKERS || String(Math.max(1, os.cp
 | `SERVER_REQUEST_TIMEOUT_MS` | `330000` | per-request timeout ceiling (see [§3.7](#37-server-creation-http-vs-https)) |
 | `PFX_FILENAME` | `server.pfx` | PFX file in `certs/` when `USE_HTTPS` |
 | `PFX_PASSPHRASE` | `""` | PFX passphrase |
-| `USE_HTTPS` cert dir | next-to-exe (pkg) / next-to-`server.js` | resolved at runtime, never at snapshot time |
+| `USE_HTTPS` cert dir | `APP_ROOT/certs`: next-to-exe (compiled) / next-to-`server.js` | resolved at runtime, never at compile time |
 | `CRON_LEADER` | (set by primary) | stamps exactly one worker as cron leader |
 | `ENABLE_SERVER_NOTIFICATIONS` | (see service) | gates `AlertNotifierService` |
 
@@ -172,11 +166,11 @@ The `else` branch runs for each forked worker and for a non-clustered process:
 
 1. `consoleManager.initialize()` — process title, ASCII art, daily console clearing.
 2. `require("./src/app")` (the Express app) and `require("./src/config")` (the DB adapter).
-3. **Native-module preflight:** `require("argon2")` at boot. `argon2` loads its prebuilt `.node` via `node-gyp-build`, which resolves **outside** the pkg snapshot — a missing/mislocated `node_modules\argon2\prebuilds\win32-x64` next to the exe would otherwise only surface at the first password verify. This is **alert-not-exit**: it `logger.alert`s and continues, because the rest of the API still works — only argon2-hashed credential paths would fail.
+3. **Native-module preflight:** `require("argon2")` at boot. `argon2` loads its prebuilt `.node` via `node-gyp-build`, which the compiled exe resolves from disk beside itself — a missing/mislocated `prebuilds\win32-x64` next to the exe would otherwise only surface at the first password verify. This is **alert-not-exit**: it `logger.alert`s and continues, because the rest of the API still works — only argon2-hashed credential paths would fail.
 
 ### 3.7 Server creation — HTTP vs HTTPS
 
-When `USE_HTTPS="true"`, the cert directory is resolved **at runtime** — next to the exe for pkg builds, next to `server.js` otherwise — never at snapshot time, so pkg's static analyser does not bake a build-machine path. The PFX filename comes from `PFX_FILENAME` (default `server.pfx`). If the PFX is missing, the process writes a `[FATAL]` line to **stderr synchronously** (so it is visible even if the logger's async queue has not flushed — a common compiled-build failure mode), `logger.crit`s, and `process.exit(1)`s. Otherwise `https.createServer` is used; when `USE_HTTPS` is false, `http.createServer`.
+When `USE_HTTPS="true"`, the cert directory is resolved **at runtime** — `path.join(APP_ROOT, "certs")`: next to the compiled exe, next to `server.js` otherwise — never a path fixed at compile time. The PFX filename comes from `PFX_FILENAME` (default `server.pfx`). If the PFX is missing, the process writes a `[FATAL]` line to **stderr synchronously** (so it is visible even if the logger's async queue has not flushed — a common compiled-build failure mode), `logger.crit`s, and `process.exit(1)`s. Otherwise `https.createServer` is used; when `USE_HTTPS` is false, `http.createServer`.
 
 `server.requestTimeout` is set from `SERVER_REQUEST_TIMEOUT_MS` (a valid positive integer) or defaults to `330_000` ms. The comment notes that long-running guarded write paths (retry/batch DB retries plus awaited email dispatch) can legitimately exceed Node's default 300 s, and that any reverse proxy in front must independently set at least as large a read/proxy timeout.
 
@@ -215,7 +209,8 @@ Holds the `connections` registry. The template ships **one** connection, `appDb`
 Merges the former `oracleEnvironment`, `oracleLoader` and `oracleConnectionPool` files. Highlights relevant to boot:
 
 - **Client validation & PATH setup.** `validateOracleClient()` checks `ORACLE_INSTANT_CLIENT` exists and contains `oci.dll` plus the core i18n DLL under either name (`oraociei23.dll` or `oraociei.dll`, which differ across 23.x builds). `setupOracleEnvironment()` prepends the client path to `PATH`.
-- **Compiled-env `.env` loader.** In `pkg` builds (`process.pkg` defined) `_loadEnvForCompiled()` reads `.env` from disk only — cwd then next-to-exe — and never via `path.join(__dirname, …)`, because pkg's static analyser would resolve that pattern and **bake the build machine's real secrets into every distributed exe** (CWE-798/CWE-540, confirmed by byte-scanning a build).
+- **Compiled-env `.env` loader.** In the compiled exe (`IS_COMPILED`) `_loadEnvForCompiled()` reads `.env` from disk only — cwd then next-to-exe — and never via `path.join(__dirname, …)`: under pkg that pattern **baked the build machine's real secrets into every distributed exe** (CWE-798/CWE-540, confirmed by byte-scanning a build). A byte scan of the Bun-built exe (2026-11-21) found no `.env` value.
+- **Thick binary location.** When compiled, `initOracleClient` gets `binaryDir: appPath("node_modules", "oracledb", "build", "Release")`, because oracledb's own search path is relative to its baked `__dirname`.
 - **Thick vs Thin.** `_initOracleClient` attempts Thick mode whenever `ORACLE_INSTANT_CLIENT` is set (not only for compiled exes) because Thick mode supports all password verifier types; Thin rejects some. The loaded mode is logged.
 - **Pool defaults.** `POOL_DEFAULTS` (poolMin 10, poolMax 50, increment 5, timeouts, `stmtCacheSize` 50, homogeneous). `fetchArraySize = 1000` to reduce round-trips on bulk reads.
 - **Money-safe fetch.** A `NUMBER`-as-string fetch handler is defined (so exact decimals never round-trip through IEEE-754). Its wiring status is covered in the `oracle-mongo-wrapper.md` doc; it is out of scope here.
@@ -235,39 +230,33 @@ Merges the former `oracleEnvironment`, `oracleLoader` and `oracleConnectionPool`
 
 ---
 
-## 6. The PKG build
+## 6. The Bun build
 
-`package.json` defines the build:
+`package.json`:
 
 ```json
-"build": "pkg . --out-path dist --targets node18-win-x64 --no-bytecode --public --public-packages=* && node scripts/postbuild-copy-natives.js",
-"build:debug": "pkg . --out-path dist --targets node18-win-x64 --no-bytecode --public --public-packages=* --debug && node scripts/postbuild-copy-natives.js"
+"build": "bun scripts/build.js",
+"build:host": "bun scripts/build.js --target=host"
 ```
 
-- **Compiler:** `@yao-pkg/pkg` `5.16.1` (devDependency) — the maintained fork of `pkg`.
-- **Target:** `node18-win-x64` (also declared in the `pkg.targets` block). Output goes to `dist/`.
-- **Flags:** `--no-bytecode --public --public-packages=*` ship readable JS rather than V8 bytecode; `--debug` on the debug variant adds pkg's verbose resolution trace.
-- **`pkg.scripts`:** `src/**/*.js` and `server.js` — the code snapshotted into the exe.
-- **`pkg.assets`:** JS/JSON/PNG/TTF/HTML under `src/`, plus selected `node_modules` payloads that must be readable at runtime (`axios`, `pdfkit`/`fontkit`, `oracledb/lib`, `nanoid`, `qrcode`/`dijkstrajs`/`pngjs`). Assets are embedded read-only in the snapshot.
+`scripts/build.js` runs, in order:
 
-Native C++ addons (`*.node`) **cannot** be embedded in the pkg snapshot and must sit on disk next to the exe — which is what the postbuild step handles.
+1. `scripts/build-devdocs-freshness.js` → `src/generated/devDocsFreshness.json` (fails without git history).
+2. `bun build --compile --sourcemap=inline server.js --outfile dist/catherine-backend.exe --target=bun-windows-x64`. Bun cross-compiles, so a macOS or Linux build box produces the Windows exe. The exe embeds the Bun runtime; the server needs nothing installed. `build:host` targets the build machine instead, for a local smoke test.
+3. Stages `src/utils/email-templates/` and `src/generated/` into `dist/src/…`.
+4. Stages the native addons for the target platform: oracledb's `oracledb-<ver>-<platform>-<arch>.node` into `dist/node_modules/oracledb/build/Release/`, and argon2's `prebuilds/<platform>-<arch>/*.node` into `dist/prebuilds/<platform>-<arch>/` (node-gyp-build checks `<exe dir>/prebuilds` after its baked package path).
 
----
+Any step that stages nothing fails the build (exit 1).
 
-## 7. `postbuild-copy-natives.js` — native binaries after the build
+**Why files are staged rather than embedded.** `bun build --compile` bakes the build machine's absolute `__dirname` into the bundle (e.g. `C:\build\CATHERINE\Backend\src\services`). Every runtime read therefore goes through `src/utils/runtimePaths.js`: `IS_COMPILED` (Bun reports its entry as `/$bunfs/…` or `B:\~BUN\…`), `APP_ROOT` (exe folder when compiled, Backend folder otherwise) and `appPath(...)`. Logs, `data/`, `dev-docs/`, `certs/`, the backup folder and `.env` resolve the same way.
 
-Runs automatically after `build` / `build:debug`. It:
+**Source map.** Without `--sourcemap=inline`, every stack frame and log call-site reads `root/catherine-backend:<line>`. With it they read `src/…:<line>`. The map carries the source text — the same exposure as the old pkg build's `--public --no-bytecode`.
 
-1. Iterates `NATIVE_PACKAGES = ["oracledb", "argon2"]`.
-2. Recursively finds every `*.node` under each package in `node_modules`.
-3. Filters to the current platform using `PLATFORM_FILTERS` (`win32-x64`, `win-x64`, or a `*win32-x64.node` suffix), so no darwin/linux/arm binaries are copied.
-4. Copies each surviving binary to `dist/node_modules/<relative path>`, **preserving the path under `node_modules/`** so Node's addon-resolution algorithm finds it next to the exe.
-
-Adding a new native package is a one-line append to `NATIVE_PACKAGES`. This is the same on-disk layout the boot-time `argon2` preflight ([§3.6](#36-worker--single-process-boot)) checks for — `node_modules\argon2\prebuilds\win32-x64` next to the executable.
+**Engine differences found in the migration.** JavaScriptCore formats `toLocaleString("en-US", { dateStyle, timeStyle })` as "Nov 3, 2026 at 2:32 PM" where V8 writes "Nov 3, 2026, 2:32 PM"; email stamps now use `src/utils/formatUtcStamp.js` (built from `formatToParts`). Clustering shares the listen port through SO_REUSEPORT — verified on macOS, load-balanced on Linux, not verified on Windows.
 
 ---
 
-## 8. Boot-relevant environment variables
+## 7. Boot-relevant environment variables
 
 Grounded in the code read for this document. See `.env.example` for the full catalogue and safe defaults.
 
@@ -291,20 +280,20 @@ Grounded in the code read for this document. See `.env.example` for the full cat
 
 ---
 
-## 9. Security
+## 8. Security
 
 - **Fail closed at the door.** The boot guard runs before any pool opens or any port binds. In production a placeholder secret, a too-short secret, `DEMO_MODE=true`, an unset `CORS_ORIGINS`, or an unsafe money-currency change refuses startup with an unmissable stderr banner — a misconfigured deployment never reaches a serving state.
-- **Secrets stay out of the binary.** The compiled `.env` loader reads from disk next to the exe and deliberately avoids `path.join(__dirname, ".env")` because pkg would otherwise snapshot the build machine's real `.env` into every distributed exe (CWE-798 hard-coded credentials / CWE-540 information exposure) — a defect the file records as confirmed by byte-scanning a build.
-- **Working-directory independence.** Resolving `.env` and `certs/` relative to `process.execPath` (not cwd) means a service started from `System32` still loads its real config and certificate rather than silently falling back to defaults.
+- **Secrets stay out of the binary.** The compiled `.env` loader reads from disk next to the exe and deliberately avoids `path.join(__dirname, ".env")` because a compile step can otherwise bake the build machine's real `.env` into every distributed exe (CWE-798 hard-coded credentials / CWE-540 information exposure) — confirmed by byte-scanning a pkg build; a scan of the Bun build found none.
+- **Working-directory independence.** Resolving `.env` and `certs/` relative to `APP_ROOT` (the exe folder, not cwd) means a service started from `System32` still loads its real config and certificate rather than silently falling back to defaults.
 - **Loud fatal paths.** Fatal handlers write to stderr synchronously before the async logger, so a boot failure or unhandled rejection can never exit silently (the historical compiled-exe failure mode). Cron-leader invariant breaches are both crit-logged and pushed out-of-band precisely because "zero leaders" is the state where nobody is watching the log.
 - **Native-module honesty.** The `argon2` preflight surfaces a missing prebuilt addon at boot (alert), rather than letting the first credential verify fail in production with no obvious cause.
 - **Single graceful teardown.** Shutdown flushes audit rows before closing pools and releases pooled SMTP sockets, so no security telemetry is lost and the process does not hang holding open sockets.
 
 ---
 
-## 10. Appendix
+## 9. Appendix
 
-### 10.1 Known documentation drift
+### 9.1 Known documentation drift
 
 Recorded per the authority rule: **the code wins**; each item is a place where `Backend/CLAUDE.md` does not match the boot/config/build source as read on 2026-09-04.
 
@@ -312,8 +301,8 @@ Recorded per the authority rule: **the code wins**; each item is a place where `
 
 - **Boot guard scope vs CLAUDE.md summaries.** The boot guard enforces more than secrets (it also guards `DEMO_MODE`, `CORS_ORIGINS` and the money base-currency in production). Where any CLAUDE.md summary describes the guard as secrets-only, the code is broader — read `bootGuard.js`'s `validateSecrets`/`validateMoneyConfig` for the full set.
 
-### 10.2 Things noted but not asserted
+### 9.2 Things noted but not asserted
 
-- The internal behaviour of `AlertNotifierService`, `AuditLogService`, `SharedTransporter`, `consoleManager`, `clusterRole` and `encodingPolyfill` was read only as far as `server.js`/config reference them; their full contracts are out of scope for this document and should be read from their own files before changing them.
+- The internal behaviour of `AlertNotifierService`, `AuditLogService`, `SharedTransporter`, `consoleManager` and `clusterRole` was read only as far as `server.js`/config reference them; their full contracts are out of scope for this document and should be read from their own files before changing them.
 - `db.initializePools`, `db.shutdown`/`db.closeAll` are called via `typeof … === "function"` guards in `server.js`; this document describes the call sites and the adapter registry, not the pool-lifecycle internals of `adapters/oracle.js` beyond the boot-relevant sections in [§4.4](#44-adaptersoraclejs--the-oracle-adapter).
-- The `.env.example` file was referenced by the code but not read in full for this pass; the env table in [§8](#8-boot-relevant-environment-variables) lists only variables observed directly in the source files named in the scope.
+- The `.env.example` file was referenced by the code but not read in full for this pass; the env table in [§7](#7-boot-relevant-environment-variables) lists only variables observed directly in the source files named in the scope.

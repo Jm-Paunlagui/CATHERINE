@@ -13,7 +13,7 @@ while read local_ref local_sha remote_ref remote_sha; do
         refs/tags/*)
             [ "$local_sha" = "$zero" ] && continue   # tag deletion
             tag=${local_ref#refs/tags/}
-            node scripts/verify-changelog-release.js --ref "$local_sha" --tag "$tag" || status=1
+            bun scripts/verify-changelog-release.js --ref "$local_sha" --tag "$tag" || status=1
             ;;
     esac
 done

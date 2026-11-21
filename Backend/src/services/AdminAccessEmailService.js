@@ -1,4 +1,7 @@
 "use strict";
+const { appPath } = require("../utils/runtimePaths");
+
+const { formatUtcStamp } = require("../utils/formatUtcStamp");
 
 /**
  * @fileoverview Access Control — who receives a temporary admin password, and
@@ -41,16 +44,13 @@ const AdminModel = require("../models/admin.model");
 const UserModel = require("../models/user.model");
 const SharedTransporter = require("./email/SharedTransporter");
 
-const TEMPLATE_PATH = path.join(
-    __dirname,
-    "..",
-    "utils",
+const TEMPLATE_PATH = appPath("src", "utils",
     "email-templates",
     "admin-access",
     "temporary-password.html",
 );
 
-const ASSETS_DIR = path.join(__dirname, "..", "utils", "email-templates", "assets");
+const ASSETS_DIR = appPath("src", "utils", "email-templates", "assets");
 
 /** Product name shown in the email. */
 const PRODUCT_NAME = process.env.APP_NAME || "CATHERINE";
@@ -251,7 +251,7 @@ class AdminAccessEmailService {
         const hh = String(Math.floor(absMin / 60)).padStart(2, "0");
         const mm = String(absMin % 60).padStart(2, "0");
         return (
-            shifted.toLocaleString("en-US", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" }) +
+            formatUtcStamp(shifted) +
             ` UTC${sign}${hh}:${mm}`
         );
     }

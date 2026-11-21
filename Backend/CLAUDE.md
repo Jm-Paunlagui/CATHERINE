@@ -25,11 +25,10 @@ Production-grade Node.js Express API template. Class-based OOP architecture, cle
 - Response time tracking with slow-response detection
 - Graceful shutdown with pool cleanup
 - OracleDB dual-pool pattern with PoolHealthMonitor and exponential backoff retry
-- Console manager (ASCII art, daily clearing, process title for PKG)
-- Encoding polyfills for PKG-compiled executables
+- Console manager (ASCII art, daily clearing, process title for the compiled exe)
 - Clustering support (master/worker, configurable via env)
 - OracleDB wrapper library that mimics MongoDB's API (`src/utils/oracle-mongo-wrapper/`)
-- PKG-compatible for compiling into a standalone `.exe`
+- Runs on Bun; compiles into a standalone `.exe` with `bun build --compile`
 
 ---
 
@@ -38,10 +37,10 @@ Production-grade Node.js Express API template. Class-based OOP architecture, cle
 ```
 Backend/
 ├── server.js                          # Entry point (surface root, NOT src/) — HTTP/HTTPS, clustering, scheduler, graceful shutdown
-├── package.json                       # catherine-backend; bin catherine_backend; pkg target node24-win-x64
+├── package.json                       # catherine-backend; engines.bun; build → bun-windows-x64 exe
 ├── .env.example                       # All env vars documented with safe defaults
 ├── sql/                               # 01_schema, 02_seed_demo, 03_alter_admins_notification_columns, 04_platform_tables
-├── scripts/                           # seed-template, seed-changelog, dump-changelog, build-devdocs-freshness, postbuild-copy-natives
+├── scripts/                           # seed-template, seed-changelog, dump-changelog, build-devdocs-freshness, build (compile + stage)
 ├── deploy/                            # winsw/ (catherine-backend service), systemd/, runbooks
 ├── dev-docs/                          # Developer docs served at /api/v1/dev-docs
 ├── test/                              # Vitest: server/{unit,integration,security,performance,reliability}, unit/, encryption/
@@ -91,9 +90,10 @@ Backend/
     └── utils/
         ├── logger.js                  # Custom logger (daily rotation, no truncation)
         ├── catchAsync.js              # Async error wrapper for controllers
-        ├── encodingPolyfill.js        # PKG encoding polyfills (must load first)
         ├── consoleManager.js          # Class: ASCII art, process title, daily clear
-        ├── nanoidLoader.js            # Nanoid with fallback chain for PKG
+        ├── runtimePaths.js            # IS_COMPILED / APP_ROOT / appPath — every on-disk path
+        ├── formatUtcStamp.js          # Engine-neutral "Nov 3, 2026, 2:32 PM" email stamps
+        ├── nanoidLoader.js            # Nanoid with fallback chain
         └── oracle-mongo-wrapper/      # MongoDB-style Oracle query library
 ```
 
@@ -933,7 +933,7 @@ Seed template accounts with `bun run db:seed:template`. Models use explicit proj
 | --- | --- |
 | `winsw/catherine-backend-service.xml` | Service id `catherine-backend`, executable `%BASE%\catherine-backend.exe`, `stoptimeout` 1860 s, preshutdown enabled |
 | `winsw/install-service.ps1` / `uninstall-service.ps1` / `check-shutdown-readiness.ps1` | Install (default ExeName `catherine-backend.exe`), remove, verify |
-| `systemd/catherine-backend.service` | `User=catherine`, `ExecStart=/usr/bin/node server.js`, `TimeoutStopSec=1860` |
+| `systemd/catherine-backend.service` | `User=catherine`, `ExecStart=/usr/local/bin/bun server.js`, `TimeoutStopSec=1860` |
 | `DEPLOYMENT_RUNBOOK.md`, `DEPLOYMENT_CHECKLIST.md`, `RESTART_VERIFICATION.md` | Operator procedures |
 
 `SHUTDOWN_FORCED_EXIT_MS` (max 1834000) must stay below the service stop timeout.
@@ -1071,22 +1071,25 @@ deliberately; do not inherit a default.
 
 ---
 
-## PKG Compilation
+## Bun Runtime and Compiled Exe
 
-Compile into standalone Windows executable via `pkg`:
+Bun is the runtime, package manager and test runner (`engines.bun`, `packageManager`). `bun server.js` runs the API; `bun run test` runs Vitest under Bun (`bun --bun vitest`). Never `bun test` — that is Bun's own runner and skips Vitest.
+
+Compile into a standalone Windows executable with `bun build --compile` (`scripts/build.js`):
 
 ```bash
-bun run build        # Produces dist/catherine_backend.exe
-bun run build:debug  # With debug output
+bun run build        # dist/catherine-backend.exe (bun-windows-x64; cross-compiles from macOS/Linux)
+bun run build:host   # dist/catherine-backend for this machine — smoke-test a build locally
 ```
 
-PKG compatibility requirements:
+Compiled-exe rules:
 
-1. `src/utils/encodingPolyfill.js` is **always first require** in `server.js`
-2. `src/utils/nanoidLoader.js` handles nanoid's ESM-only issue in compiled environments
-3. `src/config/adapters/oracle.js` handles Thick mode init for compiled Oracle client
-4. `src/utils/consoleManager.js` sets process title for compiled exe window
-5. **Dev/CI baseline:** development and CI use Node.js 26 LTS (26.13.1 or later, the 2026-11-11 security release; `engines.node` `>=26.13.1`, CI `node-version: 26`). The production exe still targets `node24-win-x64` until pkg-fetch on npm ships a 26.13.1 build, at which point it moves to `node26-win-x64`. The Node that runs `bun run test` is not the Node inside the exe.
+1. **Never read a file relative to `__dirname`.** `bun build --compile` bakes the BUILD machine's absolute `__dirname` into the binary, so on the server it points at nothing. Resolve every on-disk path through `src/utils/runtimePaths.js` (`APP_ROOT` = exe folder when compiled, Backend folder otherwise; `appPath(...)`).
+2. `scripts/build.js` stages beside the exe: `src/utils/email-templates/`, `src/generated/`, `node_modules/oracledb/build/Release/` (Thick binary, passed as `initOracleClient({ binaryDir })`) and `prebuilds/<platform-arch>/` (argon2, found by node-gyp-build's exe-relative lookup). It fails the build if any stages nothing. A new on-disk asset must be added to `ASSET_DIRS` there.
+3. The source map is embedded (`--sourcemap=inline`) so log call-sites read `src/...:line`, not `root/catherine-backend:line`.
+4. `Intl` output differs between engines (JavaScriptCore writes "Nov 3, 2026 at 2:32 PM"; V8 "Nov 3, 2026, 2:32 PM"). Never use `dateStyle`/`timeStyle` for text that tests or emails depend on — use `formatUtcStamp` or `formatToParts`.
+5. `src/utils/consoleManager.js` sets the process title for the exe window.
+6. Clustering shares the port through SO_REUSEPORT: verified on macOS, load-balanced on Linux, not verified on Windows — keep `ENABLE_CLUSTERING=false` on a Windows host until it is.
 
 ---
 
@@ -1138,7 +1141,6 @@ OPTISv2 backend at `D:\Web\OPTISv2\OPITS-BE` used as reference for advanced patt
 
 | Feature                                                                  | Status                                       |
 | ------------------------------------------------------------------------ | -------------------------------------------- |
-| PKG encoding polyfills (`encodingPolyfill.js`)                           | ✅ Implemented                               |
 | Dual DB pool + PoolHealthMonitor (30s, 3-strike)                         | ✅ Implemented                               |
 | Exponential backoff on pool init (3 retries)                             | ✅ Implemented                               |
 | Security filter (scanner/traversal blocking)                             | ✅ Implemented                               |
@@ -2425,11 +2427,6 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "26"
 
             - name: Setup Bun
               uses: oven-sh/setup-bun@v2

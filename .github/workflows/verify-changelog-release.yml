@@ -27,9 +27,9 @@ jobs:
               with:
                   fetch-depth: 0
                   fetch-tags: true
-            - uses: actions/setup-node@v4
+            - uses: oven-sh/setup-bun@v2
               with:
-                  node-version: 26
+                  bun-version-file: Backend/package.json
             - name: Verify changelog in the release
               working-directory: Backend
               env:
@@ -37,4 +37,4 @@ jobs:
                   TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
               run: |
                   if [ -z "$CHANGELOG_ENCRYPTION_KEY" ]; then echo "::error::Repository secret CHANGELOG_ENCRYPTION_KEY is not set"; exit 1; fi
-                  node scripts/verify-changelog-release.js $TAG
+                  bun scripts/verify-changelog-release.js $TAG
