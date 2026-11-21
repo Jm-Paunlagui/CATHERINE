@@ -74,7 +74,7 @@ function buildDynamicPatterns(override: RegExp[]): RegExp[] {
 }
 
 class CorsMiddleware {
-  declare _cors: (req: cors.CorsRequest, res: { statusCode?: number | undefined; setHeader(key: string, value: string): any; end(): any; }, next: (err?: any) => any) => void;
+  declare _cors: (req: cors.CorsRequest, res: { statusCode?: number | undefined; setHeader(key: string, value: string): any; end(): any; }, next: (err?: unknown) => any) => void;
   declare _dynamicPatterns: RegExp[];
   declare _explicitOrigins: any;
   constructor(options: Record<string, any> = {}) {

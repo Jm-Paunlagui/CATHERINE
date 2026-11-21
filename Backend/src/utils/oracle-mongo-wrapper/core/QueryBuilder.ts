@@ -481,7 +481,7 @@ class QueryBuilder {
                     }
                     fn(row);
                 });
-                stream.on("error", (err: any) => {
+                stream.on("error", (err: unknown) => {
                     reject(
                         new Error(
                             MSG.wrapError(

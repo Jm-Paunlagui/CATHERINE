@@ -6,24 +6,24 @@
  */
 
 const authMessages = {
-    AUTH_SUCCESS: (userId: any) => `USER ${userId} authenticated successfully.`,
-    AUTH_LOGOUT: (userId: any) => `USER ${userId} logged out.`,
-    TOKEN_REFRESHED: (userId: any) => `Token refreshed for user ${userId}.`,
-    ACCOUNT_INACTIVE_BLOCKED: (userId: any) =>
+    AUTH_SUCCESS: (userId: unknown) => `USER ${userId} authenticated successfully.`,
+    AUTH_LOGOUT: (userId: unknown) => `USER ${userId} logged out.`,
+    TOKEN_REFRESHED: (userId: unknown) => `Token refreshed for user ${userId}.`,
+    ACCOUNT_INACTIVE_BLOCKED: (userId: unknown) =>
         `Login blocked — account ${userId} is inactive.`,
-    HASH_UPGRADED: (userId: any) =>
+    HASH_UPGRADED: (userId: unknown) =>
         `Password hash for ${userId} upgraded to current Argon2 parameters on login.`,
-    PROFILE_FLAG_REFRESH_FAILED: (userId: any, errMessage: any) =>
+    PROFILE_FLAG_REFRESH_FAILED: (userId: unknown, errMessage: unknown) =>
         `Permission-flag refresh failed for /auth/me — user ${userId}, falling back to token payload: ${errMessage}`,
-    SYS_SIGNATURE_TAMPERED_BLOCKED: (username: any) =>
+    SYS_SIGNATURE_TAMPERED_BLOCKED: (username: unknown) =>
         `SYSSIGNATURE mismatch for USERNAME: ${username} — record may have been tampered with. Login blocked.`,
-    LOGIN_ATTEMPT_FAILED: (userId: any, failCount: any, currentMax: any) =>
+    LOGIN_ATTEMPT_FAILED: (userId: unknown, failCount: unknown, currentMax: unknown) =>
         `Failed login attempt for USER ${userId} (${failCount}/${currentMax}).`,
-    LOGIN_LOCKOUT_ENGAGED: (userId: any, durationMs: any, cycles: any) =>
+    LOGIN_LOCKOUT_ENGAGED: (userId: unknown, durationMs: unknown, cycles: unknown) =>
         `USER ${userId} locked out for ${durationMs}ms (cycle ${cycles}).`,
-    LOGIN_LOCKOUT_CLEARED: (userId: any) =>
+    LOGIN_LOCKOUT_CLEARED: (userId: unknown) =>
         `Lockout cleared for user ${userId} after successful login.`,
-    LOGIN_LOCKOUT_PERMANENT: (userId: any) =>
+    LOGIN_LOCKOUT_PERMANENT: (userId: unknown) =>
         `USER ${userId} permanently locked after exhausting all retry cycles. HR reset required.`,
     /**
      * Machine-readable authentication trace segment for the Request Log Trace.
@@ -44,9 +44,9 @@ const authMessages = {
      */
     AUTH_TRACE: (summary: string): string => `[AUTH @ ${summary}]`,
 
-    PASSWORD_CHANGED: (userId: any) =>
+    PASSWORD_CHANGED: (userId: unknown) =>
         `USER ${userId} changed their password successfully.`,
-    DEFAULT_PASSWORD_REJECTED: (userId: any) =>
+    DEFAULT_PASSWORD_REJECTED: (userId: unknown) =>
         `USER ${userId} attempted to set the system default password as their new password — rejected.`,
 
     // ── Temporary passwords ──────────────────────────────────────────────────

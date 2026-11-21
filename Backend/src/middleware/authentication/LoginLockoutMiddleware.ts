@@ -234,7 +234,7 @@ class LoginLockoutMiddleware {
   }
 
   /** CLUSTER_LOCKOUT_FALLBACK, at most once a minute. */
-  _warnFallback(reason: any) {
+  _warnFallback(reason: unknown) {
     const now = Date.now();
     if (now - this._lastFallbackLog < CLUSTER_RPC_LIMITS.REJECT_LOG_GAP_MS) return;
     this._lastFallbackLog = now;

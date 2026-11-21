@@ -92,7 +92,7 @@ const notificationMessages = {
      */
     SHUTDOWN_ROW_EMAIL_NOTE: "emailed during shutdown, after this row was saved; delivery not recorded",
 
-    ALERT_LOG_ROWS_SKIPPED_SHUTDOWN: (n: any) =>
+    ALERT_LOG_ROWS_SKIPPED_SHUTDOWN: (n: unknown) =>
         `${n} SERVER_ALERT_LOG row(s) not persisted — the final shutdown flush runs after the Oracle pools closed.`,
 
     /**

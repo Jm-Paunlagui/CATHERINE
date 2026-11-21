@@ -939,7 +939,7 @@ class AlertNotifierService {
         return `${events.length} alert(s) recovered`;
     }
 
-    _severityRank(severity: any) {
+    _severityRank(severity: unknown) {
         return severity === "critical" ? 2 : severity === "warning" ? 1 : 0;
     }
 
@@ -2172,7 +2172,7 @@ class AlertNotifierService {
         return result;
     }
 
-    _buildTestRow(channel: any) {
+    _buildTestRow(channel: unknown) {
         if (channel === "server-critical-notification") {
             return {
                 level: "CRITICAL",
@@ -2190,7 +2190,7 @@ class AlertNotifierService {
         };
     }
 
-    _buildTestKv(channel: any) {
+    _buildTestKv(channel: unknown) {
         switch (channel) {
             case "server-critical-notification":
                 return { eventCount: 1, windowLabel: "test", firstEventAt: new Date().toISOString() };

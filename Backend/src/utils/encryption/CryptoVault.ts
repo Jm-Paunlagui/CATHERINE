@@ -44,7 +44,7 @@ const SymmetricCrypto = (() => {
     });
 
     // ─── Helper: Map algorithm enum → Node.js cipher name ───
-    function getCipherName(algorithmID: any, keyLength: any) {
+    function getCipherName(algorithmID: unknown, keyLength: unknown) {
         switch (algorithmID) {
             case EncryptionAlgorithm.Des:
                 return "des-cbc";
@@ -62,7 +62,7 @@ const SymmetricCrypto = (() => {
     }
 
     // ─── Helper: Default key/IV sizes (bytes) ───
-    function getDefaultSizes(algorithmID: any) {
+    function getDefaultSizes(algorithmID: unknown) {
         switch (algorithmID) {
             case EncryptionAlgorithm.Des:
                 return { keySize: 8, ivSize: 8 };
@@ -82,7 +82,7 @@ const SymmetricCrypto = (() => {
         declare _key: any;
         declare _iv: any;
         declare algorithmID: any;
-        constructor(algId: any) {
+        constructor(algId: unknown) {
             this.algorithmID = algId;
             this._iv = null;
             this._key = null;
@@ -117,12 +117,12 @@ const SymmetricCrypto = (() => {
     class DecryptTransformer {
         declare _iv: any;
         declare algorithmID: any;
-        constructor(algId: any) {
+        constructor(algId: unknown) {
             this.algorithmID = algId;
             this._iv = null;
         }
 
-        set IV(v: any) {
+        set IV(v: unknown) {
             this._iv = v;
         }
 
@@ -139,7 +139,7 @@ const SymmetricCrypto = (() => {
         declare _key: any;
         declare _iv: any;
         declare transformer: EncryptTransformer;
-        constructor(algId: any) {
+        constructor(algId: unknown) {
             this.transformer = new EncryptTransformer(algId);
             this._iv = null;
             this._key = null;
@@ -156,7 +156,7 @@ const SymmetricCrypto = (() => {
             return this._key;
         }
 
-        encrypt(bytesData: any, bytesKey: any) {
+        encrypt(bytesData: any, bytesKey: unknown) {
             try {
                 this.transformer.IV = this._iv;
                 const cipher =
@@ -181,16 +181,16 @@ const SymmetricCrypto = (() => {
     class Decryptor {
         declare _iv: any;
         declare transformer: DecryptTransformer;
-        constructor(algId: any) {
+        constructor(algId: unknown) {
             this.transformer = new DecryptTransformer(algId);
             this._iv = null;
         }
 
-        set IV(v: any) {
+        set IV(v: unknown) {
             this._iv = v;
         }
 
-        decrypt(bytesData: any, bytesKey: any) {
+        decrypt(bytesData: any, bytesKey: unknown) {
             try {
                 this.transformer.IV = this._iv;
                 const decipher =
@@ -252,7 +252,7 @@ const SymmetricCrypto = (() => {
             }
         }
 
-        static generateCodeID(text: any) {
+        static generateCodeID(text: unknown) {
             const randomBytes = crypto
                 .randomBytes(6)
                 .toString("base64")
@@ -485,7 +485,7 @@ const applyPepper = (password: any) =>
 /** bcrypt consumes only the first 72 bytes of its input. */
 const BCRYPT_MAX_PASSWORD_BYTES = 72;
 
-const validatePassword = (value: any, label = "Password") => {
+const validatePassword = (value: unknown, label = "Password") => {
     if (!value || typeof value !== "string") {
         throw new TypeError(
             `[CryptoVault] ${label} must be a non-empty string.`,
@@ -1319,8 +1319,8 @@ if (import.meta.main) {
     const TEST_PASSWORD = "SelfTest-Passw0rd!";
 
     const hr = () => console.log("─".repeat(65));
-    const pass = (label: any) => console.log(`    ${label}`);
-    const fail = (label: any, err: any) =>
+    const pass = (label: unknown) => console.log(`    ${label}`);
+    const fail = (label: unknown, err: unknown) =>
         console.error(`  ❌  ${label}: ${err?.constructor?.name ?? "Error"}`);
 
     const runTests = async () => {

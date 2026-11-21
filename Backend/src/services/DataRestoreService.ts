@@ -350,7 +350,7 @@ class DataRestoreService {
         const batchSize = _restoreBatchSize();
         const txManager = new Transaction(_db);
 
-        await txManager.withTransaction(async (session: any) => {
+        await txManager.withTransaction(async (session) => {
             for (const entry of getRestoreOrder(preflight.tables)) {
                 const archivedRows = dataByTable[entry.table] ?? [];
                 if (archivedRows.length === 0) {
@@ -537,7 +537,7 @@ class DataRestoreService {
                 });
                 const list = group.map((_, i) => `:p${i}`).join(", ");
                 // Identifiers come from the purgeTables registry (allow-list), values are binds.
-                const cols = tsCols.map((c: any) => `TO_CHAR("${c}",'${CANONICAL_TS_FORMAT}') AS "${c}"`).join(", ");
+                const cols = tsCols.map((c) => `TO_CHAR("${c}",'${CANONICAL_TS_FORMAT}') AS "${c}"`).join(", ");
                 const res = await session.execute(
                     `SELECT "${entry.pk}", ${cols} FROM "${entry.table}" WHERE "${entry.pk}" IN (${list})`,
                     binds,
@@ -910,7 +910,7 @@ class DataRestoreService {
                 HTTP_STATUS.FORBIDDEN,
                 {
                     type: "AuthorizationError",
-                    details: protectedNames.map((t: any) => ({
+                    details: protectedNames.map((t: unknown) => ({
                         field: "tables",
                         issue: `"${t}" is protected and can never be restored.`,
                     })),
@@ -928,7 +928,7 @@ class DataRestoreService {
                 HTTP_STATUS.FORBIDDEN,
                 {
                     type: "AuthorizationError",
-                    details: unknownNames.map((t: any) => ({
+                    details: unknownNames.map((t: unknown) => ({
                         field: "tables",
                         issue: `"${t}" is not a recognised table.`,
                     })),

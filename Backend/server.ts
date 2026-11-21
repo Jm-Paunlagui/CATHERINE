@@ -168,7 +168,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // digest), so a breach / crash-loop / forced-kill is emailed with the
     // one-shot notifyCriticalNow (bounded internally). Lazy require + swallowed
     // failure: a notification problem must never crash or block the primary.
-    const notifyCritical = (message: any) => {
+    const notifyCritical = (message: unknown) => {
         const AlertNotifierService = require("./src/services/AlertNotifierService").default;
         return AlertNotifierService.notifyCriticalNow({ level: "CRITICAL", message });
     };
@@ -723,7 +723,7 @@ function bootWorker() {
         }
 
         // Lazy import to avoid loading the service layer before pools are ready.
-        async function _runBackup(label: any) {
+        async function _runBackup(label: unknown) {
             if (require("./src/utils/InFlightTaskRegistry").default.isShuttingDown()) return;
             try {
                 const BackupScheduleService = require("./src/services/BackupScheduleService").default;
@@ -999,7 +999,7 @@ function bootWorker() {
             logger,
             reason: "server_shutdown",
             httpInFlight,
-            onRequestsCut: (summary: any, graceMs: any, total: any, opts: any) =>
+            onRequestsCut: (summary: unknown, graceMs: unknown, total: unknown, opts: unknown) =>
                 shutdownNotifier.requestsCut(summary, graceMs, total, opts),
         });
 
@@ -1167,7 +1167,7 @@ function bootWorker() {
     // The idle watchdog fires its hook on EVERY termination; only a cut made
     // while the process is stopping belongs in the shutdown "requests cut"
     // email, so the shutdown state is checked here.
-    RequestWatchdog.setShutdownHook((entry: any) => {
+    RequestWatchdog.setShutdownHook((entry: unknown) => {
         if (isShuttingDown) teardownHandle?.recordIdleCut(entry);
     });
 

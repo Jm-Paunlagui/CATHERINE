@@ -108,9 +108,9 @@ class RateLimiterMiddleware {
    * limit, today's behaviour) and `CLUSTER_RL_FALLBACK` is logged at most once a
    * minute per label. Every rejection reaches `next(err)`; `next` is called once.
    */
-  _handleShared(req: Request, res: Response, next: NextFunction, key: any) {
+  _handleShared(req: Request, res: Response, next: NextFunction, key: unknown) {
     let settled = false;
-    const once = (err: any) => {
+    const once = (err: unknown) => {
       if (settled) return;
       settled = true;
       next(err);
@@ -128,7 +128,7 @@ class RateLimiterMiddleware {
       });
   }
 
-  async _hitShared(key: any) {
+  async _hitShared(key: unknown) {
     const args = {
       label: this._sharedLabel,
       key,
@@ -164,7 +164,7 @@ class RateLimiterMiddleware {
   }
 
   /** CLUSTER_RL_FALLBACK, at most once a minute per limiter label. */
-  _warnFallback(reason: any) {
+  _warnFallback(reason: unknown) {
     const now = Date.now();
     if (now - this._lastFallbackLog < CLUSTER_RPC_LIMITS.REJECT_LOG_GAP_MS) return;
     this._lastFallbackLog = now;
@@ -172,7 +172,7 @@ class RateLimiterMiddleware {
   }
 
   /** Headers, limit refusal and pass log: shared by the local and cluster paths. */
-  _finish(req: Request, res: Response, next: NextFunction, key: any, result: any) {
+  _finish(req: Request, res: Response, next: NextFunction, key: unknown, result: any) {
     this._setHeaders(res, {
       limit: this._max,
       remaining: result.remaining,
@@ -275,7 +275,7 @@ class RateLimiterMiddleware {
     return this._store.getStats();
   }
 
-  clearKey(key: any) {
+  clearKey(key: unknown) {
     const n = this._store.del(key);
     logger.info("Rate Limit Key cleared", { key, deleted: n });
     this._notifyClear(key);
@@ -289,7 +289,7 @@ class RateLimiterMiddleware {
   }
 
   /** Cluster only: tells the primary to clear its counters for this limiter. */
-  _notifyClear(key: any) {
+  _notifyClear(key: unknown) {
     if (!clusterRpc.active) return;
     const args = { label: this._sharedLabel, key };
     if (validateArgs(CLUSTER_RPC_METHODS.RL_CLEAR, args).ok) {
@@ -299,7 +299,7 @@ class RateLimiterMiddleware {
 
   // ── Private helpers ───────────────────────────────────────────────────
 
-  _getKey(req: any) {
+  _getKey(req: unknown) {
     if (typeof this._keyBy === "function") return this._keyBy(req);
     return (
       RateLimiterMiddleware.keyGenerators[this._keyBy as keyof typeof RateLimiterMiddleware.keyGenerators] ??

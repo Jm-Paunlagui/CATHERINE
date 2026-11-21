@@ -591,7 +591,7 @@ function _fieldRef(val: any) {
  * or a bind variable (if it's a literal string/number/boolean).
  * This ensures literal values are NEVER interpolated into SQL.
  */
-function _fieldRefOrBind(val: any, binds: any, counter: any) {
+function _fieldRefOrBind(val: unknown, binds: any, counter: any) {
   if (typeof val === "string" && val.startsWith("$")) {
     return quoteIdentifier(val.substring(1));
   }
@@ -711,7 +711,7 @@ function _buildAddFieldsCols(addFields: any, counter: any) {
  * A lateral join is like a correlated subquery used as a join source.
  * Values prefixed with "$outer." reference the outer table's columns.
  */
-function _buildLateralSub(lj: any, prevSource: any) {
+function _buildLateralSub(lj: any, prevSource: unknown) {
   if (lj.subquery && typeof lj.subquery._buildSQL === "function") {
     const { sql: builtSql, binds } = lj.subquery._buildSQL();
     let sql = builtSql;
@@ -736,7 +736,7 @@ function _buildLateralSub(lj: any, prevSource: any) {
  * Build a MERGE INTO statement for the $merge pipeline stage.
  * Merges results from the pipeline into a target table.
  */
-function _buildMergeStage(merge: any, source: any) {
+function _buildMergeStage(merge: any, source: unknown) {
   const into = quoteIdentifier(merge.into);
   const onCols = Object.entries(merge.on as Record<string, string>)
     .map(([l, r]) => `tgt.${quoteIdentifier(l)} = src.${quoteIdentifier(r)}`)
@@ -750,7 +750,7 @@ function _buildMergeStage(merge: any, source: any) {
  * Groups values into ranges using CASE WHEN expressions.
  * Example: boundaries [0, 100, 500] creates buckets: 0-99, 100-499
  */
-function _buildBucket(bucket: any, source: any, counter: any) {
+function _buildBucket(bucket: any, source: unknown, counter: any) {
   const binds: Record<string, any> = {};
   const { groupBy, boundaries, default: defaultBucket, output } = bucket;
   const col = groupBy.startsWith("$") ? groupBy.substring(1) : groupBy;
@@ -758,7 +758,7 @@ function _buildBucket(bucket: any, source: any, counter: any) {
 
   // Determine if boundaries are numeric — if so, use TO_CHAR for THEN labels
   // so that the default bucket string doesn't cause ORA-00932 (inconsistent datatypes).
-  const numericBoundaries = boundaries.every((b: any) => typeof b === "number");
+  const numericBoundaries = boundaries.every((b: unknown) => typeof b === "number");
 
   for (let i = 0; i < boundaries.length - 1; i++) {
     const lo = counter.next("bkt");

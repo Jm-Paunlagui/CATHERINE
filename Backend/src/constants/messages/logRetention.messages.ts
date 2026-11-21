@@ -12,17 +12,17 @@
 const logRetentionMessages = {
   LOG_RETENTION_DISABLED: () =>
     `Log retention sweep disabled — LOG_RETENTION_DAYS=0.`,
-  LOG_RETENTION_INVALID_DAYS: (raw: any, fallback: any) =>
+  LOG_RETENTION_INVALID_DAYS: (raw: unknown, fallback: unknown) =>
     `Log retention: LOG_RETENTION_DAYS="${raw}" is not a valid positive number — falling back to ${fallback} day(s).`,
-  LOG_RETENTION_STARTED: (days: any, checkMs: any) =>
+  LOG_RETENTION_STARTED: (days: unknown, checkMs: unknown) =>
     `Log retention sweep started — retaining ${days} day(s), checked every ${checkMs}ms.`,
-  LOG_RETENTION_SWEEP_DONE: (removedDays: any, freedHuman: any, days: any) =>
+  LOG_RETENTION_SWEEP_DONE: (removedDays: unknown, freedHuman: unknown, days: unknown) =>
     `Log retention sweep complete — removed ${removedDays} day dir(s), freed ${freedHuman}, retention ${days} day(s).`,
-  LOG_RETENTION_DAY_FAILED: (dayLabel: any, errMsg: any) =>
+  LOG_RETENTION_DAY_FAILED: (dayLabel: unknown, errMsg: unknown) =>
     `Log retention: day dir ${dayLabel} removal failed: ${errMsg}.`,
-  LOG_RETENTION_BUDGET_ABORT: (failed: any, budget: any) =>
+  LOG_RETENTION_BUDGET_ABORT: (failed: unknown, budget: unknown) =>
     `Log retention sweep aborted — ${failed} failed day dir(s) reached the budget of ${budget}. Remaining days retried next sweep.`,
-  LOG_RETENTION_SWEEP_FAILED: (errMsg: any) =>
+  LOG_RETENTION_SWEEP_FAILED: (errMsg: unknown) =>
     `Log retention sweep failed unexpectedly: ${errMsg}.`,
 };
 

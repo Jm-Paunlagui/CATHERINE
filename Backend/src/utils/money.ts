@@ -528,7 +528,7 @@ class Money {
      * lossy step is obvious and contained.
      * @private
      */
-    _toBoundedNumberForDisplay(displayScale: any) {
+    _toBoundedNumberForDisplay(displayScale: unknown) {
         // Truncate/round to displayScale via string first to keep the double as
         // close to the exact value as the format's own scale.
         const str = this.toStorage(); // scale 4 exact string

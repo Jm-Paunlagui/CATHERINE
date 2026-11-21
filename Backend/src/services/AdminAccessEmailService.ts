@@ -74,7 +74,7 @@ const ROLE_LABELS = Object.freeze({
  * @param {*} value
  * @returns {string}
  */
-function _escapeHtml(value: any): string {
+function _escapeHtml(value: unknown): string {
     if (value == null) return "";
     return String(value)
         .replace(/&/g, "&amp;")
@@ -93,7 +93,7 @@ function _escapeHtml(value: any): string {
  * @param {*} raw
  * @returns {string|null|object}
  */
-function _normaliseOverride(raw: any): string | null | Record<string, any> {
+function _normaliseOverride(raw: unknown): string | null | Record<string, any> {
     if (raw === undefined || raw === null) return null;
     if (typeof raw !== "string") return raw;
     const trimmed = raw.trim();
@@ -139,7 +139,7 @@ class AdminAccessEmailService {
      * @returns {Promise<{ address: string, source: 'PROFILE'|'OVERRIDE', hint: string }>}
      * @throws {AppError}
      */
-    static async resolveRecipient(username: string, overrideEmail: any): Promise<{ address: string; source: 'PROFILE' | 'OVERRIDE'; hint: string | null; }> {
+    static async resolveRecipient(username: string, overrideEmail: unknown): Promise<{ address: string; source: 'PROFILE' | 'OVERRIDE'; hint: string | null; }> {
         const override = _normaliseOverride(overrideEmail);
 
         let profileAddress;

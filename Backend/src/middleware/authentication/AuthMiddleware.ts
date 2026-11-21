@@ -205,7 +205,7 @@ class AuthMiddleware {
             token,
             process.env.JWT_SECRET ?? "", // bootGuard guarantees it; "" fails verify like undefined did
             { algorithms: ["HS256"] },
-            (err: any, user: any) => {
+            (err, user: any) => {
                 if (err) {
                     // TokenExpiredError   → session timed out                       → 440
                     // NotBeforeError      → token used before its nbf claim         → 403
@@ -493,7 +493,7 @@ class AuthMiddleware {
                 token,
                 process.env.JWT_SECRET ?? "",
                 { algorithms: ["HS256"] },
-                (err: any, payload: any) => {
+                (err, payload: any) => {
                     if (
                         err ||
                         classifyAccessClaims(payload) !== "access" ||
@@ -671,7 +671,7 @@ class AuthMiddleware {
         };
     }
 
-    static _escapeHtml(str: any) {
+    static _escapeHtml(str: unknown) {
         return String(str)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
@@ -680,7 +680,7 @@ class AuthMiddleware {
             .replace(/'/g, "&#39;");
     }
 
-    static _authHtmlError(title: any, line1: any, line2: any) {
+    static _authHtmlError(title: unknown, line1: unknown, line2: unknown) {
         const t = AuthMiddleware._escapeHtml(title);
         const l1 = AuthMiddleware._escapeHtml(line1);
         const l2 = AuthMiddleware._escapeHtml(line2);

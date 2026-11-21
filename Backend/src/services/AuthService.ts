@@ -420,7 +420,7 @@ class AuthService {
     }
 
     /** Throws 403 when the user row is deactivated (IS_ACTIVE='N'). */
-    static _assertUserActive(user: any, userId: any) {
+    static _assertUserActive(user: any, userId: unknown) {
         if (String(user.IS_ACTIVE ?? "Y") === "N") {
             logger.warning(authMessages.ACCOUNT_INACTIVE_BLOCKED(userId));
             throw new AppError(AUTH_ERRORS.ACCOUNT_INACTIVE, 403, {

@@ -258,7 +258,7 @@ class ClusterRpcHub {
 
     // ── Inbound ──────────────────────────────────────────────────────────────
 
-    #onRequest(worker: any, msg: any) {
+    #onRequest(worker: unknown, msg: any) {
         const v = validateRequest(msg);
         if (!v.ok) {
             this.#reject(worker, v.reason);
@@ -298,7 +298,7 @@ class ClusterRpcHub {
         }
     }
 
-    #onNotify(worker: any, msg: any) {
+    #onNotify(worker: unknown, msg: unknown) {
         const v = validateNotify(msg);
         if (!v.ok) return this.#reject(worker, v.reason);
         const { method, args } = v.value;
@@ -308,7 +308,7 @@ class ClusterRpcHub {
         this.#runPrimary(worker, method, a.value).catch((err) => this.#handlerError(method, err));
     }
 
-    #onReturn(worker: any, msg: any) {
+    #onReturn(worker: any, msg: unknown) {
         if (!isPlainObject(msg) || typeof msg.callId !== "string") return this.#reject(worker, "bad-return");
         const call = this.#calls.get(msg.callId);
         // Identity from the worker object: only the worker the call went to may answer it.
@@ -333,13 +333,13 @@ class ClusterRpcHub {
 
     // ── Routing ──────────────────────────────────────────────────────────────
 
-    async #runPrimary(worker: any, method: any, args: any) {
+    async #runPrimary(worker: unknown, method: any, args: unknown) {
         const handler = this.#handlers.get(method);
         if (!handler) throw Object.assign(new Error("no-handler"), { code: "NO_HANDLER" });
         return handler(args, { worker });
     }
 
-    #forwardToLeader(worker: any, reqId: any, method: any, args: any) {
+    #forwardToLeader(worker: any, reqId: any, method: unknown, args: unknown) {
         const leader = this._getLeader();
         if (!leader) return this.#respond(worker, reqId, false, undefined, buildError(E.NO_LEADER, "no leader"));
         if (this.#leaderCalls >= CLUSTER_RPC_LIMITS.MAX_LEADER_CALLS) {
@@ -360,7 +360,7 @@ class ClusterRpcHub {
         }
     }
 
-    #gather(worker: any, reqId: any, method: any, args: any) {
+    #gather(worker: any, reqId: any, method: unknown, args: unknown) {
         const live = this._getLiveWorkers();
         if (this.#gathers >= CLUSTER_RPC_LIMITS.MAX_GATHERS) {
             return this.#respond(worker, reqId, false, undefined, buildError(E.OVERLOAD, "too many gathers"));
@@ -398,7 +398,7 @@ class ClusterRpcHub {
         if (g.outstanding === 0) this.#finishGather(g);
     }
 
-    #gatherPartDone(callId: any, call: any, value: any) {
+    #gatherPartDone(callId: any, call: any, value: unknown) {
         if (!this.#calls.has(callId)) return;
         this.#calls.delete(callId);
         const g = call.gather;
@@ -439,7 +439,7 @@ class ClusterRpcHub {
 
     // ── Wire helpers ─────────────────────────────────────────────────────────
 
-    #handlerError(method: any, err: any) {
+    #handlerError(method: unknown, err: any) {
         const wire = buildError(E.HANDLER_ERROR, err?.isOperational ? err.message : "handler failed", err);
         if (!err?.isOperational) {
             this._logger.warning(clusterMessages.CLUSTER_RPC_HANDLER_FAILED(method, String(err?.message ?? err).slice(0, 200)));
@@ -448,7 +448,7 @@ class ClusterRpcHub {
     }
 
     /** Re-clamps an error object received from a leader before relaying it. */
-    #sanitizeWireError(e: any) {
+    #sanitizeWireError(e: unknown) {
         if (!isPlainObject(e) || typeof e.message !== "string") return buildError(E.HANDLER_ERROR, "leader handler failed");
         const out = buildError(E.HANDLER_ERROR, e.message);
         const a = e.appError;
@@ -462,19 +462,19 @@ class ClusterRpcHub {
         return out;
     }
 
-    #respond(worker: any, id: any, ok: boolean, result?: unknown, error?: RpcError) {
+    #respond(worker: unknown, id: unknown, ok: boolean, result?: unknown, error?: RpcError) {
         const msg: { cmd: string; id: unknown; ok: boolean; result?: unknown; error?: RpcError } = { cmd: CLUSTER_IPC.RPC_RESPONSE, id, ok };
         if (ok) msg.result = result === undefined ? null : result;
         else msg.error = error;
         this.#send(worker, msg);
     }
 
-    #respondTo(workerId: any, id: any, ok: boolean, result?: unknown, error?: RpcError) {
+    #respondTo(workerId: unknown, id: unknown, ok: boolean, result?: unknown, error?: RpcError) {
         const w = this._getLiveWorkers().find((x) => x.id === workerId);
         if (w) this.#respond(w, id, ok, result, error);
     }
 
-    #send(worker: any, message: any) {
+    #send(worker: any, message: unknown) {
         try {
             worker.send(message);
             return true;
@@ -493,7 +493,7 @@ class ClusterRpcHub {
         return `c${++this.#seq}`;
     }
 
-    #safeHook(fn: any, worker: any) {
+    #safeHook(fn: any, worker: unknown) {
         try {
             fn(worker);
         } catch (err) {
@@ -502,7 +502,7 @@ class ClusterRpcHub {
     }
 
     /** Logs a rejected message at most once per minute (CWE-400 on the log). */
-    #reject(worker: any, reason: any) {
+    #reject(worker: any, reason: unknown) {
         const now = this._now();
         if (now - this.#lastRejectLog < CLUSTER_RPC_LIMITS.REJECT_LOG_GAP_MS) return;
         this.#lastRejectLog = now;

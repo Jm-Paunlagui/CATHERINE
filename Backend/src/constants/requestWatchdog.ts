@@ -164,7 +164,7 @@ function normalizePath(url: string | undefined): string {
     return p;
 }
 
-function _matches(rules: any, method: any, path: any) {
+function _matches(rules: any, method: unknown, path: unknown) {
     return rules.some(
         (r: any) => (r.method === null || r.method === method) && r.path.test(path),
     );

@@ -200,7 +200,7 @@ class ClusterSupervisor {
 
     // ── Election (moved verbatim from server.ts) ────────────────────────────
 
-    _forkWorker(isCronLeader: any) {
+    _forkWorker(isCronLeader: unknown) {
         const env = this._clusterRole.cronLeaderEnv(isCronLeader);
         const worker = this._cluster.fork({ CRON_LEADER: env, [SERVER_RUN_MARKER.CLUSTER_RUN_ID_ENV]: this._runId });
         this.#live.set(worker.id, worker);
@@ -259,7 +259,7 @@ class ClusterSupervisor {
         this._logger.warning(middlewareMessages.CRON_WORKER_DISCONNECTED(worker.process?.pid, worker.id));
     }
 
-    _onExit(worker: any, code: any, signal: any) {
+    _onExit(worker: any, code: unknown, signal: unknown) {
         const wasCronLeader = worker.id === this.#cronLeaderId;
         this.#live.delete(worker.id);
         this.#workerLeaderEnv.delete(worker.id);
@@ -321,7 +321,7 @@ class ClusterSupervisor {
         this.#pendingRespawns.set(timer, wasCronLeader);
     }
 
-    _tripCrashLoop(exits: any) {
+    _tripCrashLoop(exits: unknown) {
         this.#fatal = true;
         this._clearPendingRespawns();
         const message = clusterMessages.CLUSTER_CRASH_LOOP_TRIPPED(exits, ClusterSupervisor.CRASH_LOOP_WINDOW_MS);
@@ -354,7 +354,7 @@ class ClusterSupervisor {
     }
 
     /** A worker cannot start (PFX missing, port taken): stop everything, no fork storm. Ignored once the worker has emitted `listening`. */
-    _onBootFatal(worker: any, code: any) {
+    _onBootFatal(worker: any, code: unknown) {
         if (this.#fatal) return;
         if (this.#listening.has(worker.id)) {
             // Already serving: not a boot failure (a runtime EACCES in one worker).
@@ -392,7 +392,7 @@ class ClusterSupervisor {
     }
 
     /** @returns {boolean} whether the send was attempted without throwing */
-    _send(worker: any, message: any): boolean {
+    _send(worker: any, message: unknown): boolean {
         try {
             worker.send(message);
             return true;
@@ -410,7 +410,7 @@ class ClusterSupervisor {
     }
 
     /** Failsafe: SIGKILL what is left, bounded critical email, exit 1. */
-    async _forceExit(ms: any) {
+    async _forceExit(ms: unknown) {
         if (this.#finished) return;
         this.#finished = true;
         const log = this._logger;
@@ -457,7 +457,7 @@ class ClusterSupervisor {
         this._exit(1);
     }
 
-    _exit(code: any) {
+    _exit(code: unknown) {
         Promise.resolve(this._logger.flush?.(ClusterSupervisor.LOGGER_FLUSH_MS))
             .catch(() => {})
             .finally(() => this._process.exit(code));

@@ -113,7 +113,7 @@ class IdempotencyMiddleware {
      * @returns {string}
      * @private
      */
-    static _bodyHash(body: any): string {
+    static _bodyHash(body: unknown): string {
         const canonical = IdempotencyMiddleware._canonicalise(body);
         return crypto.createHash("sha256").update(canonical).digest("hex");
     }

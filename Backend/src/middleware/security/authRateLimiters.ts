@@ -96,7 +96,7 @@ const onLimit = (req: Request, res: Response, { retryAfter }: any) =>
     },
   });
 
-const make = (cfg: any, keyBy: any, countMode: any) =>
+const make = (cfg: any, keyBy: unknown, countMode: unknown) =>
   new RateLimiterMiddleware({
     max: cfg.MAX,
     windowMs: cfg.WINDOW_MS,

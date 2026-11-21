@@ -289,7 +289,7 @@ function _toComparable(v: any) {
     return v;
 }
 
-function _matchOp(value: any, op: any, expected: any) {
+function _matchOp(value: unknown, op: unknown, expected: unknown) {
     switch (op) {
         case "$eq":
             return value === expected;

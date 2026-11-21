@@ -32,7 +32,7 @@ class ResponseTimeMiddleware {
     const startTime = process.hrtime.bigint();
 
     const originalWriteHead = res.writeHead;
-    res.writeHead = function (this: unknown, statusCode: number, statusMessage?: any, headers?: any) {
+    res.writeHead = function (this: unknown, statusCode: number, statusMessage?, headers?) {
       // writeHead runs synchronously while the handler is still on the stack
       // (req.baseUrl + req.route + req.params intact), so capture the precise
       // label here before Express restores baseUrl on stack unwind.

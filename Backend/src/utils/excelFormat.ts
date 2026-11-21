@@ -170,7 +170,7 @@ function formatDateTimeText(value: Date | string | number | null | undefined): s
     if (value === null || value === undefined || value === "") return "-";
     const d = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(d.getTime())) return "-";
-    const pad = (n: any) => String(n).padStart(2, "0");
+    const pad = (n: unknown) => String(n).padStart(2, "0");
     const hr24 = d.getHours();
     return (
         `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()} ` +

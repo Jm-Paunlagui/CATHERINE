@@ -185,7 +185,7 @@ class SharedTransporter {
             return {};
         }
 
-        const positiveInt = (raw: any, fallback: any) => {
+        const positiveInt = (raw: any, fallback: unknown) => {
             const n = parseInt(raw, 10);
             return Number.isInteger(n) && n > 0 ? n : fallback;
         };

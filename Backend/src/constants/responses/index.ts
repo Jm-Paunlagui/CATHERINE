@@ -70,7 +70,7 @@ function getStatusTitle(code: number): string {
  * @param {number} [code=200]
  * @returns {{ status: string, code: number, message: string, data: * }}
  */
-function sendSuccess(message: string, data: any = null, code: number = 200, requestId: string | null = null): { status: string; code: number; message: string; requestId: string | null; data: any; } {
+function sendSuccess(message: string, data: unknown = null, code: number = 200, requestId: string | null = null): { status: string; code: number; message: string; requestId: string | null; data: any; } {
     return {
         status: "success",
         code,

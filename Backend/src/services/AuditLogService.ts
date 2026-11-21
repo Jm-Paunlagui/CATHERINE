@@ -1204,7 +1204,7 @@ class AuditLogService {
         return new Promise((resolve, reject) => {
             const chunks: any[] = [];
             const pass = new PassThrough();
-            pass.on("data", (chunk: any) => chunks.push(chunk));
+            pass.on("data", (chunk: unknown) => chunks.push(chunk));
             pass.on("end", () => resolve(Buffer.concat(chunks)));
             pass.on("error", reject);
 

@@ -34,7 +34,7 @@ function refuseBrotli(parser: import("express").RequestHandler): import("express
 }
 
 class BodyParserMiddleware {
-  declare _defaultBody: (req: any, _res: any, next: any) => void;
+  declare _defaultBody: (req: any, _res: unknown, next: any) => void;
   declare _urlencodedParser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
   declare _jsonParser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
   declare _limit: any;

@@ -348,7 +348,7 @@ class PoolHealthMonitor extends EventEmitter {
     }
 
     /** Emits `"check"` `{ name, ok }` after every check; a listener fault never reaches the monitor. */
-    _emitCheck(name: any, ok: any) {
+    _emitCheck(name: unknown, ok: unknown) {
         try {
             this.emit("check", { name, ok });
         } catch (e) {
@@ -364,7 +364,7 @@ class PoolHealthMonitor extends EventEmitter {
         return false;
     }
 
-    _ensure(name: any) {
+    _ensure(name: unknown) {
         if (!this._metrics.has(name))
             this._metrics.set(name, {
                 healthy: true,
@@ -510,7 +510,7 @@ class PoolHealthMonitor extends EventEmitter {
     }
 
     /** Runs one check unless one is already in flight for `name`. */
-    _runCheck(name: any) {
+    _runCheck(name: unknown) {
         if (this._inFlight.has(name)) return;
         this._inFlight.add(name);
         this.checkPool(name)
@@ -567,7 +567,7 @@ class PoolHealthMonitor extends EventEmitter {
         return true;
     }
 
-    isHealthy(name: any) {
+    isHealthy(name: unknown) {
         return this._metrics.get(name)?.healthy ?? true;
     }
 
@@ -591,7 +591,7 @@ const CONNECTIVITY_ERROR_RE =
 
 // ── Pool lifecycle ────────────────────────────────────────────────────────────
 
-function _validateConfig(config: any, name: any) {
+function _validateConfig(config: any, name: unknown) {
     const missing = ["user", "password", "connectString"].filter(
         (k) => !config[k],
     );
@@ -622,7 +622,7 @@ function toDriverConnectTimeoutSec(ms: number): number {
     return Math.max(1, Math.ceil(safeMs / 1000));
 }
 
-async function _createPool(name: any, dbConfig: any, attempt = 0) {
+async function _createPool(name: unknown, dbConfig: any, attempt = 0) {
     const MAX_RETRIES = 3;
     const delay = Math.min(1000 * 2 ** attempt, 10_000);
 
@@ -1073,7 +1073,7 @@ async function withConnection(connectionName: string, callback: ((...args: any[]
  * @param {Function} callback  async (conn) => result
  */
 async function withTransaction(connectionName: string, callback: ((...args: any[]) => any)) {
-    return withConnection(connectionName, async (conn: any) => {
+    return withConnection(connectionName, async (conn) => {
         try {
             const result = await callback(conn);
             await conn.commit();
@@ -1103,7 +1103,7 @@ async function withBatchConnection(connectionName: string, operations: ((...args
             "withBatchConnection: operations must be a non-empty array.",
         );
 
-    return withConnection(connectionName, async (conn: any) => {
+    return withConnection(connectionName, async (conn) => {
         const FATAL = new Set(["ORA-00028", "ORA-00031"]);
         const results = [];
         for (let i = 0; i < operations.length; i++) {
@@ -1236,9 +1236,9 @@ function _timeout(ms: any, msg: any) {
 // SECTION 5 — Exports
 // ─────────────────────────────────────────────────────────────────────────────
 
-const __export_isPoolHealthy = (name: any) => healthMonitor.isHealthy(name);
+const __export_isPoolHealthy = (name: unknown) => healthMonitor.isHealthy(name);
 const __export_getHealthMetrics = () => healthMonitor.getMetrics();
-const __export___setPoolHealthForTest = (name: any, healthy: any) => {
+const __export___setPoolHealthForTest = (name: any, healthy: unknown) => {
         if (process.env.NODE_ENV !== "test") {
             throw new Error(
                 "__setPoolHealthForTest is a test-only seam and must not be called outside NODE_ENV=test.",

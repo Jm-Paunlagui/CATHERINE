@@ -58,7 +58,7 @@ class ClusterCacheSync {
     static _cluster = cluster;
 
     /** Injectable sender (defaults to process.send when available). */
-    static _send = (msg: any) => process.send!(msg); // only called when isWorker (process.send exists)
+    static _send = (msg: unknown) => process.send!(msg); // only called when isWorker (process.send exists)
 
     /**
      * Injectable IPC-availability predicate (substituted in unit tests).

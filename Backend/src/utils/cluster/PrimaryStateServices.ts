@@ -88,7 +88,7 @@ class PrimaryStateServices {
             hub.broadcast(TOPIC.AUTH_REVOKED, { entries }, { exceptId: worker.id });
             return null;
         });
-        hub.addListeningHook((worker: any) => {
+        hub.addListeningHook((worker: unknown) => {
             const entries = this._revoked.snapshot(this._now(), ACCESS_REVOCATION_LIMITS.MAX_SYNC_ENTRIES);
             if (entries.length > 0) hub.sendTo(worker, TOPIC.AUTH_SYNC, { entries });
         });
@@ -97,7 +97,7 @@ class PrimaryStateServices {
     // ── Recipient cache ──────────────────────────────────────────────────────
 
     #attachRecipients(hub: any) {
-        hub.register(M.RECIPIENTS_INVALIDATE, (_args: any, { worker }: any) => {
+        hub.register(M.RECIPIENTS_INVALIDATE, (_args: unknown, { worker }: any) => {
             hub.broadcast(TOPIC.RECIPIENTS_INVALIDATE, {}, { exceptId: worker.id });
             return null;
         });
@@ -190,7 +190,7 @@ class PrimaryStateServices {
             hub.broadcast(TOPIC.SF_UNBLOCKED, { ip });
             return { cleared };
         });
-        hub.addListeningHook((worker: any) => {
+        hub.addListeningHook((worker: unknown) => {
             const blocks = this._ipTracker.blocksSnapshot(this._now(), CLUSTER_RPC_LIMITS.SF_SYNC_MAX_ENTRIES);
             if (blocks.length > 0) hub.sendTo(worker, TOPIC.SF_SYNC, { blocks });
         });
@@ -204,7 +204,7 @@ class PrimaryStateServices {
             hub.broadcast(TOPIC.SCHED_STATE, { job, outcome }, { exceptId: worker.id });
             return null;
         });
-        hub.addListeningHook((worker: any) => {
+        hub.addListeningHook((worker: unknown) => {
             if (this._sched.size === 0) return;
             hub.sendTo(worker, TOPIC.SCHED_SYNC, { state: Object.fromEntries(this._sched) });
         });

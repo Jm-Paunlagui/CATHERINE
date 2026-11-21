@@ -83,8 +83,8 @@ function resolveMarkerPath(env: NodeJS.ProcessEnv = process.env): { path: string
     return { path: path.join(root, "data", SERVER_RUN_MARKER.FILE_NAME), ignoredOverride, ignoredReason };
 }
 
-const isPlainObject = (v: any) => v !== null && typeof v === "object" && !Array.isArray(v);
-const isTime = (v: any) => v === undefined || v === null || Number.isFinite(v);
+const isPlainObject = (v: unknown) => v !== null && typeof v === "object" && !Array.isArray(v);
+const isTime = (v: unknown) => v === undefined || v === null || Number.isFinite(v);
 
 /**
  * Shape check for a record read back from disk: an own STATES
@@ -101,7 +101,7 @@ function isWellFormed(rec: Record<string, any>): boolean {
         if (!isTime(rec[k])) return false;
     }
     if (rec.stopEmailUnsent !== undefined && typeof rec.stopEmailUnsent !== "boolean") return false;
-    const okList = (p: any) => p === undefined || isPlainObject(p) || (Array.isArray(p) && p.every(isPlainObject));
+    const okList = (p: unknown) => p === undefined || isPlainObject(p) || (Array.isArray(p) && p.every(isPlainObject));
     return okList(rec.pendingUnclean) && okList(rec.pendingLeaderLost);
 }
 
@@ -112,7 +112,7 @@ const PENDING_UNCLEAN_MAX = 5;
  * A record's pendingUnclean as a list (an rc.3 record held one object).
  * Capped on read too (CWE-770): a tampered record must not make one boot send hundreds of emails.
  */
-function pendingList(p: any) {
+function pendingList(p: unknown) {
     if (Array.isArray(p)) return p.filter(isPlainObject).slice(-PENDING_UNCLEAN_MAX);
     return isPlainObject(p) ? [p] : [];
 }
@@ -140,8 +140,8 @@ function uncleanSnapshot(rec: Record<string, any>): Record<string, any> {
 }
 
 class ServerRunMarker {
-    declare static pendingList: (p: any) => any[];
-    declare static pendingKey: (entry: any) => string;
+    declare static pendingList: (p: unknown) => any[];
+    declare static pendingKey: (entry: unknown) => string;
     declare static resolveMarkerPath: (env?: NodeJS.ProcessEnv) => { path: string; ignoredOverride: string | null; ignoredReason: "relative" | "production" | null; };
     declare _pendingLeaderLost: any;
     declare _pendingUnclean: any;
@@ -464,7 +464,7 @@ class ServerRunMarker {
         try {
             if (this._pendingUnclean === undefined) return;
             // No keys: everything was reported. Keys: drop only the entries that were sent.
-            const keep = Array.isArray(keys) ? this._pendingUnclean.filter((e: any) => !keys.includes(pendingKey(e))) : [];
+            const keep = Array.isArray(keys) ? this._pendingUnclean.filter((e: unknown) => !keys.includes(pendingKey(e))) : [];
             this._pendingUnclean = keep.length ? keep : undefined;
             if (this._started) {
                 this._write(this._state === STATES.STOPPED ? this._stoppedRecord(this._stoppedExitCode) : this._record());
@@ -482,7 +482,7 @@ class ServerRunMarker {
     clearPendingLeaderLost(keys: string[]) {
         try {
             if (this._pendingLeaderLost === undefined) return;
-            const keep = Array.isArray(keys) ? this._pendingLeaderLost.filter((e: any) => !keys.includes(pendingKey(e))) : [];
+            const keep = Array.isArray(keys) ? this._pendingLeaderLost.filter((e: unknown) => !keys.includes(pendingKey(e))) : [];
             this._pendingLeaderLost = keep.length ? keep : undefined;
             if (this._started) {
                 this._write(this._state === STATES.STOPPED ? this._stoppedRecord(this._stoppedExitCode) : this._record());

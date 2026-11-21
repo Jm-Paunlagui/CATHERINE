@@ -83,7 +83,7 @@ class CacheStore {
    * @param {number} [ttl]  - Per-entry override in seconds. Omit to use the store default.
    * @returns {boolean}
    */
-  set(key: string, value: any, ttl?: number): boolean {
+  set(key: string, value: unknown, ttl?: number): boolean {
     return ttl !== undefined
       ? this._store.set(key, value, ttl)
       : this._store.set(key, value);
@@ -268,7 +268,7 @@ class CacheStore {
     this._flight = new SingleFlight();
   }
 
-  _log(event: any, key: any) {
+  _log(event: any, key: unknown) {
     logger.debug(`[Cache:${this._name}] ${event.padEnd(7)} ${key}`);
   }
 }

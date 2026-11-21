@@ -73,7 +73,7 @@ class CacheKeyBuilder {
    * @param {*}       value  - Any scalar, array, or object value.
    * @returns {this}
    */
-  param(name: string, value: any): this {
+  param(name: string, value: unknown): this {
     this._params.set(name, CacheKeyBuilder._normalise(value));
     return this;
   }
@@ -129,7 +129,7 @@ class CacheKeyBuilder {
    * @param {*} value
    * @returns {string}
    */
-  static _normalise(value: any): string {
+  static _normalise(value: unknown): string {
     if (value === null || value === undefined) return "null";
 
     if (Array.isArray(value)) {

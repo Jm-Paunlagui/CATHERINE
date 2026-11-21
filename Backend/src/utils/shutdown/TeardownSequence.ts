@@ -202,7 +202,7 @@ function preCloseTeardown({
 
     // Nothing tracked is left: close every remaining socket, no earlier than
     // minGraceMs after the start.
-    const finish = (logFinished: any) => {
+    const finish = (logFinished: unknown) => {
         if (finished) return;
         finished = true;
         if (cutTimer) clearTimeout(cutTimer);

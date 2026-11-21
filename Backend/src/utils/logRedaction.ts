@@ -238,7 +238,7 @@ function scrubString(str: string): string {
                 0,
                 match.length - groups.gidList.length,
             );
-            const tokenizedList = groups.gidList.replace(/\d{2,}/g, (d: any) =>
+            const tokenizedList = groups.gidList.replace(/\d{2,}/g, (d) =>
                 pseudonymize("gid", d),
             );
             return prefix + tokenizedList;
@@ -280,7 +280,7 @@ const IDENTIFIER_KEYS = Object.freeze({
 });
 
 /** @returns {string|undefined} The hash class for an identifier-named key. */
-function identifierClassOf(key: any): string | undefined {
+function identifierClassOf(key: unknown): string | undefined {
     return (IDENTIFIER_KEYS as Record<string, string>)[String(key).toLowerCase().replace(/[_-]/g, "")];
 }
 
@@ -289,7 +289,7 @@ function identifierClassOf(key: any): string | undefined {
  * Digit strings and integers only; anything else goes through the normal
  * scrub (arrays element by element).
  */
-function scrubIdentifierValue(value: any, klass: any, state: any, depth: any): unknown {
+function scrubIdentifierValue(value: unknown, klass: any, state: any, depth: any): unknown {
     if (typeof value === "number" && Number.isInteger(value) && value >= 10) {
         return pseudonymize(klass, String(value));
     }
@@ -308,7 +308,7 @@ function scrubIdentifierValue(value: any, klass: any, state: any, depth: any): u
  * Built-ins whose JSON form carries no own-property data worth walking
  * (or must keep their prototype to serialise at all: `Date#toJSON`).
  */
-function isOpaqueObject(value: any) {
+function isOpaqueObject(value: unknown) {
     return (
         value instanceof Date ||
         value instanceof RegExp ||
@@ -327,7 +327,7 @@ function isOpaqueObject(value: any) {
  * @param {*} value
  * @returns {*}
  */
-function scrubOverBudget(value: any): any {
+function scrubOverBudget(value: unknown): any {
     if (typeof value === "string") return scrubString(value);
     if (value === null || typeof value !== "object") return value;
     if (isOpaqueObject(value)) return value;
@@ -354,7 +354,7 @@ function scrubOverBudget(value: any): any {
  * with raw addresses. An Error's non-enumerable `message` / `stack` are
  * copied back non-enumerable, scrubbed.
  */
-function scrubInstance(value: any, state: any, depth: any) {
+function scrubInstance(value: any, state: unknown, depth: any) {
     const copy = Object.create(Object.getPrototypeOf(value));
     if (value instanceof Error) {
         for (const key of ["message", "stack"] as const) {
@@ -375,7 +375,7 @@ function scrubInstance(value: any, state: any, depth: any) {
 }
 
 /** Scrubs one keyed child, honouring identifier-named keys and the budget. */
-function scrubChild(key: any, child: any, state: any, depth: any) {
+function scrubChild(key: unknown, child: unknown, state: any, depth: any) {
     if (state.nodes >= MAX_NODES) return scrubOverBudget(child);
     state.nodes += 1;
     const klass = identifierClassOf(key);
@@ -385,7 +385,7 @@ function scrubChild(key: any, child: any, state: any, depth: any) {
 }
 
 /** @returns {boolean} Whether `value` is a plain `{}`/`Object.create(null)` object. */
-function isPlainObject(value: any): boolean {
+function isPlainObject(value: unknown): boolean {
     if (value === null || typeof value !== "object") return false;
     const proto = Object.getPrototypeOf(value);
     return proto === Object.prototype || proto === null;

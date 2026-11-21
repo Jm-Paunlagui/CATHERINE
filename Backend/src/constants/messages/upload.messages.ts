@@ -13,13 +13,13 @@ const uploadMessages = {
      * silently disappeared between the request and the response — the exact
      * class of defect this module exists to make impossible.
      */
-    LEDGER_UNBALANCED: (feature: any, counts: any) =>
+    LEDGER_UNBALANCED: (feature: unknown, counts: any) =>
         `[UploadOutcome:${feature}] LEDGER UNBALANCED — ${counts.unaccounted} row(s) unaccounted for. ` +
         `total=${counts.total} inserted=${counts.inserted} updated=${counts.updated} ` +
         `skipped=${counts.skipped} failed=${counts.failed} pending=${counts.pending}`,
 
     /** Routine per-batch ledger trace. */
-    LEDGER_BALANCED: (feature: any, counts: any) =>
+    LEDGER_BALANCED: (feature: unknown, counts: any) =>
         `[UploadOutcome:${feature}] ledger balanced — ` +
         `total=${counts.total} inserted=${counts.inserted} updated=${counts.updated} ` +
         `skipped=${counts.skipped} failed=${counts.failed} pending=${counts.pending}`,
@@ -29,12 +29,12 @@ const uploadMessages = {
      * declared total (double-counting — e.g. a row pushed into both the skipped
      * and the failed bucket).
      */
-    LEDGER_OVERCOUNT: (feature: any, recorded: any, total: any) =>
+    LEDGER_OVERCOUNT: (feature: unknown, recorded: unknown, total: unknown) =>
         `[UploadOutcome:${feature}] LEDGER OVERCOUNT — ${recorded} outcome(s) recorded for ${total} submitted row(s). ` +
         `A row was bucketed more than once.`,
 
     /** Emitted at WARNING when the same row key is bucketed twice. */
-    LEDGER_DUPLICATE_KEY: (feature: any, key: any, first: any, second: any) =>
+    LEDGER_DUPLICATE_KEY: (feature: unknown, key: unknown, first: unknown, second: unknown) =>
         `[UploadOutcome:${feature}] row "${key}" bucketed twice — first as "${first}", again as "${second}".`,
 };
 

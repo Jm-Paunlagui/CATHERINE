@@ -154,7 +154,7 @@ function isLatin9Encodable(ch: string): boolean {
  * @example
  * normalizeText("Building — 2nd Floor"); // "Building - 2nd Floor"
  */
-function normalizeText(value: any): any {
+function normalizeText(value: unknown): any {
     if (typeof value !== "string" || value.length === 0) return value;
 
     let out = "";
@@ -181,7 +181,7 @@ function normalizeText(value: any): any {
  * @example
  * findUnencodable(normalizeText("Grüße 日本")); // ["日", "本"]
  */
-function findUnencodable(value: any): string[] {
+function findUnencodable(value: unknown): string[] {
     if (typeof value !== "string" || value.length === 0) return [];
     const bad = [];
     const seen = new Set();

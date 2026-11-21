@@ -35,7 +35,7 @@ const MAX_ADDRESS_LENGTH = 254;
  * @param {*} raw
  * @returns {string|null}
  */
-function singleAddress(raw: any): string | null {
+function singleAddress(raw: unknown): string | null {
     if (raw != null && typeof raw !== "string") return null;
     const v = raw == null ? "" : raw.trim();
     if (!v || v.length > MAX_ADDRESS_LENGTH) return null;
@@ -51,7 +51,7 @@ function singleAddress(raw: any): string | null {
  * @param {*} raw
  * @returns {string|null}
  */
-function maskAddress(raw: any): string | null {
+function maskAddress(raw: unknown): string | null {
     const address = singleAddress(raw);
     if (!address) return null;
     const at = address.lastIndexOf("@");

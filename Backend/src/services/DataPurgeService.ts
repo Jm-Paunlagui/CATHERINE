@@ -91,7 +91,7 @@ const RECOUNT_TOLERANCE = 0;
  * @returns {string[]}
  * @private
  */
-function _normalizeStringArray(value: any): string[] {
+function _normalizeStringArray(value: unknown): string[] {
     if (!Array.isArray(value)) return [];
     const cleaned = value
         .filter((v) => typeof v === "string" && v.trim() !== "")
@@ -117,7 +117,7 @@ function _computeChildClosure(baseTables: Iterable<string>): Set<string> {
         changed = false;
         for (const entry of PURGE_TABLES) {
             if (result.has(entry.table)) continue;
-            if (entry.fkEdges.some((edge: any) => result.has(edge.refTable))) {
+            if (entry.fkEdges.some((edge) => result.has(edge.refTable))) {
                 result.add(entry.table);
                 changed = true;
             }

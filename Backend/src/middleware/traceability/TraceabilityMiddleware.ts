@@ -45,7 +45,7 @@ function isSensitiveKey(key: any) {
     return SENSITIVE_PATTERNS.some((p) => norm.includes(p));
 }
 
-function redactValue(key: any, value: any) {
+function redactValue(key: unknown, value: unknown) {
     return isSensitiveKey(key) ? "[REDACTED]" : value;
 }
 
@@ -82,7 +82,7 @@ function redactValue(key: any, value: any) {
  * @returns {*} A redacted copy. Primitives are returned unchanged.
  * @throws {TypeError} On a circular reference.
  */
-function deepRedact(value: any, depth: number = 0, seen: WeakSet<Record<string, any>> = new WeakSet()): any {
+function deepRedact(value: unknown, depth: number = 0, seen: WeakSet<Record<string, any>> = new WeakSet()): any {
     // Depth cap: a malicious or accidental deeply-nested payload must not turn
     // a log line into a stack overflow. 8 is far past any real request shape.
     if (depth > 8) return "[MAX_DEPTH]";

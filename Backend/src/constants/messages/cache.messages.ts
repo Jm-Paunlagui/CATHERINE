@@ -100,7 +100,7 @@ const cacheMessages = {
      * @param {*}      arg       - Keys or pattern, null for flush
      * @returns {string}
      */
-    CACHE_CLUSTER_SYNC_APPLIED: (storeName: string, op: string, arg: any): string =>
+    CACHE_CLUSTER_SYNC_APPLIED: (storeName: string, op: string, arg: unknown): string =>
         `Cache cluster-sync applied — store: ${storeName}, op: ${op}, arg: ${JSON.stringify(arg)}`,
 
     /**

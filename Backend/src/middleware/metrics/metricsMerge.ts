@@ -39,7 +39,7 @@ const BISECT_STEPS = 60;
 const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
 const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const maxOf = (values: any) => values.reduce((m: any, v: any) => (v > m ? v : m), 0);
-const sumOf = (values: any) => values.reduce((s: any, v: any) => s + v, 0);
+const sumOf = (values: any) => values.reduce((s: any, v: unknown) => s + v, 0);
 const round2 = (v: any) => Number(v.toFixed(2));
 
 /**
@@ -99,7 +99,7 @@ function percentileFromSketches(sketches: Array<{ n: number; q: number[]; }>, p:
     const hi0 = Math.max(...live.map((s) => s.q[s.q.length - 1]));
     if (p <= 0) return lo0;
     if (p >= 1) return hi0;
-    const mixed = (x: any) => sumOf(live.map((s) => s.n * sketchCdf(s.q, x))) / total;
+    const mixed = (x: unknown) => sumOf(live.map((s) => s.n * sketchCdf(s.q, x))) / total;
     let lo = lo0;
     let hi = hi0;
     for (let i = 0; i < BISECT_STEPS; i++) {
@@ -123,7 +123,7 @@ function isUsablePart(part: any): boolean {
     );
 }
 
-const latestIso = (a: any, b: any) => (a && (!b || a > b) ? a : b ?? null);
+const latestIso = (a: unknown, b: unknown) => (a && (!b || a > b) ? a : b ?? null);
 
 /** Merges the red[] maps. */
 function mergeRed(snaps: any, extrasList: any) {
@@ -252,7 +252,7 @@ function mergeSystem(parts: any) {
     const sys = parts.map((p: any) => p.value.snapshot.system);
     const heapRatio = (s: any) => num(s.memory.heapUsed) / (num(s.memory.heapSizeLimit) || 1);
     let hottest = 0;
-    sys.forEach((s: any, i: any) => {
+    sys.forEach((s: unknown, i: any) => {
         if (heapRatio(s) > heapRatio(sys[hottest])) hottest = i;
     });
     let trendIdx = hottest;
@@ -335,17 +335,17 @@ function mergeOracle(parts: any) {
     });
     const out = new Map();
     for (const [name, { rows, sketches, totalMs, haveTotalMs }] of pools) {
-        const nonNull = (key: any) => rows.map((r: any) => r[key]).filter((v: any) => typeof v === "number" && Number.isFinite(v));
-        const sumOrNull = (key: any) => {
+        const nonNull = (key: any) => rows.map((r: any) => r[key]).filter((v: unknown) => typeof v === "number" && Number.isFinite(v));
+        const sumOrNull = (key: unknown) => {
             const v = nonNull(key);
             return v.length ? sumOf(v) : null;
         };
-        const maxOrNull = (key: any) => {
+        const maxOrNull = (key: unknown) => {
             const v = nonNull(key);
             return v.length ? Math.max(...v) : null;
         };
         const queryCount = sumOf(rows.map((r: any) => num(r.queryCount)));
-        const health = rows.map((r: any) => r.healthy).filter((h: any) => typeof h === "boolean");
+        const health = rows.map((r: any) => r.healthy).filter((h: unknown) => typeof h === "boolean");
         out.set(name, {
             queryCount,
             errorCount: sumOf(rows.map((r: any) => num(r.errorCount))),

@@ -268,13 +268,13 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static listBackups = catchAsync(async (_req: any, res: any) => {
+    static listBackups = catchAsync(async (_req, res) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const archives = await BackupStoreService.listArchives();
 
         // Derive aggregate disk usage from the index entries.
         const totalSizeBytes = archives.reduce(
-            (sum: any, a: any) => sum + (a.sizeBytes ?? 0),
+            (sum: unknown, a: any) => sum + (a.sizeBytes ?? 0),
             0,
         );
 

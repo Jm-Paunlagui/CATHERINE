@@ -101,7 +101,7 @@ class ClusterRpcClient {
     init({ isLeader = false }: { isLeader?: boolean; } = {}): boolean {
         if (this.#active || !this._canSend()) return false;
         this.#isLeader = isLeader === true;
-        this.#listener = (msg: any) => this.#onMessage(msg);
+        this.#listener = (msg) => this.#onMessage(msg);
         this._proc.on("message", this.#listener);
         this.#active = true;
         return true;
@@ -211,7 +211,7 @@ class ClusterRpcClient {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    #trySend(message: any) {
+    #trySend(message: unknown) {
         try {
             this._proc.send!(message); // a cluster worker always has the IPC channel
             return true;
@@ -220,7 +220,7 @@ class ClusterRpcClient {
         }
     }
 
-    #onMessage(msg: any) {
+    #onMessage(msg: unknown) {
         if (!isPlainObject(msg)) return;
         switch (msg.cmd) {
             case CLUSTER_IPC.RPC_RESPONSE:

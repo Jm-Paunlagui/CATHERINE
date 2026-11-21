@@ -179,7 +179,7 @@ class StartupNotifier {
         const d = new Date(ms + off * 60_000);
         const h24 = d.getUTCHours();
         const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-        const pad = (n: any) => String(n).padStart(2, "0");
+        const pad = (n: unknown) => String(n).padStart(2, "0");
         const sign = off < 0 ? "-" : "+";
         const abs = Math.abs(off);
         return (
@@ -264,7 +264,7 @@ class StartupNotifier {
         };
     }
 
-    #startedPayload(verdict: any, previous: any, current: any) {
+    #startedPayload(verdict: unknown, previous: any, current: any) {
         const p = previous ?? {};
         let desc;
         let severity = "NOTICE";
@@ -303,7 +303,7 @@ class StartupNotifier {
         };
     }
 
-    #warn(event: any, err: any) {
+    #warn(event: unknown, err: any) {
         try {
             this._logger.warning(serverMessages.STARTUP_NOTIFY_FAILED(event, err?.message ?? String(err)), {
                 _noNotify: true,

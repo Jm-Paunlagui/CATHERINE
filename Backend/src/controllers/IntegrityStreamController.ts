@@ -64,7 +64,7 @@ function _safeSend(res: import('express').Response, event: string, payload: Reco
 }
 
 /** Deterministic subscription key from table + scope filters (sorted keys). */
-function _subKey(table: any, filters: any) {
+function _subKey(table: unknown, filters: any) {
     const scope: Record<string, any> = {};
     for (const k of Object.keys(filters).sort()) {
         const v = filters[k];

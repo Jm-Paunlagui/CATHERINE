@@ -37,7 +37,7 @@ import AuthRefreshTokenModel from "../models/auth.refresh.token.model";
 import AccessRevocationService from "./AccessRevocationService";
 import { RetryPolicy } from "../utils/resilience";
 
-const fidPrefix = (fid: any) => String(fid ?? "").slice(0, 8);
+const fidPrefix = (fid: unknown) => String(fid ?? "").slice(0, 8);
 
 class RefreshTokenService {
     /**

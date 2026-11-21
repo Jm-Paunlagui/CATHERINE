@@ -21,7 +21,7 @@ import { logger } from "../utils/logger";
 /** Pool the scan helpers read from. */
 const _db = createDb("appDb");
 
-const _str = (v: any) => (v == null ? "" : String(v));
+const _str = (v: unknown) => (v == null ? "" : String(v));
 
 /**
  * T_SYSTEM_CONFIG — the key/value application config store. CONFIG_KEY is the

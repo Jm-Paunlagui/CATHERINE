@@ -16,10 +16,10 @@
 const MAP_VERIFIED_AT = "2026-11-03";
 
 const API = "Backend/";
-const S = (f: any) => `${API}src/services/${f}`;
-const M = (f: any) => `${API}src/models/${f}`;
-const U = (f: any) => `${API}src/utils/${f}`;
-const MW = (f: any) => `${API}src/middleware/${f}`;
+const S = (f: unknown) => `${API}src/services/${f}`;
+const M = (f: unknown) => `${API}src/models/${f}`;
+const U = (f: unknown) => `${API}src/utils/${f}`;
+const MW = (f: unknown) => `${API}src/middleware/${f}`;
 const SERVER = `${API}server.ts`;
 
 const layers = [

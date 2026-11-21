@@ -47,7 +47,7 @@ class ErrorHandlerMiddleware {
 
     // ─── Main handler ──────────────────────────────────────────────────────────
 
-    handle(err: any, req: Request, res: Response, _next: any) {
+    handle(err: any, req: Request, res: Response, _next: unknown) {
         // The request watchdog already answered (504) or destroyed this
         // response. The handler's late error (ERR_HTTP_HEADERS_SENT, or the
         // RequestStalledError thrown by a later DB call) must not be logged as
@@ -330,7 +330,7 @@ class ErrorHandlerMiddleware {
 
     // ─── 404 handler ──────────────────────────────────────────────────────────
 
-    notFoundHandler(req: Request, res: Response, _next: any) {
+    notFoundHandler(req: Request, res: Response, _next: unknown) {
         res.status(404).json({
             status: "error",
             code: 404,

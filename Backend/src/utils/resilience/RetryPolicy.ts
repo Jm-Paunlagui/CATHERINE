@@ -265,7 +265,7 @@ class RetryPolicy {
      *   `.classification` (string|null) attached, when the attempt budget for
      *   its classification is exhausted.
      */
-    async execute<T>(fn: (attempt: number) => Promise<T>, hooks: { onRetry?: (err: any, attempt: number) => Promise<{
+    async execute<T>(fn: (attempt: number) => Promise<T>, hooks: { onRetry?: (err: unknown, attempt: number) => Promise<{
         key: any; resolved: T; 
 } | void>; } = {}): Promise<T> {
         let attempt = 0;
@@ -418,7 +418,7 @@ class RetryPolicy {
      * @param {*} err
      * @returns {"TRANSIENT_DB"|"FATAL_SESSION"|"DUPLICATE"|"PERMANENT_DB"}
      */
-    static classifyDbError(err: any): "TRANSIENT_DB" | "FATAL_SESSION" | "DUPLICATE" | "PERMANENT_DB" {
+    static classifyDbError(err: unknown): "TRANSIENT_DB" | "FATAL_SESSION" | "DUPLICATE" | "PERMANENT_DB" {
         if (!err || typeof err !== "object") return CLASSIFICATIONS.PERMANENT_DB;
         const chain = errorChain(err);
 
@@ -464,7 +464,7 @@ class RetryPolicy {
      * @param {*} err
      * @returns {"TRANSIENT_SMTP"|"PERMANENT_SMTP"}
      */
-    static classifySmtpError(err: any): "TRANSIENT_SMTP" | "PERMANENT_SMTP" {
+    static classifySmtpError(err: unknown): "TRANSIENT_SMTP" | "PERMANENT_SMTP" {
         if (!err || typeof err !== "object") return CLASSIFICATIONS.PERMANENT_SMTP;
         const chain = errorChain(err);
 
@@ -489,7 +489,7 @@ class RetryPolicy {
      * @param {*} err
      * @returns {boolean} True when `classifyDbError(err) === "TRANSIENT_DB"`.
      */
-    static isTransientDbError(err: any): boolean {
+    static isTransientDbError(err: unknown): boolean {
         return RetryPolicy.classifyDbError(err) === CLASSIFICATIONS.TRANSIENT_DB;
     }
 
@@ -497,7 +497,7 @@ class RetryPolicy {
      * @param {*} err
      * @returns {boolean} True when `classifySmtpError(err) === "TRANSIENT_SMTP"`.
      */
-    static isTransientSmtpError(err: any): boolean {
+    static isTransientSmtpError(err: unknown): boolean {
         return RetryPolicy.classifySmtpError(err) === CLASSIFICATIONS.TRANSIENT_SMTP;
     }
 }

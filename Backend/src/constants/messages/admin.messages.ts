@@ -6,14 +6,14 @@
  */
 
 const adminMessages = {
-  ADMIN_SEARCH: (query: any) => `Account search executed with query: "${query}".`,
+  ADMIN_SEARCH: (query: unknown) => `Account search executed with query: "${query}".`,
   ADMIN_LIST_FETCHED: () =>
     "Admin list fetched and enriched with user profile data.",
-  ADMIN_CREATED: (username: any, role: any) =>
+  ADMIN_CREATED: (username: unknown, role: unknown) =>
     `Admin created — USERNAME: ${username}, ROLE: ${role}.`,
-  ADMIN_UPDATED: (username: any) => `Admin record updated — USERNAME: ${username}.`,
-  ADMIN_DELETED: (username: any) => `Admin removed — USERNAME: ${username}.`,
-  ADMIN_PASSWORD_RESET: (username: any) =>
+  ADMIN_UPDATED: (username: unknown) => `Admin record updated — USERNAME: ${username}.`,
+  ADMIN_DELETED: (username: unknown) => `Admin removed — USERNAME: ${username}.`,
+  ADMIN_PASSWORD_RESET: (username: unknown) =>
     `Admin password reset to a new temporary password — USERNAME: ${username}.`,
 
   // ── Temporary-password delivery ──
@@ -42,13 +42,13 @@ const adminMessages = {
   /** @param {string} username */
   TEMP_PASSWORD_LEGACY_FIELDS_REFUSED: (username: string) =>
     `Admin creation refused — USERNAME: ${username}; the request carried retainPassword/newPassword, which the server no longer accepts.`,
-  ADMIN_SIGNATURE_RESET: (username: any) =>
+  ADMIN_SIGNATURE_RESET: (username: unknown) =>
     `Admin SYSSIGNATURE recomputed — USERNAME: ${username}.`,
-  ADMIN_SIGNATURE_INVALID: (username: any) =>
+  ADMIN_SIGNATURE_INVALID: (username: unknown) =>
     `SYSSIGNATURE mismatch detected for USERNAME: ${username} — record may have been tampered with.`,
-  ADMIN_ALREADY_EXISTS: (username: any) =>
+  ADMIN_ALREADY_EXISTS: (username: unknown) =>
     `Admin creation rejected — USERNAME: ${username} already exists in T_ADMINS_DEV.`,
-  ADMIN_NOT_FOUND: (username: any) =>
+  ADMIN_NOT_FOUND: (username: unknown) =>
     `Admin operation failed — USERNAME: ${username} not found in T_ADMINS_DEV.`,
 
   // ── Permission flags ──────────────────────────────────────────────────────

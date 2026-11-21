@@ -283,14 +283,14 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, o
       binds[bname] = val;
       conditions.push(`${qField} LIKE :${bname}`);
     } else if (op === "$any") {
-      const placeholders = val.map((v: any) => {
+      const placeholders = val.map((v: unknown) => {
         const bname = counter.next(`where_${field}`);
         binds[bname] = v;
         return `:${bname}`;
       });
       conditions.push(`${qField} = ANY(${placeholders.join(", ")})`);
     } else if (op === "$all") {
-      const placeholders = val.map((v: any) => {
+      const placeholders = val.map((v: unknown) => {
         const bname = counter.next(`where_${field}`);
         binds[bname] = v;
         return `:${bname}`;

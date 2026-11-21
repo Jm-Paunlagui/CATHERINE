@@ -20,7 +20,7 @@
 import path from "path";
 
 /** True when `main` is an entry point inside a compiled Bun executable's embedded filesystem. */
-function isBunCompiledMain(main: any) {
+function isBunCompiledMain(main: unknown) {
     return typeof main === "string" && (main.startsWith("/$bunfs/") || /^[A-Za-z]:[\\/]~BUN[\\/]/.test(main));
 }
 

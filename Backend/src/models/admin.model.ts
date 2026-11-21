@@ -58,7 +58,7 @@ function escapeLike(s: string): string {
  * @param {*} limit
  * @returns {number}
  */
-function clampLimit(limit: any): number {
+function clampLimit(limit: unknown): number {
     const n = Math.trunc(Number(limit));
     if (!Number.isFinite(n) || n < 1) return SEARCH_DEFAULT_LIMIT;
     return Math.min(n, SEARCH_MAX_LIMIT);
@@ -337,7 +337,7 @@ class AdminModel {
 
         const assertNotLast = (rows: any) => {
             const ids = rows.map((r: any) => Number(r.ID));
-            if (ids.includes(targetId) && ids.every((id: any) => id === targetId)) {
+            if (ids.includes(targetId) && ids.every((id: unknown) => id === targetId)) {
                 logger.warning(adminMessages.ADMIN_LAST_SUPER_ADMIN_BLOCKED(excludeId));
                 throw new AppError(ADMIN_ERRORS.LAST_ACTIVE_SUPER_ADMIN, HTTP_STATUS.CONFLICT, {
                     type: "BusinessRuleError",
@@ -353,7 +353,7 @@ class AdminModel {
             return fn(null);
         }
 
-        return new Transaction(db()).withTransaction(async (session: any) => {
+        return new Transaction(db()).withTransaction(async (session) => {
             // No .limit(): FETCH FIRST cannot be combined with FOR UPDATE.
             const rows = await session
                 .collection(TABLE)

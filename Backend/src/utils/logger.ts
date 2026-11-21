@@ -246,7 +246,7 @@ class Logger {
      * @param {object} meta      - Log metadata; `_noNotify: true` skips the tap
      * @param {string|null} requestId
      */
-    #notifySubscribers(level: string, message: any, meta: Record<string, any>, requestId: string | null) {
+    #notifySubscribers(level: string, message: unknown, meta: Record<string, any>, requestId: string | null) {
         if (!this._levelSubscribers.length) return;
         if (meta && meta._noNotify) return;
         const priority = Logger.CONFIG.LEVELS[level];
@@ -341,7 +341,7 @@ class Logger {
     /**
      * Shorten absolute paths to start at src/ when possible
      */
-    #shortenPath(fullPath: any) {
+    #shortenPath(fullPath: unknown) {
         try {
             const cwd = process.cwd().replace(/\\/g, "/");
             const norm = String(fullPath || "").replace(/\\/g, "/");
@@ -365,7 +365,7 @@ class Logger {
     /**
      * Safely serialize any value to string, handling objects, arrays, and primitives
      */
-    #safeStringify(value: any, maxLength = this._maxSafeStrLength) {
+    #safeStringify(value: unknown, maxLength = this._maxSafeStrLength) {
         try {
             if (value === null) return "null";
             if (value === undefined) return "undefined";
@@ -485,7 +485,7 @@ class Logger {
     /**
      * Get next available log filename, rolling over when the size limit is exceeded
      */
-    async #getAvailableFilename(baseDir: any, baseName: any) {
+    async #getAvailableFilename(baseDir: any, baseName: unknown) {
         let filename = `${baseName}.log`;
         let fullPath = path.join(baseDir, filename);
 
@@ -531,7 +531,7 @@ class Logger {
     /**
      * Build the plain-text log entry string
      */
-    #formatMessage(level: any, message: any, meta: Record<string, any> = {}, requestId = null) {
+    #formatMessage(level: unknown, message: unknown, meta: Record<string, any> = {}, requestId = null) {
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
         const { displayFn, displayFile, displayLine } =
@@ -559,7 +559,7 @@ class Logger {
     /**
      * Build the colorized console log entry string
      */
-    #formatColorizedMessage(level: any, message: any, meta: Record<string, any> = {}, requestId = null) {
+    #formatColorizedMessage(level: any, message: unknown, meta: Record<string, any> = {}, requestId = null) {
         const colors = Logger.CONFIG.COLORS;
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
@@ -602,7 +602,7 @@ class Logger {
     /**
      * Resolve a raw message value to a clean string
      */
-    #resolveMessage(message: any) {
+    #resolveMessage(message: unknown) {
         if (message === null || message === undefined) return "[Empty Message]";
         return this.#safeStringify(message).trim() || "[Empty Message]";
     }
@@ -674,7 +674,7 @@ class Logger {
     /**
      * Write a formatted log entry to the appropriate file
      */
-    async #writeToFile(level: any, message: any, meta: Record<string, any> = {}, requestId = null) {
+    async #writeToFile(level: any, message: unknown, meta: Record<string, any> = {}, requestId = null) {
         const logDir = this.#getLogDirectory();
         try {
             await this.#ensureDirectoryExists(logDir);
@@ -758,14 +758,14 @@ class Logger {
             return { message, meta: rest[0] };
         }
 
-        const formattedArgs = rest.map((a: any) => this.#formatMetaValue(a, true));
+        const formattedArgs = rest.map((a: unknown) => this.#formatMetaValue(a, true));
         return {
             message: `${message} ${formattedArgs.join(" ")}`,
-            meta: { additionalData: rest.map((a: any) => this.#formatMetaValue(a)) },
+            meta: { additionalData: rest.map((a: unknown) => this.#formatMetaValue(a)) },
         };
     }
 
-    #isPlainMetaObject(value: any) {
+    #isPlainMetaObject(value: unknown) {
         if (
             value === null ||
             value === undefined ||
@@ -777,7 +777,7 @@ class Logger {
         return keys.length === 0 || !keys.every((key, i) => key === String(i));
     }
 
-    #formatMetaValue(value: any, forMessage = false) {
+    #formatMetaValue(value: unknown, forMessage = false) {
         if (value === null) return "null";
         if (value === undefined) return "undefined";
         if (typeof value === "string") return value;
@@ -1079,7 +1079,7 @@ class Logger {
     // SPECIALIZED LOGGING
     // ========================================
 
-    cache(operation: any, key: any, result: any, duration = null) {
+    cache(operation: unknown, key: unknown, result: unknown, duration = null) {
         return this.log("DEBUG", "Cache Operation", {
             operation,
             key,
@@ -1088,7 +1088,7 @@ class Logger {
         });
     }
 
-    database(operation: any, table: any, duration = null, rowCount = null) {
+    database(operation: unknown, table: unknown, duration = null, rowCount = null) {
         return this.log("DEBUG", "Database Operation", {
             operation,
             table,
@@ -1097,7 +1097,7 @@ class Logger {
         });
     }
 
-    performance(operation: any, duration: any, details: Record<string, any> = {}) {
+    performance(operation: unknown, duration: any, details: Record<string, any> = {}) {
         const level = duration > 5000 ? "WARNING" : "INFO";
         return this.log(level, "Performance", {
             operation,
@@ -1106,7 +1106,7 @@ class Logger {
         });
     }
 
-    security(event: any, details: Record<string, any> = {}) {
+    security(event: unknown, details: Record<string, any> = {}) {
         return this.log("WARNING", "Security Event", {
             event,
             timestamp: new Date().toISOString(),

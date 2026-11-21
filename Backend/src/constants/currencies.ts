@@ -82,7 +82,7 @@ const CURRENCY_CODES: ReadonlyArray<string> = Object.freeze(Object.keys(CURRENCI
  * @param {*} code
  * @returns {boolean}
  */
-function isValidCurrency(code: any): boolean {
+function isValidCurrency(code: unknown): boolean {
     return typeof code === "string" && Object.prototype.hasOwnProperty.call(CURRENCIES, code);
 }
 

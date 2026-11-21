@@ -580,7 +580,7 @@ class DataPurgeModel {
         // Long-hold multi-table purge — routed through the appDbBulk pool so a
         // full purge cannot exhaust the interactive appDb pool.
         const txManager = new Transaction(_bulkDb);
-        await txManager.withTransaction(async (session: any) => {
+        await txManager.withTransaction(async (session) => {
             for (const entry of orderedEntries) {
                 const deletedCount = await DataPurgeModel.deleteTable(entry.table, session, highWater?.[entry.table]);
                 perTable.push({ table: entry.table, deletedCount });

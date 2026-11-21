@@ -63,7 +63,7 @@ class MetricsController {
    * Returns the full in-process metrics snapshot.
    * Requires userLevel >= 2.
    */
-  static getSnapshot = catchAsync(async (_req: any, res: any) => {
+  static getSnapshot = catchAsync(async (_req, res) => {
     const snapshot = await MetricsService.getClusterSnapshot();
     logger.info(metricsMessages.SNAPSHOT_FETCHED());
     res.json(sendSuccess(RESPONSE_MESSAGES.METRICS_FETCHED, snapshot));
@@ -74,7 +74,7 @@ class MetricsController {
    * Returns an abbreviated summary: totals, top-5 slow routes, alert count.
    * Requires userLevel >= 1.
    */
-  static getSummary = catchAsync(async (_req: any, res: any) => {
+  static getSummary = catchAsync(async (_req, res) => {
     const summary = MetricsService.getSummary(await MetricsService.getClusterSnapshot());
     logger.info(metricsMessages.SUMMARY_FETCHED());
     res.json(sendSuccess(RESPONSE_MESSAGES.METRICS_SUMMARY_FETCHED, summary));
@@ -88,7 +88,7 @@ class MetricsController {
    * round-trip.
    * Requires userLevel >= 2.
    */
-  static getAlerts = catchAsync(async (_req: any, res: any) => {
+  static getAlerts = catchAsync(async (_req, res) => {
     const alerts = MetricsService.evaluateAlerts(await MetricsService.getClusterSnapshot());
     const decorated = await AlertNotifierService.decorateAlertsWithAckState(alerts);
     logger.info(metricsMessages.ALERTS_FETCHED());
@@ -117,7 +117,7 @@ class MetricsController {
    * addresses), active alert states, and the recent-sends ring buffer.
    * Requires userLevel >= 2.
    */
-  static getNotificationStatus = catchAsync(async (_req: any, res: any) => {
+  static getNotificationStatus = catchAsync(async (_req, res) => {
     const status = await AlertNotifierService.getStatus();
     logger.info(notificationMessages.STATUS_FETCHED());
     res.json(sendSuccess(RESPONSE_MESSAGES.NOTIFICATION_STATUS_FETCHED, status));

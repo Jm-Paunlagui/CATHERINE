@@ -100,7 +100,7 @@ class CacheMiddleware {
    *
    * @returns {import('express').RequestHandler}
    */
-  static read(store: import('./CacheStore').CacheStore, keyFn: (req: import('express').Request) => string, options: { bypassMethods?: string[]; ttl?: number; setHeaders?: boolean; coalesce?: boolean; shouldCache?: (req: import('express').Request, resBody: any) => boolean; } = {}): import('express').RequestHandler {
+  static read(store: import('./CacheStore').CacheStore, keyFn: (req: import('express').Request) => string, options: { bypassMethods?: string[]; ttl?: number; setHeaders?: boolean; coalesce?: boolean; shouldCache?: (req: import('express').Request, resBody: unknown) => boolean; } = {}): import('express').RequestHandler {
     const bypass = new Set(
       options.bypassMethods ?? ["POST", "PUT", "PATCH", "DELETE"],
     );
@@ -136,7 +136,7 @@ class CacheMiddleware {
       const flightKey = store.name + "|" + key;
 
       if (coalesce) {
-        const serveCoalesced = (value: any) => {
+        const serveCoalesced = (value: unknown) => {
           if (setHeaders) {
             res.set("X-Cache", "COALESCED");
             res.set("X-Cache-Key", key);

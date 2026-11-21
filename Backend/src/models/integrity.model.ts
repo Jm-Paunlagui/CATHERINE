@@ -162,8 +162,8 @@ class IntegrityModel {
                 ]);
                 const opts = (rows ?? [])
                     .map((r: any) => r[def.column])
-                    .filter((v: any) => v != null && v !== "")
-                    .map((v: any) => ({ value: String(v), label: String(v) }));
+                    .filter((v: unknown) => v != null && v !== "")
+                    .map((v: unknown) => ({ value: String(v), label: String(v) }));
                 return [fk, opts];
             }),
         );
@@ -243,7 +243,7 @@ class IntegrityModel {
             if (!rows || rows.length === 0) break;
 
             // Verify the batch concurrently (HMAC is cheap; this is bounded by `batch`).
-            const verdicts = await Promise.all(rows.map((r: any) => cfg.verifyFn(r)));
+            const verdicts = await Promise.all(rows.map((r) => cfg.verifyFn(r)));
             for (let i = 0; i < rows.length; i++) {
                 if (!verdicts[i]) tampered.push(rows[i]);
             }

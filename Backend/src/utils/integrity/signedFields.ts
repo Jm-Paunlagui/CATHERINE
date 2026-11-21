@@ -70,7 +70,7 @@ function canonicalMoney(v: any): string {
  * @param {*} v
  * @returns {string}
  */
-function canonicalPlain(v: any): string {
+function canonicalPlain(v: unknown): string {
     if (v === null || v === undefined) return "";
     return String(v);
 }

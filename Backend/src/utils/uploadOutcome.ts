@@ -172,7 +172,7 @@ class UploadOutcomeBuilder {
      * @returns {{ key: string, label: string|null }}
      * @private
      */
-    static _identity(key: any, label: any): { key: string; label: string | null; } {
+    static _identity(key: unknown, label: unknown): { key: string; label: string | null; } {
         const k = key === null || key === undefined || key === "" ? "—" : String(key);
         const l = label === null || label === undefined || label === "" ? null : String(label);
         return { key: k, label: l };
@@ -204,7 +204,7 @@ class UploadOutcomeBuilder {
      * @param {*} [label]
      * @returns {this}
      */
-    insert(key: any, label: any): this {
+    insert(key: unknown, label: unknown): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.INSERTED]++;
         this._track(id.key, OUTCOME.INSERTED);
@@ -217,7 +217,7 @@ class UploadOutcomeBuilder {
      * @param {*} [label]
      * @returns {this}
      */
-    update(key: any, label: any): this {
+    update(key: unknown, label: unknown): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.UPDATED]++;
         this._track(id.key, OUTCOME.UPDATED);
@@ -235,7 +235,7 @@ class UploadOutcomeBuilder {
      *   (e.g. `{ code: "LOCKED" }`). Never overrides key/label/reason/category.
      * @returns {this}
      */
-    skip(key: any, label: any, reason: string, category: string = SKIP_REASON.NOT_ACTIONABLE, extra: Record<string, any> = {}): this {
+    skip(key: unknown, label: unknown, reason: string, category: string = SKIP_REASON.NOT_ACTIONABLE, extra: Record<string, any> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.SKIPPED]++;
         this._rows[OUTCOME.SKIPPED].push({
@@ -259,7 +259,7 @@ class UploadOutcomeBuilder {
      *   (e.g. `{ attempts: 3 }`). Never overrides key/label/reason/category.
      * @returns {this}
      */
-    fail(key: any, label: any, reason: string, category: string = FAIL_REASON.DATABASE, extra: Record<string, any> = {}): this {
+    fail(key: unknown, label: unknown, reason: string, category: string = FAIL_REASON.DATABASE, extra: Record<string, any> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.FAILED]++;
         this._rows[OUTCOME.FAILED].push({
@@ -282,7 +282,7 @@ class UploadOutcomeBuilder {
      * @param {object} [extra]
      * @returns {this}
      */
-    pend(key: any, label: any, reason: string, category: string = PENDING_REASON.RETRY_EXHAUSTED, extra: Record<string, any> = {}): this {
+    pend(key: unknown, label: unknown, reason: string, category: string = PENDING_REASON.RETRY_EXHAUSTED, extra: Record<string, any> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.PENDING]++;
         this._rows[OUTCOME.PENDING].push({

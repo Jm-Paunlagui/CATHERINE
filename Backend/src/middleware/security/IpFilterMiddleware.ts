@@ -51,7 +51,7 @@ class IpFilterMiddleware {
     next();
   }
 
-  static ipInCidr(ip: any, cidr: any) {
+  static ipInCidr(ip: unknown, cidr: any) {
     const [range, bits] = cidr.split("/");
     const mask = bits ? ~((1 << (32 - parseInt(bits, 10))) - 1) : 0xffffffff;
     const ipNum = IpFilterMiddleware.ipToNum(ip);

@@ -25,7 +25,7 @@ import { defaultSecurityFilter } from "../middleware/security/SecurityFilterMidd
  * @param {*} value
  * @returns {boolean}
  */
-const _flag = (value: any): boolean =>
+const _flag = (value: unknown): boolean =>
     value === true || value === 1 || value === "true" || value === "1";
 
 /**

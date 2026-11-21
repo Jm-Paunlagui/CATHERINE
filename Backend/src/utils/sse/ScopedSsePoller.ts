@@ -229,7 +229,7 @@ class ScopedSsePoller {
      * `close()` returned from {@link open}, wired to `req.on("close")`.
      * @private
      */
-    _safeSend(res: any, eventName: any, payload: any) {
+    _safeSend(res: any, eventName: unknown, payload: unknown) {
         try {
             res.write(`event: ${eventName}\n`);
             res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -240,12 +240,12 @@ class ScopedSsePoller {
     }
 
     /** @private */
-    _broadcast(scope: any, eventName: any, payload: any) {
+    _broadcast(scope: any, eventName: unknown, payload: unknown) {
         for (const res of scope.connections) this._safeSend(res, eventName, payload);
     }
 
     /** @private */
-    _log(level: any, message: any) {
+    _log(level: any, message: unknown) {
         if (this.logger && typeof this.logger[level] === "function") {
             this.logger[level](message);
         }

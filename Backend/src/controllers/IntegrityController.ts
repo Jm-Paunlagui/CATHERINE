@@ -81,7 +81,7 @@ class IntegrityController {
      * GET /api/v1/integrity/tables
      * Returns the table catalog (key, label, pk, filters, live) — no SQL surface.
      */
-    static getTables = catchAsync(async (_req: any, res: any) => {
+    static getTables = catchAsync(async (_req, res) => {
         const tables = IntegrityService.listTables();
         res.status(HTTP_STATUS.OK).json(
             sendSuccess(RESPONSE_MESSAGES.INTEGRITY_TABLES_FETCHED, { tables }),

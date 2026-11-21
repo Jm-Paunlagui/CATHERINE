@@ -118,7 +118,7 @@ class CTEResult {
   declare _from: any;
   declare _cteDefs: Record<string, QueryBuilder>;
   declare _db: any;
-  constructor(db: any, cteDefs: any) {
+  constructor(db: unknown, cteDefs: any) {
     this._db = db;
     this._cteDefs = cteDefs;
     this._from = null;
@@ -128,27 +128,27 @@ class CTEResult {
     this._skipVal = null;
   }
 
-  from(cteName: any) {
+  from(cteName: unknown) {
     this._from = cteName;
     return this;
   }
 
-  join(joinSpec: any) {
+  join(joinSpec: unknown) {
     this._join = joinSpec;
     return this;
   }
 
-  sort(sortSpec: any) {
+  sort(sortSpec: unknown) {
     this._sort = sortSpec;
     return this;
   }
 
-  limit(n: any) {
+  limit(n: unknown) {
     this._limitVal = n;
     return this;
   }
 
-  skip(n: any) {
+  skip(n: unknown) {
     this._skipVal = n;
     return this;
   }
@@ -233,7 +233,7 @@ class RecursiveCTEResult {
   declare _def: any;
   declare _cteName: any;
   declare _db: any;
-  constructor(db: any, cteName: any, def: any) {
+  constructor(db: unknown, cteName: unknown, def: unknown) {
     this._db = db;
     this._cteName = cteName;
     this._def = def;
@@ -242,17 +242,17 @@ class RecursiveCTEResult {
     this._skipVal = null;
   }
 
-  sort(sortSpec: any) {
+  sort(sortSpec: unknown) {
     this._sort = sortSpec;
     return this;
   }
 
-  limit(n: any) {
+  limit(n: unknown) {
     this._limitVal = n;
     return this;
   }
 
-  skip(n: any) {
+  skip(n: unknown) {
     this._skipVal = n;
     return this;
   }

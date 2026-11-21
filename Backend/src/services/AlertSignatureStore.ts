@@ -108,7 +108,7 @@ class AlertSignatureStore {
     }
 
     /** @private */
-    async _insert(scopeKey: any, label: any, row: any) {
+    async _insert(scopeKey: any, label: unknown, row: any) {
         try {
             await this._model.insertOne({
                 alertKey: this.alertKey(scopeKey),
@@ -127,7 +127,7 @@ class AlertSignatureStore {
     }
 
     /** @private */
-    _warn(template: any, scopeKey: any, err: any, label: any) {
+    _warn(template: any, scopeKey: unknown, err: any, label: unknown) {
         try {
             this._logger.warning(template(scopeKey, err?.message ?? String(err), label));
         } catch {

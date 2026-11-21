@@ -216,7 +216,7 @@ class DevDocsService {
      * @returns {string}
      */
     static _buildId(section: string, fileName: string): string {
-        const slug = (v: any) => String(v).replace(/\.md$/i, "").replace(/[\\/]+/g, "-").trim().toLowerCase();
+        const slug = (v: unknown) => String(v).replace(/\.md$/i, "").replace(/[\\/]+/g, "-").trim().toLowerCase();
         return `${slug(section)}/${slug(fileName)}`;
     }
 

@@ -259,7 +259,7 @@ class EmailProtectionService {
                                     label,
                                     attempt,
                                     cap,
-                                    err.message ?? String(err),
+                                    (err as { message?: string } | null)?.message ?? String(err),
                                 ),
                             );
                         }
@@ -401,7 +401,7 @@ class EmailProtectionService {
                                     `${label}:fallback`,
                                     attempt,
                                     cap,
-                                    err.message ?? String(err),
+                                    (err as { message?: string } | null)?.message ?? String(err),
                                 ),
                             );
                         }

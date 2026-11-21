@@ -55,7 +55,7 @@ class CsrfMiddleware {
         maxAge: TOKEN_TTL_MS,
       },
       size: TOKEN_SIZE,
-      getCsrfTokenFromRequest: (req: any) =>
+      getCsrfTokenFromRequest: (req) =>
         req.headers["x-csrf-token"] ?? req.body?._csrf ?? req.body?.csrfToken,
     });
 
@@ -80,7 +80,7 @@ class CsrfMiddleware {
     return this._doubleCsrfProtection;
   }
 
-  _buildTokenResponse(res: any, token: any) {
+  _buildTokenResponse(res: any, token: unknown) {
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MS).toISOString();
     res.json({
       success: true,
@@ -92,7 +92,7 @@ class CsrfMiddleware {
     });
   }
 
-  _sendError(res: any, statusCode: any, message: any, error: any) {
+  _sendError(res: any, statusCode: unknown, message: unknown, error: any) {
     res.status(statusCode).json({
       success: false,
       message,

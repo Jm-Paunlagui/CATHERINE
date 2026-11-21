@@ -71,7 +71,7 @@ const NOTIFY_FLAG_CHANNELS = Object.freeze({
 const ALLOWED_FLAG_KEYS = Object.freeze([...Object.keys(NOTIFY_FLAG_CHANNELS), "isActive"]);
 
 /** The audited entity a revoke-backup is scoped to (fed into the token's scope hash). */
-const _revokeEntity = (username: any) => ({
+const _revokeEntity = (username: unknown) => ({
     table: "T_ADMINS_DEV",
     keyColumn: "USERNAME",
     keyValue: String(username),

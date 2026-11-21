@@ -155,7 +155,7 @@ class SystemLogTailService {
     }
 
     /** @returns {boolean} */
-    hasConnection(connId: any): boolean {
+    hasConnection(connId: unknown): boolean {
         return this._connections.has(connId);
     }
 

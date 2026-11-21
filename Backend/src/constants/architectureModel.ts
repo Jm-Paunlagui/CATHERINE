@@ -24,14 +24,14 @@ const MAP_VERIFIED_AT = "2026-11-03";
 
 const API = "Backend/";
 const UI = "Frontend/";
-const R = (f: any) => `${API}src/routes/${f}`;
-const C = (f: any) => `${API}src/controllers/${f}`;
-const S = (f: any) => `${API}src/services/${f}`;
-const M = (f: any) => `${API}src/models/${f}`;
-const U = (f: any) => `${API}src/utils/${f}`;
-const MW = (f: any) => `${API}src/middleware/${f}`;
-const F = (f: any) => `${UI}src/features/${f}`;
-const eps = (base: any, list: any) => list.split(";").filter(Boolean).map((e: any) => {
+const R = (f: unknown) => `${API}src/routes/${f}`;
+const C = (f: unknown) => `${API}src/controllers/${f}`;
+const S = (f: unknown) => `${API}src/services/${f}`;
+const M = (f: unknown) => `${API}src/models/${f}`;
+const U = (f: unknown) => `${API}src/utils/${f}`;
+const MW = (f: unknown) => `${API}src/middleware/${f}`;
+const F = (f: unknown) => `${UI}src/features/${f}`;
+const eps = (base: unknown, list: any) => list.split(";").filter(Boolean).map((e: any) => {
     const [m, p] = e.split(" ");
     return `${m} /api/v1${base}${p === "/" ? "" : p}`;
 });

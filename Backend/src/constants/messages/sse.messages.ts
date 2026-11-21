@@ -88,7 +88,7 @@ const sseMessages = {
     /** @param {number} count */
     SSE_SESSION_ENDED: (count: number) =>
         `Ended ${count} live stream(s) whose session was signed out or had its password changed.`,
-    SSE_SHUTDOWN_BROADCAST: (count: any) =>
+    SSE_SHUTDOWN_BROADCAST: (count: unknown) =>
         `SSE graceful shutdown — sent 'shutdown' event to ${count} live stream(s).`,
 };
 

@@ -30,7 +30,7 @@ const RELAY_META_MAX = 4000;
  * @param {*} meta
  * @returns {object}
  */
-function sanitizeMeta(meta: any): Record<string, any> {
+function sanitizeMeta(meta: unknown): Record<string, any> {
     if (!meta || typeof meta !== "object") return {};
     const seen = new WeakSet();
     try {
@@ -81,7 +81,7 @@ function buildRelayMessage(record: { level: string; message: any; meta?: Record<
  * @returns {Function} unsubscribe
  */
 function subscribeCriticalRelay(logger: { onLevel: (max: number, fn: ((...args: any[]) => any)) => ((...args: any[]) => any); }, proc: { send?: ((...args: any[]) => any); connected?: boolean; pid: number; }): ((...args: any[]) => any) {
-    return logger.onLevel(2, (record: any) => {
+    return logger.onLevel(2, (record) => {
         // `_noNotify` records never reach onLevel subscribers (logger skips
         // them); checked again here so a direct caller keeps the loop guard.
         if (record?.meta?._noNotify) return;

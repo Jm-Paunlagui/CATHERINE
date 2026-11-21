@@ -235,7 +235,7 @@ class HealthStreamHub {
     }
 
     /** Writes and flushes; a dead socket is torn down, never thrown. */
-    _write(res: any, chunk: any) {
+    _write(res: any, chunk: unknown) {
         try {
             res.write(chunk);
             if (typeof res.flush === "function") res.flush();

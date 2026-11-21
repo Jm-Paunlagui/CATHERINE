@@ -89,15 +89,15 @@ function describeBinds(binds: Record<string, any> | Array<any> | null | undefine
 
 const oracleMongoWrapperMessages = {
   // ── Error formatter ──────────────────────────────────────────────────────
-  wrapError: (scope: any, err: any, sql: any, binds?: any) =>
+  wrapError: (scope: unknown, err: any, sql: unknown, binds?: unknown) =>
     `[${scope}] ${err.message}\nSQL: ${sql}${binds !== undefined ? `\nBinds: ${describeBinds(binds)}` : ""}`,
 
   // ── Privilege / DCL ──────────────────────────────────────────────────────
-  INSUFFICIENT_PRIVILEGES: (scope: any, requiredPrivilege: any, err: any, sql: any) =>
+  INSUFFICIENT_PRIVILEGES: (scope: unknown, requiredPrivilege: unknown, err: any, sql: unknown) =>
     `[${scope}] Insufficient privileges. ${requiredPrivilege}\nOriginal: ${err.message}\nSQL: ${sql}`,
-  DCL_GRANT_INSUFFICIENT: (err: any, sql: any) =>
+  DCL_GRANT_INSUFFICIENT: (err: any, sql: unknown) =>
     `[OracleDCL.grant] Insufficient privileges to GRANT. Requires GRANT OPTION or DBA role.\nOriginal: ${err.message}\nSQL: ${sql}`,
-  DCL_REVOKE_INSUFFICIENT: (err: any, sql: any) =>
+  DCL_REVOKE_INSUFFICIENT: (err: any, sql: unknown) =>
     `[OracleDCL.revoke] Insufficient privileges to REVOKE. Requires GRANT OPTION or DBA role.\nOriginal: ${err.message}\nSQL: ${sql}`,
 
   // ── Privilege requirement descriptions ───────────────────────────────────
@@ -111,14 +111,14 @@ const oracleMongoWrapperMessages = {
   // ── Validation messages ──────────────────────────────────────────────────
   CREATEDB_INVALID_CONNECTION_NAME:
     "createDb: connectionName must be a non-empty string",
-  MERGE_BINDS_KEY_COLLISION: (key: any) =>
+  MERGE_BINDS_KEY_COLLISION: (key: unknown) =>
     `Bind key collision: "${key}" exists in both bind objects.`,
-  FILTER_UNSUPPORTED_OPERATOR: (op: any) =>
+  FILTER_UNSUPPORTED_OPERATOR: (op: unknown) =>
     `[filterParser] Unsupported operator: ${op}`,
   UPDATE_EMPTY: "[updateParser] Update object must not be empty.",
   UPDATE_RENAME_NOT_SUPPORTED:
     "[updateParser] $rename is not supported. Use ALTER TABLE to rename columns.",
-  UPDATE_UNSUPPORTED_OPERATOR: (op: any) =>
+  UPDATE_UNSUPPORTED_OPERATOR: (op: unknown) =>
     `[updateParser] Unsupported update operator: ${op}`,
   UPDATE_NO_OPERATOR:
     "[updateParser] Update object must contain at least one operator ($set, $inc, etc.).",
@@ -136,7 +136,7 @@ const oracleMongoWrapperMessages = {
     "[OracleCollection.bulkUpdateByKeys] Rows must contain at least one non-key column to update.",
   BULK_WRITE_EMPTY:
     "[OracleCollection.bulkWrite] Operations must be a non-empty array.",
-  BULK_WRITE_UNKNOWN_OP: (keys: any) =>
+  BULK_WRITE_UNKNOWN_OP: (keys: unknown) =>
     `[OracleCollection.bulkWrite] Unknown operation type: ${JSON.stringify(keys)}`,
   SCHEMA_ALTER_TABLE_UNKNOWN_OP: "[OracleSchema.alterTable] Unknown operation.",
   SCHEMA_CREATE_VIEW_INVALID_INPUT:

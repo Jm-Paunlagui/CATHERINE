@@ -50,7 +50,7 @@ import { OracleCollection } from "./core/OracleCollection";
  * Validate a savepoint name — must be a safe Oracle identifier.
  * Only allows letters, digits, and underscores to prevent SQL injection.
  */
-function _validateSavepointName(name: any) {
+function _validateSavepointName(name: unknown) {
     if (typeof name !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
         throw new Error(
             `Invalid savepoint name "${name}": must match /^[A-Za-z_][A-Za-z0-9_]*$/`,

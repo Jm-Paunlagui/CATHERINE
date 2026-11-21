@@ -9,7 +9,7 @@
 
 // const isDevelopment = process.env.NODE_ENV === "development";
 
-function buildSimpleConnectString(host: any, port: any, service: any) {
+function buildSimpleConnectString(host: unknown, port: unknown, service: unknown) {
     return `${host}:${port}/${service}`;
 }
 
@@ -26,7 +26,7 @@ function nonNegativeInt(raw: string | undefined, fallback: number): number {
   return /^\d+$/.test(s) ? Number(s) : fallback;
 }
 
-function buildTNSConnectString(host: any, port: any, sid: any) {
+function buildTNSConnectString(host: unknown, port: unknown, sid: unknown) {
     return (
         `(DESCRIPTION=` +
         `(ADDRESS=(PROTOCOL=TCP)(HOST=${host})(PORT=${port}))` +

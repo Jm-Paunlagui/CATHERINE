@@ -70,7 +70,7 @@ router.get("/live", (_req, res) => {
  */
 router.get(
     "/ready",
-    catchAsync(async (_req: any, res: any) => {
+    catchAsync(async (_req, res) => {
         // Draining: report not-ready at once and do NOT probe the pools -
         // the load-balancer and the UI's "server is restarting" banner only need the 503.
         if (InFlightTaskRegistry.isShuttingDown()) {
@@ -137,7 +137,7 @@ router.get("/stream", (req: Request, res: Response) => {
  */
 router.get(
     "/",
-    catchAsync(async (_req: any, res: any) => {
+    catchAsync(async (_req, res) => {
         // Draining: answer 200 from memory with database:"draining" - no pool borrow per monitor poll,
         // and the 200 stays compatible with legacy monitors (shutdownGate.integration pin).
         if (InFlightTaskRegistry.isShuttingDown()) {
