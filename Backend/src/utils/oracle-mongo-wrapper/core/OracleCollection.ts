@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -103,7 +102,7 @@ function _deepClone(value: any): any {
 }
 
 class OracleCollection {
-    declare _conn: Record<string, any>;
+    declare _conn: Record<string, any> | null;
     declare db: Record<string, any>;
     declare tableName: string;
     /**
@@ -116,7 +115,7 @@ class OracleCollection {
      *   When set → transaction mode (reuses this connection for all operations).
      *   You normally don't pass this yourself — it's set by Session.collection().
      */
-    constructor(tableName: string, db: Record<string, any>, _conn: Record<string, any> = null) {
+    constructor(tableName: string, db: Record<string, any>, _conn: Record<string, any> | null = null) {
         this.tableName = tableName;
         this.db = db;
         this._conn = _conn;
@@ -293,7 +292,7 @@ class OracleCollection {
                         }
                     }
 
-                    const mergeSql: any[] =
+                    const mergeSql: string =
                         `MERGE INTO ${quoteIdentifier(this.tableName)} tgt ` +
                         `USING (SELECT ${srcParts.join(", ")} FROM DUAL) src ` +
                         `ON (${onParts.join(" AND ")}) ` +
@@ -708,7 +707,7 @@ class OracleCollection {
                 const result = await conn.execute(sql, allBinds, {
                     autoCommit: !this._conn,
                 });
-                const response = { acknowledged: true, insertedId: null };
+                const response: { acknowledged: boolean; insertedId: unknown; returning?: Record<string, unknown> } = { acknowledged: true, insertedId: null };
 
                 // Extract insertedId
                 if (result.outBinds) {
@@ -892,14 +891,14 @@ class OracleCollection {
                     ...(batchErrors ? { batchErrors: true } : {}),
                 });
 
-                const response = {
+                const response: { acknowledged: boolean; insertedCount: number; insertedIds: unknown[]; returning?: Record<string, unknown>[]; batchErrors?: Array<{ offset: number; message: string }> } = {
                     acknowledged: true,
                     insertedCount: result.rowsAffected,
                     insertedIds: [],
                 };
 
                 if (returningCols.length > 0 && result.outBinds) {
-                    response.returning = result.outBinds.map((ob: any) => {
+                    const returning: Record<string, unknown>[] = result.outBinds.map((ob: any) => {
                         const rowOut: Record<string, any> = {};
                         for (const c of returningCols) {
                             const val = ob[`out_${c}`];
@@ -907,8 +906,9 @@ class OracleCollection {
                         }
                         return rowOut;
                     });
+                    response.returning = returning;
                     if (returningCols.includes("ID")) {
-                        response.insertedIds = response.returning.map(
+                        response.insertedIds = returning.map(
                             (r: any) => r.ID ?? null,
                         );
                     }
@@ -1093,7 +1093,7 @@ class OracleCollection {
      *     { $set: { status: "premium" }, $inc: { loginCount: 1 } }
      *   );
      */
-    async updateOne(filter: Record<string, any>, update: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged; matchedCount; modifiedCount; returning?; }> {
+    async updateOne(filter: Record<string, any>, update: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number; returning?: Record<string, unknown>;  }> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const { setClause, binds: updateBinds } = parseUpdate(update);
@@ -1147,7 +1147,7 @@ class OracleCollection {
                     };
                 }
 
-                const response = {
+                const response: { acknowledged: boolean; matchedCount: number; modifiedCount: number; returning?: Record<string, unknown> } = {
                     acknowledged: true,
                     matchedCount: result.rowsAffected > 0 ? 1 : 0,
                     modifiedCount: result.rowsAffected,
@@ -1194,7 +1194,7 @@ class OracleCollection {
      *   );
      *   console.log(`Updated ${result.modifiedCount} users`);
      */
-    async updateMany(filter: Record<string, any>, update: Record<string, any>, _options: Record<string, any> = {}): Promise<{ acknowledged; matchedCount; modifiedCount; }> {
+    async updateMany(filter: Record<string, any>, update: Record<string, any>, _options: Record<string, any> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number;  }> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const { setClause, binds: updateBinds } = parseUpdate(update);
@@ -1241,7 +1241,7 @@ class OracleCollection {
      *     { name: "New Name", email: "new@test.com", status: "active" }
      *   );
      */
-    async replaceOne(filter: Record<string, any>, replacement: Record<string, any>, _options: Record<string, any> = {}): Promise<{ acknowledged; matchedCount; modifiedCount; }> {
+    async replaceOne(filter: Record<string, any>, replacement: Record<string, any>, _options: Record<string, any> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number;  }> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const cols = Object.keys(replacement).filter((c) => c !== "ID");
@@ -1294,7 +1294,7 @@ class OracleCollection {
      *     { deleteOne: { filter: { id: 99 } } },
      *   ]);
      */
-    async bulkWrite(operations: Array<any>): Promise<{ acknowledged; results; }> {
+    async bulkWrite(operations: Array<any>): Promise<{ acknowledged: boolean; results: unknown[];  }> {
         if (!Array.isArray(operations) || operations.length === 0) {
             throw new Error(MSG.BULK_WRITE_EMPTY);
         }
@@ -1380,7 +1380,7 @@ class OracleCollection {
      *   );
      *   console.log(result2.returning.name); // → "Ana"
      */
-    async deleteOne(filter: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged; deletedCount; returning?; }> {
+    async deleteOne(filter: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; deletedCount: number; returning?: Record<string, unknown>;  }> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds } = parseFilter(filter);
 
@@ -1405,7 +1405,7 @@ class OracleCollection {
                 const result = await conn.execute(sql, allBinds, {
                     autoCommit: !this._conn,
                 });
-                const response = {
+                const response: { acknowledged: boolean; deletedCount: number; returning?: Record<string, unknown> } = {
                     acknowledged: true,
                     deletedCount: result.rowsAffected,
                 };
@@ -1446,7 +1446,7 @@ class OracleCollection {
      *   const result = await users.deleteMany({ status: "inactive" });
      *   console.log(`Deleted ${result.deletedCount} users`);
      */
-    async deleteMany(filter: Record<string, any>): Promise<{ acknowledged; deletedCount; }> {
+    async deleteMany(filter: Record<string, any>): Promise<{ acknowledged: boolean; deletedCount: number;  }> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds } = parseFilter(filter);
             const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} ${whereClause}`;
@@ -1479,7 +1479,7 @@ class OracleCollection {
      *
      * @returns {Promise<{ acknowledged }>}
      */
-    async drop(): Promise<{ acknowledged; }> {
+    async drop(): Promise<{ acknowledged: boolean;  }> {
         return this._execute(async (conn: any) => {
             const sql = `DROP TABLE ${quoteIdentifier(this.tableName)} CASCADE CONSTRAINTS`;
             try {
@@ -1520,7 +1520,7 @@ class OracleCollection {
      *   ]);
      *   // Returns the top 5 regions by total order amount
      */
-    aggregate(pipeline: Array<any>): Promise<Array<any>> & { _buildSQL: ((...args: any[]) => any); } {
+    aggregate(pipeline: Array<any>): Promise<Record<string, unknown>[]> & { _buildSQL: () => { sql: string; binds: Record<string, unknown> } } {
         const { buildAggregateSQL } = require("../pipeline/aggregatePipeline");
         // Deep-clone preserving Date instances — JSON round-trip converts Dates to
         // ISO strings which then fail Oracle's NLS_DATE_FORMAT implicit conversion
@@ -1532,7 +1532,7 @@ class OracleCollection {
             this.db,
         );
 
-        const resultPromise = this._execute(async (conn: any) => {
+        const resultPromise: Promise<Record<string, unknown>[]> & { _buildSQL?: () => { sql: string; binds: Record<string, unknown> } } = this._execute(async (conn: any) => {
             try {
                 const result = await conn.execute(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
@@ -1553,7 +1553,7 @@ class OracleCollection {
 
         // Augment the promise so createMaterializedView can extract the SQL
         resultPromise._buildSQL = () => ({ sql, binds });
-        return resultPromise;
+        return resultPromise as Promise<Record<string, unknown>[]> & { _buildSQL: () => { sql: string; binds: Record<string, unknown> } };
     }
 
     // ─── Index Operations ────────────────────────────────────────
@@ -1564,7 +1564,7 @@ class OracleCollection {
      * @param {Object} [options] - unique, name, type ('bitmap')
      * @returns {Promise<{ acknowledged, indexName }>}
      */
-    async createIndex(fields: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged; indexName; }> {
+    async createIndex(fields: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; indexName: string;  }> {
         return this._execute(async (conn: any) => {
             const cols = Object.entries(fields)
                 .map(
@@ -1595,7 +1595,7 @@ class OracleCollection {
      * @param {Array} indexSpecs - [{ fields, options }]
      * @returns {Promise<{ acknowledged, indexNames }>}
      */
-    async createIndexes(indexSpecs: Array<any>): Promise<{ acknowledged; indexNames; }> {
+    async createIndexes(indexSpecs: Array<any>): Promise<{ acknowledged: boolean; indexNames: string[];  }> {
         const indexNames = [];
         for (const spec of indexSpecs) {
             const result = await this.createIndex(
@@ -1612,7 +1612,7 @@ class OracleCollection {
      * @param {string} indexName
      * @returns {Promise<{ acknowledged }>}
      */
-    async dropIndex(indexName: string): Promise<{ acknowledged; }> {
+    async dropIndex(indexName: string): Promise<{ acknowledged: boolean;  }> {
         return this._execute(async (conn: any) => {
             const sql = `DROP INDEX ${quoteIdentifier(indexName)}`;
             try {
@@ -1630,7 +1630,7 @@ class OracleCollection {
      * Drop all non-primary-key indexes on this table.
      * @returns {Promise<{ acknowledged, dropped }>}
      */
-    async dropIndexes(): Promise<{ acknowledged; dropped; }> {
+    async dropIndexes(): Promise<{ acknowledged: boolean; dropped: string[];  }> {
         return this._execute(async (conn: any) => {
             const sql = `SELECT INDEX_NAME FROM USER_INDEXES WHERE TABLE_NAME = UPPER(:tbl) AND INDEX_TYPE <> 'LOB' AND INDEX_NAME NOT IN (SELECT CONSTRAINT_NAME FROM USER_CONSTRAINTS WHERE TABLE_NAME = UPPER(:tbl2) AND CONSTRAINT_TYPE = 'P')`;
             const result = await conn.execute(
@@ -1661,7 +1661,7 @@ class OracleCollection {
      * Get all indexes on this table.
      * @returns {Promise<Array<{ indexName, columns, unique, type }>>}
      */
-    async getIndexes(): Promise<Array<{ indexName; columns; unique; type; }>> {
+    async getIndexes(): Promise<Array<{ indexName: string; columns: string[]; unique: boolean; type: string;  }>> {
         return this._execute(async (conn: any) => {
             const sql = `SELECT i.INDEX_NAME, i.UNIQUENESS, i.INDEX_TYPE, ic.COLUMN_NAME, ic.COLUMN_POSITION FROM USER_INDEXES i JOIN USER_IND_COLUMNS ic ON i.INDEX_NAME = ic.INDEX_NAME WHERE i.TABLE_NAME = UPPER(:tbl) ORDER BY i.INDEX_NAME, ic.COLUMN_POSITION`;
             const result = await conn.execute(
@@ -1692,7 +1692,7 @@ class OracleCollection {
      * Rebuild all indexes on this table.
      * @returns {Promise<{ acknowledged }>}
      */
-    async reIndex(): Promise<{ acknowledged; }> {
+    async reIndex(): Promise<{ acknowledged: boolean;  }> {
         return this._execute(async (conn: any) => {
             const sql = `SELECT INDEX_NAME FROM USER_INDEXES WHERE TABLE_NAME = UPPER(:tbl) AND INDEX_TYPE <> 'LOB'`;
             const result = await conn.execute(
@@ -1745,7 +1745,7 @@ class OracleCollection {
      *     }
      *   );
      */
-    async merge(sourceData: Record<string, any>, matchCondition: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged; }> {
+    async merge(sourceData: Record<string, any>, matchCondition: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean;  }> {
         return this._execute(async (conn: any) => {
             const cols = Object.keys(sourceData);
             const srcParts = cols.map((c) => {
@@ -1819,7 +1819,7 @@ class OracleCollection {
      *     { whenMatched: { $set: { price: "$src.price", stock: "$src.stock" } } }
      *   );
      */
-    async mergeFrom(sourceTable: string, matchCondition: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged; }> {
+    async mergeFrom(sourceTable: string, matchCondition: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean;  }> {
         return this._execute(async (conn: any) => {
             const onClause = `tgt.${quoteIdentifier(matchCondition.localField)} = src.${quoteIdentifier(matchCondition.foreignField)}`;
             const binds: Record<string, any> = {};
@@ -1993,7 +1993,7 @@ class OracleCollection {
      *     { all: true }
      *   ).toArray();
      */
-    static union(qb1: QueryBuilder, qb2: QueryBuilder, options: Record<string, any> = {}): SetResultBuilder {
+    static union(qb1: QueryBuilder, qb2: QueryBuilder, options: Record<string, any> = {}): import("../joins/setOperations").SetResultBuilder {
         const { SetResultBuilder } = require("../joins/setOperations");
         return new SetResultBuilder(
             qb1,
@@ -2009,7 +2009,7 @@ class OracleCollection {
      * @param {QueryBuilder} qb2 - Second query
      * @returns {SetResultBuilder}
      */
-    static intersect(qb1: QueryBuilder, qb2: QueryBuilder): SetResultBuilder {
+    static intersect(qb1: QueryBuilder, qb2: QueryBuilder): import("../joins/setOperations").SetResultBuilder {
         const { SetResultBuilder } = require("../joins/setOperations");
         return new SetResultBuilder(qb1, qb2, "INTERSECT");
     }
@@ -2021,7 +2021,7 @@ class OracleCollection {
      * @param {QueryBuilder} qb2 - Second query (to subtract)
      * @returns {SetResultBuilder}
      */
-    static minus(qb1: QueryBuilder, qb2: QueryBuilder): SetResultBuilder {
+    static minus(qb1: QueryBuilder, qb2: QueryBuilder): import("../joins/setOperations").SetResultBuilder {
         const { SetResultBuilder } = require("../joins/setOperations");
         return new SetResultBuilder(qb1, qb2, "MINUS");
     }
@@ -2047,7 +2047,7 @@ class OracleCollection {
      *     users.find({ status: "active" })
      *   );
      */
-    async insertFromQuery(targetTable: string, queryBuilder: QueryBuilder, options: Record<string, any> = {}): Promise<{ acknowledged; insertedCount; }> {
+    async insertFromQuery(targetTable: string, queryBuilder: QueryBuilder, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; insertedCount: number;  }> {
         return this._execute(async (conn: any) => {
             const { sql: builtSql, binds } = queryBuilder._buildSQL();
             let selectSql = builtSql;
@@ -2128,7 +2128,7 @@ class OracleCollection {
      *     where: { status: "pending" }
      *   });
      */
-    async updateFromJoin(spec: Record<string, any>): Promise<{ acknowledged; modifiedCount; }> {
+    async updateFromJoin(spec: Record<string, any>): Promise<{ acknowledged: boolean; modifiedCount: number;  }> {
         return this._execute(async (conn: any) => {
             const { target, join: joinSpec, set, where } = spec;
 
