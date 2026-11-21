@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -149,11 +148,12 @@ function preCloseTeardown({
     onRequestsCut,
     waitNoticeMs = SHUTDOWN_WAIT_NOTICE_MS,
 }: { sseRegistry: { endAll: (reason: string) => void; }; server: import('http').Server; forceCloseAfterMs?: number; sseDrainGraceMs?: number; minGraceMs?: number; logger: { notice?: ((...args: any[]) => any); warning: ((...args: any[]) => any); }; reason?: string; httpInFlight?: { beginShutdown: ((...args: any[]) => any); activeCount: () => number; activeSummary?: ((...args: any[]) => any); }; onRequestsCut?: (summary: Array<Record<string, any>>, graceMs: number, total: number, opts: { reason: "cap" | "idle"; }) => void; waitNoticeMs?: number; }): { shortenTo: (ms: number) => void; recordIdleCut: (entry: Record<string, any>) => void; idleCuts: Array<Record<string, any>>; } {
-    let graceMs = forceCloseAfterMs ?? sseDrainGraceMs;
+    // Callers always pass one; 0 matches setTimeout's handling of an undefined delay.
+    let graceMs: number = forceCloseAfterMs ?? sseDrainGraceMs ?? 0;
     /** @type {Array<object>} */
     const idleCuts: Array<Record<string, any>> = [];
     const handle = {
-        shortenTo() {},
+        shortenTo(_ms: number) {},
         recordIdleCut: (entry: any) => {
             idleCuts.push(entry);
         },
@@ -271,7 +271,7 @@ function preCloseTeardown({
         );
     }
 
-    handle.shortenTo = (ms: any) => {
+    handle.shortenTo = (ms: number) => {
         if (finished) return;
         const remaining = Math.max(0, startedAt + graceMs - Date.now());
         const next = Math.max(0, Math.min(remaining, ms));

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -272,9 +271,9 @@ class SystemLogTailService {
 
                 const levelKey = filename.match(
                     AuditLogService.SYSTEM_LOG_FILENAME_RE,
-                )[1];
+                )![1] as keyof typeof AuditLogService.SYSTEM_LOG_LEVEL_NAMES; // listed files already matched the RE
                 const fileLevel = AuditLogService.SYSTEM_LOG_LEVEL_NAMES[levelKey];
-                const priority = AuditLogService.SYSTEM_LOG_PRIORITY[fileLevel];
+                const priority = AuditLogService.SYSTEM_LOG_PRIORITY[fileLevel as keyof typeof AuditLogService.SYSTEM_LOG_PRIORITY];
 
                 for (const line of delta.split("\n")) {
                     if (!line.trim()) continue;
@@ -295,7 +294,7 @@ class SystemLogTailService {
                             ? fileLevel === conn.level
                             : priority <= conn.maxPriority;
                         if (matches) {
-                            perConnRows.get(connId).push(parsed);
+                            perConnRows.get(connId)!.push(parsed); // seeded for every connection above
                         }
                     }
                 }

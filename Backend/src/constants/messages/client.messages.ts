@@ -15,7 +15,7 @@ const clientMessages = {
      * @param {string|number} userId - The reporting user's identifier (JWT userId).
      * @returns {string}
      */
-    CLIENT_ERROR: (userId: string | number): string =>
+    CLIENT_ERROR: (userId: string | number | undefined): string =>
         `Client-side render error reported by user ${userId}`,
 
     /**

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -304,7 +303,7 @@ class AdminModel {
                     (!hasExclusion || a.USERNAME !== excludeUsername),
             ).length;
         }
-        const filter = { ROLE: role, IS_ACTIVE: "Y" };
+        const filter: Record<string, unknown> = { ROLE: role, IS_ACTIVE: "Y" };
         if (hasExclusion) filter.USERNAME = { $ne: excludeUsername };
         return col().find(filter).count();
     }
@@ -385,7 +384,7 @@ class AdminModel {
      * @returns {Promise<string[]>} De-duplicated emails ([] for an unknown channel)
      */
     static async findServerNotifyRecipients(channel: string): Promise<string[]> {
-        const flagColumn = SERVER_NOTIFY_FLAG_COLUMNS[channel];
+        const flagColumn = SERVER_NOTIFY_FLAG_COLUMNS[channel as keyof typeof SERVER_NOTIFY_FLAG_COLUMNS];
         if (!flagColumn) return [];
 
         let rows;
@@ -402,10 +401,10 @@ class AdminModel {
         }
 
         return [
-            ...new Set(
+            ...new Set<string>(
                 rows
-                    .map((r: any) => String(r.EMAIL ?? "").trim())
-                    .filter((email: any) => email.length > 0),
+                    .map((r: { EMAIL?: unknown }) => String(r.EMAIL ?? "").trim())
+                    .filter((email: string) => email.length > 0),
             ),
         ];
     }
@@ -511,7 +510,7 @@ class AdminModel {
     static async setNotifyFlags(username: string, channelFlags: Record<string, 'Y' | 'N'>, session: Record<string, any> | null = null): Promise<void> {
         const fields: Record<string, any> = {};
         for (const [channel, value] of Object.entries(channelFlags ?? {})) {
-            const column = SERVER_NOTIFY_FLAG_COLUMNS[channel];
+            const column = SERVER_NOTIFY_FLAG_COLUMNS[channel as keyof typeof SERVER_NOTIFY_FLAG_COLUMNS];
             if (column) fields[column] = value === "Y" ? "Y" : "N";
         }
         if (Object.keys(fields).length === 0) return;

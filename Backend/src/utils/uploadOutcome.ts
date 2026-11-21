@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -123,9 +122,18 @@ const BUCKET_ORDER = Object.freeze([
  * Accumulates per-row outcomes for one save batch and emits the canonical
  * contract. One instance per request — never share across batches.
  */
+/** One skipped / failed / pending detail row. `extra` fields ride along. */
+export interface OutcomeRow {
+    key: string;
+    label: string | null;
+    reason: string;
+    category: string;
+    [extra: string]: unknown;
+}
+
 class UploadOutcomeBuilder {
     declare _seen: Map<any, any>;
-    declare _rows: { skipped: never[]; failed: never[]; pending: never[]; };
+    declare _rows: { skipped: OutcomeRow[]; failed: OutcomeRow[]; pending: OutcomeRow[]; };
     declare _counts: { inserted: number; updated: number; skipped: number; failed: number; pending: number; };
     declare _total: number;
     declare _feature: string;
@@ -311,11 +319,19 @@ class UploadOutcomeBuilder {
      *   balanced: boolean,
      * }}
      */
-    build(extra: Record<string, any> = {}): {
+    build(extra: Record<string, unknown> = {}): {
         feature: string;
         counts: { total: number; inserted: number; updated: number; skipped: number; failed: number; pending: number; unaccounted: number; };
-        rows: { skipped: Array<Record<string, any>>; failed: Array<Record<string, any>>; pending: Array<Record<string, any>>; };
+        rows: { skipped: OutcomeRow[]; failed: OutcomeRow[]; pending: OutcomeRow[]; };
         balanced: boolean;
+        /** Deprecated legacy mirror of counts/rows (see below). */
+        total: number;
+        inserted: number;
+        updated: number;
+        skipped: number;
+        failed: OutcomeRow[];
+        pending: OutcomeRow[];
+        [extra: string]: unknown;
     } {
         const recorded = this.recorded;
         const unaccounted = this._total - recorded;

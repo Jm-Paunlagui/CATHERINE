@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -203,7 +202,7 @@ class AdminManagementService {
                 allowed = newRole === "USER";
                 message = ADMIN_ERRORS.ADMIN_CREATE_USER_ONLY;
             } else if (action === "resetPassword") {
-                allowed = targetRole === "USER" && String(target) !== String(caller.username);
+                allowed = targetRole === "USER" && String(target) !== String(caller?.username);
                 message = ADMIN_ERRORS.ADMIN_RESET_USER_ONLY;
             } else if (action === "changeRole") {
                 message = ADMIN_ERRORS.ROLE_CHANGE_SUPER_ADMIN_ONLY;
@@ -705,7 +704,7 @@ class AdminManagementService {
     static async buildRevokeBackup({ username, actorId, requestId = null }: { username: string; actorId: number | string; requestId?: string | null; }): Promise<{ zipBuffer: Buffer; filename: string; token: string; expiresAt: number; totalRows: number; tableCount: number; rowCounts: Record<string, number>; }> {
         const admin = await AdminManagementService._fetchAndVerify(username);
 
-        const filterFor = {
+        const filterFor: Record<string, { columns: string[]; value: string | number }> = {
             T_ADMINS_DEV: { columns: ["USERNAME"], value: String(username) },
             T_AUDIT_LOGS_DEV: { columns: ["USERNAME"], value: String(username) },
             T_SERVER_ALERT_ACK_DEV: { columns: ["ACKED_BY"], value: Number(admin.ID) },
@@ -815,7 +814,7 @@ class AdminManagementService {
             if (deactivating) {
                 await AdminManagementService._endSessions(username, SESSION_END_CAUSES.DEACTIVATED);
             }
-            if (activeChanging) {
+            if (activeChanging && sysSignature !== null) { // signed exactly when activeChanging
                 await AdminModel.setActive(username, flags.isActive, sysSignature, session);
             }
         };

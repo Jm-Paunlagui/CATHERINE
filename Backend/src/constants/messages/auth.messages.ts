@@ -52,33 +52,33 @@ const authMessages = {
     // ── Temporary passwords ──────────────────────────────────────────────────
     // Identifiers are labelled `USERNAME:` so logRedaction pseudonymises numeric usernames.
     /** @param {string|number} userId */
-    TEMP_PASSWORD_LOGIN: (userId: string | number) =>
+    TEMP_PASSWORD_LOGIN: (userId: string | number | undefined) =>
         `Temporary-password sign-in — USERNAME: ${userId}; session restricted to setting a new password.`,
     /** @param {string|number} userId @param {string} stage — 'login' | 'refresh' | 'change-password' */
-    TEMP_PASSWORD_EXPIRED: (userId: string | number, stage: string) =>
+    TEMP_PASSWORD_EXPIRED: (userId: string | number | undefined, stage: string) =>
         `Expired temporary password refused at ${stage} — USERNAME: ${userId}.`,
     /** @param {string|number} userId */
-    TEMP_PASSWORD_REPLACED: (userId: string | number) =>
+    TEMP_PASSWORD_REPLACED: (userId: string | number | undefined) =>
         `Temporary password replaced by the account holder — USERNAME: ${userId}.`,
     /** @param {string|number} userId @param {string} method @param {string} path */
-    PASSWORD_CHANGE_GATE_BLOCKED: (userId: string | number, method: string, path: string) =>
+    PASSWORD_CHANGE_GATE_BLOCKED: (userId: string | number | undefined, method: string, path: string) =>
         `Restricted session refused — USERNAME: ${userId} must set a new password before ${method} ${path}.`,
 
     // ── Refresh-token revocation ─────────────────────────────────────────────
     // NEVER log a token, a jti or a full family id - only the first 8 chars (CWE-532).
     /** @param {string|number} userId @param {string} fidPrefix8 */
-    REFRESH_TOKEN_REUSE_DETECTED: (userId: string | number, fidPrefix8: string) =>
+    REFRESH_TOKEN_REUSE_DETECTED: (userId: string | number | undefined, fidPrefix8: string) =>
         `Refresh-token reuse detected - USERNAME: ${userId}, family ${fidPrefix8}; the whole session family was revoked.`,
     /** @param {string} title @param {string} detail */
     AUTH_DOWNLOAD_REJECTED: (title: string, detail: string) => `${title} - ${detail}`,
     /** @param {string|number} userId @param {string} outcome - revoked | reused | absent | unknown */
-    REFRESH_TOKEN_REJECTED: (userId: string | number, outcome: string) =>
+    REFRESH_TOKEN_REJECTED: (userId: string | number | undefined, outcome: string) =>
         `Refresh refused - USERNAME: ${userId}, outcome ${outcome}.`,
     /** @param {string} fidPrefix8 @param {string} reason */
     REFRESH_FAMILY_REVOKED: (fidPrefix8: string, reason: string) =>
         `Refresh-token family ${fidPrefix8} revoked (${reason}).`,
     /** @param {string|number} userId @param {string} reason */
-    REFRESH_USER_SESSIONS_REVOKED: (userId: string | number, reason: string) =>
+    REFRESH_USER_SESSIONS_REVOKED: (userId: string | number | undefined, reason: string) =>
         `All refresh sessions revoked - USERNAME: ${userId} (${reason}).`,
     /** @param {string} what - family | user @param {string} err */
     REFRESH_REVOKE_PERSIST_FAILED: (what: string, err: string) =>
@@ -87,7 +87,7 @@ const authMessages = {
     REFRESH_PURGE_FAILED: (err: string) =>
         `Expired refresh-token purge failed (best effort, ignored): ${err}.`,
     /** @param {string|number} userId @param {string} fidPrefix8 */
-    ACCESS_SESSION_REVOKED_REFUSED: (userId: string | number, fidPrefix8: string) =>
+    ACCESS_SESSION_REVOKED_REFUSED: (userId: string | number | undefined, fidPrefix8: string) =>
         `Access token refused - USERNAME: ${userId}, session family ${fidPrefix8} was ended.`,
     /** @param {number} count */
     ACCESS_REVOCATIONS_LOADED: (count: number) =>
@@ -105,7 +105,7 @@ const authMessages = {
     ACCESS_TTL_UNPARSEABLE: (raw: string) =>
         `JWT_EXPIRES_IN "${raw}" is not in the s/m/h/d form; revoked sessions are kept for the refresh lifetime instead.`,
     /** @param {string|number} userId */
-    LOGIN_FAILURE_IGNORED_LOCKED: (userId: string | number) =>
+    LOGIN_FAILURE_IGNORED_LOCKED: (userId: string | number | undefined) =>
         `Failed login for USER ${userId} not counted - account is already locked.`,
 };
 

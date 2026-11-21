@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 import { logger } from "../utils/logger";
@@ -24,13 +23,30 @@ import { CLUSTER_RPC_METHODS } from "../constants/clusterIpc";
  *   SchedulerStateService.record("dbBackup", { label, status, detail, at })
  *   SchedulerStateService.snapshot() → { dbBackup, ...every KNOWN_JOBS key }
  */
+/** A job's last-run outcome as reported by the scheduler or relayed from the leader. */
+interface SchedulerOutcome {
+    label: string;
+    status: string;
+    detail: string | null;
+    at: string | Date;
+}
+
+/** The stored snapshot for one job. */
+interface SchedulerJobState {
+    job: string;
+    label: string | undefined;
+    status: string | undefined;
+    detail: string | null;
+    at: Date;
+}
+
 class SchedulerStateService {
     /**
      * Internal map keyed by job name. Initialised with null per known job so
      * snapshot() always returns a complete shape even before any job runs.
      * @type {Map<string, object|null>}
      */
-    static #state: Map<string, Record<string, any> | null> = new Map(KNOWN_JOBS.map((j) => [j, null]));
+    static #state: Map<string, SchedulerJobState | null> = new Map(KNOWN_JOBS.map((j: string) => [j, null]));
 
     /**
      * Records the last-run outcome for a scheduled job.
@@ -54,7 +70,7 @@ class SchedulerStateService {
      */
     static record(
         job: string,
-        { label, status, detail = null, at = new Date() }: { label: string; status: string; detail?: string; at?: Date; } = {},
+        { label, status, detail = null, at = new Date() }: { label?: string; status?: string; detail?: string | null; at?: Date; } = {},
     ): void {
         if (!KNOWN_JOBS.includes(job)) {
             logger.warning(serverMessages.SCHEDULER_UNKNOWN_JOB(job));
@@ -91,7 +107,7 @@ class SchedulerStateService {
      * @param {{label: string, status: string, detail: string|null, at: string|Date}} outcome
      * @returns {boolean} applied
      */
-    static applyRemote(job: string, outcome: { label: string; status: string; detail: string | null; at: string | Date; }): boolean {
+    static applyRemote(job: string, outcome: SchedulerOutcome): boolean {
         if (!KNOWN_JOBS.includes(job) || !outcome) return false;
         SchedulerStateService.#state.set(job, {
             job,
@@ -110,7 +126,7 @@ class SchedulerStateService {
      * @param {Array<{job: string, outcome: object}>} entries
      * @returns {number} entries applied
      */
-    static applySync(entries: Array<{ job: string; outcome: Record<string, any>; }>): number {
+    static applySync(entries: Array<{ job: string; outcome: SchedulerOutcome; }>): number {
         let applied = 0;
         for (const { job, outcome } of entries ?? []) {
             const local = SchedulerStateService.#state.get(job);
@@ -127,7 +143,7 @@ class SchedulerStateService {
      * @returns {Record<string, { job: string, label: string, status: string, detail: string|null, at: Date }|null>}
      *   one entry per KNOWN_JOBS key
      */
-    static snapshot(): Record<string, { job: string; label: string; status: string; detail: string | null; at: Date; } | null> {
+    static snapshot(): Record<string, SchedulerJobState | null> {
         return Object.fromEntries(SchedulerStateService.#state.entries());
     }
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -88,7 +87,7 @@ class StartupNotifier {
      * @param {number} p.nowMs
      * @returns {Promise<{sent: boolean, reason?: string, event?: string}>}
      */
-    async announce({ verdict, previous, current, lastStartNoticeAt, nowMs }: { verdict: string; previous: Record<string, any> | null; current: { pid: number; version: string; bootedAtMs: number; }; lastStartNoticeAt: number | null; nowMs: number; }): Promise<{ sent: boolean; reason?: string; event?: string; }> {
+    async announce({ verdict, previous, current, lastStartNoticeAt, nowMs }: { verdict: string; previous: Record<string, any> | null; current: { pid: number; version: string; bootedAtMs: number; }; lastStartNoticeAt: number | null; nowMs: number; }): Promise<{ sent: boolean; reason?: string; event?: string; uncleanReported?: boolean; reportedKeys?: string[]; leaderLostReported?: boolean; reportedLeaderLostKeys?: string[]; }> {
         // `uncleanReported`: every unclean restart known to this boot was emailed;
         // `reportedKeys`: the pendingKey of each one that was, so the caller clears
         // only those. Notifications switched off counts
@@ -138,8 +137,9 @@ class StartupNotifier {
             // (the clock went back).
             // Never against a stop that emailed AFTER the last started notice: recipients'
             // last word would be "shutting down" / "crashed" while the server is back up.
-            const sinceLast = nowMs - lastStartNoticeAt;
+            const sinceLast = nowMs - (lastStartNoticeAt ?? 0);
             if (
+                lastStartNoticeAt !== null &&
                 Number.isFinite(lastStartNoticeAt) &&
                 !previous?.unreported &&
                 !announcedStopSince(previous, lastStartNoticeAt) &&

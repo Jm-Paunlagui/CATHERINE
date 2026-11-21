@@ -34,7 +34,7 @@ const backupEmailMessages = {
      * @param {number|string} adminId
      * @returns {string}
      */
-    SEND_SKIPPED_DISABLED: (adminId: number | string): string =>
+    SEND_SKIPPED_DISABLED: (adminId: number | string | undefined): string =>
         `Purge backup email skipped for ADMIN_ID ${adminId} — backup email delivery is disabled (BACKUP_EMAIL_ENABLED=false).`,
 
     /**
@@ -43,7 +43,7 @@ const backupEmailMessages = {
      * @param {number|string} adminId
      * @returns {string}
      */
-    SEND_SKIPPED_NO_RECIPIENTS: (adminId: number | string): string =>
+    SEND_SKIPPED_NO_RECIPIENTS: (adminId: number | string | undefined): string =>
         `Purge backup email skipped for ADMIN_ID ${adminId} — no resolvable recipient email address (no opted-in active SUPER_ADMIN, and the acting operator has no resolvable email).`,
 
     /**
@@ -62,7 +62,7 @@ const backupEmailMessages = {
      * @param {number} recipientCount
      * @returns {string}
      */
-    SEND_SUCCESS: (adminId: number | string, recipientCount: number): string =>
+    SEND_SUCCESS: (adminId: number | string | undefined, recipientCount: number): string =>
         `Purge notification email sent — triggered by ADMIN_ID ${adminId}, ${recipientCount} recipient(s) (notification only, no attachment).`,
 
     /**
@@ -73,7 +73,7 @@ const backupEmailMessages = {
      * @param {string} cause
      * @returns {string}
      */
-    SEND_FAILED: (adminId: number | string, cause: string): string =>
+    SEND_FAILED: (adminId: number | string | undefined, cause: string): string =>
         `Purge backup email failed for ADMIN_ID ${adminId}: ${cause}`,
 
     /**
@@ -87,7 +87,7 @@ const backupEmailMessages = {
      * @param {Error|string} err
      * @returns {string}
      */
-    DISPATCH_REJECTED: (adminId: number | string, err: Error | string): string =>
+    DISPATCH_REJECTED: (adminId: number | string | undefined, err: Error | string): string =>
         `Purge backup email dispatch rejected at the fire-and-forget call site (ADMIN_ID ${adminId}) — the purge backup response itself was NOT affected: ${(err as Error)?.message ?? err}`,
 };
 

@@ -24,7 +24,7 @@ const devDocsMessages = {
      * @param {string} docId        - Opaque manifest id
      * @returns {string}
      */
-    DOC_READ: (adminId: number | string, docId: string): string =>
+    DOC_READ: (adminId: number | string | undefined, docId: string): string =>
         `Dev-docs document read — ADMIN_ID: ${adminId}, DOC_ID: ${docId}.`,
 
     /**
@@ -35,7 +35,7 @@ const devDocsMessages = {
      * @param {number} docCount
      * @returns {string}
      */
-    TREE_SERVED: (adminId: number | string, sectionCount: number, docCount: number): string =>
+    TREE_SERVED: (adminId: number | string | undefined, sectionCount: number, docCount: number): string =>
         `Dev-docs index served — ADMIN_ID: ${adminId}, sections: ${sectionCount}, documents: ${docCount}.`,
 
     /**
@@ -49,7 +49,7 @@ const devDocsMessages = {
      * @param {number} returned  - Matches actually returned after the cap
      * @returns {string}
      */
-    SEARCH_COMPLETED: (adminId: number | string, total: number, returned: number): string =>
+    SEARCH_COMPLETED: (adminId: number | string | undefined, total: number, returned: number): string =>
         `Dev-docs search completed — ADMIN_ID: ${adminId}, matches: ${total}, returned: ${returned}.`,
 
     /**

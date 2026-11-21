@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -61,13 +60,13 @@ const dataBackupMessages = {
         `Backup archive written to disk — archiveId: ${archiveId}, file: ${filename}, ${sizeBytes} byte(s).`,
     /** @param {string} archiveId @param {Error|string} err */
     ARCHIVE_WRITE_FAILED: (archiveId: string, err: Error | string) =>
-        `Backup archive write FAILED — archiveId: ${archiveId}: ${err?.message ?? err}. Any partial ".part" file is left for manual inspection, never renamed into place.`,
+        `Backup archive write FAILED — archiveId: ${archiveId}: ${(err as Error)?.message ?? err}. Any partial ".part" file is left for manual inspection, never renamed into place.`,
     /** @param {number} count @param {number} ms */
     INDEX_REBUILT: (count: number, ms: number) =>
         `Backup store index rebuilt from disk — ${count} archive(s) found, ${ms}ms.`,
     /** @param {string} filename @param {Error|string} err */
     INDEX_ENTRY_UNREADABLE: (filename: string, err: Error | string) =>
-        `Backup store index: "${filename}" could not be read as a valid backup archive and was skipped: ${err?.message ?? err}.`,
+        `Backup store index: "${filename}" could not be read as a valid backup archive and was skipped: ${(err as Error)?.message ?? err}.`,
 
     // ── Chain decisions ───────────────────────────────────────────
     /** @param {string} archiveId @param {string} reason */
@@ -112,39 +111,39 @@ const dataBackupMessages = {
     SCHEDULE_NO_EVENTS_DUE: (label: string, windowHours: number) =>
         `Scheduled DB backup trigger (label: ${label}) — no scheduled backup event fell inside the ${windowHours}h catch-up window.`,
     /** @param {number|string} eventId @param {string} event */
-    SCHEDULE_EVENT_ALREADY_BACKED_UP: (eventId: number | string, event: string) =>
+    SCHEDULE_EVENT_ALREADY_BACKED_UP: (eventId: number | string | undefined, event: string) =>
         `Scheduled DB backup: event ${eventId} / ${event} already has a matching SCHEDULED archive on disk — skipped (filename-derived idempotency).`,
     /** @param {string} label @param {number|string} eventId @param {string} event @param {string} archiveId @param {string} mode */
-    SCHEDULE_BACKUP_RAN: (label: string, eventId: number | string, event: string, archiveId: string, mode: string) =>
+    SCHEDULE_BACKUP_RAN: (label: string, eventId: number | string | undefined, event: string, archiveId: string, mode: string) =>
         `Scheduled DB backup RAN (label: ${label}) — event ${eventId} / ${event}: archiveId ${archiveId}, mode ${mode}.`,
     /** @param {string} label @param {number|string} eventId @param {string} event @param {Error|string} err */
-    SCHEDULE_BACKUP_FAILED: (label: string, eventId: number | string, event: string, err: Error | string) =>
-        `Scheduled DB backup FAILED (label: ${label}) — event ${eventId} / ${event}: ${err?.message ?? err}.`,
+    SCHEDULE_BACKUP_FAILED: (label: string, eventId: number | string | undefined, event: string, err: Error | string) =>
+        `Scheduled DB backup FAILED (label: ${label}) — event ${eventId} / ${event}: ${(err as Error)?.message ?? err}.`,
     /** @param {string} label @param {string} archiveId @param {string} baseArchiveId */
     SCHEDULE_PRUNED: (label: string, archiveId: string, baseArchiveId: string) =>
         `Scheduled DB backup retention sweep (label: ${label}) deleted expired archive ${archiveId} (chain base ${baseArchiveId}) — whole chain past DB_BACKUP_RETENTION_DAYS.`,
     /** @param {string} label @param {string} archiveId @param {Error|string} err */
     SCHEDULE_PRUNE_SKIPPED: (label: string, archiveId: string, err: Error | string) =>
-        `Scheduled DB backup retention sweep (label: ${label}) could not delete ${archiveId} — left for the next sweep: ${err?.message ?? err}.`,
+        `Scheduled DB backup retention sweep (label: ${label}) could not delete ${archiveId} — left for the next sweep: ${(err as Error)?.message ?? err}.`,
 
     // ── Backup tab routes (step 7) ────────────────────────────────────────────
     /** @param {number|string} adminId */
-    MANUAL_BACKUP_REQUESTED: (adminId: number | string) =>
+    MANUAL_BACKUP_REQUESTED: (adminId: number | string | undefined) =>
         `Manual backup requested by ADMIN_ID ${adminId}.`,
     /** @param {string} archiveId @param {number|string} adminId */
-    MANUAL_BACKUP_COMPLETE: (archiveId: string, adminId: number | string) =>
+    MANUAL_BACKUP_COMPLETE: (archiveId: string, adminId: number | string | undefined) =>
         `Manual backup complete — archiveId: ${archiveId}, requested by ADMIN_ID ${adminId}.`,
     /** @param {string} archiveId @param {number|string} adminId */
-    DOWNLOAD_REQUESTED: (archiveId: string, adminId: number | string) =>
+    DOWNLOAD_REQUESTED: (archiveId: string, adminId: number | string | undefined) =>
         `Backup download requested — archiveId: ${archiveId}, ADMIN_ID ${adminId}.`,
     /** @param {string} archiveId @param {boolean} valid @param {number|string} adminId */
-    VERIFY_REQUESTED: (archiveId: string, valid: boolean, adminId: number | string) =>
+    VERIFY_REQUESTED: (archiveId: string, valid: boolean, adminId: number | string | undefined) =>
         `Backup verify — archiveId: ${archiveId}, signatureValid: ${valid}, ADMIN_ID ${adminId}.`,
     /** @param {string} archiveId @param {number|string} adminId */
-    DELETE_REQUESTED: (archiveId: string, adminId: number | string) =>
+    DELETE_REQUESTED: (archiveId: string, adminId: number | string | undefined) =>
         `Backup delete requested — archiveId: ${archiveId}, ADMIN_ID ${adminId}.`,
     /** @param {string} archiveId @param {number|string} adminId */
-    PURGE_BACKUP_PERSISTED: (archiveId: string, adminId: number | string) =>
+    PURGE_BACKUP_PERSISTED: (archiveId: string, adminId: number | string | undefined) =>
         `Purge backup persisted to disk — archiveId: ${archiveId}, triggered by ADMIN_ID ${adminId}.`,
 
     /** @param {string} archiveId */
@@ -153,35 +152,35 @@ const dataBackupMessages = {
 
     // ── Majority-vote delete ──────────────
     /** @param {string} archiveId @param {number|string} adminId @param {number} votesNeeded */
-    DELETE_REQUEST_CREATED: (archiveId: string, adminId: number | string, votesNeeded: number) =>
+    DELETE_REQUEST_CREATED: (archiveId: string, adminId: number | string | undefined, votesNeeded: number) =>
         `Backup delete request created — archiveId: ${archiveId}, requested by ADMIN_ID ${adminId}, ${votesNeeded} vote(s) needed.`,
     /** @param {string} archiveId @param {number|string} adminId @param {number} votesCast @param {number} votesNeeded */
-    DELETE_VOTE_CAST: (archiveId: string, adminId: number | string, votesCast: number, votesNeeded: number) =>
+    DELETE_VOTE_CAST: (archiveId: string, adminId: number | string | undefined, votesCast: number, votesNeeded: number) =>
         `Backup delete vote cast — archiveId: ${archiveId}, ADMIN_ID ${adminId}, ${votesCast}/${votesNeeded} votes.`,
     /** @param {string} archiveId @param {number|string} adminId */
-    DELETE_VOTE_THRESHOLD_MET: (archiveId: string, adminId: number | string) =>
+    DELETE_VOTE_THRESHOLD_MET: (archiveId: string, adminId: number | string | undefined) =>
         `Backup delete vote threshold met — archiveId: ${archiveId}, final vote by ADMIN_ID ${adminId}. Executing chain-safe delete.`,
     /** @param {string} archiveId @param {number|string} adminId */
-    DELETE_REQUEST_CANCELLED: (archiveId: string, adminId: number | string) =>
+    DELETE_REQUEST_CANCELLED: (archiveId: string, adminId: number | string | undefined) =>
         `Backup delete request cancelled — archiveId: ${archiveId}, cancelled by ADMIN_ID ${adminId}.`,
 
     // ── Backup token consume — replay protection (token replay fix) ──────────
     /** @param {number|string} adminId @param {string} jti */
-    TOKEN_CONSUMED: (adminId: number | string, jti: string) =>
+    TOKEN_CONSUMED: (adminId: number | string | undefined, jti: string) =>
         `Backup token consumed — ADMIN_ID ${adminId}, jti ${jti}. This token can never be accepted again.`,
     /** @param {number|string} adminId @param {string} jti */
-    TOKEN_REPLAY_BLOCKED: (adminId: number | string, jti: string) =>
+    TOKEN_REPLAY_BLOCKED: (adminId: number | string | undefined, jti: string) =>
         `Backup token REPLAY BLOCKED — ADMIN_ID ${adminId}, jti ${jti} was already consumed. Rejecting (ORA-00001 on T_SERVER_BACKUP_TOKEN_CONSUMED_DEV.JTI).`,
 
     // ── Pre-scheduled-backup lockout window — BackupScheduleService.getLockoutStatus / describeLockout ──
     /** @param {Error|string} err */
     SCHEDULE_WINDOW_LOOKUP_FAILED: (err: Error | string) =>
-        `Backup lockout-window lookup FAILED — could not read the upcoming backup events: ${err?.message ?? err}. Failing OPEN (lockout treated as inactive) — the FIFO chain-race mutex in BackupStoreService.runBackup is the correctness guarantee, this window is ergonomics only.`,
+        `Backup lockout-window lookup FAILED — could not read the upcoming backup events: ${(err as Error)?.message ?? err}. Failing OPEN (lockout treated as inactive) — the FIFO chain-race mutex in BackupStoreService.runBackup is the correctness guarantee, this window is ergonomics only.`,
     /** @param {"running"|"imminent"} reason @param {number|null} msRemaining */
     MANUAL_BACKUP_BLOCKED_SCHEDULE_WINDOW: (reason: "running" | "imminent", msRemaining: number | null) =>
         `Manual backup REJECTED — pre-scheduled-backup lockout window active (reason: ${reason}${msRemaining != null ? `, ~${Math.ceil(msRemaining / 1000)}s remaining` : ""}).`,
     /** @param {number|string} adminId @param {"running"|"imminent"} reason @param {number|null} msRemaining */
-    PURGE_BLOCKED_SCHEDULE_WINDOW: (adminId: number | string, reason: "running" | "imminent", msRemaining: number | null) =>
+    PURGE_BLOCKED_SCHEDULE_WINDOW: (adminId: number | string | undefined, reason: "running" | "imminent", msRemaining: number | null) =>
         `Purge execute REJECTED for ADMIN_ID ${adminId} — pre-scheduled-backup lockout window active (reason: ${reason}${msRemaining != null ? `, ~${Math.ceil(msRemaining / 1000)}s remaining` : ""}). This is an ergonomics guard only — the purge's own PURGE-triggered backup call still queues correctly behind BackupStoreService's FIFO mutex regardless of this check.`,
 
     // ── Backup watchdog + cross-process lease (B-D13) ────────────────────────

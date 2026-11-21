@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -30,7 +29,7 @@ function refreshFamilyOf(token: unknown): string | null {
             audience: TOKEN_AUDIENCES.REFRESH,
             issuer: TOKEN_ISSUER,
         });
-        if (decoded?.type !== TOKEN_TYPES.REFRESH) return null;
+        if (typeof decoded !== "object" || decoded?.type !== TOKEN_TYPES.REFRESH) return null;
         return typeof decoded.fid === "string" && decoded.fid.length === FID_LENGTH ? decoded.fid : null;
     } catch {
         return null;

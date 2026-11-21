@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -204,7 +203,7 @@ class AuthMiddleware {
         // tokens uniformly — the security decision is always server-controlled.
         jwt.verify(
             token,
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET ?? "", // bootGuard guarantees it; "" fails verify like undefined did
             { algorithms: ["HS256"] },
             (err: any, user: any) => {
                 if (err) {
@@ -492,7 +491,7 @@ class AuthMiddleware {
         return new Promise((resolve, reject) => {
             jwt.verify(
                 token,
-                process.env.JWT_SECRET,
+                process.env.JWT_SECRET ?? "",
                 { algorithms: ["HS256"] },
                 (err: any, payload: any) => {
                     if (
@@ -637,9 +636,9 @@ class AuthMiddleware {
      * @param {string[]} [fields.hash=[]]   - new passwords about to be hashed
      */
     static validatePasswordFields({ verify = [], hash = [] }: { verify?: string[]; hash?: string[]; } = {}) {
-        const checks = [
-            ...verify.map((field) => [field, false]),
-            ...hash.map((field) => [field, true]),
+        const checks: Array<[string, boolean]> = [
+            ...verify.map((field): [string, boolean] => [field, false]),
+            ...hash.map((field): [string, boolean] => [field, true]),
         ];
 
         return (req: Request, res: Response, next: NextFunction) => {

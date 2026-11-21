@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -35,6 +34,7 @@
  * ============================================================================
  */
 
+import type { QueryBuilder } from "../core/QueryBuilder";
 import { quoteIdentifier } from "../utils";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 

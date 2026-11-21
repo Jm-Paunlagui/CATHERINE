@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { APP_ROOT } from "../runtimePaths";
 
@@ -66,8 +65,8 @@ const RENAME_FALLBACK_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
  */
 function resolveMarkerPath(env: NodeJS.ProcessEnv = process.env): { path: string; ignoredOverride: string | null; ignoredReason: "relative" | "production" | null; } {
     const override = env[SERVER_RUN_MARKER.PATH_OVERRIDE_ENV];
-    let ignoredOverride = null;
-    let ignoredReason = null;
+    let ignoredOverride: string | null = null;
+    let ignoredReason: "relative" | "production" | null = null;
     if (override) {
         const allowed = env.NODE_ENV !== "production";
         if (!path.isAbsolute(override)) {
@@ -272,7 +271,7 @@ class ServerRunMarker {
             return { verdict: VERDICTS.FIRST_BOOT, previous: null, cause: "record from another host" };
         }
 
-        let verdict = VERDICTS.UNCLEAN;
+        let verdict: string = VERDICTS.UNCLEAN;
         if (rec.state === STATES.STOPPED) verdict = VERDICTS.CLEAN;
         else if (rec.runId && rec.runId === this._runId) verdict = VERDICTS.HANDOVER;
         this._verdict = verdict;

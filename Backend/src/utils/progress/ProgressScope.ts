@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -26,13 +25,14 @@
  */
 
 class ProgressScope {
-    declare createdAt: any;
-    declare _abortError: any;
+    declare createdAt: number;
+    declare _abortError: Error | null;
     declare _controller: AbortController;
-    declare _hooks: Set<unknown>;
-    declare _children: Set<unknown>;
-    declare _busy: Map<any, any>;
-    declare _followed: any;
+    declare _hooks: Set<(err: Error) => void>;
+    declare _children: Set<ProgressScope>;
+    /** Busy markers (one object identity per markBusy call) -> when marked. */
+    declare _busy: Map<object, number>;
+    declare _followed: ProgressScope | null;
     declare _lastSource: string;
     declare _ownAt: number;
     declare _now: () => number;
@@ -46,7 +46,7 @@ class ProgressScope {
      * @param {ProgressScope|null} [options.parent=null] - Parent scope (receives touches, propagates aborts down).
      * @param {() => number} [options.now=Date.now] - Clock (injectable for tests).
      */
-    constructor({ label, idleLimitMs, parent = null, now = Date.now }: { label: string; idleLimitMs: number; parent?: ProgressScope | null; now?: () => number; } = {}) {
+    constructor({ label, idleLimitMs, parent = null, now = Date.now }: { label?: string; idleLimitMs?: number; parent?: ProgressScope | null; now?: () => number; } = {}) {
         this.label = label ?? "scope";
         this.idleLimitMs = idleLimitMs ?? Infinity;
         this._parent = parent;
@@ -125,7 +125,7 @@ class ProgressScope {
      * @returns {() => void} release (idempotent)
      */
     markBusy(): () => void {
-        const key: Record<string, any> = {};
+        const key = {};
         this._busy.set(key, this._now());
         const releaseParent = this._parent ? this._parent.markBusy() : null;
         return () => {
@@ -164,11 +164,12 @@ class ProgressScope {
      * Abort the scope (idempotent — only the first error sticks).
      * @param {Error} err
      */
-    abort(err: Error) {
+    abort(err?: Error | null) {
         if (this._abortError) return;
-        this._abortError = err ?? new Error("ProgressScope aborted");
+        const abortError = err ?? new Error("ProgressScope aborted");
+        this._abortError = abortError;
         try {
-            this._controller.abort(this._abortError);
+            this._controller.abort(abortError);
         } catch {
             /* signal listeners must never break the abort path */
         }
@@ -176,12 +177,12 @@ class ProgressScope {
         this._hooks.clear();
         for (const fn of hooks) {
             try {
-                fn(this._abortError);
+                fn(abortError);
             } catch {
                 /* a failing hook must not stop the others */
             }
         }
-        for (const child of [...this._children]) child.abort(this._abortError);
+        for (const child of [...this._children]) child.abort(abortError);
     }
 
     /**

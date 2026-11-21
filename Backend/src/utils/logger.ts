@@ -992,7 +992,7 @@ class Logger {
     // HTTP REQUEST LIFECYCLE LOGGING
     // ========================================
 
-    logIncomingRequest(req: any, customMessage = null) {
+    logIncomingRequest(req: any, customMessage: string | null = null) {
         return this.log("INFO", customMessage || "Incoming Request", {
             method: req.method,
             url: req.originalUrl || req.url,
@@ -1013,7 +1013,7 @@ class Logger {
         });
     }
 
-    logCompletedRequest(req: Request, res: Response, duration: any, customMessage = null) {
+    logCompletedRequest(req: Request, res: Response, duration: number, customMessage: string | null = null) {
         const level = res.statusCode >= 400 ? "ERROR" : "INFO";
         return this.log(level, customMessage || "Request Complete", {
             method: req.method,

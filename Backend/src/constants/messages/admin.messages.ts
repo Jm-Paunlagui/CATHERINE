@@ -62,7 +62,7 @@ const adminMessages = {
   // ── Access Control revoke ───────────────────────────────────────────────────
   // Every identifier carries a label — logRedaction only matches prefixed ids.
   /** @param {string} username - target admin @param {number|string} adminId - issuing admin (T_ADMINS_DEV.ID) */
-  ADMIN_REVOKE_BACKUP_ISSUED: (username: string, adminId: number | string) =>
+  ADMIN_REVOKE_BACKUP_ISSUED: (username: string, adminId: number | string | undefined) =>
     `Revoke-backup archive issued — target USERNAME: ${username}, issued to ADMIN_ID: ${adminId}.`,
   /** @param {string} username @param {string} reason */
   ADMIN_REVOKE_TOKEN_REJECTED: (username: string, reason: string) =>
@@ -77,7 +77,7 @@ const adminMessages = {
   ADMIN_DELETE_SELF_BLOCKED: (username: string) =>
     `Admin delete rejected — USERNAME: ${username} attempted to delete their own account.`,
   /** @param {number|string} adminId - T_ADMINS_DEV.ID */
-  ADMIN_LAST_SUPER_ADMIN_BLOCKED: (adminId: number | string) =>
+  ADMIN_LAST_SUPER_ADMIN_BLOCKED: (adminId: number | string | undefined) =>
     `Admin action rejected — ADMIN_ID: ${adminId} is the last active SUPER_ADMIN.`,
 };
 

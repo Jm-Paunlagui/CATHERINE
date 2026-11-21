@@ -558,7 +558,7 @@ class DevDocsService {
      * @returns {Promise<{ results: object[], total: number, truncated: boolean }>}
      * @throws {AppError} 400 when the query is too short
      */
-    static async search(rawQuery: string): Promise<{ results: Record<string, any>[]; total: number; truncated: boolean; }> {
+    static async search(rawQuery: unknown): Promise<{ results: Record<string, any>[]; total: number; truncated: boolean; }> {
         const query = String(rawQuery ?? "").trim();
         if (query.length < MIN_QUERY_LENGTH) {
             throw new AppError(DEV_DOCS_ERRORS.INVALID_QUERY, HTTP_STATUS.BAD_REQUEST, {

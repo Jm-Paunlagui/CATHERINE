@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -92,7 +91,7 @@ import { resilienceMessages } from "../../constants/messages";
  * @returns {number}
  */
 function envInt(name: string, fallback: number): number {
-    const parsed = parseInt(process.env[name], 10);
+    const parsed = parseInt(process.env[name] ?? "", 10);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
@@ -202,7 +201,7 @@ function extractOraCode(err: any): number | null {
 
 class RetryPolicy {
     declare _label: string;
-    declare _classifier: (err: any) => string;
+    declare _classifier: ((err: unknown) => string) | null;
     declare _maxDelayMs: number;
     declare _baseDelayMs: number;
     declare _maxAttempts: number;
@@ -221,7 +220,7 @@ class RetryPolicy {
         maxDelayMs = envInt("DB_RETRY_MAX_DELAY_MS", 5000),
         classifier = null,
         label = "operation",
-    }: { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number; classifier?: (err: any) => string; label?: string; } = {}) {
+    }: { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number; classifier?: ((err: unknown) => string) | null; label?: string; } = {}) {
         if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
             throw new RangeError(
                 "RetryPolicy: maxAttempts must be a positive integer.",
@@ -307,8 +306,8 @@ class RetryPolicy {
                     if (probe && Object.prototype.hasOwnProperty.call(probe, "resolved")) {
                         const key =
                             probe.key ??
-                            probe.resolved?.id ??
-                            probe.resolved?.ID ??
+                            (probe.resolved as { id?: unknown; ID?: unknown } | null | undefined)?.id ??
+                            (probe.resolved as { id?: unknown; ID?: unknown } | null | undefined)?.ID ??
                             null;
                         // Operationally important — a prior attempt actually
                         // committed and the ack was lost. INFO, not DEBUG:
@@ -368,7 +367,7 @@ class RetryPolicy {
                 classification,
             )
         ) {
-            const cap = CLASSIFICATION_ATTEMPT_CAPS[classification];
+            const cap = CLASSIFICATION_ATTEMPT_CAPS[classification as keyof typeof CLASSIFICATION_ATTEMPT_CAPS];
             return cap === null ? this._maxAttempts : cap;
         }
         return this._maxAttempts;

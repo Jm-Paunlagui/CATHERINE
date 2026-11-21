@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -226,7 +225,7 @@ class TraceabilityMiddleware {
 
             const originalEnd = res.end;
             const emitIncoming = () => this._emitIncoming(req);
-            res.end = function (...args) {
+            res.end = function (this: unknown, ...args: unknown[]) {
                 const duration = Date.now() - startTime;
                 if (shouldLog && !isOptions) {
                     // Safety net for requests that never reach `logIncoming`:
@@ -243,8 +242,8 @@ class TraceabilityMiddleware {
                         TraceabilityMiddleware.createRequestMessage(req),
                     );
                 }
-                originalEnd.apply(this, args);
-            };
+                (originalEnd as (...a: unknown[]) => unknown).apply(this, args);
+            } as typeof res.end;
 
             next();
         });
