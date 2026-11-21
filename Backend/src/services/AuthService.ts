@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -54,6 +53,17 @@ function _profileFlagsStore() {
     }
 }
 
+/** The persisted half of a newly issued refresh token (see RefreshTokenService.persistIssued). */
+type RefreshRecord = {
+    jtiHash: string;
+    familyId: string;
+    userId: string;
+    userKey: string;
+    roleSource: "user" | "admin";
+    issuedAtMs: number;
+    expiresAtMs: number;
+};
+
 class AuthService {
     // Re-export: the constant lives in constants/authTokens.js so the rate
     // limiters can read it without importing this service.
@@ -72,7 +82,7 @@ class AuthService {
      * @param {string} password
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string, refreshRecord: object }>}
      */
-    static async login(userId: string, password: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: Record<string, any>; }> {
+    static async login(userId: string, password: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         const lockState = await loginLockout.checkAsync(userId);
 
         if (lockState.hrReset) {
@@ -117,10 +127,10 @@ class AuthService {
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string, refreshRecord: object }>}
      * @throws {AppError} 403 invalid token; 401 revoked / reused / account gone
      */
-    static async refresh(refreshToken: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: Record<string, any>; }> {
+    static async refresh(refreshToken: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         let decoded;
         try {
-            decoded = jwt.verify(refreshToken, process.env.JWT_SECRET, {
+            decoded = jwt.verify(refreshToken, process.env.JWT_SECRET ?? "", {
                 algorithms: ["HS256"],
                 audience: TOKEN_AUDIENCES.REFRESH,
                 issuer: TOKEN_ISSUER,
@@ -133,6 +143,8 @@ class AuthService {
         }
 
         if (
+            typeof decoded !== "object" ||
+            typeof decoded.sub !== "string" ||
             decoded.type !== TOKEN_TYPES.REFRESH ||
             typeof decoded.jti !== "string" ||
             decoded.jti === "" ||
@@ -218,7 +230,8 @@ class AuthService {
      * @param {object} decodedUser - req.user (verified JWT payload)
      * @returns {Promise<object>}
      */
-    static async getProfile(decodedUser: import("../types/express").AuthUser | undefined): Promise<Record<string, any>> {
+    static async getProfile(decodedUser: import("../types/express").AuthUser | undefined): Promise<Record<string, any> | undefined> {
+        if (!decodedUser) return decodedUser;
         try {
             // USER sessions never carry admin flags.
             if (decodedUser?.role === "USER") return decodedUser;
@@ -499,7 +512,8 @@ class AuthService {
             return {
                 isDefaultPassword: false,
                 isTemporaryPassword: true,
-                temporaryPasswordExpiresAt: new Date(parsed.expiresAt).toISOString(),
+                // Non-null: a marker with no expiry counts as expired and was refused above.
+                temporaryPasswordExpiresAt: new Date(parsed.expiresAt as number).toISOString(),
                 requiresPasswordChange: true,
             };
         }
@@ -634,7 +648,7 @@ class AuthService {
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string, refreshRecord: object }>}
      * @private
      */
-    static async _rotateInto(decoded: Record<string, any>, params: Record<string, any>): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: Record<string, any>; }> {
+    static async _rotateInto(decoded: Record<string, any>, params: Omit<Parameters<typeof AuthService._issueTokens>[0], "familyId">): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         const tokens = AuthService._issueTokens({ ...params, familyId: decoded.fid });
         await RefreshTokenService.rotate(
             { jti: decoded.jti, familyId: decoded.fid, userId: decoded.sub },
@@ -685,7 +699,7 @@ class AuthService {
      * @returns {Promise<void>}
      * @private
      */
-    static async _persistSession(tokens: { refreshRecord: Record<string, any>; }): Promise<void> {
+    static async _persistSession(tokens: { refreshRecord: RefreshRecord; }): Promise<void> {
         await RefreshTokenService.persistIssued(tokens.refreshRecord);
         await RefreshTokenService.purgeExpired();
     }
@@ -732,7 +746,7 @@ class AuthService {
         requiresPasswordChange = false,
         permissionFlags = {},
         familyId,
-    }: { id: number | null; userId: string; firstName: string | null; lastName: string | null; email: string | null; role: string; roleSource: 'admin' | 'user'; credentialHash?: string; isDefaultPassword?: boolean; isTemporaryPassword?: boolean; temporaryPasswordExpiresAt?: string | null; requiresPasswordChange?: boolean; permissionFlags?: Record<string, any>; familyId?: string; }): { user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: Record<string, any>; } {
+    }: { id: number | null; userId: string; firstName: string | null; lastName: string | null; email: string | null; role: string; roleSource: 'admin' | 'user'; credentialHash?: string; isDefaultPassword?: boolean; isTemporaryPassword?: boolean; temporaryPasswordExpiresAt?: string | null; requiresPasswordChange?: boolean; permissionFlags?: Record<string, any>; familyId?: string; }): { user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; } {
         const pwv = credentialEpoch(credentialHash);
         const userPayload = {
             sub: String(userId),
@@ -764,10 +778,11 @@ class AuthService {
                 type: TOKEN_TYPES.ACCESS,
                 fid,
             },
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET ?? "",
             {
                 algorithm: "HS256",
-                expiresIn: process.env.JWT_EXPIRES_IN || ACCESS_TOKEN_DEFAULT_EXPIRES_IN,
+                // An env duration such as "30m"; jsonwebtoken rejects a malformed one at sign time.
+                expiresIn: (process.env.JWT_EXPIRES_IN || ACCESS_TOKEN_DEFAULT_EXPIRES_IN) as import("jsonwebtoken").SignOptions["expiresIn"],
                 audience: TOKEN_AUDIENCES.ACCESS,
                 issuer: TOKEN_ISSUER,
             },
@@ -781,17 +796,18 @@ class AuthService {
                 fid,
                 ...(pwv ? { pwv } : {}),
             },
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET ?? "",
             {
                 algorithm: "HS256",
-                expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
+                expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as import("jsonwebtoken").SignOptions["expiresIn"],
                 jwtid: jti,
                 audience: TOKEN_AUDIENCES.REFRESH,
                 issuer: TOKEN_ISSUER,
             },
         );
 
-        const decoded = jwt.decode(refreshToken);
+        // Minted just above with iat/exp, so the payload is an object carrying both.
+        const decoded = jwt.decode(refreshToken) as import("jsonwebtoken").JwtPayload & { iat: number; exp: number };
         const refreshRecord = {
             jtiHash: hashJti(jti),
             familyId: fid,
@@ -826,7 +842,7 @@ class AuthService {
      * @throws {AppError} 404 not found; 403 inactive; 422 signature invalid;
      *   401 wrong current password / expired temporary; 400 default or reused password
      */
-    static async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: Record<string, any>; }> {
+    static async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         const admin = await AdminModel.findByUsername(userId);
         const user = admin ? null : await UserModel.findByUsername(userId);
         if (!admin && !user) {
@@ -856,7 +872,7 @@ class AuthService {
             currentIsTemporary = temporary === true;
         } else {
             AuthService._assertUserActive(user, userId);
-            const matched = await CryptoVault.verifyPassword(currentPassword, user.PASSWORD);
+            const matched = await CryptoVault.verifyPassword(currentPassword, user!.PASSWORD); // admin is null, so user is not (guard above)
             if (!matched) AuthService._refuseWrongCurrentPassword();
         }
 
@@ -917,7 +933,7 @@ class AuthService {
             claims = AuthService._adminClaims(fresh);
         } else {
             newHash = await CryptoVault.hashPassword(newPassword);
-            await UserModel.updatePassword(user.USERNAME, newHash);
+            await UserModel.updatePassword(user!.USERNAME, newHash); // admin is null, so user is not (guard above)
             claims = AuthService._userClaims(user);
         }
         logger.info(authMessages.PASSWORD_CHANGED(userId));

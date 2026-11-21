@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -131,7 +130,7 @@ import ExcelJS from "exceljs";
 import { logger } from "../utils/logger";
 import { touch } from "../utils/progress/progress";
 import { dataPurgeMessages, dataBackupMessages } from "../constants/messages";
-import { getEntry } from "../constants/purgeTables";
+import { getEntry, requireEntry } from "../constants/purgeTables";
 import DataPurgeModel from "../models/data-purge.model";
 import DataPurgeService from "./DataPurgeService";
 import BackupTokenService from "./BackupTokenService";
@@ -294,15 +293,19 @@ class BackupArchiveService {
         // because identifier PKs arrive as exact-digit strings (TO_CHAR) and
         // may exceed 2^53; a lexical max would also rank "9" above "10".
         const appendOnlyPk = new Map(
-            tables.map((t) => getEntry(t)).filter((e) => e?.appendOnlyLog).map((e) => [e.table, e.pk]),
+            tables
+                .map((t) => getEntry(t))
+                .filter((e): e is NonNullable<typeof e> => Boolean(e?.appendOnlyLog))
+                .map((e): [string, string] => [e.table, e.pk]),
         );
+        type TableAccumulator = { hash: import("crypto").Hash; lines: string[]; rowCount: number; maxPk: bigint };
         const freshAccumulators = () =>
-            new Map(tables.map((t) => [t, { hash: crypto.createHash("sha256"), lines: [], rowCount: 0, maxPk: 0n }]));
+            new Map<string, TableAccumulator>(tables.map((t) => [t, { hash: crypto.createHash("sha256"), lines: [], rowCount: 0, maxPk: 0n }]));
         let acc = freshAccumulators();
 
         const onBatchFor = (table: any) => (rows: any) => {
             touch("backup-batch");
-            const a = acc.get(table);
+            const a = acc.get(table)!; // one accumulator per requested table
             const pkCol = appendOnlyPk.get(table);
             for (const row of rows) {
                 const line = JSON.stringify(row) + "\n";
@@ -341,7 +344,7 @@ class BackupArchiveService {
         const highWater: Record<string, any> = {};
         let totalRows = 0;
         for (const table of tables) {
-            const a = acc.get(table);
+            const a = acc.get(table)!; // one accumulator per requested table
             if (appendOnlyPk.has(table)) highWater[table] = a.maxPk.toString();
             const sha256 = a.hash.digest("hex");
             totalRows += a.rowCount;
@@ -489,7 +492,7 @@ class BackupArchiveService {
         const durationMs = Date.now() - startedAt;
         logger.info(dataPurgeMessages.BACKUP_COMPLETE(adminId, scope.scopeHash, totalRows, durationMs));
 
-        const groupsInScope = [...new Set(scope.tables.map((t) => getEntry(t).group))];
+        const groupsInScope = [...new Set(scope.tables.map((t) => requireEntry(t).group))];
         const filename = `app-backup_${_buildScopeSlug(scope)}_${_timestampSlug()}.zip`;
 
         return {
@@ -801,8 +804,8 @@ class BackupArchiveService {
         const dataBuffers: Record<string, Buffer> = {};
 
         for (const filter of tableFilters) {
-            const entry = getEntry(filter.table);
-            const rows: any[] = [];
+            const entry = requireEntry(filter.table);
+            const rows: Record<string, unknown>[] = [];
             const count = await DataPurgeModel.streamTableFiltered(filter.table, {
                 pageSize: STREAM_PAGE_SIZE,
                 whereColumns: filter.whereColumns,
@@ -932,7 +935,7 @@ class BackupArchiveService {
             });
         }
 
-        return workbook.xlsx.writeBuffer();
+        return Buffer.from(await workbook.xlsx.writeBuffer()); // exceljs declares its own Buffer type
     }
 
     /**
@@ -978,7 +981,7 @@ class BackupArchiveService {
             }
         }
 
-        return workbook.xlsx.writeBuffer();
+        return Buffer.from(await workbook.xlsx.writeBuffer()); // exceljs declares its own Buffer type
     }
 
     /**

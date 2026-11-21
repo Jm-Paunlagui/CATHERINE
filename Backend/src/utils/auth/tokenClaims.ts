@@ -73,7 +73,7 @@ const CREDENTIAL_EPOCH_KDF_LABEL = "app-api:auth:credential-epoch:v1";
  * @param {string} storedHash - T_ADMINS_DEV.PASSWORD as stored
  * @returns {string|null} 16 hex chars, or null when no hash / no secret
  */
-function credentialEpoch(storedHash: string): string | null {
+function credentialEpoch(storedHash: string | null | undefined): string | null {
     const secret = process.env.JWT_SECRET;
     if (typeof storedHash !== "string" || storedHash === "" || !secret) return null;
     const key = Buffer.from(
