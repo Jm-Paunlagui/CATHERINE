@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -61,8 +60,8 @@ class SlidingWindowCounter {
         const prevKey = `${key}:${windowStart - windowMs}`;
         const currKey = `${key}:${windowStart}`;
 
-        const prevCount = this._store.get(prevKey) ?? 0;
-        const currCount = this._store.get(currKey) ?? 0;
+        const prevCount = this._store.get<number>(prevKey) ?? 0;
+        const currCount = this._store.get<number>(currKey) ?? 0;
 
         const elapsed = now - windowStart;
         const weight = (windowMs - elapsed) / windowMs;
@@ -128,7 +127,7 @@ class SlidingWindowCounter {
         const windowStart = Math.floor(now / windowMs) * windowMs;
         if (!Number.isFinite(bucket) || bucket < windowStart - windowMs) return false;
         const bucketKey = `${key}:${bucket}`;
-        const count = this._store.get(bucketKey) ?? 0;
+        const count = this._store.get<number>(bucketKey) ?? 0;
         if (count <= 0) return false;
         if (count === 1) {
             this._store.del(bucketKey);

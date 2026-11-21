@@ -400,7 +400,7 @@ class BackupStoreService {
         }
         // `.zip.part` files never match `.endsWith(".zip")` — a crash
         // mid-write is structurally invisible here, no extra filtering needed.
-        const zipFilenames: any[] = filenames.filter((f) => f.endsWith(".zip"));
+        const zipFilenames = filenames.filter((f) => f.endsWith(".zip"));
 
         const entries = [];
         for (const filename of zipFilenames) {

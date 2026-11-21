@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -230,7 +229,7 @@ class DataPurgeModel {
      *     onBatch: (rows) => rows.forEach((r) => collected.push(r)),
      * });
      */
-    static async streamTableFiltered(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns: string[]; whereValue: string | number; } = {}): Promise<number> {
+    static async streamTableFiltered(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns: string[]; whereValue: string | number; }): Promise<number> {
         if (!Array.isArray(opts.whereColumns) || opts.whereColumns.length === 0) {
             throw new Error(`DataPurgeModel.streamTableFiltered: "${table}" requires a non-empty opts.whereColumns array.`);
         }
@@ -327,7 +326,7 @@ class DataPurgeModel {
         // already streamed against a transaction that is doomed to fail.
         const entries = tables.map((table) => _requireEntry(table, "streamAllTables"));
 
-        const pageSize = Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
+        const pageSize = typeof opts.pageSize === "number" && Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
         const onBatch = typeof opts.onBatch === "function" ? opts.onBatch : () => {};
 
         try {
@@ -368,12 +367,13 @@ class DataPurgeModel {
                 ),
             );
 
-            const snapshotErr = new Error(
+            const snapshotErr = Object.assign(new Error(
                 `DataPurgeModel.streamAllTables: ORA-01555 snapshot too old across ${entries.length} table(s) — read-only transaction invalidated mid-read. Caller must fall back to the per-table streamTable() path and mark readConsistent:false.`,
-            );
-            snapshotErr.code = "ORA_01555_SNAPSHOT_TOO_OLD";
-            snapshotErr.isSnapshotTooOld = true;
-            snapshotErr.originalError = err;
+            ), {
+                code: "ORA_01555_SNAPSHOT_TOO_OLD",
+                isSnapshotTooOld: true,
+                originalError: err,
+            });
             throw snapshotErr;
         }
     }
@@ -425,12 +425,12 @@ class DataPurgeModel {
      */
     static async _streamRowsOnConnection(conn: import('oracledb').Connection, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
         const outFormat = { outFormat: _db.oracledb.OUT_FORMAT_OBJECT };
-        const pageSize = Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
+        const pageSize = typeof opts.pageSize === "number" && Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
         const onBatch = typeof opts.onBatch === "function" ? opts.onBatch : () => {};
         const whereColumns = Array.isArray(opts.whereColumns) && opts.whereColumns.length > 0 ? opts.whereColumns : null;
         const whereValue = opts.whereValue;
 
-        const colResult = await conn.execute(
+        const colResult = await conn.execute<{ COLUMN_NAME: string; DATA_TYPE: string }>(
             `SELECT COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLUMNS WHERE TABLE_NAME = :tableName ORDER BY COLUMN_ID`,
             { tableName: entry.table },
             outFormat,
@@ -494,7 +494,7 @@ class DataPurgeModel {
                 OFFSET :skip ROWS FETCH NEXT :pageSize ROWS ONLY
             `;
             const binds = whereColumns ? { whereValue, skip, pageSize } : { skip, pageSize };
-            const result = await conn.execute(
+            const result = await conn.execute<Record<string, unknown>>(
                 sql,
                 binds,
                 clobColumns.length > 0 ? { ...outFormat, fetchInfo } : outFormat,

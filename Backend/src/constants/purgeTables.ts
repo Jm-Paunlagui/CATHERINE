@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -87,9 +86,9 @@ export interface PurgeTableEntry {
     /** true when pk is an IDENTITY column (restore must regenerate + remap). */
     isIdentity: boolean;
     /** `GENERATED ALWAYS AS <expr> VIRTUAL` columns — excluded from INSERT lists (ORA-54013). */
-    virtualColumns: string[];
+    virtualColumns: readonly string[];
     /** Child→parent FK edges to OTHER tables in this registry. */
-    fkEdges: FkEdge[];
+    fkEdges: readonly Readonly<FkEdge>[];
     /** Leaves→roots ordering. Lower runs first. */
     deleteOrderTier: number;
     /** Roots→leaves ordering. Lower runs first. */
@@ -97,12 +96,15 @@ export interface PurgeTableEntry {
     /** CryptoVault.signRecord/verifyRecord domain key for the ROW_HASH column, or null. */
     rowHashDomain: string | null;
     /** Signed TIMESTAMP columns exported as the canonical FF6 string. Usually empty. */
-    canonicalTimestampColumns: string[];
+    canonicalTimestampColumns: readonly string[];
     /** true for identity-PK log tables the app appends to continuously; purge only deletes `pk <= highWater` of the backup. */
     appendOnlyLog?: boolean;
     /** NUMBER identifier columns serialised as exact digit STRINGS on backup, never `Number()`. */
-    identifierColumns: string[];
+    identifierColumns: readonly string[];
 }
+
+/** A registry entry as written in PURGE_TABLES below, before freezing. */
+type PurgeTableSeed = Omit<PurgeTableEntry, "canonicalTimestampColumns"> & { canonicalTimestampColumns?: readonly string[] };
 
 /**
  * The registry. Array order is irrelevant — the order tiers are the authority.
@@ -110,7 +112,7 @@ export interface PurgeTableEntry {
  * @type {ReadonlyArray<Readonly<PurgeTableEntry>>}
  */
 const PURGE_TABLES: ReadonlyArray<Readonly<PurgeTableEntry>> = Object.freeze(
-    [
+    ([
         {
             // Registered so the Access Control revoke-backup can archive an admin's row;
             // purging it needs `acknowledgeLockout` (DataPurgeService step 5).
@@ -167,7 +169,7 @@ const PURGE_TABLES: ReadonlyArray<Readonly<PurgeTableEntry>> = Object.freeze(
             rowHashDomain: null,
             identifierColumns: ["ACKED_BY"],
         },
-    ].map((entry) =>
+    ] satisfies PurgeTableSeed[] as PurgeTableSeed[]).map((entry) =>
         Object.freeze({
             ...entry,
             fkEdges: Object.freeze(entry.fkEdges.map((e) => Object.freeze({ ...e }))),

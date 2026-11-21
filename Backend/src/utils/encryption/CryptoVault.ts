@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 /**
  * CryptoVault.js
  * Unified password encryption, hashing, and verification module.
@@ -214,6 +213,8 @@ const SymmetricCrypto = (() => {
         static encryptText(text: any) {
             try {
                 const initkey = process.env.PASSWORD_KEY;
+                // Never fall back to a default key: a missing key fails into the catch below.
+                if (initkey === undefined) throw new Error("PASSWORD_KEY is not set.");
                 const prefix = initkey.padEnd(5, "x").substring(0, 5);
                 const keyStr = prefix + "57984354841";
                 const ivStr = prefix + "789";
@@ -233,6 +234,8 @@ const SymmetricCrypto = (() => {
         static decryptText(base64CipherText: any) {
             try {
                 const initkey = process.env.PASSWORD_KEY;
+                // Never fall back to a default key: a missing key fails into the catch below.
+                if (initkey === undefined) throw new Error("PASSWORD_KEY is not set.");
                 const prefix = initkey.padEnd(5, "x").substring(0, 5);
                 const keyStr = prefix + "57984354841";
                 const ivStr = prefix + "789";
@@ -339,7 +342,7 @@ const resolveAdminMode = (): 'bcrypt' | 'argon2' => {
         );
     }
 
-    return encMode;
+    return encMode as "argon2" | "bcrypt"; // STRONG_MODES check above
 };
 
 // Cache the resolved admin mode (lazy, same pattern as _mode).
@@ -366,7 +369,7 @@ const BCRYPT_DEFAULTS = { minRounds: 10, maxRounds: 31, defaultRounds: 12 };
 
 const resolveBcryptRounds = () => {
     const raw = process.env.BCRYPT_SALT_ROUNDS;
-    const parsed = parseInt(raw, 10);
+    const parsed = parseInt(raw ?? "", 10);
     if (raw === undefined) return BCRYPT_DEFAULTS.defaultRounds;
     if (
         isNaN(parsed) ||
@@ -754,7 +757,7 @@ class CryptoVault {
         // and can never reach the TripleDES rehash branch.
         const parsed = parseStoredAdminPassword(storedHash);
         if (parsed.temporary) {
-            const refused = { matched: false, newHash: null, temporary: true, expired: false, expiresAt: null };
+            const refused: { matched: boolean; newHash: null; temporary: true; expired: boolean; expiresAt: null } = { matched: false, newHash: null, temporary: true, expired: false, expiresAt: null };
             if (parsed.malformed) return refused;
             const inner = await CryptoVault.verifyAdminPassword(password, parsed.hash);
             if (!inner.matched) return refused;
@@ -1163,7 +1166,7 @@ class BCryptAdapter {
 
     static #SALT_ROUNDS = (() => {
         const raw = process.env.BCRYPT_SALT_ROUNDS;
-        const parsed = parseInt(raw, 10);
+        const parsed = parseInt(raw ?? "", 10);
         if (!raw) return BCryptAdapter.#DEFAULT_ROUNDS;
         if (
             isNaN(parsed) ||
@@ -1558,6 +1561,7 @@ if (import.meta.main) {
             pass("Rejects empty password");
         }
         try {
+            // @ts-expect-error deliberate bad input: the self-test checks the runtime guard
             await CryptoVault.hashPassword(12345);
             fail("Non-string password", { message: "Should throw" });
         } catch {
@@ -1691,6 +1695,7 @@ if (import.meta.main) {
                 pass("buildPayload: rejects empty context");
             }
             try {
+                // @ts-expect-error deliberate bad input: the self-test checks the runtime guard
                 CryptoVault.buildPayload("USERS", null);
                 fail("buildPayload null fields", { message: "Should throw" });
             } catch {

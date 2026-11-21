@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -8,6 +7,7 @@
  */
 
 import type { Request, Response } from "express";
+import { requireAuthUser } from "../utils/auth/requireAuthUser";
 import { catchAsync } from "../utils/catchAsync";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { AppError, NOTIFICATION_ERRORS, HTTP_STATUS } from "../constants";
@@ -28,9 +28,9 @@ const VALID_HISTORY_SEVERITIES = ["WARNING", "CRITICAL", "RESOLVED"];
  * @param {string} field - Query param name, echoed in the validation detail
  * @returns {Date|null}
  */
-function parseHistoryDate(raw: string | undefined, field: string): Date | null {
+function parseHistoryDate(raw: unknown, field: string): Date | null {
   if (raw == null || raw === "") return null;
-  const d = new Date(raw);
+  const d = new Date(raw as string); // a non-string query value parses to NaN -> 400
   if (isNaN(d.getTime())) {
     throw new AppError(
       NOTIFICATION_ERRORS.INVALID_DATE_RANGE,
@@ -52,8 +52,9 @@ function parseHistoryDate(raw: string | undefined, field: string): Date | null {
  * @param {import('express').Request} req
  * @returns {number|string|undefined}
  */
-function actorId(req: import('express').Request): number | string | undefined {
-  return req.user?.id ?? req.user?.userId;
+function actorId(req: import('express').Request): number | string {
+  const user = requireAuthUser(req);
+  return user.id ?? user.userId;
 }
 
 class MetricsController {
@@ -180,12 +181,12 @@ class MetricsController {
 
     const result = await AlertNotifierService.getAlertHistory(
       {
-        rule: rule || undefined,
+        rule: typeof rule === "string" && rule !== "" ? rule : undefined,
         severity: severity ? String(severity).toUpperCase() : undefined,
-        from: fromDate,
-        to: toDate,
+        from: fromDate ?? undefined,
+        to: toDate ?? undefined,
       },
-      { page, limit },
+      { page, limit }, // raw query values; the model applies Number(x) || default
     );
 
     res.json(sendSuccess(RESPONSE_MESSAGES.NOTIFICATION_HISTORY_FETCHED, result));

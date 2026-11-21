@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -28,6 +27,7 @@
 import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../constants";
 import { AppError, PURGE_ERRORS } from "../constants/errors";
+import { requireAuthUser } from "../utils/auth/requireAuthUser";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { logger } from "../utils/logger";
 import { dataBackupMessages } from "../constants/messages";
@@ -40,11 +40,13 @@ import DataRestoreService from "../services/DataRestoreService";
  * tokens, votes and audit rows record as the actor.
  *
  * @param {import('express').Request} req
- * @returns {number|string|undefined}
+ * @returns {number|string}
+ * @throws {AppError} 401 without an authenticated admin (unreachable behind authenticate)
  * @private
  */
-function _callerAdminId(req: import('express').Request): number | string | undefined {
-    return req.user?.id ?? req.user?.userId;
+function _callerAdminId(req: import('express').Request): number | string {
+    const user = requireAuthUser(req);
+    return user.id ?? user.userId;
 }
 
 class DataPurgeController {
@@ -344,7 +346,7 @@ class DataPurgeController {
     static downloadBackup = catchAsync(async (req: Request, res: Response) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const adminId = _callerAdminId(req);
-        const archiveId = req.params.id;
+        const archiveId = req.params.id as string; // a named :param is one string
 
         logger.info(
             dataBackupMessages.DOWNLOAD_REQUESTED(archiveId, adminId),
@@ -373,7 +375,7 @@ class DataPurgeController {
     static verifyBackup = catchAsync(async (req: Request, res: Response) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const adminId = _callerAdminId(req);
-        const archiveId = req.params.id;
+        const archiveId = req.params.id as string; // a named :param is one string
 
         // Delegates entirely to BackupStoreService.verifyArchive — the
         // service owns the signature re-verification AND the chain-health
@@ -406,7 +408,7 @@ class DataPurgeController {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);
-        const archiveId = req.params.id;
+        const archiveId = req.params.id as string; // a named :param is one string
 
         // Validate archive exists (CWE-22 check inside getArchive).
         await BackupStoreService.getArchive(archiveId);
@@ -484,7 +486,7 @@ class DataPurgeController {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);
-        const archiveId = req.params.id;
+        const archiveId = req.params.id as string; // a named :param is one string
 
         // Validate archive exists
         await BackupStoreService.getArchive(archiveId);
@@ -575,7 +577,7 @@ class DataPurgeController {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);
-        const archiveId = req.params.id;
+        const archiveId = req.params.id as string; // a named :param is one string
 
         // Validate archive exists
         await BackupStoreService.getArchive(archiveId);

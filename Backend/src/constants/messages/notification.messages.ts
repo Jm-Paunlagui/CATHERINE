@@ -179,7 +179,7 @@ const notificationMessages = {
      * @param {string} testedBy - Requesting admin's user id
      * @returns {string}
      */
-    TEST_SEND_REQUESTED: (channel: string, testedBy: string): string =>
+    TEST_SEND_REQUESTED: (channel: string, testedBy: string | number): string =>
         `Test notification requested on channel '${channel}' by ${testedBy}.`,
 
     // ── Phase 4: Alert Acknowledgement ─────────────────────────────────────────

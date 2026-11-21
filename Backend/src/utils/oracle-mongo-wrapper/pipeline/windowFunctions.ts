@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -92,27 +91,27 @@ function buildWindowExpr(spec: { fn: string; field?: string; partitionBy?: strin
     case "NTILE":
       return `NTILE(${n || 4}) ${overClause}`;
     case "LAG":
-      return `LAG(${quoteIdentifier(field)}, ${offset || 1}) ${overClause}`;
+      return `LAG(${quoteIdentifier(field as string)}, ${offset || 1}) ${overClause}`;
     case "LEAD":
-      return `LEAD(${quoteIdentifier(field)}, ${offset || 1}) ${overClause}`;
+      return `LEAD(${quoteIdentifier(field as string)}, ${offset || 1}) ${overClause}`;
     case "FIRST_VALUE":
-      return `FIRST_VALUE(${quoteIdentifier(field)}) ${overClause}`;
+      return `FIRST_VALUE(${quoteIdentifier(field as string)}) ${overClause}`;
     case "LAST_VALUE":
-      return `LAST_VALUE(${quoteIdentifier(field)}) ${overClause}`;
+      return `LAST_VALUE(${quoteIdentifier(field as string)}) ${overClause}`;
     case "NTH_VALUE":
-      return `NTH_VALUE(${quoteIdentifier(field)}, ${n || 1}) ${overClause}`;
+      return `NTH_VALUE(${quoteIdentifier(field as string)}, ${n || 1}) ${overClause}`;
     case "SUM":
-      return `SUM(${field === "*" ? "*" : quoteIdentifier(field)}) ${overClause}`;
+      return `SUM(${field === "*" ? "*" : quoteIdentifier(field as string)}) ${overClause}`;
     case "AVG":
-      return `AVG(${field === "*" ? "*" : quoteIdentifier(field)}) ${overClause}`;
+      return `AVG(${field === "*" ? "*" : quoteIdentifier(field as string)}) ${overClause}`;
     case "COUNT":
-      return `COUNT(${field === "*" ? "*" : quoteIdentifier(field)}) ${overClause}`;
+      return `COUNT(${field === "*" ? "*" : quoteIdentifier(field as string)}) ${overClause}`;
     case "MIN":
-      return `MIN(${quoteIdentifier(field)}) ${overClause}`;
+      return `MIN(${quoteIdentifier(field as string)}) ${overClause}`;
     case "MAX":
-      return `MAX(${quoteIdentifier(field)}) ${overClause}`;
+      return `MAX(${quoteIdentifier(field as string)}) ${overClause}`;
     default:
-      return `${fnUpper}(${field ? quoteIdentifier(field) : ""}) ${overClause}`;
+      return `${fnUpper}(${field ? quoteIdentifier(field as string) : ""}) ${overClause}`;
   }
 }
 

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -37,8 +36,8 @@ const WATCHDOG_ROUTES_MERGE_MAX = 200;
 /** Bisection steps when inverting the mixed CDF. */
 const BISECT_STEPS = 60;
 
-const isObj = (v: any) => v !== null && typeof v === "object" && !Array.isArray(v);
-const num = (v: any) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
+const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const maxOf = (values: any) => values.reduce((m: any, v: any) => (v > m ? v : m), 0);
 const sumOf = (values: any) => values.reduce((s: any, v: any) => s + v, 0);
 const round2 = (v: any) => Number(v.toFixed(2));
@@ -57,8 +56,9 @@ function buildQuantileSketch(sortedDurations: number[]): { n: number; q: number[
 }
 
 /** @returns {boolean} a sketch with finite, ascending values on the full grid */
-function isValidSketch(s: any): boolean {
-    if (!isObj(s) || !Number.isFinite(s.n) || s.n < 0 || !Array.isArray(s.q)) return false;
+function isValidSketch(s: unknown): s is { n: number; q: number[] } {
+    // typeof check first: Number.isFinite is false for non-numbers anyway.
+    if (!isObj(s) || typeof s.n !== "number" || !Number.isFinite(s.n) || s.n < 0 || !Array.isArray(s.q)) return false;
     if (s.n === 0) return s.q.length === 0;
     if (s.q.length !== QUANTILE_GRID.length) return false;
     for (let i = 0; i < s.q.length; i++) {

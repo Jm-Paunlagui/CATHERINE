@@ -26,7 +26,10 @@
 //   504 Gateway Timeout     – the caller gave up waiting for a connection
 // ─────────────────────────────────────────────────────────────────────────────
 
-const NJS_MAP = {
+/** One NJS-* code's client-facing mapping. */
+type NjsMapping = { status: number; msg: string; type?: string; hint?: string };
+
+const NJS_MAP: Record<number, NjsMapping> = {
     40: {
         status: 503,
         msg: "Database connection pool is exhausted. Please retry shortly.",

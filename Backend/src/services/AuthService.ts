@@ -195,7 +195,7 @@ class AuthService {
      * @param {object} user - verified access-token payload (req.user)
      * @returns {Promise<void>}
      */
-    static async logout(user: Record<string, any>): Promise<void> {
+    static async logout(user: import("../types/express").AuthUser | undefined): Promise<void> {
         if (!user?.userId) return;
         if (user.fid) {
             await RefreshTokenService.revokeFamily(
@@ -218,7 +218,7 @@ class AuthService {
      * @param {object} decodedUser - req.user (verified JWT payload)
      * @returns {Promise<object>}
      */
-    static async getProfile(decodedUser: Record<string, any>): Promise<Record<string, any>> {
+    static async getProfile(decodedUser: import("../types/express").AuthUser | undefined): Promise<Record<string, any>> {
         try {
             // USER sessions never carry admin flags.
             if (decodedUser?.role === "USER") return decodedUser;
@@ -253,7 +253,7 @@ class AuthService {
 
     // ─── Cookie option helpers (used by the controller) ───────────────────────
 
-    static accessCookieOptions() {
+    static accessCookieOptions(): import("express").CookieOptions {
         // In production cookies are always Secure — the app may sit behind a
         // TLS-terminating proxy where USE_HTTPS=false.
         const isProduction = process.env.NODE_ENV === "production";
@@ -270,7 +270,7 @@ class AuthService {
         };
     }
 
-    static refreshCookieOptions() {
+    static refreshCookieOptions(): import("express").CookieOptions {
         const isProduction = process.env.NODE_ENV === "production";
         const secure = process.env.USE_HTTPS === "true" || isProduction;
 

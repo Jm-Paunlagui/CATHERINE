@@ -1,7 +1,7 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 import type { Request, Response } from "express";
+import { requireAuthUser } from "../utils/auth/requireAuthUser";
 import { HTTP_STATUS, AppError, AUTH_ERRORS } from "../constants";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { catchAsync } from "../utils/catchAsync";
@@ -124,7 +124,7 @@ class AuthController {
      */
     static changePassword = catchAsync(async (req: Request, res: Response) => {
         const { currentPassword, newPassword } = req.body;
-        const userId = req.user?.userId;
+        const { userId } = requireAuthUser(req);
 
         const { user, accessToken, refreshToken } =
             await AuthService.changePassword(

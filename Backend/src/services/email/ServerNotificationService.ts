@@ -217,7 +217,7 @@ class ServerNotificationService {
             );
         }
 
-        const source: any[] = dbUp && dbOptIns.length > 0 ? dbOptIns : envFloor;
+        const source = dbUp && dbOptIns.length > 0 ? dbOptIns : envFloor;
         const seen = new Set();
         const out = [];
         for (const email of source) {

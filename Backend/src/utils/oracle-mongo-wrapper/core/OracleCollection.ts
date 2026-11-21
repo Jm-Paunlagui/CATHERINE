@@ -493,7 +493,7 @@ class OracleCollection {
             });
 
             const allBinds = mergeBinds(filterBinds, replBinds);
-            const updateSql: any[] = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} ${whereClause}`;
+            const updateSql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} ${whereClause}`;
 
             try {
                 await conn.execute(updateSql, allBinds, {
@@ -1254,7 +1254,7 @@ class OracleCollection {
             });
 
             const allBinds = mergeBinds(filterBinds, replBinds);
-            const sql: any[] = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} ${whereClause} AND ROWNUM = 1)`;
+            const sql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} ${whereClause} AND ROWNUM = 1)`;
 
             try {
                 const result = await conn.execute(sql, allBinds, {

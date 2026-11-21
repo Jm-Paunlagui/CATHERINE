@@ -126,12 +126,16 @@ function wrapTemporaryHash(hash: string, expiresAtMs: number): string {
  *   — callers must treat it as unverifiable (fail closed), never fall back to
  *   verifying the raw string.
  */
-function parseStoredAdminPassword(stored: string): {
-    hash: string | null;
-    temporary: boolean;
-    expiresAt: number | null;
-    malformed: boolean;
-} {
+/** A stored admin password, unwrapped from its temporary-password marker if it has one. */
+type ParsedAdminPassword =
+    /** No marker: the stored value is the hash itself (null when it is not a string). */
+    | { hash: string | null; temporary: false; expiresAt: null; malformed: false }
+    /** A marker that does not parse: refuse it. */
+    | { hash: null; temporary: true; expiresAt: null; malformed: true }
+    /** A well-formed marker: inner hash plus its expiry. */
+    | { hash: string; temporary: true; expiresAt: number; malformed: false };
+
+function parseStoredAdminPassword(stored: string): ParsedAdminPassword {
     if (typeof stored !== "string" || !stored.startsWith(MARKER_PREFIX)) {
         return { hash: typeof stored === "string" ? stored : null, temporary: false, expiresAt: null, malformed: false };
     }

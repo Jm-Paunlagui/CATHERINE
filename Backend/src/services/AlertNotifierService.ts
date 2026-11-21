@@ -2125,7 +2125,7 @@ class AlertNotifierService {
      * @param {{ page?: number, limit?: number }} [opts]
      * @returns {Promise<{ rows: object[], total: number, page: number, limit: number }>}
      */
-    async getAlertHistory(filters: { rule?: string; severity?: string; from?: Date; to?: Date; } = {}, opts: { page?: number; limit?: number; } = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; }> {
+    async getAlertHistory(filters: { rule?: string; severity?: string; from?: Date; to?: Date; } = {}, opts: { page?: unknown; limit?: unknown; } = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; }> {
         return ServerAlertLogModel.findPage(filters, opts);
     }
 
@@ -2143,7 +2143,7 @@ class AlertNotifierService {
      * @returns {Promise<{ sent: boolean, notificationId?: string }>}
      * @throws {AppError} 400 CHANNEL_UNKNOWN | 502 TEST_SEND_FAILED
      */
-    async sendTestNotification(channel: string, user: { id?: number; userId?: string; username?: string; }): Promise<{ sent: boolean; notificationId?: string; }> {
+    async sendTestNotification(channel: string, user: { id?: number | null; userId?: string; username?: string; } | undefined): Promise<{ sent: boolean; notificationId?: string; }> {
         if (!ServerNotificationService.CHANNELS.includes(channel)) {
             throw new AppError(NOTIFICATION_ERRORS.CHANNEL_UNKNOWN, 400, {
                 type: "ValidationError",

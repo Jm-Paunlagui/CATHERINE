@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 /**
  * @fileoverview Enterprise Logging System with RFC 5424 Syslog Levels and File Rotation
  * @description Comprehensive logging solution with RFC 5424 severity levels, automatic
@@ -62,7 +61,7 @@ class Logger {
             NOTICE: 5, // Normal but significant condition (startup complete, config change)
             INFO: 6, // Informational (formerly INFO:2)
             DEBUG: 7, // Debug-level messages (formerly DEBUG:3)
-        },
+        } as Record<string, number>,
 
         COLORS: {
             // RFC 5424 new levels
@@ -87,7 +86,7 @@ class Logger {
             RESET: "\x1b[0m",
             BRACKET: "\x1b[37m",
             SEPARATOR: "\x1b[37m",
-        },
+        } as Record<string, string>,
 
         // In the compiled exe logs live NEXT TO THE EXE — a service can
         // start the exe with cwd anywhere (e.g. System32).
@@ -132,7 +131,7 @@ class Logger {
             // PKG-compiled prod exe: "[2026-07-02 24:56:00]"), which breaks
             // timestamp parsing and sorts the first hour of the day last.
             hourCycle: "h23",
-        },
+        } satisfies Intl.DateTimeFormatOptions,
     };
     declare _levelSubscribers: any[];
     declare machineIdentifier: string;
@@ -293,7 +292,9 @@ class Logger {
             for (const entries of Object.values(interfaces)) {
                 if (!entries) continue;
                 for (const net of entries) {
-                    const family = net.family || net.addressFamily || "";
+                    // Old Node versions reported family as the number 4 / 6.
+                    const legacy = net as { family: string | number; addressFamily?: string };
+                    const family: string | number = legacy.family || legacy.addressFamily || "";
                     const isIPv4 = family === "IPv4" || family === 4;
                     if (isIPv4 && !net.internal) {
                         ipAddress = net.address || ipAddress;
@@ -1179,10 +1180,10 @@ class Logger {
             this.logIncomingRequest(req);
 
             const originalEnd = res.end.bind(res);
-            res.end = (...args) => {
+            res.end = ((...args: unknown[]) => {
                 this.logCompletedRequest(req, res, Date.now() - startTime);
-                return originalEnd(...args);
-            };
+                return (originalEnd as (...a: unknown[]) => unknown)(...args);
+            }) as typeof res.end;
 
             next();
         };

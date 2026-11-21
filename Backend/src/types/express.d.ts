@@ -11,12 +11,16 @@ import type { JwtPayload } from "jsonwebtoken";
  * Claims beyond the named ones stay reachable through JwtPayload's index signature.
  */
 export interface AuthUser extends JwtPayload {
-    userId?: string | number;
-    id?: string | number;
-    username?: string;
-    role?: string;
-    firstName?: string;
-    fid?: string | number;
+    /** The account's username (AuthService signs String(userId)). */
+    userId: string;
+    /** Same as userId. */
+    username: string;
+    /** Numeric admin id; null for user accounts. */
+    id: number | null;
+    role: string;
+    firstName?: string | null;
+    /** Refresh-token family id. */
+    fid?: string;
     GID?: string | number;
 }
 

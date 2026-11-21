@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -163,7 +162,7 @@ function effectiveCap(classification: string | null, maxAttempts: number): numbe
         classification &&
         Object.prototype.hasOwnProperty.call(capsTable, classification)
     ) {
-        const cap = capsTable[classification];
+        const cap = capsTable[classification as keyof typeof capsTable];
         return cap === null ? maxAttempts : cap;
     }
     return maxAttempts;
@@ -206,18 +205,20 @@ class EmailProtectionService {
      * }>}
      */
     async sendProtected({ buildMailOptions, label = "email", fallback = null }: {
-        buildMailOptions: () => Record<string, any>; label?: string; fallback?: {
+        buildMailOptions: () => import("nodemailer").SendMailOptions; label?: string; fallback?: {
             resolveRecipients: () => Promise<string[]>;
-            buildMailOptions: (recipients: string[]) => Record<string, any>;
-        };
-    } = {}): Promise<{
-        status: "DELIVERED" | "FALLBACK" | "FAILED";
+            buildMailOptions: (recipients: string[]) => import("nodemailer").SendMailOptions;
+        } | null;
+    }): Promise<{
+        status: "DELIVERED" | "FALLBACK" | "FAILED" | "PARTIAL";
         recipient: string | null;
         fallbackRecipients: string[];
         attempts: number;
         fallbackAttempts: number;
         cause: string | null;
         smtpErrorCode: string | null;
+        /** Set on PARTIAL: the addresses SMTP refused. */
+        rejectedRecipients?: string[];
     }> {
         const primaryMaxAttempts = envInt("EMAIL_RETRY_ATTEMPTS", 3);
         const fallbackMaxAttempts = envInt("EMAIL_FALLBACK_RETRY_ATTEMPTS", 3);
@@ -236,7 +237,7 @@ class EmailProtectionService {
         let primaryCause = null;
         let primaryErrorCode = null;
 
-        let primaryInfo = null;
+        let primaryInfo: { rejected?: Array<string | { address?: string }> } | null = null;
         try {
             primaryInfo = await primaryPolicy.execute(
                 async (attempt) => {
@@ -274,12 +275,12 @@ class EmailProtectionService {
             // DELIVERED and its batch counted as sent.
             const rejected = Array.isArray(primaryInfo?.rejected) ? primaryInfo.rejected : [];
             if (rejected.length > 0) {
-                const maskedRejected = rejected.map((r) => maskEmail(String(r?.address ?? r)));
+                const maskedRejected = rejected.map((r) => maskEmail(String(typeof r === "string" ? r : r?.address ?? r)));
                 logger.warning(resilienceMessages.EMAIL_PARTIALLY_REJECTED(label, maskedRejected.length, maskedRejected.join(", ")));
                 return {
                     status: STATUS.PARTIAL,
                     recipient: primaryRecipient,
-                    rejectedRecipients: rejected.map((r) => String(r?.address ?? r)),
+                    rejectedRecipients: rejected.map((r) => String(typeof r === "string" ? r : r?.address ?? r)),
                     fallbackRecipients: [],
                     attempts: primaryAttempts,
                     fallbackAttempts: 0,
@@ -371,7 +372,7 @@ class EmailProtectionService {
         // array used to stringify via commas and only the first address was
         // masked, shipping every later one in the clear.
         logger.warning(
-            resilienceMessages.EMAIL_FALLBACK(fallbackRecipients.map(maskEmail)),
+            resilienceMessages.EMAIL_FALLBACK(fallbackRecipients.map((r) => maskEmail(r))),
         );
 
         const fallbackPolicy = new RetryPolicy({
@@ -387,7 +388,7 @@ class EmailProtectionService {
             await fallbackPolicy.execute(
                 async (attempt) => {
                     fallbackAttempts = attempt;
-                    const mailOptions: any[] = fallback.buildMailOptions(fallbackRecipients);
+                    const mailOptions = fallback.buildMailOptions(fallbackRecipients);
                     return SharedTransporter.getTransporter().sendMail(mailOptions);
                 },
                 {
@@ -408,8 +409,8 @@ class EmailProtectionService {
                 },
             );
 
-            const maskedFallbackRecipients: any[] = fallbackRecipients
-                .map(maskEmail)
+            const maskedFallbackRecipients: string = fallbackRecipients
+                .map((r) => maskEmail(r))
                 .join(", ");
             logger.debug(
                 resilienceMessages.EMAIL_ATTEMPT_OK(

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -18,6 +17,18 @@ import { getStatusTitle } from "../../constants/responses";
 
 /** AppError type of the shutdown-drain 503 (ShutdownGateMiddleware). */
 const SHUTTING_DOWN_TYPE = "ServerShuttingDown";
+
+/** What _classify derives from any thrown value: the envelope's inputs. */
+interface ClassifiedError {
+    statusCode: number;
+    message: string;
+    type: string;
+    details?: unknown;
+    hint?: string;
+    reasons?: string[];
+    rawMessage?: string;
+    retryAfterSec?: number;
+}
 
 class ErrorHandlerMiddleware {
     declare _cors: any;
@@ -139,7 +150,7 @@ class ErrorHandlerMiddleware {
      *   4. HTTP-level framework errors (body-parser, multer)
      *   5. Fallback generic 500
      */
-    _classify(err: any) {
+    _classify(err: any): ClassifiedError {
         // 1. AppError — already operational and classified
         if (err.isOperational) {
             return {
@@ -357,7 +368,7 @@ class ErrorHandlerMiddleware {
         let totalBytes = 0;
         let capped = false;
 
-        res.write = function (chunk, ...args) {
+        res.write = function (chunk: string | Buffer, ...args: unknown[]) {
             if (!capped) {
                 const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
                 totalBytes += buf.length;
@@ -367,10 +378,10 @@ class ErrorHandlerMiddleware {
                     capped = true;
                 }
             }
-            oldWrite.apply(res, [chunk, ...args]);
-        };
+            (oldWrite as (...a: unknown[]) => unknown).apply(res, [chunk, ...args]);
+        } as typeof res.write;
 
-        res.end = function (chunk, ...args) {
+        res.end = function (chunk?: string | Buffer, ...args: unknown[]) {
             if (chunk && !capped) {
                 const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
                 totalBytes += buf.length;
@@ -383,8 +394,8 @@ class ErrorHandlerMiddleware {
             res.locals.body = capped
                 ? "[response body too large — capture skipped]"
                 : Buffer.concat(chunks).toString("utf8");
-            oldEnd.apply(res, [chunk, ...args]);
-        };
+            (oldEnd as (...a: unknown[]) => unknown).apply(res, [chunk, ...args]);
+        } as typeof res.end;
 
         next();
     }

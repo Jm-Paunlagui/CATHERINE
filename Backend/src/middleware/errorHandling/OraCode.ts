@@ -32,7 +32,10 @@
 //   507 Insufficient Storage – disk/tablespace quota exhausted
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ORA_MAP = {
+/** One ORA-* code's client-facing mapping. */
+type OraMapping = { status: number; msg: string; type?: string; hint?: string };
+
+const ORA_MAP: Record<number, OraMapping> = {
     // ════════════════════════════════════════════════════════════════════════
     // SECTION 1 — Session / Instance Errors
     // ════════════════════════════════════════════════════════════════════════

@@ -813,7 +813,7 @@ class BackupArchiveService {
             });
             rowCounts[filter.table] = count;
             rowsByTable[filter.table] = rows;
-            const jsonl: any[] = rows.length > 0 ? rows.map((r) => JSON.stringify(r)).join("\n") + "\n" : "";
+            const jsonl = rows.length > 0 ? rows.map((r) => JSON.stringify(r)).join("\n") + "\n" : "";
             dataBuffers[`data/${entry.table}.jsonl`] = Buffer.from(jsonl, "utf8");
         }
 
