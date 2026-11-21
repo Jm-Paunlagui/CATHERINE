@@ -8,7 +8,7 @@
  *   runs BEFORE the Express app: it creates one ProgressScope per request
  *   (keyed in a WeakMap, read back with `RequestWatchdog.scopeOf(req)`) and
  *   registers it with an IdleWatchdog. The 13-step middleware chain in
- *   `src/app.js` is untouched — TraceabilityMiddleware only copies the scope
+ *   `src/app.ts` is untouched — TraceabilityMiddleware only copies the scope
  *   into the ALS store (step 3).
  *
  * WHAT COUNTS AS PROGRESS

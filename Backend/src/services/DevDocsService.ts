@@ -121,36 +121,36 @@ const MIN_QUERY_LENGTH = 2;
 const SECTION_SOURCE_MAP = Object.freeze({
     // Paths are case-exact: git pathspecs are case-sensitive.
     "System Admin": [
-        "src/services/DataPurgeService.js",
-        "src/services/BackupStoreService.js",
-        "src/services/AdminManagementService.js",
-        "src/services/IntegrityService.js",
-        "src/services/AuditLogService.js",
-        "src/services/MetricsService.js",
+        "src/services/DataPurgeService.ts",
+        "src/services/BackupStoreService.ts",
+        "src/services/AdminManagementService.ts",
+        "src/services/IntegrityService.ts",
+        "src/services/AuditLogService.ts",
+        "src/services/MetricsService.ts",
     ],
     // The union of what the Support documents describe: the changelog, and the
     // Architecture / Runtime system maps with the dev-docs viewer that serves them.
     // Changelog-only left architecture, runtime and viewer docs unable to go SUSPECT.
     Support: [
-        "src/services/ChangelogService.js",
-        "src/services/ArchitectureService.js",
-        "src/constants/architectureModel.js",
-        "src/constants/runtimeModel.js",
-        "src/utils/systemMap.js",
-        "src/services/DevDocsService.js",
+        "src/services/ChangelogService.ts",
+        "src/services/ArchitectureService.ts",
+        "src/constants/architectureModel.ts",
+        "src/constants/runtimeModel.ts",
+        "src/utils/systemMap.ts",
+        "src/services/DevDocsService.ts",
     ],
     // Cross-cutting. The union of what the documents under Others/ describe:
     // auth, health probes, CSRF and client error ingestion.
     Others: [
-        "src/services/AuthService.js",
-        "src/routes/health.route.js",
-        "src/middleware/security/CsrfMiddleware.js",
-        "src/services/ClientService.js",
+        "src/services/AuthService.ts",
+        "src/routes/health.route.ts",
+        "src/middleware/security/CsrfMiddleware.ts",
+        "src/services/ClientService.ts",
     ],
     // The synthetic section holding root-level README.md. Its sources are what
     // actually makes it stale: README documents how the corpus is served and
     // what the freshness badge means, so this service IS its subject.
-    Overview: ["src/services/DevDocsService.js"],
+    Overview: ["src/services/DevDocsService.ts"],
 });
 
 /** @type {{ builtAt: number, byId: Map<string, object>, sections: object[] }|null} */

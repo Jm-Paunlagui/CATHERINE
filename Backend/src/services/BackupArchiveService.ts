@@ -76,7 +76,7 @@
  * accepts a `previousTableState` map and can mark a table `"UNCHANGED"`.
  *
  * ── ORA-01555 critical-log decision ("not fixed in step 3") ──
- * `db.withConnection` (`src/config/adapters/oracle.js#withConnection`, a
+ * `db.withConnection` (`src/config/adapters/oracle.ts#withConnection`, a
  * shared path this feature does NOT own or edit) unconditionally
  * `logger.critical`s any callback error — including a handled ORA-01555 —
  * BEFORE `DataPurgeModel.streamAllTables` gets a chance to convert it into

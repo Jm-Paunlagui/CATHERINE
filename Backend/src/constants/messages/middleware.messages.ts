@@ -47,7 +47,7 @@ const middlewareMessages = {
     `Security filter: ${method} with a request body refused — ${path} from ${ip}.`,
 
   // ── Cluster cron-leader election (server.js primary process) ─────────────
-  // ClusterRole.isCronLeader fails CLOSED (see src/utils/clusterRole.js);
+  // ClusterRole.isCronLeader fails CLOSED (see src/utils/clusterRole.ts);
   // these are the election-lifecycle templates the primary process uses so a
   // broken election is loud, never silent.
   CRON_LEADER_ELECTED: (workerId, pid, context) =>

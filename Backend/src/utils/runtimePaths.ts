@@ -11,7 +11,7 @@
  *
  *   - compiled exe → the directory holding the exe; the build stages `src/utils/email-templates`,
  *     `src/assets`, `src/generated` and the native addons beside it (scripts/build.js)
- *   - `bun server.js` / tests → the Backend folder (this file is Backend/src/utils/runtimePaths.js)
+ *   - `bun server.js` / tests → the Backend folder (this file is Backend/src/utils/runtimePaths.ts)
  *
  * Detection: a compiled Bun binary reports its entry point inside Bun's embedded filesystem —
  * `/$bunfs/root/...` on POSIX, `B:\~BUN\root\...` on Windows.

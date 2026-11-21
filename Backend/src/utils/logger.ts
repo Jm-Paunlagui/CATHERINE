@@ -441,7 +441,7 @@ class Logger {
                         .slice(2)
                         .find(
                             (line) =>
-                                line.trim() && !line.includes("logger.js"),
+                                line.trim() && !/logger\.[jt]s\b/.test(line),
                         );
 
                     if (chosenFrame) {
@@ -631,9 +631,7 @@ class Logger {
                 const t = line.trim();
                 return (
                     t &&
-                    !t.includes("utils/logger.js") &&
-                    !t.includes("\\utils\\logger.js") &&
-                    !t.includes("/utils/logger.js")
+                    !/[\\/]utils[\\/]logger\.[jt]s\b/.test(t)
                 );
             });
 
@@ -1144,7 +1142,7 @@ class Logger {
     // date and never used it. It also had zero call sites anywhere in this
     // codebase, so the false assurance it gave never even reached an
     // operator through a real invocation. The real, unattended retention
-    // sweep is `src/services/LogRetentionService.js` — it lives in a service, not
+    // sweep is `src/services/LogRetentionService.ts` — it lives in a service, not
     // here, because this file deliberately imports nothing from `src/`
     // except `requestContext` (see the comment at :20-27); pulling in
     // `constants/messages` or `fs`-heavy retention logic here would invert

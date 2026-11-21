@@ -2,7 +2,7 @@
 
 /**
  * Property + unit tests for the exact-decimal `Money` value type
- * (src/utils/money.js). Pure — no DB, no HTTP.
+ * (src/utils/money.ts). Pure — no DB, no HTTP.
  *
  * These encode ACCOUNTING INVARIANTS, not implementation details:
  *   - exact arithmetic never rounds

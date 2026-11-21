@@ -33,7 +33,7 @@ module.exports = defineConfig({
         coverage: {
             provider: "v8",
             reporter: ["text", "lcov"],
-            include: ["src/**/*.js"],
+            include: ["src/**/*.ts"],
             exclude: [
                 "src/config/**",
                 "src/utils/oracle-mongo-wrapper/**",

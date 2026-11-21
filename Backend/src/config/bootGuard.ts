@@ -105,7 +105,7 @@ function validateMoneyConfig(violations, isProduction) {
     if (!isValidCurrency(base)) {
         violations.push(
             `MONEY_BASE_CURRENCY "${base}" is not a registered ISO 4217 code. ` +
-                `Registered: ${CURRENCY_CODES.join(", ")}. Add it to constants/currencies.js or fix the value.`,
+                `Registered: ${CURRENCY_CODES.join(", ")}. Add it to constants/currencies.ts or fix the value.`,
         );
         return;
     }

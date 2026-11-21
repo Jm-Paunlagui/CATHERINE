@@ -190,7 +190,7 @@ Eight full-page screens exist, but only four are ever reached by the response in
 
 ### 3.2 The status catalogue
 
-`HTTP_STATUS_TITLES` in `httpStatus.js:48` carries **22 entries**, byte-identical to `HTTP_STATUS_TITLES` in `Backend/src/constants/responses/index.js:20`:
+`HTTP_STATUS_TITLES` in `httpStatus.js:48` carries **22 entries**, byte-identical to `HTTP_STATUS_TITLES` in `Backend/src/constants/responses/index.ts:20`:
 
 | | Codes |
 | --- | --- |
@@ -198,7 +198,7 @@ Eight full-page screens exist, but only four are ever reached by the response in
 | 4xx | 400 Bad Request · 401 Unauthorized Access · 403 Forbidden Access · 404 Not Found · 405 Method Not Allowed · 408 Request Timeout · 409 Conflict Detected · 410 Gone Permanently · 413 Payload Too Large · 422 Unprocessable Entity · 423 Locked Resource · 428 Precondition Required · 429 Too Many Requests · 440 Session Timeout · 498 Invalid Token |
 | 5xx | 500 Internal Server Error · 502 Bad Gateway · 503 Service Unavailable · 504 Gateway Timeout · 507 Insufficient Storage · 523 Origin Unreachable |
 
-The backend's `HTTP_STATUS` object (`Backend/src/constants/index.js:21`) declares **26** codes — the same 22 plus `200`, `201`, `202` and `204`, which have no title because `sendSuccess` carries no `title` field at all.
+The backend's `HTTP_STATUS` object (`Backend/src/constants/index.ts:21`) declares **26** codes — the same 22 plus `200`, `201`, `202` and `204`, which have no title because `sendSuccess` carries no `title` field at all.
 
 `getStatusTitle` falls back by category and is identical on both sides, so an offline-generated title can never disagree with a server-generated one:
 
@@ -260,7 +260,7 @@ The countdown never fires a request of its own — an automatic retry is exactly
 
 A render crash has no envelope and no status. `ErrorBoundary` still produces a Request ID from one of two sources: `error.requestId`, if the crash came from an error the interceptor had already tagged; otherwise the id returned by `clientLogger.error()`, which POSTs the crash to `/api/v1/client/errors` and reads the `requestId` off *that* response.
 
-`POST /client/errors` is auth-gated (`Backend/src/routes/client.route.js:22`) so anonymous traffic cannot pollute the log stream — which means a render crash on the sign-in screen is **not** forwarded, and the dev-only `console.error` in `clientLogger.js` is the only local signal. The dev-only `<pre>` in the fallback prints `error.message`, never the stack.
+`POST /client/errors` is auth-gated (`Backend/src/routes/client.route.ts:22`) so anonymous traffic cannot pollute the log stream — which means a render crash on the sign-in screen is **not** forwarded, and the dev-only `console.error` in `clientLogger.js` is the only local signal. The dev-only `<pre>` in the fallback prints `error.message`, never the stack.
 
 `App.jsx` adds a second, narrower boundary: `RouteErrorBoundary` sits inside the `<Suspense>` and catches stale dynamic-import failures (a new deploy rotated the hashed chunk filenames after this tab loaded `index.html`). It auto-reloads **once per tab session**, guarded by a `sessionStorage` key, so a genuinely broken deploy cannot trap the tab in a reload loop.
 
@@ -270,7 +270,7 @@ A render crash has no envelope and no status. `ErrorBoundary` still produces a R
 
 ### 4.1 `AppError`
 
-`Backend/src/constants/errors/index.js:13`. A thin `Error` subclass with four additions:
+`Backend/src/constants/errors/index.ts:13`. A thin `Error` subclass with four additions:
 
 ```js
 this.name = opts.type || "AppError";   // becomes error.type on the wire
@@ -286,7 +286,7 @@ The message strings themselves live in the same file as frozen constant groups �
 
 ### 4.2 `catchAsync`
 
-`Backend/src/utils/catchAsync.js`:
+`Backend/src/utils/catchAsync.ts`:
 
 ```js
 function catchAsync(fn) {
@@ -304,7 +304,7 @@ The `Promise.resolve(...).catch(next)` handles a rejected async function. The su
 
 ### 4.3 The response helpers
 
-`Backend/src/constants/responses/index.js`.
+`Backend/src/constants/responses/index.ts`.
 
 ```js
 function sendSuccess(message, data = null, code = 200, requestId = null) {
@@ -334,7 +334,7 @@ Note the fourth parameter of `sendSuccess`: in practice **no controller passes i
 
 ### 4.4 `ErrorHandlerMiddleware`
 
-`Backend/src/middleware/errorHandling/ErrorHandlerMiddleware.js`. Three responsibilities, all bound in the constructor:
+`Backend/src/middleware/errorHandling/ErrorHandlerMiddleware.ts`. Three responsibilities, all bound in the constructor:
 
 **`handle(err, req, res, next)`** — classify, log, respond.
 
@@ -393,7 +393,7 @@ This is the documented exception to the envelope, and it has a real downstream c
 
 ### 4.7 The catalogue's reserved codes
 
-`Backend/src/constants/index.js` annotates four codes as reserved, and a repo-wide search of `Backend/src` confirms none of them is emitted by application code:
+`Backend/src/constants/index.ts` annotates four codes as reserved, and a repo-wide search of `Backend/src` confirms none of them is emitted by application code:
 
 | Code | Why it is in the catalogue |
 | --- | --- |
@@ -630,9 +630,9 @@ The CSRF `fetch` calls have their own 10-second `AbortSignal.timeout` for a reas
 
 | # | Location | Says | Code actually does |
 | --- | --- | --- | --- |
-| 1 | `Backend/src/constants/responses/index.js:70` | `@returns {{ status, code, message, data }}` for `sendSuccess` | Returns **five** keys — `requestId` sits between `message` and `data`. The JSDoc is stale. |
-| 2 | `Backend/src/constants/responses/index.js:93` | `sendError`'s `@param` for `opts` documents `type`, `details`, `hint`, `stack` | The body also reads `opts.requestId` (line 101), which is undocumented. |
-| 3 | `Backend/src/constants/index.js:15` | the contract test is `test/unit/constants/httpStatusContract.test.js` | The file is `test/unit/constants/httpStatusCatalog.test.js`. |
+| 1 | `Backend/src/constants/responses/index.ts:70` | `@returns {{ status, code, message, data }}` for `sendSuccess` | Returns **five** keys — `requestId` sits between `message` and `data`. The JSDoc is stale. |
+| 2 | `Backend/src/constants/responses/index.ts:93` | `sendError`'s `@param` for `opts` documents `type`, `details`, `hint`, `stack` | The body also reads `opts.requestId` (line 101), which is undocumented. |
+| 3 | `Backend/src/constants/index.ts:15` | the contract test is `test/unit/constants/httpStatusContract.test.js` | The file is `test/unit/constants/httpStatusCatalog.test.js`. |
 | 4 | `Frontend/CLAUDE.md` §13.4 | `resolveStatusHandling(status, type)` | The second parameter is a **context object** `{ url, errorType, hasEnvelope }` (a bare string is accepted and treated as `{ url }`). Passing an error *type* as the second argument would be read as a URL. |
 | 5 | `Frontend/CLAUDE.md` §13.4 | `440 → /session-expired` | The route is `/login-timeout` (`ERROR_PAGE_ROUTES[440]`, `App.jsx:264`). No `/session-expired` route exists. |
 | 6 | `Frontend/CLAUDE.md` §13.4 | lists `CSRF_ERROR_CODES` alongside `SELF_HANDLED_ENDPOINTS` as an input to the inline decision | `CSRF_ERROR_CODES` lives in `HttpClient` and drives only the one-shot retry. `resolveStatusHandling` never sees it. |
@@ -721,8 +721,8 @@ Evidence is cited, not executed — every entry is marked **not run** unless sta
 > *Proposed:* a pure unit suite over `resolveStatusHandling` — one case per row of the §5.3 table, plus the four conditional permutations (outage type / business type / no envelope / self-handled), plus `440` on `auth/login` asserting `endsSession: true` **and** `mode: "takeover"` (self-handling must not suppress a session teardown). It needs no DOM and no mocks. _Status: not run._
 
 > **Q:** Do the frontend and backend title maps actually match byte-for-byte?
-> **A:** They do today — I compared `Frontend/src/constants/httpStatus.js:48-74` against `Backend/src/constants/responses/index.js:20-46` and all 22 entries are identical.
-> **Evidence:** **⚠ No automated test enforces this.** `httpStatusCatalog.test.js` scans only `Backend/src`; its file header calls itself "the backend half of the status-code contract", and the frontend half was never written. The comment at `Backend/src/constants/index.js:12-16` claims a contract test fails when the three places disagree — it does not, and it names a filename that does not exist (§6.10 #3).
+> **A:** They do today — I compared `Frontend/src/constants/httpStatus.js:48-74` against `Backend/src/constants/responses/index.ts:20-46` and all 22 entries are identical.
+> **Evidence:** **⚠ No automated test enforces this.** `httpStatusCatalog.test.js` scans only `Backend/src`; its file header calls itself "the backend half of the status-code contract", and the frontend half was never written. The comment at `Backend/src/constants/index.ts:12-16` claims a contract test fails when the three places disagree — it does not, and it names a filename that does not exist (§6.10 #3).
 > *Proposed:* a frontend test that reads the backend file, extracts the object literal, and deep-equals it against the imported `HTTP_STATUS_TITLES` — a cross-repo read is acceptable in a monorepo and is the only thing that would make the "single source of truth" claim true. _Status: not run._
 
 > **Q:** Does the sessionStorage hand-off survive a hard navigation, and is it read exactly once?

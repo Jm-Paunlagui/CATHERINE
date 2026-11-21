@@ -2,8 +2,8 @@
 
 /**
  * @fileoverview Pure validator/assembler for the Support system maps —
- * Architecture (`src/constants/architectureModel.js`) and Runtime
- * (`src/constants/runtimeModel.js`). No I/O.
+ * Architecture (`src/constants/architectureModel.ts`) and Runtime
+ * (`src/constants/runtimeModel.ts`). No I/O.
  *
  * A model is plain data: `{ MAP_VERIFIED_AT, META, LAYOUT, layers, edgeKinds,
  * nodes, E, flows }`. Edges are `[source, target, kind, label]`; flow steps are

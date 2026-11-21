@@ -3,7 +3,7 @@
 /**
  * @fileoverview Generic Server-Sent Events (SSE) poller log message
  * templates — used by every `ScopedSsePoller` instance
- * (`src/utils/sse/ScopedSsePoller.js`), regardless of which feature owns it.
+ * (`src/utils/sse/ScopedSsePoller.ts`), regardless of which feature owns it.
  *
  * Every template is parameterised by the poller's own `name` (set at
  * construction — e.g. "audit-live", "report-live") so one log line

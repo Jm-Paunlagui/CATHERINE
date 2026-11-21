@@ -102,7 +102,7 @@ Each connection gets a name (like `"appDb"`) and its credentials from `.env`. Yo
 - `buildTNSConnectString(host, port, sid)` → full `(DESCRIPTION=(ADDRESS=…)…)` with load-balance + failover
 
 ```js
-// src/config/database.js (already set up — add new connections as needed)
+// src/config/database.ts (already set up — add new connections as needed)
 
 const connections = {
   // appDb — the only connection a fresh template needs. Used by createDb("appDb").
@@ -162,7 +162,7 @@ You don't need to edit `oracle.js` — it automatically:
 This file auto-detects the adapter from `DB_TYPE` env var (defaults to `"oracle"`) and exports everything:
 
 ```js
-// src/config/index.js — you usually don't need to edit this
+// src/config/index.ts — you usually don't need to edit this
 // It exports: withConnection, withTransaction, withBatchConnection,
 //             closeAll, getPoolStats, isPoolHealthy, getConnectionConfig,
 //             oracledb, and more.
@@ -186,7 +186,7 @@ const {
     createPerformance,
 } = require("./oracle-mongo-wrapper");
 
-// Connect to your database pool (configured in src/config/database.js)
+// Connect to your database pool (configured in src/config/database.ts)
 const db = createDb("appDb");
 ```
 

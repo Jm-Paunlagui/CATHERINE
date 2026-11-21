@@ -75,10 +75,10 @@ const NJS_MAP = {
 // String-pattern matches for adapter/driver-level failures that never carry
 // an ORA-/NJS- code at all — e.g. the plain `Error("Timed out getting
 // connection from \"<name>\"")` thrown by `withConnection()`
-// (src/config/adapters/oracle.js:490-496) when `pool.getConnection()` itself
+// (src/config/adapters/oracle.ts:490-496) when `pool.getConnection()` itself
 // races against a timeout before any driver error is raised. The adapter
 // wraps this in `DB_OP_FAILED(name, err.message)`
-// (src/constants/messages/oracle.messages.js:52), which embeds the original
+// (src/constants/messages/oracle.messages.ts:52), which embeds the original
 // message — so the pattern still matches the wrapped error without needing
 // to unwrap `err.originalError`.
 // ─────────────────────────────────────────────────────────────────────────────

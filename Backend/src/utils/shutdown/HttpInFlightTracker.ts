@@ -5,7 +5,7 @@
  * graceful shutdown can let them finish instead of resetting their sockets.
  *
  * Attached as a SERVER-level `request` listener (after the Express app, which
- * is the first listener), so the 13-step middleware chain in `src/app.js` is
+ * is the first listener), so the 13-step middleware chain in `src/app.ts` is
  * untouched. Server-Sent-Event responses are tracked but never counted as
  * "in flight": a stream has no natural end and is closed by
  * `SseConnectionRegistry.endAll()` at the start of shutdown instead.

@@ -32,7 +32,7 @@ const architectureMessages = {
      * @returns {string}
      */
     MAP_BUILD_FAILED: (name, reason) =>
-        `System map "${name}" could not be built (src/constants/${name}Model.js): ${reason}`,
+        `System map "${name}" could not be built (src/constants/${name}Model.ts): ${reason}`,
 };
 
 module.exports = architectureMessages;

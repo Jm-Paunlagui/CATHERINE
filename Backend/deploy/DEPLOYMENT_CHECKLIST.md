@@ -11,7 +11,7 @@ schema and functional checks to sections B and D.
 ## A. Before you deploy
 
 - [ ] **A1 — `.env` is present on the host and is the production one.**
-      The backend reads `.env` and only `.env`. `server.js` and `src/config/database.js` both
+      The backend reads `.env` and only `.env`. `server.js` and `src/config/database.ts` both
       hardcode that name — nothing loads `.env.production`, which is a *reference copy* you deploy
       **as** `.env`. (Vite auto-loads `.env.production` for the frontend; the backend does not. Same
       filename, different rule.)
@@ -19,7 +19,7 @@ schema and functional checks to sections B and D.
       Windows service can start with cwd anywhere.
 
 - [ ] **A2 — `NODE_ENV=production` in that `.env`.**
-      ⚠ This gates more than error formatting. `src/config/bootGuard.js` runs its whole
+      ⚠ This gates more than error formatting. `src/config/bootGuard.ts` runs its whole
       fail-closed suite **only** when `NODE_ENV === "production"`; anything else downgrades
       placeholder secrets, `DEMO_MODE=true` and a missing `CORS_ORIGINS` to warnings the process
       starts through. It also switches `ErrorHandlerMiddleware` to generic messages — without it,
@@ -76,7 +76,7 @@ schema and functional checks to sections B and D.
       SELECT COUNT(*) FROM <table> WHERE INSTR(<text_column>, CHR(191)) > 0;
       ```
 
-      ⚠ Scope the scan to this application's own tables (`src/constants/purgeTables.js` is the
+      ⚠ Scope the scan to this application's own tables (`src/constants/purgeTables.ts` is the
       authority). A shared Oracle schema may also host other projects' tables; a blind
       `USER_TAB_COLUMNS` sweep will report their data as if it were ours.
 

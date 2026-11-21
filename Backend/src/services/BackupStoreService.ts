@@ -138,7 +138,7 @@ class BackupStoreService {
 
     /**
      * Resolves `DB_BACKUP_DIR` to an ABSOLUTE path. Mirrors
-     * `src/utils/logger.js`'s `LOG_BASE_DIR` resolution exactly: in the compiled
+     * `src/utils/logger.ts`'s `LOG_BASE_DIR` resolution exactly: in the compiled
      * exe `__dirname` is the build machine's path baked into the binary,
      * so the directory is always resolved relative to the compiled
      * executable's location (`process.execPath`) rather than the source

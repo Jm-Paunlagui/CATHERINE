@@ -2,8 +2,8 @@
 
 > **Scope:** The **Runtime page** — Support → **Runtime** (`/support/runtime`), **SUPER_ADMIN only**. An interactive map of how the backend *runs*: boot and its guards, cluster roles, the cron-leader schedulers, scheduled backups, the request and backup watchdogs, rate limiting and the security filter, the pool breaker, alerting, crash handling and graceful shutdown. Each flow carries a `ref` badge naming the code site (or test) that exercises it.
 > **Source (FE):** `Frontend/src/features/support/runtime/` — `Runtime.view.jsx`, `runtime.hook.js`, `runtime.api.js` — a thin feature over the shared engine in `Frontend/src/components/shared/systemMap/` (see `Support/architecture-documentation.md` §3). Route registered in `Frontend/src/App.jsx`; nav item (SUPER_ADMIN block only) in `Frontend/src/components/layout/config/nav.config.jsx`.
-> **Source (BE):** `Backend/src/constants/runtimeModel.js` (the hand-authored map), served by `GET /api/v1/architecture/runtime` through `src/routes/architecture.route.js`, `src/controllers/ArchitectureController.js` (`getRuntimeMap`), `src/services/ArchitectureService.js` (`getMap("runtime")`) and `src/utils/systemMap.js`. `RUNTIME_MAP_FETCHED` in `src/constants/responses/index.js`.
-> **Verified 2026-10-29.** Re-checked against the CATHERINE source: `Backend/src/constants/runtimeModel.js` (`MAP_VERIFIED_AT = "2026-10-26"`, `META.system` "CATHERINE — backend runtime: scheduling, backup, resilience, shutdown", 44 nodes, 95 edges, 21 flows counted by hand), the shared route/controller/service/builder (see the Architecture doc), `runtime.hook.js` (`cacheKey "architecture/runtime"`, `downloadName "runtime.json"`), `FlowPanel.jsx` (`ref` badge), `SystemMapView.jsx` (endpoint count hidden when 0), `Backend/src/constants/clusterIpc.js`, `PrimaryStateServices.js`, `LoginLockoutState.js`, `RevokedSessionSet.js`, `AccessRevocationService.js`, `HealthStreamHub.js`, `LogRetentionService.js` and `Backend/deploy/winsw/`. There is **no** `scripts/sim-server/` and no `sim:server` package script in this repo, so flow `ref`s name code sites (mostly `server.js`), not simulation stages. No system-map test exists in `Backend/test/` or `Frontend/test/`; §8 says so. No test counts are quoted.
+> **Source (BE):** `Backend/src/constants/runtimeModel.ts` (the hand-authored map), served by `GET /api/v1/architecture/runtime` through `src/routes/architecture.route.ts`, `src/controllers/ArchitectureController.ts` (`getRuntimeMap`), `src/services/ArchitectureService.ts` (`getMap("runtime")`) and `src/utils/systemMap.ts`. `RUNTIME_MAP_FETCHED` in `src/constants/responses/index.ts`.
+> **Verified 2026-10-29.** Re-checked against the CATHERINE source: `Backend/src/constants/runtimeModel.ts` (`MAP_VERIFIED_AT = "2026-10-26"`, `META.system` "CATHERINE — backend runtime: scheduling, backup, resilience, shutdown", 44 nodes, 95 edges, 21 flows counted by hand), the shared route/controller/service/builder (see the Architecture doc), `runtime.hook.js` (`cacheKey "architecture/runtime"`, `downloadName "runtime.json"`), `FlowPanel.jsx` (`ref` badge), `SystemMapView.jsx` (endpoint count hidden when 0), `Backend/src/constants/clusterIpc.ts`, `PrimaryStateServices.js`, `LoginLockoutState.js`, `RevokedSessionSet.js`, `AccessRevocationService.js`, `HealthStreamHub.js`, `LogRetentionService.js` and `Backend/deploy/winsw/`. There is **no** `scripts/sim-server/` and no `sim:server` package script in this repo, so flow `ref`s name code sites (mostly `server.js`), not simulation stages. No system-map test exists in `Backend/test/` or `Frontend/test/`; §8 says so. No test counts are quoted.
 >
 > **Related docs:**
 > - `Support/architecture-documentation.md` — the sibling whole-system map; same engine, route and gate.
@@ -86,7 +86,7 @@ Everything else — diagram, flow player, node details, URL-held selection (`?fl
 
 ## 4. Backend implementation
 
-`src/constants/runtimeModel.js` is plain data — `{ MAP_VERIFIED_AT, META, LAYOUT, layers, edgeKinds, nodes, E, flows }` — in the same shape as `architectureModel.js`, validated by the same `buildSystemMap`. `ArchitectureService.getMap("runtime")` builds it once per process; a failed build is logged and not cached, and does not affect the Architecture map. The route, controller, `private, no-store` headers and audit log line are shared with Architecture (`Support/architecture-documentation.md` §4).
+`src/constants/runtimeModel.ts` is plain data — `{ MAP_VERIFIED_AT, META, LAYOUT, layers, edgeKinds, nodes, E, flows }` — in the same shape as `architectureModel.js`, validated by the same `buildSystemMap`. `ArchitectureService.getMap("runtime")` builds it once per process; a failed build is logged and not cached, and does not affect the Architecture map. The route, controller, `private, no-store` headers and audit log line are shared with Architecture (`Support/architecture-documentation.md` §4).
 
 Edge kinds specific to this map: `signal` (signals and exit codes), `schedule`, `call`, `ipc`, `http`, `sse`, `log`, `sql`, `fs`, `smtp`.
 
@@ -106,7 +106,7 @@ What nothing catches: a threshold that changed in code but not here. Every numbe
 
 **Single-process vs clustered.** Flows that mention the primary, shared state or the critical relay apply only with `ENABLE_CLUSTERING=true`. In single-process mode the one process is always the cron leader and registers no IPC listener.
 
-**Cluster shared state (auth).** Two auth counters live in the primary-held state (`src/utils/cluster/PrimaryStateServices.js`, methods in `src/constants/clusterIpc.js`, argument and result validators in `ipcSchemas.js`):
+**Cluster shared state (auth).** Two auth counters live in the primary-held state (`src/utils/cluster/PrimaryStateServices.ts`, methods in `src/constants/clusterIpc.ts`, argument and result validators in `ipcSchemas.js`):
 
 | IPC method | Kind | What the primary does | When the primary does not answer |
 | --- | --- | --- | --- |
@@ -143,7 +143,7 @@ Every flow has a `ref`, but it is a label, not a link. 19 of 21 say `server.js`;
 
 **Q: What stops the runtime map pointing at files that no longer exist?**
 Nothing automated in this repo. `buildSystemMap` checks ids, edges and placement, not file paths.
-**Evidence (API):** source only — `Backend/src/utils/systemMap.js`.
+**Evidence (API):** source only — `Backend/src/utils/systemMap.ts`.
 **Evidence (UI):** none — backend-only. _Status: no test in this repo._
 
 **Q: If the runtime model is broken, does the Architecture page still work?**

@@ -2206,7 +2206,7 @@ class AlertNotifierService {
     /**
      * Accepts a critical log record relayed from a NON-leader cluster worker
      * (worker -> primary -> this leader worker, see
-     * `src/utils/cluster/critRelay.js`) and feeds it into the same
+     * `src/utils/cluster/critRelay.ts`) and feeds it into the same
      * `_onCriticalLog` path as a leader-local critical log, so the digest
      * window, buffer cap and hourly storm ceiling all apply.
      *

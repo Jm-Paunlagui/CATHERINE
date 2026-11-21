@@ -2468,7 +2468,7 @@ describe("32. Money — Live Precision Round-Trip", function () {
     const MONEY_TBL = "TEST_MONEY_RT";
 
     // The money-safe fetchTypeHandler, applied on the raw read. Selection is on
-    // scale > 0, mirroring src/config/adapters/oracle.js — a scaled NUMBER comes
+    // scale > 0, mirroring src/config/adapters/oracle.ts — a scaled NUMBER comes
     // back as a STRING so Money.from() parses it losslessly; scale-0 keys stay
     // numbers. Passing it explicitly here proves the read path, independent of
     // whatever default the wrapper's own execute options carry.

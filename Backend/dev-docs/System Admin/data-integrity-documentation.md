@@ -1,7 +1,7 @@
 # Data Integrity — Technical Documentation
 
 > **Scope:** The **Data Integrity** page (Integrity Center) — System → **Data Integrity** (`/system/data-integrity`), **SUPER_ADMIN only**. A generic, registry-driven HMAC tamper monitor: for every table a project registers, it re-computes each row's `ROW_HASH`, lists the rows that no longer match, offers a browse-all mode with a per-row verdict, an Excel/CSV export, a cache-busting re-scan and (for tables flagged `live`) an SSE live-tail.
-> **Source (BE):** `Backend/src/routes/integrity.route.js`, `Backend/src/controllers/IntegrityController.js`, `Backend/src/controllers/IntegrityStreamController.js`, `Backend/src/services/IntegrityService.js`, `Backend/src/models/integrity.model.js`, `Backend/src/services/TamperDetectionService.js`, `Backend/src/utils/encryption/CryptoVault.js` (data-signing section), `Backend/src/utils/integrity/signedFields.js`, `Backend/src/constants/messages/integrity.messages.js`, `INTEGRITY_ERRORS` / `STREAM_ERRORS` in `Backend/src/constants/errors/index.js`, `INTEGRITY_*` in `Backend/src/constants/responses/index.js`, the `integrity` cache store in `Backend/src/app.js`.
+> **Source (BE):** `Backend/src/routes/integrity.route.ts`, `Backend/src/controllers/IntegrityController.ts`, `Backend/src/controllers/IntegrityStreamController.ts`, `Backend/src/services/IntegrityService.ts`, `Backend/src/models/integrity.model.ts`, `Backend/src/services/TamperDetectionService.ts`, `Backend/src/utils/encryption/CryptoVault.ts` (data-signing section), `Backend/src/utils/integrity/signedFields.ts`, `Backend/src/constants/messages/integrity.messages.ts`, `INTEGRITY_ERRORS` / `STREAM_ERRORS` in `Backend/src/constants/errors/index.ts`, `INTEGRITY_*` in `Backend/src/constants/responses/index.ts`, the `integrity` cache store in `Backend/src/app.ts`.
 > **Source (FE):** `Frontend/src/features/systemadmin/integrity/` — `IntegrityCenter.view.jsx`, `integrity.hook.js`, `integrity.api.js`, `components/IntegrityTablePanel.jsx`, `components/ScopeFilters.jsx`, `components/shared/integrityColumns.jsx`, `components/shared/IntegrityBadge.jsx`. Route in `Frontend/src/App.jsx`; nav item in `Frontend/src/components/layout/config/nav.config.jsx`.
 > **Verified 2026-10-29 against source.** `TABLE_REGISTRY` is `Object.freeze({})` with a commented `orders` example; `_FIELD_BUILDERS` holds exactly one domain, `T_SYSTEM_CONFIG`. The template therefore ships with **zero** tables in the Integrity Center. No test was run for this revision; §8 cites only test files confirmed to exist.
 >
@@ -15,7 +15,7 @@
 
 A **signed table** stores, on every row, `ROW_HASH = HMAC-SHA256(DATA_SIGNING_SECRET, buildPayload(domain, fields))`. The fields come from one builder per domain, kept in `TamperDetectionService`. If someone edits a signed column directly in the database without the secret, the stored hash no longer matches the recomputed one, and the row reads **TAMPERED**.
 
-The Integrity Center is the operator's view of that check. It is **generic**: it has no table-specific code. Everything it shows (tabs, filters, live indicator, columns) comes from the backend `TABLE_REGISTRY` in `Backend/src/models/integrity.model.js`.
+The Integrity Center is the operator's view of that check. It is **generic**: it has no table-specific code. Everything it shows (tabs, filters, live indicator, columns) comes from the backend `TABLE_REGISTRY` in `Backend/src/models/integrity.model.ts`.
 
 **What ships in the template:**
 
@@ -26,7 +26,7 @@ The Integrity Center is the operator's view of that check. It is **generic**: it
 | Signed table in use | `T_SYSTEM_CONFIG_DEV` (via `SystemConfigService`), **not** registered in the Integrity Center |
 | FE column registry (`integrityColumns.jsx` `COLUMNS`) | Empty; columns are derived from the first row |
 
-**What the screen shows with zero registered tables:** `GET /integrity/tables` returns `tables: []`, so the view renders an info `Alert` titled **"No tables registered"**, telling the operator to register a table in `Backend/src/models/integrity.model.js` (`IntegrityCenter.view.jsx`). No tabs and no table panel are shown, and no tamper, browse or stream request is made, because `activeTab` stays `null` and every data `useRequest` key is `null`.
+**What the screen shows with zero registered tables:** `GET /integrity/tables` returns `tables: []`, so the view renders an info `Alert` titled **"No tables registered"**, telling the operator to register a table in `Backend/src/models/integrity.model.ts` (`IntegrityCenter.view.jsx`). No tabs and no table panel are shown, and no tamper, browse or stream request is made, because `activeTab` stays `null` and every data `useRequest` key is `null`.
 
 The signed config store still protects itself without the Integrity Center: `SystemConfigService.getRaw` verifies each row before trusting it, and falls back to the key's safe default if the row is unsigned or fails verification.
 
@@ -182,7 +182,7 @@ Only the verdict column is added generically (`INTEGRITY_COLUMN` in `IntegrityTa
 
 ### 4.1 Route and guard
 
-`Backend/src/routes/index.js` mounts the router at `/integrity` under `app.use("/api/v1", routes)` (`Backend/src/app.js`). The router does:
+`Backend/src/routes/index.ts` mounts the router at `/integrity` under `app.use("/api/v1", routes)` (`Backend/src/app.ts`). The router does:
 
 ```js
 router.use(AuthMiddleware.authenticate, requireSuperAdmin);
@@ -227,21 +227,21 @@ A thin layer: every method is `catchAsync` and calls `IntegrityService`.
 
 ### 4.5 Signing primitives
 
-**`TamperDetectionService`** (`Backend/src/services/TamperDetectionService.js`):
+**`TamperDetectionService`** (`Backend/src/services/TamperDetectionService.ts`):
 
 - `_FIELD_BUILDERS = Object.freeze({ T_SYSTEM_CONFIG: _fieldsSystemConfig })`. The builder returns `{ CONFIG_KEY, CONFIG_VALUE }` as strings (`null` becomes `""`).
 - `buildSignedFields(domain, row)` throws if the domain is unknown. `listDomains()`. `verifyRow(domain, row)` calls `CryptoVault.verifyRecord(domain, fields, row.ROW_HASH)`. `verifySystemConfigRow(row)`.
 - `scanTable(tableName, domain, projection)` is a full-table audit helper and is not used by the Integrity Center.
 - The same builder is used by the writer (`SystemConfigService.set`), the reader (`SystemConfigService.getRaw`) and `DataRestoreService._verifyThenSign`.
 
-**`CryptoVault`** data-signing section (`Backend/src/utils/encryption/CryptoVault.js`):
+**`CryptoVault`** data-signing section (`Backend/src/utils/encryption/CryptoVault.ts`):
 
 - `buildPayload(context, fields)` returns `"<context>:" + sorted "k=v"` joined with `|`, with any `|` inside a value doubled (CWE-347).
 - `signData` is HMAC-SHA256 hex using `DATA_SIGNING_SECRET`. `resolveSigningSecret` throws if the secret is missing or shorter than 32 characters.
 - `verifySignature` rejects anything that is not exact hex of the right length, then uses `crypto.timingSafeEqual`. `verifyRecord` returns `false` for a missing signature.
 - `verifyRowHash(canonical, stored)` is plain **unkeyed** SHA-256, for Oracle `STANDARD_HASH` columns. No `Backend/src` caller uses it.
 
-**`makeSignedFields`** (`Backend/src/utils/integrity/signedFields.js`) is an optional factory. It produces one `project`/`sign`/`verify` set per domain, and passes money fields through `Money.from(..).toStorage()` (scale 4) so `1500`, `"1500.00"` and an Oracle number all sign the same way. No `_FIELD_BUILDERS` entry uses it yet.
+**`makeSignedFields`** (`Backend/src/utils/integrity/signedFields.ts`) is an optional factory. It produces one `project`/`sign`/`verify` set per domain, and passes money fields through `Money.from(..).toStorage()` (scale 4) so `1500`, `"1500.00"` and an Oracle number all sign the same way. No `_FIELD_BUILDERS` entry uses it yet.
 
 ### 4.6 How a project registers a signed table
 
@@ -260,7 +260,7 @@ To make a table show up as a tab, follow these steps in order. The example names
    - `live: true` only for append-only tables
 6. **Unkeyed alternative (not recommended).** If the database computes the hash with `STANDARD_HASH`, a `verifyFn` can wrap `CryptoVault.verifyRowHash(canonical, row.ROW_HASH)`. Anyone with write access to the database can recompute an unkeyed hash, so this detects accidental drift, not deliberate tampering (§7).
 7. **Columns (optional).** Register `<key>: [col("COLUMN", "Label", text), ...]` in `COLUMNS` of `integrityColumns.jsx`. Without it, columns are derived from the first row: the first column is shown as an id cell, `*_AT`/`*DATE*` columns as dates, and the rest as text.
-8. **Restore coverage (optional).** If the table is in `Backend/src/constants/purgeTables.js`, set its `rowHashDomain`. `DataRestoreService._verifyThenSign` then checks each archived hash before re-signing (all four template entries are currently `null`).
+8. **Restore coverage (optional).** If the table is in `Backend/src/constants/purgeTables.ts`, set its `rowHashDomain`. `DataRestoreService._verifyThenSign` then checks each archived hash before re-signing (all four template entries are currently `null`).
 
 **What the UI then shows:** a pill tab with `label`. It opens in tampered-only mode with the filters you declared (From/To if you declared `date`, a dropdown per enum, a text box per other key). A **Live / Offline** dot appears for `live` tables. The scan summary reads "Scanned <time> · N rows". Export and Re-scan are available, and every row carries a Verified/Tampered badge in "Show all rows" mode. Rows written before signing was in place have `ROW_HASH = NULL`; `verifyRecord` returns `false` for them, so they show as **Tampered** until they are re-signed.
 
@@ -293,7 +293,7 @@ Each row carries its projected columns plus `id` (`Number(row[pk])`) and `integr
 | 400 `STREAM_ERRORS.TABLE_NOT_STREAMABLE` | `/stream` for an unknown or non-`live` table | `IntegrityStreamController.stream` |
 | 403 (CSRF) | POST `/rescan` without a valid CSRF token | `defaultCsrf` in `app.js` |
 
-SSE pre-upgrade refusals use the standard error envelope, including `requestId` (`Backend/src/utils/sse/ssePreflight.js`). After the upgrade, failures are sent as `event: error` frames.
+SSE pre-upgrade refusals use the standard error envelope, including `requestId` (`Backend/src/utils/sse/ssePreflight.ts`). After the upgrade, failures are sent as `event: error` frames.
 
 ---
 
@@ -340,16 +340,16 @@ SSE pre-upgrade refusals use the standard error envelope, including `requestId` 
 Evidence is cited as `file:symbol`. **Tests: not run for this revision.** The only test files that exercise this area are `Backend/test/server/unit/utils/cryptoVaultRowHash.test.js` (`CryptoVault.verifyRowHash`) and `Backend/test/unit/signedFields.test.js` (`makeSignedFields`, `canonicalMoney`, `canonicalPlain`). A search of `Backend/test/` and `Frontend/test/` found **no** test for `IntegrityController`, `IntegrityStreamController`, `IntegrityService`, `IntegrityModel`, `TamperDetectionService`, or any `features/systemadmin/integrity` component. `CryptoVault.js` also has an inline self-test (`require.main === module`, "TEST GROUP 8: HMAC-SHA256 Data Signing") that runs only when the file is executed directly.
 
 **Q1. Does the template register any table in the Integrity Center?**
-No. Evidence: `Backend/src/models/integrity.model.js:TABLE_REGISTRY` is `Object.freeze({})`; the `orders` entry is a comment.
+No. Evidence: `Backend/src/models/integrity.model.ts:TABLE_REGISTRY` is `Object.freeze({})`; the `orders` entry is a comment.
 
 **Q2. What does the screen show then?**
 An info alert "No tables registered", with no tabs or panel. Evidence: `Frontend/src/features/systemadmin/integrity/IntegrityCenter.view.jsx:IntegrityCenterView` (the `tabs.length === 0` branch); `integrity.hook.js:useIntegrity` (`activeTab` stays `null`, so no data key).
 
 **Q3. Which tables does the template actually sign?**
-Only the `T_SYSTEM_CONFIG` domain (physical table `T_SYSTEM_CONFIG_DEV`). Evidence: `Backend/src/services/TamperDetectionService.js:_FIELD_BUILDERS`; `Backend/src/models/system.config.model.js:TABLE`; `Backend/src/services/SystemConfigService.js:set` / `getRaw`.
+Only the `T_SYSTEM_CONFIG` domain (physical table `T_SYSTEM_CONFIG_DEV`). Evidence: `Backend/src/services/TamperDetectionService.ts:_FIELD_BUILDERS`; `Backend/src/models/system.config.model.ts:TABLE`; `Backend/src/services/SystemConfigService.ts:set` / `getRaw`.
 
 **Q4. Who can call the API?**
-Only `SUPER_ADMIN`. Evidence: `Backend/src/routes/integrity.route.js:requireSuperAdmin` with `router.use(AuthMiddleware.authenticate, requireSuperAdmin)`; `Backend/src/middleware/authentication/AuthMiddleware.js:requireAccess` (401/403).
+Only `SUPER_ADMIN`. Evidence: `Backend/src/routes/integrity.route.ts:requireSuperAdmin` with `router.use(AuthMiddleware.authenticate, requireSuperAdmin)`; `Backend/src/middleware/authentication/AuthMiddleware.ts:requireAccess` (401/403).
 
 **Q5. Can `:table` or a filter key inject SQL?**
 No. `:table` only looks up the frozen registry, and filter keys are mapped through `cfg.filters`. Evidence: `integrity.model.js:getTableConfig`, `_buildMatch`; `IntegrityController.js:parseFilters` (`FILTER_KEY_PATTERN`, `NON_FILTER_KEYS`).
@@ -361,19 +361,19 @@ No. `:table` only looks up the frozen registry, and filter keys are mapped throu
 Yes: batch 5,000, cap 200,000, `truncated` flag. Evidence: `integrity.model.js:DEFAULT_SWEEP_BATCH`, `DEFAULT_SWEEP_CAP`, `sweepTampered`; FE alert in `IntegrityTablePanel.jsx` ("Partial scan").
 
 **Q8. Is a stale "clean" result possible?**
-Yes, within the 180 s TTL. Re-scan deletes the exact key first. Evidence: `Backend/src/app.js` (`integrity` store); `IntegrityService.js:_sweptTampered`, `rescan`.
+Yes, within the 180 s TTL. Re-scan deletes the exact key first. Evidence: `Backend/src/app.ts` (`integrity` store); `IntegrityService.js:_sweptTampered`, `rescan`.
 
 **Q9. Which tables can stream?**
-Only entries with `live: true`; others get 400 before the upgrade. Evidence: `IntegrityStreamController.js:stream` (`!cfg || !cfg.live`); `Backend/src/utils/sse/ssePreflight.js:sendSsePreflightError`.
+Only entries with `live: true`; others get 400 before the upgrade. Evidence: `IntegrityStreamController.js:stream` (`!cfg || !cfg.live`); `Backend/src/utils/sse/ssePreflight.ts:sendSsePreflightError`.
 
 **Q10. Does the money canonicaliser make the signer and verifier agree?**
-Yes, if a domain uses it. Evidence: `Backend/src/utils/integrity/signedFields.js:canonicalMoney`; test file `Backend/test/unit/signedFields.test.js` (not run for this revision).
+Yes, if a domain uses it. Evidence: `Backend/src/utils/integrity/signedFields.ts:canonicalMoney`; test file `Backend/test/unit/signedFields.test.js` (not run for this revision).
 
 **Q11. Is `verifyRowHash` safe against length and case quirks?**
 It compares byte lengths and upper-cases both sides. Evidence: `CryptoVault.js:verifyRowHash`; test file `Backend/test/server/unit/utils/cryptoVaultRowHash.test.js` (not run for this revision). No source caller uses it.
 
 **Q12. Does a restored row keep a bad hash's verdict?**
-Yes, for tables with a `rowHashDomain`: the original hash is verified before re-signing, and an invalid row is restored with `ROW_HASH = NULL`. Evidence: `Backend/src/services/DataRestoreService.js:_verifyThenSign`; `Backend/src/constants/purgeTables.js` (`rowHashDomain: null` on every template entry, so this does not apply yet).
+Yes, for tables with a `rowHashDomain`: the original hash is verified before re-signing, and an invalid row is restored with `ROW_HASH = NULL`. Evidence: `Backend/src/services/DataRestoreService.ts:_verifyThenSign`; `Backend/src/constants/purgeTables.ts` (`rowHashDomain: null` on every template entry, so this does not apply yet).
 
 ---
 

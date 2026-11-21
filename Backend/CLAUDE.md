@@ -315,7 +315,7 @@ router.delete(
 
 No other roles exist. `AuthService` checks admins (`T_ADMINS_DEV`) first, then users (`T_USERS_DEV`).
 
-### Tokens and cookies (`src/constants/authTokens.js`)
+### Tokens and cookies (`src/constants/authTokens.ts`)
 
 | Constant | Value |
 | --- | --- |
@@ -341,9 +341,9 @@ Refresh (`POST /auth/refresh`) reads **only** `req.signedCookies["app.refresh-to
 
 > Known wart: a missing refresh cookie throws `AUTH_ERRORS.USER_NOT_FOUND` (401) in `AuthControllers.refresh` (~lines 47-56). The status is right; the message is misleading. Tracked in `plans/template-reimport-handover.md`.
 
-### Auth rate limiters (`src/middleware/security/authRateLimiters.js`)
+### Auth rate limiters (`src/middleware/security/authRateLimiters.ts`)
 
-Limits live in `src/constants/authRateLimits.js`; all four are grouped in `authRateLimiters = new RateLimiterGroup([...])`.
+Limits live in `src/constants/authRateLimits.ts`; all four are grouped in `authRateLimiters = new RateLimiterGroup([...])`.
 
 | Limiter | Limit | Counts |
 | --- | --- | --- |
@@ -358,7 +358,7 @@ Login lockout (`LoginLockoutMiddleware`, env `LOGIN_*`) is separate from these l
 
 ## Logger — Usage Rules
 
-`src/utils/logger.js` is **only** logger in application. **Never use `console.log`, `console.error`, or any other logging mechanism in production code.**
+`src/utils/logger.ts` is **only** logger in application. **Never use `console.log`, `console.error`, or any other logging mechanism in production code.**
 
 > **v5.0.0 — 2026-05-21:** Logger upgraded from 4-level to RFC 5424 8-level hierarchy.
 > `logger.warn(...)` was renamed to `logger.warning(...)` at all call sites.
@@ -401,13 +401,13 @@ Login lockout (`LoginLockoutMiddleware`, env `LOGIN_*`) is separate from these l
 Examples:
 
 Server function call:
-[JmPaunlagui (S) 192.168.100.92] [2025-08-22 19:43:03] [INFO] [PID:23632] [initializePool @ src/config/adapters/oracle.js:234] [FUNC] - appDb pool created successfully
+[JmPaunlagui (S) 192.168.100.92] [2025-08-22 19:43:03] [INFO] [PID:23632] [initializePool @ src/config/adapters/oracle.ts:234] [FUNC] - appDb pool created successfully
 
 Client incoming request:
-[paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.js:55] [Incoming Request] [POST] - [POST @ /api/v1/auth/login]
+[paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.ts:55] [Incoming Request] [POST] - [POST @ /api/v1/auth/login]
 
 Client request complete:
-[paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.js:80] [Request Complete] [POST] - [POST @ /api/v1/auth/login]
+[paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.ts:80] [Request Complete] [POST] - [POST @ /api/v1/auth/login]
 ```
 
 ### Log Truncation Policy
@@ -682,7 +682,7 @@ or reviewed against a four-key success shape is wrong.
 }
 ```
 
-`title` comes from `HTTP_STATUS_TITLES` in `src/constants/responses/index.js`, which
+`title` comes from `HTTP_STATUS_TITLES` in `src/constants/responses/index.ts`, which
 the frontend mirrors code-for-code in `Frontend/src/constants/httpStatus.js`. That
 parity is enforced by `Frontend/test/unit/constants/httpStatus.test.js`, which reads
 these backend files directly — changing a title on one side without the other fails
@@ -721,7 +721,7 @@ throw new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, HTTP_STATUS.FORBIDDEN, {
 
 ## Middleware Stack (order matters — do not reorder)
 
-**`src/app.js` is the authority — read the numbered comments there, do not trust a
+**`src/app.ts` is the authority — read the numbered comments there, do not trust a
 count from this file.** The chain is 13 numbered steps plus sub-steps `3a`, `3b`, `4a`
 and `5a`; step 4 mounts three handlers. A sub-step exists where a later addition had to
 land *inside* an existing step's ordering constraint rather than after it.
@@ -808,11 +808,11 @@ Note the login credential field is **`userId`**, not `username`.
 ## Route Conventions
 
 - All routes prefixed with `/api/v1/`
-- Group by resource; one `<resource>.route.js` per mount, aggregated in `src/routes/index.js`
-- Project feature routes mount at the placeholder comment `Project feature routes mount here.` in `src/routes/index.js`
+- Group by resource; one `<resource>.route.js` per mount, aggregated in `src/routes/index.ts`
+- Project feature routes mount at the placeholder comment `Project feature routes mount here.` in `src/routes/index.ts`
 - Inside a router: auth gates first, then cache reads, then validation, then the controller
 
-### Route table (`src/routes/index.js`)
+### Route table (`src/routes/index.ts`)
 
 | Mount | Access | Endpoints |
 | --- | --- | --- |
@@ -871,11 +871,11 @@ An ADMIN may create and reset only `USER` accounts (`AdminManagementService._ass
 ## Database — OracleDB Adapter Rules
 
 - **Dual-pool pattern**: `appDb` (interactive; the only entry in `READINESS_GATING_POOLS`) and `appDbBulk` (bulk/long-running work). Same credentials (`APP_DB_USERNAME`/`APP_DB_PASSWORD`) and connect string (`DB_HOST`, `DB_PORT`, `DB_APP_SERVICE_NAME` as SID); separate sizing (`APP_POOL_*`, `APP_BULK_*`). Names are exported as `POOL_NAMES`.
-- `DEMO_MODE=true` skips Oracle entirely (`src/config/demoMode.js`)
-- New connection requires only new entry in `src/config/database.js` — no other file changes
+- `DEMO_MODE=true` skips Oracle entirely (`src/config/demoMode.ts`)
+- New connection requires only new entry in `src/config/database.ts` — no other file changes
 - `PoolHealthMonitor` runs every 30 seconds, marks unhealthy pools after 3 consecutive failures
 - Exponential backoff on pool init: 3 retries, delay `min(1000 * 2^n, 10000)ms`
-- **Never** use raw `oracledb` outside `src/config/adapters/oracle.js`
+- **Never** use raw `oracledb` outside `src/config/adapters/oracle.ts`
 
 ```js
 // Usage everywhere else in the app
@@ -916,7 +916,7 @@ Full API documented in `src/utils/oracle-mongo-wrapper/README.md`.
 
 Seed template accounts with `bun run db:seed:template`. Models use explicit projections, so apply SQL **before** deploying code that reads new columns (otherwise `ORA-00904`). Details in `sql/README.md`.
 
-## AdminModel (`src/models/admin.model.js`)
+## AdminModel (`src/models/admin.model.ts`)
 
 | Method | Purpose |
 | --- | --- |
@@ -948,7 +948,7 @@ CATHERINE ships an **exact-decimal money capability**, not a money *feature*
 if broken. The worked reference lives at the `/about/money` page; this section is
 the enforced contract for backend code.
 
-### Value type — `src/utils/money.js`
+### Value type — `src/utils/money.ts`
 
 - Money is the `Money` value type: a `BigInt` coefficient plus an integer scale.
   **Never** hold a monetary amount in a JS `number`, `parseFloat`, or `FLOAT`.
@@ -993,7 +993,7 @@ the enforced contract for backend code.
   wherever a total decomposes into parts.
 - **Bind money as its fixed-scale string** through `parseUpdate`, so the value
   never round-trips through a JS double on the way to a `NUMBER(19,4)` column.
-- `src/config/adapters/oracle.js` installs a `fetchTypeHandler` that returns any
+- `src/config/adapters/oracle.ts` installs a `fetchTypeHandler` that returns any
   `NUMBER` with **scale > 0 as a string** (rule 3b). Scale-0 columns (IDs,
   counts) stay numbers. Blast radius is zero until a scaled column exists.
 - The `oracle-mongo-wrapper` `convertTypes` is **FENCED**: it converts only
@@ -1010,7 +1010,7 @@ the enforced contract for backend code.
 
 ### Ledger integrity — signed fields (§3.4)
 
-- `src/utils/integrity/signedFields.js` — one `makeSignedFields({ domain, fields,
+- `src/utils/integrity/signedFields.ts` — one `makeSignedFields({ domain, fields,
   moneyFields })` factory produces **one** projection used by both signer and
   verifier. A downstream app's projection once drifted into four copies; that drift made
   legitimately corrected rows read TAMPERED forever. There must be exactly one
@@ -1084,11 +1084,11 @@ bun run build:host   # dist/catherine-backend for this machine — smoke-test a 
 
 Compiled-exe rules:
 
-1. **Never read a file relative to `__dirname`.** `bun build --compile` bakes the BUILD machine's absolute `__dirname` into the binary, so on the server it points at nothing. Resolve every on-disk path through `src/utils/runtimePaths.js` (`APP_ROOT` = exe folder when compiled, Backend folder otherwise; `appPath(...)`).
+1. **Never read a file relative to `__dirname`.** `bun build --compile` bakes the BUILD machine's absolute `__dirname` into the binary, so on the server it points at nothing. Resolve every on-disk path through `src/utils/runtimePaths.ts` (`APP_ROOT` = exe folder when compiled, Backend folder otherwise; `appPath(...)`).
 2. `scripts/build.js` stages beside the exe: `src/utils/email-templates/`, `src/generated/`, `node_modules/oracledb/build/Release/` (Thick binary, passed as `initOracleClient({ binaryDir })`) and `prebuilds/<platform-arch>/` (argon2, found by node-gyp-build's exe-relative lookup). It fails the build if any stages nothing. A new on-disk asset must be added to `ASSET_DIRS` there.
 3. The source map is embedded (`--sourcemap=inline`) so log call-sites read `src/...:line`, not `root/catherine-backend:line`.
 4. `Intl` output differs between engines (JavaScriptCore writes "Nov 3, 2026 at 2:32 PM"; V8 "Nov 3, 2026, 2:32 PM"). Never use `dateStyle`/`timeStyle` for text that tests or emails depend on — use `formatUtcStamp` or `formatToParts`.
-5. `src/utils/consoleManager.js` sets the process title for the exe window.
+5. `src/utils/consoleManager.ts` sets the process title for the exe window.
 6. Clustering shares the port through SO_REUSEPORT: verified on macOS, load-balanced on Linux, not verified on Windows — keep `ENABLE_CLUSTERING=false` on a Windows host until it is.
 
 ---

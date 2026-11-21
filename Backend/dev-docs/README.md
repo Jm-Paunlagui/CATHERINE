@@ -88,7 +88,7 @@ commit date across the source paths its **section** is mapped to
 
 The mapping is deliberately coarse — section-level, not per file.
 
-Current map (`Backend/src/services/DevDocsService.js`):
+Current map (`Backend/src/services/DevDocsService.ts`):
 
 | Section | Sources |
 |---|---|

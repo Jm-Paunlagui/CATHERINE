@@ -14,7 +14,7 @@
  *   1. scripts/build-devdocs-freshness.js writes src/generated/devDocsFreshness.json.
  *   2. `bun build --compile --sourcemap=inline` bundles server.js + node_modules into the executable.
  *   3. Stages, beside the exe, every file the server reads through APP_ROOT
- *      (src/utils/runtimePaths.js): email templates and the freshness snapshot.
+ *      (src/utils/runtimePaths.ts): email templates and the freshness snapshot.
  *      `bun build --compile` bakes the BUILD machine's absolute __dirname into the binary,
  *      so nothing may be read relative to __dirname at runtime.
  *   4. Stages the native addons for the target platform:

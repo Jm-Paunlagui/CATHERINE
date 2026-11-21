@@ -3,7 +3,7 @@
 /**
  * @file database.poolConfig.test.js
  *
- * Unit tests for the env-driven pool sizing in src/config/database.js.
+ * Unit tests for the env-driven pool sizing in src/config/database.ts.
  *
  * The appDb connection entry was updated in the performance sprint to read
  * APP_POOL_MIN and APP_POOL_MAX from environment variables, defaulting to

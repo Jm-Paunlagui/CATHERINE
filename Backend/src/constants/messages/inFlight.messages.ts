@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview Log message templates for `InFlightTaskRegistry`
- * (`src/utils/InFlightTaskRegistry.js`) — the process-level registry of
+ * (`src/utils/InFlightTaskRegistry.ts`) — the process-level registry of
  * detached ("fire-and-forget") promises that `gracefulShutdown` drains
  * before the Oracle pools and SMTP transporter are torn down (D4).
  * Used ONLY in logger calls — never thrown or sent to clients.

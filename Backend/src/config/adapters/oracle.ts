@@ -14,7 +14,7 @@
  *   isPoolHealthy(name)               health probe
  *   getHealthMetrics()                full health object
  *
- * Registered pool names live in `POOL_NAMES` in src/config/database.js — read
+ * Registered pool names live in `POOL_NAMES` in src/config/database.ts — read
  * them from there, never from a doc comment.
  */
 

@@ -259,7 +259,7 @@ The module emits `{ name, value, rating }` and nothing else — no PII, no ident
 
 ### 4.1 `MetricsStore` — the in-process store
 
-`Backend/src/middleware/metrics/MetricsStore.js`, exported as a singleton (`:922`).
+`Backend/src/middleware/metrics/MetricsStore.ts`, exported as a singleton (`:922`).
 
 **Per-route data** (`:199`) is a `Map` of `"<METHOD> <path>" → { count, redirectCount, notModifiedCount, clientErrorCount, serverErrorCount, durations }`, where `durations` is a ring buffer capped at `RING_BUFFER_SIZE = 1000` (`:47`). `#pushRing` (`:509-514`) `shift()`s at the cap — O(n) but n is bounded and small.
 
@@ -281,7 +281,7 @@ The module emits `{ name, value, rating }` and nothing else — no PII, no ident
 
 ### 4.2 `MetricsMiddleware` — step 5a
 
-`Backend/src/middleware/metrics/MetricsMiddleware.js` is 105 lines and does exactly three things: skip what should not be recorded, capture the label synchronously, record on `finish`.
+`Backend/src/middleware/metrics/MetricsMiddleware.ts` is 105 lines and does exactly three things: skip what should not be recorded, capture the label synchronously, record on `finish`.
 
 `shouldRecordRouteMetrics` (`routeLabel.js:248-252`) excludes `OPTIONS` and everything under `METRICS_EXCLUDED_PREFIXES` — by default `/api/v1/audit-logs` and `/api/v1/metrics` (`:67-71`). The reasoning at `:52-64` is the observer effect: the dashboard polls itself every 30 seconds, and `/audit-logs/stream` is a long-lived SSE whose `res.finish` fires only on *close*, so its "duration" would be the whole session and would wreck p95/p99/apdex in one sample.
 
@@ -293,7 +293,7 @@ The whole `finish` handler is wrapped in a bare `try {} catch {}` (`MetricsMiddl
 
 ### 4.3 `MetricsService` — the rule engine
 
-`Backend/src/services/MetricsService.js`. Static class, three methods.
+`Backend/src/services/MetricsService.ts`. Static class, three methods.
 
 `getSnapshot()` (`:85-94`) wraps `metricsStore.getSnapshot()` and converts any throw into `AppError 503 METRICS_UNAVAILABLE`. `getSummary()` (`:101-129`) is the light read for non-admins: totals, four heap numbers, event-loop lag, the top 5 routes by p95 descending, and the alert *count* only.
 
@@ -316,7 +316,7 @@ Every rule also emits a log line, and **every one of those lines carries `_noNot
 
 ### 4.4 `AlertNotifierService` — the state machine
 
-`Backend/src/services/AlertNotifierService.js`, a singleton instance (`:1492`). Two independent trigger paths feed four e-mail channels.
+`Backend/src/services/AlertNotifierService.ts`, a singleton instance (`:1492`). Two independent trigger paths feed four e-mail channels.
 
 **Path 1 — the metrics poll.** A plain `setInterval` at `ALERT_POLL_INTERVAL_MS` (default 60 s). Deliberately not `node-cron`: PKG builds have silently missed cron ticks before (`:14-18`). Every tick calls `evaluateAlerts()`, keys each result by `rule::(route ?? pool ?? "global")`, and diffs against `_alertStates`. Transitions are batched **per channel** — one digest e-mail per channel per tick, not one per alert (`:441-451`). A channel with both an escalation and a recovery in the same tick sends two, which is the acknowledged edge case.
 

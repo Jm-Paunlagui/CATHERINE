@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview Log message templates for the shared upload-outcome ledger
- * (`src/utils/uploadOutcome.js`). Used ONLY in logger calls — never thrown,
+ * (`src/utils/uploadOutcome.ts`). Used ONLY in logger calls — never thrown,
  * never sent to clients.
  */
 

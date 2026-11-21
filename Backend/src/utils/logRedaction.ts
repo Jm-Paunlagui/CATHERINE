@@ -34,7 +34,7 @@
  * ------------
  * HKDF-derived from the existing `DATA_SIGNING_SECRET` (already boot-guarded
  * fail-closed, already identical across cluster workers and process
- * restarts — see `src/config/bootGuard.js`). Derivation is lazy (first call,
+ * restarts — see `src/config/bootGuard.ts`). Derivation is lazy (first call,
  * not module load) so it never races dotenv loading the logger singleton is
  * constructed before, and memoised so it costs one HKDF call per process
  * lifetime. **No new environment variable** — rotating `DATA_SIGNING_SECRET`

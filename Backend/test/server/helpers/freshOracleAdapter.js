@@ -3,7 +3,7 @@
 /**
  * @fileoverview Load a FRESH copy of the Oracle adapter for one test.
  *
- * src/config/adapters/oracle.js keeps module-level state — the pool registry
+ * src/config/adapters/oracle.ts keeps module-level state — the pool registry
  * (`name → Promise<Pool>`), the PoolHealthMonitor and its 30 s interval
  * (started at module load), and the `isShuttingDown` flag. Tests that prove
  * behaviour of that state (a cached rejected pool promise, a leaked health-check
@@ -24,7 +24,7 @@
  *   - `require("oracledb").createPool` → the caller's stub. Restored to whatever
  *     was there before.
  *   - `require.cache[<adapter>]` → the fresh copy. The previous cache entry
- *     (the copy src/config/index.js already holds) is put back, so a later
+ *     (the copy src/config/index.ts already holds) is put back, so a later
  *     require of the adapter in the same file sees the original singleton.
  *   - `database.getConnectionConfig` → patched ONLY for the duration of the
  *     re-require (the adapter destructures it at load). The fresh copy's

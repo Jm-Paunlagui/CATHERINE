@@ -10,7 +10,7 @@
  * WHERE THE MAPS COME FROM
  * ────────────────────────
  * Each is a hand-authored model under `src/constants/` validated and
- * assembled by `src/utils/systemMap.js`, built once per process and held in
+ * assembled by `src/utils/systemMap.ts`, built once per process and held in
  * memory. Everything is a required module, so the compiled .exe bundles it and
  * needs no generated artefact.
  *

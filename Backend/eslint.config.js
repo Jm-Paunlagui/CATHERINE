@@ -6,9 +6,12 @@ module.exports = defineConfig([
   // BLOCK 0 — global ignores
   globalIgnores(["dist", "coverage", "node_modules"]),
 
-  // BLOCK 1 — base: all .js (src + server.js + root configs)
+  // BLOCK 1 — base: all .js/.ts (src + server.js + root configs).
+  // src/ is mid-migration to TypeScript: files are renamed .ts but still plain
+  // CommonJS JS, so espree parses them. Add typescript-eslint before the first
+  // type annotation lands.
   {
-    files: ["**/*.js"],
+    files: ["**/*.{js,ts}"],
     extends: [js.configs.recommended],
     languageOptions: {
       // ES2022: logger.js uses private class methods (#foo). 2020 would parse-error.
@@ -39,8 +42,8 @@ module.exports = defineConfig([
   // circular.
   {
     files: [
-      "src/utils/consoleManager.js",
-      "src/utils/logger.js",
+      "src/utils/consoleManager.ts",
+      "src/utils/logger.ts",
     ],
     rules: { "no-console": "off" },
   },

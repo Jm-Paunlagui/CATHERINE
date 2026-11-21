@@ -9,7 +9,7 @@
  * uses one of these templates from inside ServerNotificationService or
  * AlertNotifierService MUST also pass meta `{ _noNotify: true }` so the
  * `logger.onLevel` critical tap never re-triggers a notification from the
- * notification path itself. See src/utils/logger.js `onLevel`.
+ * notification path itself. See src/utils/logger.ts `onLevel`.
  */
 
 const notificationMessages = {

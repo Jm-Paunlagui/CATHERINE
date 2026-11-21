@@ -35,7 +35,7 @@ const { oracleMongoWrapperMessages: MSG } = require("../../constants/messages");
 /**
  * Creates a db interface bound to a named database connection pool.
  *
- * The connectionName maps to a pool configured in src/config/database.js.
+ * The connectionName maps to a pool configured in src/config/database.ts.
  * The returned object provides methods to safely borrow connections,
  * run transactions, check pool health, etc.
  *

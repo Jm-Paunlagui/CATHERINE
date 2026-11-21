@@ -2,7 +2,7 @@
 
 > **Scope:** Version history management, AES-256-GCM encrypted file-based storage, SemVer release train lifecycle, and the "Version History" UI.
 > **Source (FE):** `Frontend/src/features/support/changelog/` (`changelog.api.js`, `changelog.hook.js`, `Changelog.view.jsx`, `components/*`), `Frontend/src/contexts/version/VersionContext.jsx`, `Frontend/src/components/layout/config/nav.config.jsx` (`canSeeVersion`). Route `about/changelog` (public) in `Frontend/src/App.jsx`.
-> **Source (BE):** `Backend/src/routes/changelog.route.js`, `src/controllers/{ChangelogController,ReleaseController}.js`, `src/services/{ChangelogService,ReleaseService}.js`, `src/models/changelog.model.js`, `src/config/bootGuard.js`, `CHANGELOG_ERRORS` in `src/constants/errors/index.js`, `CHANGELOG_*` / `RELEASE_STATE_FETCHED` in `src/constants/responses/index.js`; store `Backend/data/changelog.enc`; scripts `Backend/scripts/{dump-changelog,seed-changelog}.js`.
+> **Source (BE):** `Backend/src/routes/changelog.route.ts`, `src/controllers/{ChangelogController,ReleaseController}.js`, `src/services/{ChangelogService,ReleaseService}.js`, `src/models/changelog.model.ts`, `src/config/bootGuard.ts`, `CHANGELOG_ERRORS` in `src/constants/errors/index.ts`, `CHANGELOG_*` / `RELEASE_STATE_FETCHED` in `src/constants/responses/index.ts`; store `Backend/data/changelog.enc`; scripts `Backend/scripts/{dump-changelog,seed-changelog}.js`.
 > Diagrams render in GitHub/GitLab/Obsidian/VS Code preview.
 >
 > **Verified 2026-10-29** against the source files above. The only test touching this feature in this repo is `Frontend/test/integration/changelog-httpclient.test.jsx` (CSRF injection over the real `HttpClient`); there is no backend changelog/release test. No tests were run for this revision. The sibling **Dev Docs** item has its own document, `Support/dev-docs-viewer-documentation.md`.
@@ -208,7 +208,7 @@ Read-only service that derives the release-train state from the highest-preceden
 
 ### Boot Guard
 
-`CHANGELOG_ENCRYPTION_KEY` is one of the `SECRET_RULES` in `src/config/bootGuard.js` (minimum 32 characters, must not be a `.env.example` placeholder). In production (`NODE_ENV=production`) any violation causes `process.exit(1)` (fail closed); in development it is logged as a warning.
+`CHANGELOG_ENCRYPTION_KEY` is one of the `SECRET_RULES` in `src/config/bootGuard.ts` (minimum 32 characters, must not be a `.env.example` placeholder). In production (`NODE_ENV=production`) any violation causes `process.exit(1)` (fail closed); in development it is logged as a warning.
 
 > Note the two checks differ: the boot guard accepts ≥32 characters, while `changelog.model.js` `resolveKey()` uses the key only when it is **exactly 64 characters** (hex → 32 bytes) and otherwise falls back to SHA-256 of `DATA_SIGNING_SECRET`. A 32–63-character key passes the boot guard but is silently ignored by the model. Flagged for the backend owner; not changed here.
 
@@ -392,7 +392,7 @@ The seed does not read the dump file; to carry UI-written entries into a re-seed
 | ---------------------- | ------------------------------------------------------------------------------------------------------- |
 | **Authentication**     | JWT required on all routes except `GET /public` and `GET /public/latest`                                |
 | **Authorization**      | `requireSuperAdmin` (`user.role === "SUPER_ADMIN"`) on all mutating routes + release state              |
-| **CSRF**               | App-level step 9 (`src/app.js`), enforced on POST/PUT/DELETE via the `x-csrf-token` header               |
+| **CSRF**               | App-level step 9 (`src/app.ts`), enforced on POST/PUT/DELETE via the `x-csrf-token` header               |
 | **Rate limiting**      | `GET /public` and `GET /public/latest` share one limiter: 30 req/60s (`RateLimit:changelog-public`)     |
 | **Encryption at rest** | AES-256-GCM with authenticated encryption (confidentiality + integrity)                                 |
 | **Key management**     | Boot guard validates presence, length ≥32 and non-placeholder; `process.exit(1)` in production (see §4 note on the 64-char model rule) |
@@ -410,7 +410,7 @@ The seed does not read the dump file; to carry UI-written entries into a re-seed
 
 > **Q:** Are mutating endpoints properly restricted to SUPER_ADMIN?
 > **A:** Yes, per source. POST/PUT/DELETE and `GET /release/current` all run `AuthMiddleware.authenticate` then `requireSuperAdmin` (`user.role === "SUPER_ADMIN"`), so USER and ADMIN are refused with 403.
-> **Evidence:** source only — `Backend/src/routes/changelog.route.js`.
+> **Evidence:** source only — `Backend/src/routes/changelog.route.ts`.
 > **Gap:** a security suite covering JWT bypass, role escalation (ADMIN/USER denied on mutations), CSRF and no stack-trace leakage.
 > _Status: no test in this repo._
 
@@ -421,20 +421,20 @@ The seed does not read the dump file; to carry UI-written entries into a re-seed
 
 > **Q:** Does the cross-process lock prevent concurrent write corruption?
 > **A:** By design, yes. `withLock()` wraps every create/update/delete/resetStore: exclusive `wx` lockfile, 25 ms retry, 5 s acquisition timeout → `STORE_UNAVAILABLE` (503), stale lock (>10 s) stolen.
-> **Evidence:** source only — `Backend/src/models/changelog.model.js` (`_acquireLock`, `withLock`).
+> **Evidence:** source only — `Backend/src/models/changelog.model.ts` (`_acquireLock`, `withLock`).
 > **Gap:** a chaos test for concurrent creates, a live lock → 503, and stale-lock recovery.
 > _Status: no test in this repo._
 
 > **Q:** Does the public endpoint strip author information?
 > **A:** Yes, per source. `listPublic()` destructures out `authors` and `coAuthors`; `latestPublic()` is `listPublic()[0] ?? null`, so the badge read is stripped the same way.
-> **Evidence:** source only — `Backend/src/services/ChangelogService.js`.
+> **Evidence:** source only — `Backend/src/services/ChangelogService.ts`.
 > **Gap:** a security test that stubs `ChangelogModel.listAll` with fixtures carrying authors and asserts no name in either public body. A frontend MSW handler cannot cover this — it replaces the server with a fixture.
 > _Status: no test in this repo._
 > **Evidence (UI):** none — backend-only; no screen shows this. The Version History view never renders `authors`/`coAuthors` for any role (only date/version/stage/type/message/whatChanged) — there is no screen where a stripping regression could even become visible.
 
 > **Q:** Does validation correctly reject invalid SemVer versions?
 > **A:** Yes, per source. `SEMVER_RE = /^\d+\.\d+\.\d+(?:-(?:dev|alpha|beta|rc)(?:\.\d+)+)?$/` is anchored; `DATE_RE` requires `YYYY-MM-DD`; `type` must be in `VALID_TYPES` (11 values). A failure is a 400 with a `details` array. The Create/Edit form has no client-side format gate — it surfaces whatever the backend returns.
-> **Evidence:** source only — `Backend/src/services/ChangelogService.js`.
+> **Evidence:** source only — `Backend/src/services/ChangelogService.ts`.
 > **Gap:** a unit test for the SemVer accept/reject matrix, the 11 types and partial-update acceptance.
 > _Status: no test in this repo._
 
@@ -445,7 +445,7 @@ The seed does not read the dump file; to carry UI-written entries into a re-seed
 
 > **Q:** Does the VersionContext correctly resolve the app version from the changelog?
 > **A:** Per source, yes. It reads `latestPublic()` (`GET /changelog/public/latest`), caches the result in `sessionStorage` under `app_ver`, falls back to `listPublic()` only on a 404 (any other error is rethrown), and keeps the build-time fallback (`APP_VERSION` / `APP_STAGE` from `src/config/appVersion.js`) for an empty store or a failure.
-> **Evidence:** source only — `Frontend/src/contexts/version/VersionContext.jsx`, `Backend/src/services/ChangelogService.js` → `latestPublic`.
+> **Evidence:** source only — `Frontend/src/contexts/version/VersionContext.jsx`, `Backend/src/services/ChangelogService.ts` → `latestPublic`.
 > _Status: no test in this repo._
 
 ### Coverage Summary

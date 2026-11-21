@@ -19,7 +19,7 @@
  *   own mocha+chai toolchain so the root Backend dependency tree stays free of
  *   mocha/chai (the pair flagged by `bun audit`).
  *
- *   1. Point the appDb connection in src/config/database.js at a schema that has the DEV_* fixture tables and configure ../../.env
+ *   1. Point the appDb connection in src/config/database.ts at a schema that has the DEV_* fixture tables and configure ../../.env
  *   2. Install mocha+chai LOCALLY IN THIS DIRECTORY (not the Backend root):
  *        cd test/oracle-mongo-wrapper && bun install
  *      (devDependencies mocha + chai are declared in this folder's package.json)

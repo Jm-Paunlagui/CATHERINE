@@ -9,7 +9,7 @@
  *  - SHUTDOWN   primary → worker : `{ cmd, signal }`
  *  - BOOT_FATAL worker → primary : `{ cmd, code }`  (PFX missing, EADDRINUSE, EACCES)
  *  - CRIT_RELAY worker → primary → leader worker : `{ cmd, record }`
- *               (record built by `src/utils/cluster/critRelay.js`)
+ *               (record built by `src/utils/cluster/critRelay.ts`)
  *  - RPC_REQUEST W→P `{ cmd, id, target, method, args }`; RPC_RESPONSE P→W
  *    `{ cmd, id, ok, result?, error? }`; RPC_CALL P→W `{ cmd, callId, method, args }`;
  *    RPC_RETURN W→P `{ cmd, callId, ok, result?, error? }`; NOTIFY W→P

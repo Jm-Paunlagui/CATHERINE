@@ -1,7 +1,7 @@
 # The Oracle MongoDB-Style Wrapper — Technical Documentation
 
 > **Scope:** `oracle-mongo-wrapper` — the MongoDB-shaped query layer the template puts over Oracle SQL — plus the pool adapter it runs on.
-> **Source:** `Backend/src/utils/oracle-mongo-wrapper/` and `Backend/src/config/adapters/oracle.js`. Backend-only; there is no frontend half (see [§3](#3-frontend-implementation)).
+> **Source:** `Backend/src/utils/oracle-mongo-wrapper/` and `Backend/src/config/adapters/oracle.ts`. Backend-only; there is no frontend half (see [§3](#3-frontend-implementation)).
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, the library's own `README.md` or a JSDoc block disagrees with the code, the code wins and the disagreement is recorded in [§6.12](#612-known-documentation-drift).
 > **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
@@ -13,7 +13,7 @@ Nobody writes SQL in this template. Models call `users.findOne({ USERNAME: name 
 
 The library is eighteen JavaScript files plus its own `README.md`, in four groups. `db.js` produces a `db` handle bound to one named pool. `core/` holds `OracleCollection` (the MongoDB `Collection` surface) and `QueryBuilder` (a lazy cursor — `.find()` builds nothing until a terminal method runs). `parsers/` turns filters into `WHERE` clauses and update operators into `SET` clauses. `pipeline/`, `joins/`, `advanced/` and `schema/` cover aggregation, joins, window functions, hierarchical queries, DDL and DCL. `Transaction.js` wraps a single connection in a session with named savepoints.
 
-Under all of it sits `Backend/src/config/adapters/oracle.js`: a lazy registry of named connection pools with exponential-backoff creation, a 30-second three-strike `PoolHealthMonitor`, a bounded acquire retry with an orphan-connection guard, and Thick-mode client initialisation. It also defines `moneySafeFetchTypeHandler`, which asks the driver to return any `NUMBER` with `scale > 0` as a **string** so an exact decimal never round-trips through an IEEE-754 double — a fence that is defined and unit-tested but, as shipped, is not actually attached to the wrapper's read path ([§6.9](#69-the-money-safe-fetch-fence-is-defined-but-not-wired-into-the-wrapper)).
+Under all of it sits `Backend/src/config/adapters/oracle.ts`: a lazy registry of named connection pools with exponential-backoff creation, a 30-second three-strike `PoolHealthMonitor`, a bounded acquire retry with an orphan-connection guard, and Thick-mode client initialisation. It also defines `moneySafeFetchTypeHandler`, which asks the driver to return any `NUMBER` with `scale > 0` as a **string** so an exact decimal never round-trips through an IEEE-754 double — a fence that is defined and unit-tested but, as shipped, is not actually attached to the wrapper's read path ([§6.9](#69-the-money-safe-fetch-fence-is-defined-but-not-wired-into-the-wrapper)).
 
 The template uses a fraction of this. Five models (`admin`, `user`, `audit.log`, `serverAlertLog`, `serverAlertAck`) and `FxRateService` construct collections against **one** pool named `appDb`; the aggregation pipeline, joins, window functions, PIVOT, `CONNECT BY` and the DCL surface ship unused, for a downstream project to reach for.
 
@@ -291,15 +291,15 @@ Supporting files outside the folder:
 
 | File | Responsibility |
 | --- | --- |
-| `Backend/src/config/adapters/oracle.js` | Driver load, Thick-mode init, pool registry, health monitor, acquire retry, `withConnection`/`withTransaction`/`withBatchConnection`, `moneySafeFetchTypeHandler`. |
-| `Backend/src/config/database.js` | The connection registry. One entry today: `appDb`. |
-| `Backend/src/config/index.js` | Adapter factory — selects by `DB_TYPE` (default `oracle`) and re-exports the adapter + registry as one module. |
-| `Backend/src/constants/messages/oracleWrapper.messages.js` | Every wrapper error string, including `wrapError(scope, err, sql, binds)`. |
+| `Backend/src/config/adapters/oracle.ts` | Driver load, Thick-mode init, pool registry, health monitor, acquire retry, `withConnection`/`withTransaction`/`withBatchConnection`, `moneySafeFetchTypeHandler`. |
+| `Backend/src/config/database.ts` | The connection registry. One entry today: `appDb`. |
+| `Backend/src/config/index.ts` | Adapter factory — selects by `DB_TYPE` (default `oracle`) and re-exports the adapter + registry as one module. |
+| `Backend/src/constants/messages/oracleWrapper.messages.ts` | Every wrapper error string, including `wrapError(scope, err, sql, binds)`. |
 
 ### 4.2 `createDb` — the handle, and its stale default
 
 ```js
-// Backend/src/utils/oracle-mongo-wrapper/db.js:60
+// Backend/src/utils/oracle-mongo-wrapper/db.ts:60
 function createDb(connectionName = "userAccount") { … }
 ```
 
@@ -630,9 +630,9 @@ The code is the authority. These are places where prose currently disagrees with
 | 1 | `Backend/CLAUDE.md:718` | "**Dual-pool pattern**: separate pools per named connection (`userAccount`, `unitInventory`, etc.)" | `config/database.js:43-70` registers **one** connection, `appDb`. The pattern is a lazy *named-pool registry* (`poolRegistry`, a `Map<string, Promise<Pool>>`), which supports N pools but ships with one. Neither `userAccount` nor `unitInventory` exists. |
 | 2 | `Backend/CLAUDE.md:727` and `:741` | `withConnection("userAccount", …)` / `createDb("userAccount")` | Both throw `Unknown connection "userAccount". Registered: appDb` (`database.js:76-78`). |
 | 3 | `Backend/CLAUDE.md:742` | `new OracleCollection("T_OPITS_USERS", db)` | No such table. The template's user table is `T_USERS_DEV` (`sql/01_schema.sql:64`). `T_OPITS_USERS` is a reference-system name. |
-| 4 | `Backend/src/utils/oracle-mongo-wrapper/db.js:60`, and its JSDoc at `:22` and `:54`; `Transaction.js:197` | `createDb(connectionName = "userAccount")`, examples use `createDb("userAccount")` | The default is unusable. Every live call passes `"appDb"`. |
-| 5 | `Backend/src/config/adapters/oracle.js:17-19` (file header) | "Backward-compatible shorthands: `withDbConnection(cb)`, `withDbConnectionUnit(cb)`" | Neither function exists in the file, and neither is in `module.exports` (`:845-870`). |
-| 6 | `Backend/CLAUDE.md:805-807`; `Backend/sql/README.md:89-90`; `Backend/src/services/FxRateService.js:35`; `Frontend/src/features/other/money/Money.view.jsx:169` | The adapter "installs" a `fetchTypeHandler` that reads scaled `NUMBER`s back as strings, so "the read side is exact too" | The handler is defined and put in the exported `EXECUTE_OPTIONS`, but nothing in `Backend/src` uses `EXECUTE_OPTIONS`, and `oracledb.fetchTypeHandler` is never set globally. Every wrapper read passes its own options object without it. See [§6.9](#69-the-money-safe-fetch-fence-is-defined-but-not-wired-into-the-wrapper). |
+| 4 | `Backend/src/utils/oracle-mongo-wrapper/db.ts:60`, and its JSDoc at `:22` and `:54`; `Transaction.js:197` | `createDb(connectionName = "userAccount")`, examples use `createDb("userAccount")` | The default is unusable. Every live call passes `"appDb"`. |
+| 5 | `Backend/src/config/adapters/oracle.ts:17-19` (file header) | "Backward-compatible shorthands: `withDbConnection(cb)`, `withDbConnectionUnit(cb)`" | Neither function exists in the file, and neither is in `module.exports` (`:845-870`). |
+| 6 | `Backend/CLAUDE.md:805-807`; `Backend/sql/README.md:89-90`; `Backend/src/services/FxRateService.ts:35`; `Frontend/src/features/other/money/Money.view.jsx:169` | The adapter "installs" a `fetchTypeHandler` that reads scaled `NUMBER`s back as strings, so "the read side is exact too" | The handler is defined and put in the exported `EXECUTE_OPTIONS`, but nothing in `Backend/src` uses `EXECUTE_OPTIONS`, and `oracledb.fetchTypeHandler` is never set globally. Every wrapper read passes its own options object without it. See [§6.9](#69-the-money-safe-fetch-fence-is-defined-but-not-wired-into-the-wrapper). |
 | 7 | `oracle-mongo-wrapper/README.md:81` and `:118-119` | `poolMin`/`poolMax` "falls back to 2 / 10 when unset" | `database.js:55-56` defaults to **5 / 20**. |
 | 8 | `oracle-mongo-wrapper/README.md:1092-1106` | `$coalesce` and `$nullif` shown inside `.project({ … })` | Both operators live in `filterParser` and are only reachable from a **filter**. `QueryBuilder._buildSQL` only recognises `$subquery` inside a projection (`:217`); any other object value falls through `buildProjection` and is emitted as a bare quoted column name → `ORA-00904`. |
 | 9 | `oracle-mongo-wrapper/README.md:1080-1090` | `$case` shown as a filter: `.find({ tier: { $case: [ … ], $else: "Regular" } })` | `_parseFieldExpr` emits a bare `CASE … END` *expression* into the `WHERE` clause (`filterParser.js:320`). Oracle requires a boolean predicate there; the statement does not parse. |

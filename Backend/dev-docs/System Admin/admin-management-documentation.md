@@ -3,7 +3,7 @@
 > **Scope:** Access Control: who holds a privileged account (`SUPER_ADMIN`, `ADMIN`, `USER`) in `T_ADMINS_DEV`, what each role may do to other accounts, how temporary passwords are issued and emailed, how per-admin server-notification opt-ins (`CAN_RECEIVE_SRV_*`) are set, how access is revoked or deleted behind a mandatory backup, and the tamper-evident `SYSSIGNATURE` on every row. Also covers the Super Admin escape hatch for a SecurityFilter IP block (`POST /security/unblock-ip`).
 >
 > **Primary source files:**
-> Backend: `Backend/src/routes/admin-management.route.js`, `Backend/src/controllers/AdminManagementController.js`, `Backend/src/services/AdminManagementService.js`, `Backend/src/services/AdminAccessEmailService.js`, `Backend/src/models/admin.model.js`, `Backend/src/models/user.model.js`, `Backend/src/utils/encryption/adminTempPassword.js`, `Backend/sql/01_schema.sql`.
+> Backend: `Backend/src/routes/admin-management.route.ts`, `Backend/src/controllers/AdminManagementController.ts`, `Backend/src/services/AdminManagementService.ts`, `Backend/src/services/AdminAccessEmailService.ts`, `Backend/src/models/admin.model.ts`, `Backend/src/models/user.model.ts`, `Backend/src/utils/encryption/adminTempPassword.ts`, `Backend/sql/01_schema.sql`.
 > Frontend: `Frontend/src/features/systemadmin/adminmanagement/` (`adminmanagement.api.js`, `adminmanagement.hook.js`, `AdminManagement.view.jsx`, `components/*`), `Frontend/src/App.jsx`.
 >
 > **Verified 2026-10-29 against source.** Tests were not run for this revision.
@@ -197,20 +197,20 @@ The table columns are Username, Name, Role badge (grey when inactive), Status pl
 
 | Layer | File | Notes |
 | ----- | ---- | ----- |
-| Mount | `Backend/src/routes/index.js` | `router.use("/admin-management", adminManagementRoutes)` |
-| Route | `Backend/src/routes/admin-management.route.js` | Auth, role predicates, validation, cache read/invalidate, rate limit. |
-| Controller | `Backend/src/controllers/AdminManagementController.js` | Thin. `catchAsync`, `sendSuccess`. Helpers `_flag`, `_caller`, `_actorId`. |
-| Service | `Backend/src/services/AdminManagementService.js` | Role policy, signatures, temp passwords, guards, token verification, session ending, cache busting. |
-| Email | `Backend/src/services/AdminAccessEmailService.js` | `resolveRecipient` (before any write) and `sendTemporaryPassword` (never throws). |
-| Model | `Backend/src/models/admin.model.js` | `T_ADMINS_DEV` via the oracle-mongo-wrapper `OracleCollection` / `Transaction` on `appDb`. DEMO_MODE branches use `demoStore`. |
-| Model | `Backend/src/models/user.model.js` | `T_USERS_DEV` reads (`findByUsername`, `findAll`), `appDb`. |
-| Util | `Backend/src/utils/encryption/adminTempPassword.js` | Generates temp passwords and owns the `$t$` expiry marker. |
+| Mount | `Backend/src/routes/index.ts` | `router.use("/admin-management", adminManagementRoutes)` |
+| Route | `Backend/src/routes/admin-management.route.ts` | Auth, role predicates, validation, cache read/invalidate, rate limit. |
+| Controller | `Backend/src/controllers/AdminManagementController.ts` | Thin. `catchAsync`, `sendSuccess`. Helpers `_flag`, `_caller`, `_actorId`. |
+| Service | `Backend/src/services/AdminManagementService.ts` | Role policy, signatures, temp passwords, guards, token verification, session ending, cache busting. |
+| Email | `Backend/src/services/AdminAccessEmailService.ts` | `resolveRecipient` (before any write) and `sendTemporaryPassword` (never throws). |
+| Model | `Backend/src/models/admin.model.ts` | `T_ADMINS_DEV` via the oracle-mongo-wrapper `OracleCollection` / `Transaction` on `appDb`. DEMO_MODE branches use `demoStore`. |
+| Model | `Backend/src/models/user.model.ts` | `T_USERS_DEV` reads (`findByUsername`, `findAll`), `appDb`. |
+| Util | `Backend/src/utils/encryption/adminTempPassword.ts` | Generates temp passwords and owns the `$t$` expiry marker. |
 
 ### 4.2 Route-level guards
 
 - `router.use(AuthMiddleware.authenticate, requireAdmin)`, where `requireAdmin` passes `role === "ADMIN" || role === "SUPER_ADMIN"`.
 - `requireSuperAdmin` (`role === "SUPER_ADMIN"`, message "Only a Super Admin can do this.") is added to: `PUT /:empId`, `PATCH /:empId/reset-signature`, `PATCH /:empId/permissions`, `DELETE /:empId`, `POST /:empId/revoke-backup`, `POST /:empId/revoke`, `POST /security/unblock-ip`.
-- `credentialEmailRateLimiter` (5 per 60 s, `keyBy: "user"`, `Backend/src/middleware/security/RateLimiterMiddleware.js`) only applies to `PATCH /:empId/reset-password`.
+- `credentialEmailRateLimiter` (5 per 60 s, `keyBy: "user"`, `Backend/src/middleware/security/RateLimiterMiddleware.ts`) only applies to `PATCH /:empId/reset-password`.
 - `AuthMiddleware.validateRequiredFields` rejects missing fields with 400. Its default `stringOnly` mode refuses objects and turns primitives into strings. `/permissions` passes `{ stringOnly: false }` so that `flags` can be an object.
 
 ### 4.3 Service operations
@@ -250,7 +250,7 @@ A denial throws 403 `AuthorizationError` and logs both `adminMessages.ROLE_POLIC
 - `SERVER_NOTIFY_FLAG_COLUMNS` maps channel → column. It is also the allow-list: an unknown channel resolves to zero recipients.
 - `findServerNotifyRecipients(channel)`: active admins with the flag set to 'Y' and a non-blank EMAIL, de-duplicated.
 
-### 4.6 Temporary passwords — `Backend/src/utils/encryption/adminTempPassword.js`
+### 4.6 Temporary passwords — `Backend/src/utils/encryption/adminTempPassword.ts`
 
 - `TEMP_PASSWORD_TTL_MS = 72 h`. Format `XXXX-XXXX-XXXX-XXXX` over a 56-char unambiguous alphabet, drawn with `crypto.randomInt`. The generator retries until the password contains an upper-case letter, a lower-case letter and a digit.
 - Stored as `$t$<expiry seconds base36><argon2|bcrypt hash>`. Because the expiry sits inside `PASSWORD`, `SYSSIGNATURE` covers it.
@@ -272,10 +272,10 @@ A denial throws 403 `AuthorizationError` and logs both `adminMessages.ROLE_POLIC
 
 ### 4.8 Constants
 
-- Errors: `ADMIN_ERRORS`, `VALIDATION_ERRORS` in `Backend/src/constants/errors/index.js`.
-- Responses: `RESPONSE_MESSAGES.FETCHED`, `ADMIN_CREATED`, `ADMIN_UPDATED`, `ADMIN_DELETED`, `PASSWORD_RESET`, `SIGNATURE_RESET`, `ADMIN_PERMISSIONS_UPDATED`, `ADMIN_REVOKED`, `UPDATED` in `Backend/src/constants/responses/index.js`.
-- Log templates: `adminMessages` in `Backend/src/constants/messages/admin.messages.js`.
-- Cache store: `adminList: { ttl: 600, checkPeriod: 120, maxKeys: 50 }` in `Backend/src/app.js`.
+- Errors: `ADMIN_ERRORS`, `VALIDATION_ERRORS` in `Backend/src/constants/errors/index.ts`.
+- Responses: `RESPONSE_MESSAGES.FETCHED`, `ADMIN_CREATED`, `ADMIN_UPDATED`, `ADMIN_DELETED`, `PASSWORD_RESET`, `SIGNATURE_RESET`, `ADMIN_PERMISSIONS_UPDATED`, `ADMIN_REVOKED`, `UPDATED` in `Backend/src/constants/responses/index.ts`.
+- Log templates: `adminMessages` in `Backend/src/constants/messages/admin.messages.ts`.
+- Cache store: `adminList: { ttl: 600, checkPeriod: 120, maxKeys: 50 }` in `Backend/src/app.ts`.
 
 ### 4.9 Error catalogue (raised by this feature)
 
@@ -373,7 +373,7 @@ The `:empId` parameter is the account **USERNAME**, not a numeric id. Search res
 Test files referenced below exist in the repository. **The tests were not run for this revision.** No pass counts are claimed.
 
 **Q1. Can an ADMIN only manage USER accounts?**
-Yes. `AdminManagementService._assertCanManage` allows an ADMIN `create` only when `newRole === "USER"` and `resetPassword` only on a `USER` target that is not itself. `changeRole` and `resetSignature` are always refused. The route adds `requireSuperAdmin` on PUT, reset-signature, permissions, revoke-backup, revoke, delete and unblock-ip (`Backend/src/routes/admin-management.route.js`). Evidence: `Backend/test/server/integration/admin-management/admin-management.test.js` — "returns 403 for ADMIN role (role change is SUPER_ADMIN only)", "returns 403 for ADMIN role" in the reset-signature and DELETE suites, "returns 201 for ADMIN role" on POST (service stubbed). No test exercises `_assertCanManage` directly.
+Yes. `AdminManagementService._assertCanManage` allows an ADMIN `create` only when `newRole === "USER"` and `resetPassword` only on a `USER` target that is not itself. `changeRole` and `resetSignature` are always refused. The route adds `requireSuperAdmin` on PUT, reset-signature, permissions, revoke-backup, revoke, delete and unblock-ip (`Backend/src/routes/admin-management.route.ts`). Evidence: `Backend/test/server/integration/admin-management/admin-management.test.js` — "returns 403 for ADMIN role (role change is SUPER_ADMIN only)", "returns 403 for ADMIN role" in the reset-signature and DELETE suites, "returns 201 for ADMIN role" on POST (service stubbed). No test exercises `_assertCanManage` directly.
 
 **Q2. What stops the last SUPER_ADMIN from being removed?**
 `AdminModel.withLastSuperAdminGuard` locks the active SUPER_ADMIN rows `FOR UPDATE` in one transaction and throws 409 `ADMIN_ERRORS.LAST_ACTIVE_SUPER_ADMIN`. It is invoked via `AdminManagementService._withSuperAdminGuard` from `updateAdmin` (demotion), `updatePermissions` (deactivation), `revokeAccess` and `deleteAdmin`. Evidence: `Backend/test/server/unit/models/adminModel.test.js` — "throws 409 LAST_ACTIVE_SUPER_ADMIN and never runs fn for the last one".
@@ -385,7 +385,7 @@ Yes. `AdminModel.search` binds `:q` (upper-cased, `%`-wrapped, `escapeLike`-esca
 No. `addAdmin` refuses `retainPassword` / `newPassword` (400 `PASSWORD_FIELDS_NOT_ACCEPTED`). `updateAdmin` refuses `changePassword: true` / `newPassword` (400 `EDIT_PASSWORD_NOT_ACCEPTED`). Evidence: integration suite — "returns 400 ValidationError when retainPassword is sent", "…when newPassword is sent", "…when changePassword is true", "treats changePassword: false as absent and succeeds", "returns the delivery summary and never a password field".
 
 **Q5. How long is a temporary password valid, and is the expiry tamper-proof?**
-72 h (`TEMP_PASSWORD_TTL_MS` in `Backend/src/utils/encryption/adminTempPassword.js`). The expiry is part of `PASSWORD` (the `$t$` marker), which is in `AdminModel.buildSignedFields`, so editing it breaks `SYSSIGNATURE`. Related evidence: `Backend/test/server/unit/utils/cryptoVault.adminMode.test.js` exists for admin hash mode. No dedicated test file for `adminTempPassword.js` was found.
+72 h (`TEMP_PASSWORD_TTL_MS` in `Backend/src/utils/encryption/adminTempPassword.ts`). The expiry is part of `PASSWORD` (the `$t$` marker), which is in `AdminModel.buildSignedFields`, so editing it breaks `SYSSIGNATURE`. Related evidence: `Backend/test/server/unit/utils/cryptoVault.adminMode.test.js` exists for admin hash mode. No dedicated test file for `adminTempPassword.js` was found.
 
 **Q6. Are Revoke and Delete impossible without a backup?**
 Yes. The route requires `backupToken` (400 when missing). `_verifyRevokeBackupToken` returns 428 when the token is missing, invalid, bound to another caller, or scoped to another target. Evidence: integration DELETE suite — "returns 400 with details when backupToken is missing", "returns 400 when the body is absent". No test file references `/revoke` or `/revoke-backup`.
@@ -400,7 +400,7 @@ Yes. `_fetchAndVerify` returns 422 `SIGNATURE_RESET_REQUIRED`, and `resetSignatu
 Evidence: `Backend/test/server/security/admin-management-auth.test.js` — "CSRF protection on mutating routes" (missing or forged token → 403 for POST, PUT, both PATCH resets and DELETE) and "no stack trace leakage". The permissions, revoke and unblock-ip routes are not in its `ADMIN_MUTATING_ROUTES` list.
 
 **Q10. Who can call `/security/unblock-ip`, and is it cluster-wide?**
-SUPER_ADMIN only (route). The controller calls `defaultSecurityFilter.unblockClusterWide` (`Backend/src/middleware/security/SecurityFilterMiddleware.js`). No test file references the route or `unblock`. `Backend/test/server/unit/middleware/securityFilter.test.js` exists but contains no `unblock` match.
+SUPER_ADMIN only (route). The controller calls `defaultSecurityFilter.unblockClusterWide` (`Backend/src/middleware/security/SecurityFilterMiddleware.ts`). No test file references the route or `unblock`. `Backend/test/server/unit/middleware/securityFilter.test.js` exists but contains no `unblock` match.
 
 **Q11. Who can open the page in the UI?**
 SUPER_ADMIN only: `ProtectedRoute role={[ROLES.SADMIN]}` in `Frontend/src/App.jsx`. Frontend tests only touch the path indirectly (`Frontend/test/helpers/auth.js` usage comment; `Frontend/test/unit/constants/httpStatus.test.js` uses the `admin-management` URL for status-handling plans). No frontend test covers `accessPolicy`, `useAdminManagement` or `RevokeAdminModal`.

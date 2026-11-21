@@ -7,7 +7,7 @@
 // the SUM of every connection pool's poolMax, plus headroom for non-DB worker
 // use (fs / crypto / dns).
 //
-// DERIVATION — re-derive this if any poolMax in src/config/database.js changes:
+// DERIVATION — re-derive this if any poolMax in src/config/database.ts changes:
 //     SUM(poolMax)  = appDb 20 + appDbBulk 6 = 26
 //     + headroom    = 22  (fs / crypto / dns worker-thread work)
 //     ────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ const NUM_WORKERS = parseInt(
 // SHUTDOWN_REQUEST_WAIT_CAP_MS: absolute cap on how long a
 //   stop waits for requests already in progress: 30 min. It is a CEILING, not
 //   a wait — a request that stops making progress is cut much earlier by the
-//   RequestWatchdog (idle limit per route, src/constants/requestWatchdog.js),
+//   RequestWatchdog (idle limit per route, src/constants/requestWatchdog.ts),
 //   and a stop with nothing in flight still exits in about a second.
 // FORCED_EXIT_MS: hard failsafe in gracefulShutdown. Default AND maximum:
 //   cap + notify drain clamp + reserve + margin (1_800_000 + 15_000 + 13_000
@@ -212,7 +212,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // Primary lifecycle (fork + cron-leader election, respawn with backoff and
     // a crash-loop cap, boot-fatal handling, graceful stop of all workers with a
     // bounded failsafe, critical-log relay) lives in ClusterSupervisor. The
-    // cron-leader election rationale is in src/utils/clusterRole.js's header.
+    // cron-leader election rationale is in src/utils/clusterRole.ts's header.
     // Its failsafe is FORCED_EXIT_MS (clamped above, so a lowered
     // SHUTDOWN_FORCED_EXIT_MS applies) + CLUSTER_SHUTDOWN_MARGIN_MS.
     const { ClusterSupervisor } = require("./src/utils/cluster/ClusterSupervisor");
@@ -283,7 +283,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // from a kill / power loss and email it (StartupNotifier). Lazy requires
     // on purpose: keeps the import block above untouched. The record is read in
     // the listen callback BEFORE start() overwrites it. See
-    // src/utils/lifecycle/ServerRunMarker.js.
+    // src/utils/lifecycle/ServerRunMarker.ts.
     const appVersion = (() => {
         try {
             return require("./package.json").version;
@@ -488,7 +488,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     new RequestWatchdog({ idleWatchdog: defaultIdleWatchdog }).attach(server);
 
     // Counts the requests still being answered, so a graceful shutdown can
-    // let them finish (src/utils/shutdown/HttpInFlightTracker.js). A
+    // let them finish (src/utils/shutdown/HttpInFlightTracker.ts). A
     // server-level listener (after the Express app) — the middleware chain
     // is untouched.
     const HttpInFlightTracker = require("./src/utils/shutdown/HttpInFlightTracker");
@@ -980,7 +980,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // to drop truly idle keep-alive sockets now; (3) after a short grace,
         // closeAllConnections() to force anything that ignored the shutdown
         // frame. Both socket calls are guarded by typeof for older runtimes.
-        // Moved verbatim into src/utils/shutdown/TeardownSequence.js so the
+        // Moved verbatim into src/utils/shutdown/TeardownSequence.ts so the
         // ordering can be asserted against the REAL implementation rather than
         // against a synthetic fixture. Same statements, same order, same
         // guards — see that module's header.
@@ -1034,7 +1034,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // End SSE streams (an SSE socket is never idle, so server.close()
         // would wait on it forever — defect B1), drop idle keep-alive sockets,
         // let requests in progress finish within the grace, and force-close
-        // only what is still running after it (src/utils/shutdown/TeardownSequence.js).
+        // only what is still running after it (src/utils/shutdown/TeardownSequence.ts).
         teardownHandle = preCloseTeardown({
             sseRegistry: SseConnectionRegistry,
             server,

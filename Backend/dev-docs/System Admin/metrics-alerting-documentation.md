@@ -161,22 +161,22 @@ Alert history is fetched only while `alertsView === "history"` and alerts are wa
 
 | File | Responsibility |
 | --- | --- |
-| `Backend/src/middleware/metrics/MetricsMiddleware.js` | `defaultMetrics.handle`. Registered at `app.js` step **5a**, after response-time tracking. Records route, status and duration on `finish`. |
-| `Backend/src/middleware/metrics/MetricsStore.js` | Singleton store. Per-route ring of 1000 durations (`RING_BUFFER_SIZE`). 5-minute windows (`ERROR_WINDOW_MS = LATENCY_WINDOW_MS = 300_000`, 10 s buckets). System poll every `SYSTEM_POLL_INTERVAL_MS = 10_000`. `APDEX_THRESHOLD_MS = 500`. Also `recordPoolStats` and `recordNotificationDelivery`. |
-| `Backend/src/middleware/metrics/metricsMerge.js` | `mergeMetricsSnapshots`, the cluster-wide merge used by `MetricsService.getClusterSnapshot`. |
-| `Backend/src/services/MetricsService.js` | `getSnapshot`, `getClusterSnapshot`, `getSummary`, `evaluateAlerts`, `evaluateAlertHolds`, `ingestFrontendMetrics`. Owns every threshold constant. |
-| `Backend/src/services/AlertNotifierService.js` | Poller, state machine, critical-log tap, storm ceiling, ack lifecycle, alert-log write-behind, retention purge, status/history/test-send. |
-| `Backend/src/services/email/ServerNotificationService.js` | Sender. Builds the subject, fills HTML templates with escaped values, resolves recipients, and sends through `SharedTransporter`. Never throws. |
-| `Backend/src/services/email/RecipientResolver.js` | Cached per-channel opt-in list (`RECIPIENT_REFRESH_MIN`, default 5) ; `getDbRecipientsWithState` also reports whether the database answered (`dbUp`). |
-| `Backend/src/models/serverAlertLog.model.js` | Append-only history. `insertOne`, `findPage` (max 200 per page), `findRecent`, `purgeOlderThan`. `DETAILS` is bound as a CLOB. In DEMO_MODE it uses an in-memory ring of 500 rows. |
-| `Backend/src/models/serverAlertAck.model.js` | Live ack set. `upsert`, `remove`, `findAll`. In DEMO_MODE it uses an in-memory Map. |
-| `Backend/src/models/admin.model.js` | Maps each channel to its `CAN_RECEIVE_SRV_*` flag. `findServerNotifyRecipients`. |
-| `Backend/src/routes/metrics.route.js` · `Backend/src/controllers/MetricsController.js` | The `/api/v1/metrics` surface (§5). |
-| `Backend/src/routes/health.route.js` | `/`, `/live`, `/ready`, `/stream`. |
-| `Backend/src/services/ReadinessService.js` | The single readiness rule (all pools answer, all breakers closed). Probes are bounded by `HEALTH_PROBE_TIMEOUT_MS`. Concurrent calls share one probe. |
-| `Backend/src/services/HealthStreamHub.js` | SSE hub: one evaluation loop shared by all connections, heartbeat, per-IP and total caps. |
-| `Backend/src/config/adapters/oracle.js` | The pool health check calls `metricsStore.recordPoolStats` on both its success and failure paths. |
-| `Backend/src/utils/cluster/workerRpcWiring.js` | Leader-side RPC handlers: `ALERTS_ACK`, `ALERTS_UNACK`, `ALERTS_STATUS`, `ALERTS_ACKS`. |
+| `Backend/src/middleware/metrics/MetricsMiddleware.ts` | `defaultMetrics.handle`. Registered at `app.js` step **5a**, after response-time tracking. Records route, status and duration on `finish`. |
+| `Backend/src/middleware/metrics/MetricsStore.ts` | Singleton store. Per-route ring of 1000 durations (`RING_BUFFER_SIZE`). 5-minute windows (`ERROR_WINDOW_MS = LATENCY_WINDOW_MS = 300_000`, 10 s buckets). System poll every `SYSTEM_POLL_INTERVAL_MS = 10_000`. `APDEX_THRESHOLD_MS = 500`. Also `recordPoolStats` and `recordNotificationDelivery`. |
+| `Backend/src/middleware/metrics/metricsMerge.ts` | `mergeMetricsSnapshots`, the cluster-wide merge used by `MetricsService.getClusterSnapshot`. |
+| `Backend/src/services/MetricsService.ts` | `getSnapshot`, `getClusterSnapshot`, `getSummary`, `evaluateAlerts`, `evaluateAlertHolds`, `ingestFrontendMetrics`. Owns every threshold constant. |
+| `Backend/src/services/AlertNotifierService.ts` | Poller, state machine, critical-log tap, storm ceiling, ack lifecycle, alert-log write-behind, retention purge, status/history/test-send. |
+| `Backend/src/services/email/ServerNotificationService.ts` | Sender. Builds the subject, fills HTML templates with escaped values, resolves recipients, and sends through `SharedTransporter`. Never throws. |
+| `Backend/src/services/email/RecipientResolver.ts` | Cached per-channel opt-in list (`RECIPIENT_REFRESH_MIN`, default 5) ; `getDbRecipientsWithState` also reports whether the database answered (`dbUp`). |
+| `Backend/src/models/serverAlertLog.model.ts` | Append-only history. `insertOne`, `findPage` (max 200 per page), `findRecent`, `purgeOlderThan`. `DETAILS` is bound as a CLOB. In DEMO_MODE it uses an in-memory ring of 500 rows. |
+| `Backend/src/models/serverAlertAck.model.ts` | Live ack set. `upsert`, `remove`, `findAll`. In DEMO_MODE it uses an in-memory Map. |
+| `Backend/src/models/admin.model.ts` | Maps each channel to its `CAN_RECEIVE_SRV_*` flag. `findServerNotifyRecipients`. |
+| `Backend/src/routes/metrics.route.ts` · `Backend/src/controllers/MetricsController.ts` | The `/api/v1/metrics` surface (§5). |
+| `Backend/src/routes/health.route.ts` | `/`, `/live`, `/ready`, `/stream`. |
+| `Backend/src/services/ReadinessService.ts` | The single readiness rule (all pools answer, all breakers closed). Probes are bounded by `HEALTH_PROBE_TIMEOUT_MS`. Concurrent calls share one probe. |
+| `Backend/src/services/HealthStreamHub.ts` | SSE hub: one evaluation loop shared by all connections, heartbeat, per-IP and total caps. |
+| `Backend/src/config/adapters/oracle.ts` | The pool health check calls `metricsStore.recordPoolStats` on both its success and failure paths. |
+| `Backend/src/utils/cluster/workerRpcWiring.ts` | Leader-side RPC handlers: `ALERTS_ACK`, `ALERTS_UNACK`, `ALERTS_STATUS`, `ALERTS_ACKS`. |
 | `Backend/src/utils/email-templates/server-notification/*.html` | Four channel templates (§4.4). |
 
 ### 4.2 Alert rules (`MetricsService.evaluateAlerts`)
@@ -199,7 +199,7 @@ A rule with no entry in the map falls back to `FALLBACK_CHANNEL = "server-system
 
 ### 4.3 Pool statistics (`appDb`, `appDbBulk`)
 
-`POOL_NAMES` comes from `Backend/src/config/database.js`. Each health-check tick in `oracle.js` pushes `{connectionsInUse, connectionsOpen, poolMax, queueLength, healthy, consecutiveFailures}`. A failed check sends zeroed counters plus the failure signal, so rules 9 and 10 can fire while a pool is down. `MetricsStore.recordPoolStats` derives `utilization = inUse/open` and `capacity = open/poolMax`. The snapshot exposes these as `dependencies.oracle[pool].poolUtilization` and related fields. For readiness, `READINESS_GATING_POOLS = ["appDb"]`. Saturation (NJS-076) of `appDbBulk` still counts as up (`ReadinessService`).
+`POOL_NAMES` comes from `Backend/src/config/database.ts`. Each health-check tick in `oracle.js` pushes `{connectionsInUse, connectionsOpen, poolMax, queueLength, healthy, consecutiveFailures}`. A failed check sends zeroed counters plus the failure signal, so rules 9 and 10 can fire while a pool is down. `MetricsStore.recordPoolStats` derives `utilization = inUse/open` and `capacity = open/poolMax`. The snapshot exposes these as `dependencies.oracle[pool].poolUtilization` and related fields. For readiness, `READINESS_GATING_POOLS = ["appDb"]`. Saturation (NJS-076) of `appDbBulk` still counts as up (`ReadinessService`).
 
 ### 4.4 Email channels, subject and recipients
 
@@ -240,7 +240,7 @@ All paths are under `/api/v1`. Responses use the standard `sendSuccess` / `sendE
 | GET | `/health/ready` | none | 503 + `Retry-After` while draining | `metricsApi.healthReady` | `{ready, checks…}`. 200 when ready, 503 otherwise |
 | GET | `/health/stream` | none (SSE) | 503 while draining, 429 above the per-IP or total cap | `useServerStatusStream` | events: `status {ready, cause}`, `heartbeat {t}`, `shutdown`; first frame `retry: 3000` |
 
-`alertKey` goes in the request body because it contains `::` and `/` (for example `HIGH_LATENCY::POST /api/v1/auth/login`). `/health/*` is exempt from the rate limiter (`HEALTH_PATH_RE` in `Backend/src/middleware/security/RateLimiterMiddleware.js`). SSE refusals go through `sendSsePreflightError` (`Backend/src/utils/sse/ssePreflight.js`) before the connection is upgraded, so they keep the standard error shape including `requestId`.
+`alertKey` goes in the request body because it contains `::` and `/` (for example `HIGH_LATENCY::POST /api/v1/auth/login`). `/health/*` is exempt from the rate limiter (`HEALTH_PATH_RE` in `Backend/src/middleware/security/RateLimiterMiddleware.ts`). SSE refusals go through `sendSsePreflightError` (`Backend/src/utils/sse/ssePreflight.ts`) before the connection is upgraded, so they keep the standard error shape including `requestId`.
 
 **Cluster:** `acknowledge`, `unacknowledge`, `getStatus` and the ack map behind `decorateAlertsWithAckState` are forwarded to the cron leader (`_forwardsToLeader` → `_forwardToLeader`). A request that lands on any worker therefore sees the leader's state.
 
@@ -319,7 +319,7 @@ All of these are documented in `Backend/.env.example`. The notifier values use `
   - `drainAndStop({ persist: false })` sends the final email.
   - `notifyCriticalNow` and `notifyLifecycleNow` are each bounded by `NOTIFY_NOW_TIMEOUT_MS = 5000`.
 - `beginShutdown()` stops the poll before the pools drain, so a database failure during graceful shutdown raises no false `ORACLE_POOL_DOWN`.
-- **Clock check:** once the pools are up, `server.js` calls `verifyDbClockOffset(db)` (`src/utils/dbTimezone.js`). It reads `EXTRACT(TIMEZONE_HOUR/MINUTE FROM SYSTIMESTAMP)` and logs one WARNING (`DB_CLOCK_OFFSET_MISMATCH`) when the Oracle server's zone differs from `DB_TIMEZONE_OFFSET_MINUTES` or the app process's offset. Every `DEFAULT SYSTIMESTAMP` column (Alert History "Created" included) uses the server's clock. Never throws, never blocks start-up.
+- **Clock check:** once the pools are up, `server.js` calls `verifyDbClockOffset(db)` (`src/utils/dbTimezone.ts`). It reads `EXTRACT(TIMEZONE_HOUR/MINUTE FROM SYSTIMESTAMP)` and logs one WARNING (`DB_CLOCK_OFFSET_MISMATCH`) when the Oracle server's zone differs from `DB_TIMEZONE_OFFSET_MINUTES` or the app process's offset. Every `DEFAULT SYSTIMESTAMP` column (Alert History "Created" included) uses the server's clock. Never throws, never blocks start-up.
 - The WinSW `stoptimeout` in `Backend/deploy/winsw/catherine-backend-service.xml` (1860 s) is sized to include the time for that forced-exit alert email.
 
 ---
@@ -338,7 +338,7 @@ All of these are documented in `Backend/.env.example`. The notifier values use `
 | Mail-bombing through test send | CWE-799 | SUPER_ADMIN only plus 3 req/min (`notificationTestLimiter`). |
 | Alert loop / notification storm | CWE-674 / CWE-400 | `_noNotify` loop guard, critical digest window, hourly ceiling, `_pollInFlight` guard against overlapping ticks. |
 | Missing authorization | CWE-862 | `AuthMiddleware.requireAccess` on every non-health, non-ingest route. The UI route is SUPER_ADMIN-only on top of that. |
-| CSRF | CWE-352 | Every mutation except the pre-auth `/metrics/frontend` sits behind the CSRF middleware (`CSRF_EXEMPT_PATHS` in `Backend/src/app.js`). The FE uses `httpClient` only. |
+| CSRF | CWE-352 | Every mutation except the pre-auth `/metrics/frontend` sits behind the CSRF middleware (`CSRF_EXEMPT_PATHS` in `Backend/src/app.ts`). The FE uses `httpClient` only. |
 
 ---
 
@@ -353,7 +353,7 @@ Yes. `AlertNotifierService._runPollTick` sets `shouldSend` only for FIRED, ESCAL
 Yes. `clearPollCount >= _recoveryConfirmPolls()` (default 3) in `_runPollTick`, and held keys skip the count (`MetricsService.evaluateAlertHolds`). *Tests:* none found. Source only.
 
 **Q3. Which pools are monitored and how do their stats arrive?**
-`appDb` and `appDbBulk` (`Backend/src/config/database.js:POOL_NAMES`), fed by the health check in `Backend/src/config/adapters/oracle.js` → `MetricsStore.recordPoolStats`. *Tests:* `Backend/test/server/unit/middleware/metricsStore.test.js` ("Oracle pool stats (recordPoolStats / USE method)").
+`appDb` and `appDbBulk` (`Backend/src/config/database.ts:POOL_NAMES`), fed by the health check in `Backend/src/config/adapters/oracle.ts` → `MetricsStore.recordPoolStats`. *Tests:* `Backend/test/server/unit/middleware/metricsStore.test.js` ("Oracle pool stats (recordPoolStats / USE method)").
 
 **Q4. Is the RED error rate 5xx-only?**
 Yes. The rationale is in `MetricsStore.computeRates` and the `evaluateAlerts` doc comment. *Tests:* `Backend/test/server/unit/middleware/metricsStore.test.js` ("RED three-bucket model", "computeRates()").
@@ -362,7 +362,7 @@ Yes. The rationale is in `MetricsStore.computeRates` and the `evaluateAlerts` do
 `[APP_NAME][SEVERITY] channel: headline` (`ServerNotificationService.sendChannelDigest`). *Tests:* none found. Source only.
 
 **Q6. Who receives the emails?**
-By database state, never both: active admins whose `CAN_RECEIVE_SRV_*` flag is `'Y'` while the database answers, `SERVER_NOTIFY_TO` while it is down or when nobody opted in. *Tests:* `Backend/test/server/unit/services/serverNotification.recipientsByDbState.test.js`. Source (`ServerNotificationService.resolveRecipients`, `Backend/src/models/admin.model.js` channel→flag map). *Tests:* none found.
+By database state, never both: active admins whose `CAN_RECEIVE_SRV_*` flag is `'Y'` while the database answers, `SERVER_NOTIFY_TO` while it is down or when nobody opted in. *Tests:* `Backend/test/server/unit/services/serverNotification.recipientsByDbState.test.js`. Source (`ServerNotificationService.resolveRecipients`, `Backend/src/models/admin.model.ts` channel→flag map). *Tests:* none found.
 
 **Q7. Can an acknowledgement hide a worsening incident?**
 No. `_checkAndUpdateAck` clears the ack when severity rises above `severityAtAck` or the TTL expires, and ESCALATED always sends. *Tests:* the HTTP contract for ack/unack is in `Backend/test/server/integration/metrics/metrics-notifications.test.js` ("POST /api/v1/metrics/alerts/ack", "DELETE /api/v1/metrics/alerts/ack"), with the service stubbed. The escalation-override logic itself has no test.

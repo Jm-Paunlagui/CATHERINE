@@ -4,7 +4,7 @@
 
 ### Added
 
-- **db.js** — Thin adapter factory (`createDb`) binding named connections from `src/config/database.js`
+- **db.js** — Thin adapter factory (`createDb`) binding named connections from `src/config/database.ts`
 - **utils.js** — Shared helpers: `quoteIdentifier`, `convertTypes`, `rowToDoc`, `mergeBinds`, `buildOrderBy`, `buildProjection`
 - **filterParser.js** — MongoDB filter → Oracle WHERE clause translator
   - Supports: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$between`, `$notBetween`, `$exists`, `$regex`, `$like`, `$any`, `$all`, `$and`, `$or`, `$nor`, `$not`, `$case`, `$coalesce`, `$nullif`

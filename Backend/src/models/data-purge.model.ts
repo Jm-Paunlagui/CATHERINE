@@ -13,7 +13,7 @@
  * ------------
  * `const _db = createDb("appDb");` is bound EXPLICITLY, once, at module top —
  * never a bare `createDb()` (whose default pool is not this app's; see
- * `src/utils/oracle-mongo-wrapper/db.js`) and never a pool name
+ * `src/utils/oracle-mongo-wrapper/db.ts`) and never a pool name
  * derived from a request or parameter. This is Mitigation 1 of the three
  * belt-and-braces pool-safety mitigations. No dedicated unit test pins this
  * binding yet — keep it a literal so a review catches any change.
@@ -281,7 +281,7 @@ class DataPurgeModel {
      *      driver's numeric `errorNum` (1555) and the message text, read off
      *      `err.originalError` because `db.withConnection` rewraps every
      *      error its callback throws into a new `Error` (see
-     *      `src/config/adapters/oracle.js#withConnection`). Every other
+     *      `src/config/adapters/oracle.ts#withConnection`). Every other
      *      error propagates completely unchanged — this is a specific catch,
      *      not a bare one.
      *   2. Logs `logger.warning` — this is the "expected business error"

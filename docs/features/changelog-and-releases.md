@@ -1,7 +1,7 @@
 # Changelog & Releases — Technical Documentation
 
 > **Scope:** the changelog + release-train capability — the encrypted on-disk store (`Backend/data/changelog.enc`), the thin controllers (`ChangelogController`, `ReleaseController`), the validation/business layer (`ChangelogService`, `ReleaseService`) and the encrypted model (`changelog.model.js`), the public read / SUPER_ADMIN write route surface, and the frontend Version History page (`Frontend/src/features/support/changelog/`) plus the version badge it feeds.
-> **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/models/changelog.model.js`, `Backend/src/services/{ChangelogService,ReleaseService}.js`, `Backend/src/controllers/{ChangelogController,ReleaseController}.js`, `Backend/src/routes/changelog.route.js`; the frontend is `Frontend/src/features/support/changelog/` and `Frontend/src/contexts/version/VersionContext.jsx`.
+> **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/models/changelog.model.ts`, `Backend/src/services/{ChangelogService,ReleaseService}.js`, `Backend/src/controllers/{ChangelogController,ReleaseController}.js`, `Backend/src/routes/changelog.route.ts`; the frontend is `Frontend/src/features/support/changelog/` and `Frontend/src/contexts/version/VersionContext.jsx`.
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block or a source comment disagrees with the code, the code wins and the disagreement is recorded in [§7.4](#74-known-documentation-drift).
 > **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
@@ -125,7 +125,7 @@ flowchart TD
 
 ---
 
-## 3. The encrypted store — `Backend/src/models/changelog.model.js`
+## 3. The encrypted store — `Backend/src/models/changelog.model.ts`
 
 ### 3.1 Encryption
 
@@ -162,7 +162,7 @@ An entry carries `id` (`crypto.randomUUID()`), `displayDate` (`YYYY-MM-DD`), `ve
 
 ---
 
-## 4. Validation — `Backend/src/services/ChangelogService.js`
+## 4. Validation — `Backend/src/services/ChangelogService.ts`
 
 All validation lives in the service; controllers stay thin. `validate(data, requireAll = true)` enforces:
 
@@ -176,7 +176,7 @@ All validation lives in the service; controllers stay thin. `validate(data, requ
 
 ---
 
-## 5. The release train — `Backend/src/services/ReleaseService.js`
+## 5. The release train — `Backend/src/services/ReleaseService.ts`
 
 Read-only, pure SemVer arithmetic. Key helpers:
 
@@ -201,7 +201,7 @@ The frontend mirrors the stage vocabulary in `Frontend/src/config/appVersion.js`
 
 ## 6. Route surface & the frontend
 
-### 6.1 Routes — `Backend/src/routes/changelog.route.js`
+### 6.1 Routes — `Backend/src/routes/changelog.route.ts`
 
 | Method & path | Auth | Handler |
 | --- | --- | --- |
@@ -253,10 +253,10 @@ The code is the authority. These are places where prose disagrees with it.
 
 | # | Location | Says | Code actually does |
 | --- | --- | --- | --- |
-| 1 | `Backend/src/models/changelog.model.js:15` (entry-shape comment) | `displayDate string YYYY-MM-DD (adjusted: Sat→Fri, Sun→Mon)` | **No weekend adjustment exists.** `ChangelogService.validate` only checks the `YYYY-MM-DD` shape and passes `displayDate` through unchanged; `changelog.model.js` stores it verbatim. There is no `getDay`/weekend logic anywhere in the changelog code. A Saturday date is stored as a Saturday. |
-| 2 | `Backend/src/models/changelog.model.js:22` (entry-shape comment) | `type string breaking\|feat\|fix\|patch\|perf\|refactor\|security\|docs\|chore` | The accepted set is **larger**: `ChangelogService.js:16-28` also allows `test` and `release`. The model header omits both — `release` is load-bearing (it is the type every release-train marker uses). |
-| 3 | `Backend/src/models/changelog.model.js:14-16` (entry-shape comment) | "Stage (dev\|alpha\|beta\|rc\|stable) is DERIVED from this tag — there is no separate stage field" | Correct for the *persisted* entry, but `ReleaseService.draft(...)` returns a transient `stage` field inside the **drafts** the create form seeds from (`ReleaseService.js:117`). It is informational and not persisted (the create path never stores `stage`), but a reader of the drafts payload will see a `stage` key the entry itself never keeps. |
-| 4 | `Backend/src/controllers/ChangelogController.js:26,50,58` (JSDoc) | Mutations are "SADMIN only" | The role the route actually checks is `SUPER_ADMIN` (`changelog.route.js:27` `user.role === "SUPER_ADMIN"`). "SADMIN" is shorthand for the same role, but the literal string in code is `SUPER_ADMIN`; there is no `SADMIN` role value. |
+| 1 | `Backend/src/models/changelog.model.ts:15` (entry-shape comment) | `displayDate string YYYY-MM-DD (adjusted: Sat→Fri, Sun→Mon)` | **No weekend adjustment exists.** `ChangelogService.validate` only checks the `YYYY-MM-DD` shape and passes `displayDate` through unchanged; `changelog.model.js` stores it verbatim. There is no `getDay`/weekend logic anywhere in the changelog code. A Saturday date is stored as a Saturday. |
+| 2 | `Backend/src/models/changelog.model.ts:22` (entry-shape comment) | `type string breaking\|feat\|fix\|patch\|perf\|refactor\|security\|docs\|chore` | The accepted set is **larger**: `ChangelogService.js:16-28` also allows `test` and `release`. The model header omits both — `release` is load-bearing (it is the type every release-train marker uses). |
+| 3 | `Backend/src/models/changelog.model.ts:14-16` (entry-shape comment) | "Stage (dev\|alpha\|beta\|rc\|stable) is DERIVED from this tag — there is no separate stage field" | Correct for the *persisted* entry, but `ReleaseService.draft(...)` returns a transient `stage` field inside the **drafts** the create form seeds from (`ReleaseService.js:117`). It is informational and not persisted (the create path never stores `stage`), but a reader of the drafts payload will see a `stage` key the entry itself never keeps. |
+| 4 | `Backend/src/controllers/ChangelogController.ts:26,50,58` (JSDoc) | Mutations are "SADMIN only" | The role the route actually checks is `SUPER_ADMIN` (`changelog.route.js:27` `user.role === "SUPER_ADMIN"`). "SADMIN" is shorthand for the same role, but the literal string in code is `SUPER_ADMIN`; there is no `SADMIN` role value. |
 
 ---
 

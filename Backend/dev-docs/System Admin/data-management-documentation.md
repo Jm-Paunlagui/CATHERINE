@@ -1,7 +1,7 @@
 # Data Management — Technical Documentation
 
 > **Scope:** Data Purge, Backup (purge-gating, manual, scheduled), Restore and the majority-vote archive delete for the CATHERINE template — the SUPER_ADMIN page at `/system/data-purge` ("Data Management" in the nav).
-> **Primary sources:** `Backend/src/routes/data-purge.route.js`, `Backend/src/controllers/DataPurgeController.js`, `Backend/src/services/{DataPurgeService,DataRestoreService,BackupArchiveService,BackupStoreService,BackupScheduleService,BackupTokenService,BackupEmailService}.js`, `Backend/src/models/{data-purge,backup-token,backup-vote}.model.js`, `Backend/src/constants/purgeTables.js`, `Backend/.env.example`; frontend `Frontend/src/features/systemadmin/datapurge/**` and `Frontend/src/App.jsx`.
+> **Primary sources:** `Backend/src/routes/data-purge.route.ts`, `Backend/src/controllers/DataPurgeController.ts`, `Backend/src/services/{DataPurgeService,DataRestoreService,BackupArchiveService,BackupStoreService,BackupScheduleService,BackupTokenService,BackupEmailService}.js`, `Backend/src/models/{data-purge,backup-token,backup-vote}.model.js`, `Backend/src/constants/purgeTables.ts`, `Backend/.env.example`; frontend `Frontend/src/features/systemadmin/datapurge/**` and `Frontend/src/App.jsx`.
 >
 > **Verified 2026-10-29 against source.** Every path cited below was opened for this revision. No test was run for this revision; §8 states what each answer rests on.
 >
@@ -214,23 +214,23 @@ sequenceDiagram
 
 | Layer | File | Notes |
 | --- | --- | --- |
-| Mount | `Backend/src/routes/index.js` | `router.use("/data-purge", dataPurgeRoutes)` |
-| Route | `Backend/src/routes/data-purge.route.js` | `router.use(AuthMiddleware.authenticate, requireSuperAdmin)`; `executeRateLimiter`; `restoreUpload` multer |
-| Controller | `Backend/src/controllers/DataPurgeController.js` | Thin, `catchAsync`; `_callerEmpId(req)` = `req.user.id ?? req.user.userId` |
-| Purge logic | `Backend/src/services/DataPurgeService.js` | `resolveScope`, `getScopeCatalogue`, `getPreview`, `authorise`, `backup`, `executePurge` |
-| Restore logic | `Backend/src/services/DataRestoreService.js` | `preview`, `restore`, `_verifyAndParseArchive`, `_preflight`, `_verifyThenSign` |
-| Archive build | `Backend/src/services/BackupArchiveService.js` | `buildBackup` (purge-gating), `buildScheduledBackup`, `buildEntityBackup`; `SCHEMA_VERSION = "v6"`; `BACKUP_TRIGGERS = SCHEDULED, MANUAL, PURGE` |
-| Disk store | `Backend/src/services/BackupStoreService.js` | `runBackup`, `listArchives`, `getArchive`, `materialise`, `verifyArchive`, `deleteArchive`, `countActiveSuperAdmins` |
-| Scheduler | `Backend/src/services/BackupScheduleService.js` | `registerEventSource`, `triggerScheduledBackup`, `getLockoutStatus`, `describeLockout` |
-| Token | `Backend/src/services/BackupTokenService.js` | `issue`, `verify` (pure), `consume` (single-use) |
-| Email | `Backend/src/services/BackupEmailService.js` | `sendPurgeNotification` — never throws |
-| Data access | `Backend/src/models/data-purge.model.js` | `countRows`, `streamTable`, `streamAllTables`, `deleteTable`, `purgeTables`, `insertRestoreBatch`, `existsByKey` |
-| Token ledger | `Backend/src/models/backup-token.model.js` | `consumeJti` on `T_SERVER_BACKUP_TOKEN_CONSUMED_DEV` |
-| Votes | `Backend/src/models/backup-vote.model.js` | `castVote`, `findVotesByArchive`, `findAllPendingVotes`, `cancelRequest`, `countVotesForArchive` |
-| Registry | `Backend/src/constants/purgeTables.js` | See §4.2 |
-| Errors / logs | `Backend/src/constants/errors/index.js` (`PURGE_ERRORS`), `Backend/src/constants/messages/{dataPurge,dataBackup,backupEmail}.messages.js` | Every log line is a named template |
+| Mount | `Backend/src/routes/index.ts` | `router.use("/data-purge", dataPurgeRoutes)` |
+| Route | `Backend/src/routes/data-purge.route.ts` | `router.use(AuthMiddleware.authenticate, requireSuperAdmin)`; `executeRateLimiter`; `restoreUpload` multer |
+| Controller | `Backend/src/controllers/DataPurgeController.ts` | Thin, `catchAsync`; `_callerEmpId(req)` = `req.user.id ?? req.user.userId` |
+| Purge logic | `Backend/src/services/DataPurgeService.ts` | `resolveScope`, `getScopeCatalogue`, `getPreview`, `authorise`, `backup`, `executePurge` |
+| Restore logic | `Backend/src/services/DataRestoreService.ts` | `preview`, `restore`, `_verifyAndParseArchive`, `_preflight`, `_verifyThenSign` |
+| Archive build | `Backend/src/services/BackupArchiveService.ts` | `buildBackup` (purge-gating), `buildScheduledBackup`, `buildEntityBackup`; `SCHEMA_VERSION = "v6"`; `BACKUP_TRIGGERS = SCHEDULED, MANUAL, PURGE` |
+| Disk store | `Backend/src/services/BackupStoreService.ts` | `runBackup`, `listArchives`, `getArchive`, `materialise`, `verifyArchive`, `deleteArchive`, `countActiveSuperAdmins` |
+| Scheduler | `Backend/src/services/BackupScheduleService.ts` | `registerEventSource`, `triggerScheduledBackup`, `getLockoutStatus`, `describeLockout` |
+| Token | `Backend/src/services/BackupTokenService.ts` | `issue`, `verify` (pure), `consume` (single-use) |
+| Email | `Backend/src/services/BackupEmailService.ts` | `sendPurgeNotification` — never throws |
+| Data access | `Backend/src/models/data-purge.model.ts` | `countRows`, `streamTable`, `streamAllTables`, `deleteTable`, `purgeTables`, `insertRestoreBatch`, `existsByKey` |
+| Token ledger | `Backend/src/models/backup-token.model.ts` | `consumeJti` on `T_SERVER_BACKUP_TOKEN_CONSUMED_DEV` |
+| Votes | `Backend/src/models/backup-vote.model.ts` | `castVote`, `findVotesByArchive`, `findAllPendingVotes`, `cancelRequest`, `countVotesForArchive` |
+| Registry | `Backend/src/constants/purgeTables.ts` | See §4.2 |
+| Errors / logs | `Backend/src/constants/errors/index.ts` (`PURGE_ERRORS`), `Backend/src/constants/messages/{dataPurge,dataBackup,backupEmail}.messages.js` | Every log line is a named template |
 
-### 4.2 The registry (`Backend/src/constants/purgeTables.js`)
+### 4.2 The registry (`Backend/src/constants/purgeTables.ts`)
 
 | Table | Group | PK | Identity | `appendOnlyLog` | `identifierColumns` |
 | --- | --- | --- | --- | --- | --- |
@@ -314,7 +314,7 @@ Never register `T_SERVER_BACKUP_TOKEN_CONSUMED_DEV` or `T_SERVER_BACKUP_DELETE_V
 | Restore transaction | `appDbBulk` (`createDb(PURGE_POOL)` in `DataRestoreService`) |
 | Token ledger, votes | `appDb` |
 
-With `DEMO_MODE=true` (`Backend/src/config/demoMode.js`), `BackupTokenModel` and `BackupVoteModel` use the in-memory store (`Backend/src/models/demo/demoStore.js`: `backupTokensConsumed`, `backupVotes`, `nextBackupVoteId`), keeping the same exactly-once semantics. `data-purge.model.js` has **no** demo branch. Behaviour of `/scopes`, `/preview`, `/backup`, `/execute` and `/restore` with no Oracle pool open was not verified for this revision.
+With `DEMO_MODE=true` (`Backend/src/config/demoMode.ts`), `BackupTokenModel` and `BackupVoteModel` use the in-memory store (`Backend/src/models/demo/demoStore.ts`: `backupTokensConsumed`, `backupVotes`, `nextBackupVoteId`), keeping the same exactly-once semantics. `data-purge.model.js` has **no** demo branch. Behaviour of `/scopes`, `/preview`, `/backup`, `/execute` and `/restore` with no Oracle pool open was not verified for this revision.
 
 ### 4.8 Environment variables (`Backend/.env.example`)
 
@@ -359,7 +359,7 @@ Base path `/api/v1/data-purge`. Every route: `authenticate` → `requireSuperAdm
 | POST | `/backups/:id/vote` | `voteDeleteBackup` | rate limit | — | as above |
 | DELETE | `/backups/:id/delete-request` | `cancelDeleteRequest` | rate limit | — | `{ archiveId, … }` |
 
-**Cross-origin headers.** The three `X-*` headers are readable by the browser only because `Backend/src/middleware/security/CorsMiddleware.js` lists them in `exposedHeaders`.
+**Cross-origin headers.** The three `X-*` headers are readable by the browser only because `Backend/src/middleware/security/CorsMiddleware.ts` lists them in `exposedHeaders`.
 
 **Envelope.** JSON responses use `sendSuccess(RESPONSE_MESSAGES.*, data)`; errors are `AppError` with `PURGE_ERRORS.*` text and `details[]` / `hint`, read on the FE through `extractApiError`.
 
@@ -396,13 +396,13 @@ Base path `/api/v1/data-purge`. Every route: `authenticate` → `requireSuperAdm
 
 | Where | Observation |
 | --- | --- |
-| `Backend/src/routes/data-purge.route.js` (`/scopes` comment) | Says "all 41 tables". The registry has 4. |
-| `Backend/src/routes/data-purge.route.js` (`/execute` block) | The `/execute` comment sits above the `/authorise` comment and route. |
-| `Backend/src/routes/data-purge.route.js` + `DataPurgeController.restore` / `restorePreview` JSDoc | Mention `.zip.enc` and a `passphrase` field. Nothing reads a passphrase, and multer accepts only `.zip`. |
+| `Backend/src/routes/data-purge.route.ts` (`/scopes` comment) | Says "all 41 tables". The registry has 4. |
+| `Backend/src/routes/data-purge.route.ts` (`/execute` block) | The `/execute` comment sits above the `/authorise` comment and route. |
+| `Backend/src/routes/data-purge.route.ts` + `DataPurgeController.restore` / `restorePreview` JSDoc | Mention `.zip.enc` and a `passphrase` field. Nothing reads a passphrase, and multer accepts only `.zip`. |
 | `DataPurgeController` header | Lists `DELETE /backups/:id — deleteBackup`. No such route or method exists. |
 | `datapurge.api.js` `deleteBackup` + `datapurge.hook.js` `handleDeleteArchive` | Call that non-existent route, which would return 404. `BackupPanel.jsx` uses `handleRequestDelete` instead. |
-| `DataPurgeService.backup` JSDoc, `DataPurgeController.backup` JSDoc, `BackupStoreService` header | Describe an "encrypted copy" email / `sendPurgeBackup` / email attachment. The code calls `sendPurgeNotification` with no attachment (`Backend/src/config/bootGuard.js` confirms). |
-| `Backend/src/models/data-purge.model.js` header | Cites a `dataPurgeModel.pool.test.js`. No such file exists in the repo. |
+| `DataPurgeService.backup` JSDoc, `DataPurgeController.backup` JSDoc, `BackupStoreService` header | Describe an "encrypted copy" email / `sendPurgeBackup` / email attachment. The code calls `sendPurgeNotification` with no attachment (`Backend/src/config/bootGuard.ts` confirms). |
+| `Backend/src/models/data-purge.model.ts` header | Cites a `dataPurgeModel.pool.test.js`. No such file exists in the repo. |
 | `DataPurgeController.requestDeleteBackup` | Check-then-insert. Two different admins requesting at the same moment could both pass the "no existing votes" check. |
 
 ---
@@ -438,9 +438,9 @@ No test was run for this revision. The repository has **no test file dedicated t
 
 | # | Question | Answer | Evidence |
 | --- | --- | --- | --- |
-| 1 | Can a non-SUPER_ADMIN reach any data-purge endpoint? | No — 403 from the router-level guard. | `Backend/src/routes/data-purge.route.js`: `requireSuperAdmin`, `router.use`. Not run for this revision. |
-| 2 | How many tables can be purged, and on which pool? | Four, all `appDbBulk`. | `Backend/src/constants/purgeTables.js`: `PURGE_TABLES`, `PURGE_POOL`, `assertRegistryIntegrity` |
-| 3 | Are `NEVER_PURGE` and `IMMUTABLE_TIMESTAMP_COLUMNS` populated? | No, both are empty. | `Backend/src/constants/purgeTables.js`: `NEVER_PURGE`, `IMMUTABLE_TIMESTAMP_COLUMNS` |
+| 1 | Can a non-SUPER_ADMIN reach any data-purge endpoint? | No — 403 from the router-level guard. | `Backend/src/routes/data-purge.route.ts`: `requireSuperAdmin`, `router.use`. Not run for this revision. |
+| 2 | How many tables can be purged, and on which pool? | Four, all `appDbBulk`. | `Backend/src/constants/purgeTables.ts`: `PURGE_TABLES`, `PURGE_POOL`, `assertRegistryIntegrity` |
+| 3 | Are `NEVER_PURGE` and `IMMUTABLE_TIMESTAMP_COLUMNS` populated? | No, both are empty. | `Backend/src/constants/purgeTables.ts`: `NEVER_PURGE`, `IMMUTABLE_TIMESTAMP_COLUMNS` |
 | 4 | Can the client pick an arbitrary table name? | No — unknown names are rejected and only registry names reach SQL. | `DataPurgeService.resolveScope`, `_assertSafeScope`; `data-purge.model.js`: `_requireEntry` |
 | 5 | Can `/execute` run without a backup? | No — 401 `BACKUP_TOKEN_REQUIRED`. | `DataPurgeService.executePurge` Step 3 |
 | 6 | Can one token be used twice? | No — the second `consumeJti` hits ORA-00001 → `replayed`. | `BackupTokenService.consume`; `backup-token.model.js`: `consumeJti` |
@@ -449,7 +449,7 @@ No test was run for this revision. The repository has **no test file dedicated t
 | 9 | What if rows changed after the backup? | 409 `ROW_COUNT_CHANGED`. Append-only log tables are counted only up to `highWater`. | `executePurge` Step 6; `_scopedHighWater`; `data-purge.model.js`: `_boundedFilter` |
 | 10 | Is the purge atomic? | Yes — one `Transaction` on `appDbBulk`; any failure rolls back every table. | `DataPurgeModel.purgeTables` |
 | 11 | Is the audit row lost when `T_AUDIT_LOGS_DEV` is purged? | No — it is written after the commit, outside the transaction. | `DataPurgeService._writePostCommitAudit`; Step 9 comment |
-| 12 | Does the purge email attach the archive? | No — notification only; scheduled and manual backups never email. | `BackupEmailService.sendPurgeNotification` header; `Backend/src/config/bootGuard.js` comment |
+| 12 | Does the purge email attach the archive? | No — notification only; scheduled and manual backups never email. | `BackupEmailService.sendPurgeNotification` header; `Backend/src/config/bootGuard.ts` comment |
 | 13 | Can a restore load into tables that still hold data? | Not for `FULL_SCOPE` — 409 `RESTORE_TARGET_NOT_EMPTY`. | `DataRestoreService._preflight` |
 | 14 | Can an edited archive be restored? | No — signature verification fails first. | `DataRestoreService._verifyAndParseArchive` |
 | 15 | Can an incremental archive be uploaded? | No — 422 `RESTORE_INCREMENTAL_UPLOAD`. | `DataRestoreService._preflight` |

@@ -51,7 +51,7 @@ async function seed() {
     if (isDemoMode()) {
         console.log(
             "\n🚫  DEMO_MODE=true — accounts are served from the in-memory store " +
-                "(src/models/demo/demoStore.js): admin / manager / user, password Demo@123. " +
+                "(src/models/demo/demoStore.ts): admin / manager / user, password Demo@123. " +
                 "No database seeding is needed or possible in this mode.\n",
         );
         process.exit(0);

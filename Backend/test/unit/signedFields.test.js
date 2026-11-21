@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Tests for the integrity projection factory (src/utils/integrity/signedFields.js).
+ * Tests for the integrity projection factory (src/utils/integrity/signedFields.ts).
  *
  * The CENTRAL guarantee: signer and verifier build byte-identical
  * payloads because they share ONE projection, and money spellings collapse to a

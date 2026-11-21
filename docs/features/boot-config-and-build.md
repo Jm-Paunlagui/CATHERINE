@@ -1,7 +1,7 @@
 # Boot Sequence, Configuration & the Bun Build — Technical Documentation
 
 > **Scope:** how the CATHERINE template starts — from the first `require` in `server.js`, through env loading and the fail-fast boot guard, clustering and cron-leader election, server creation and graceful shutdown — and how it is compiled to a single Windows executable with `bun build --compile`, including the templates and native binaries staged beside it.
-> **Source:** `Backend/server.js` (the surface-root entry point — **not** `src/`), `Backend/src/config/` (`index.js`, `bootGuard.js`, `database.js`, `demoMode.js`, `adapters/oracle.js`), `Backend/src/utils/runtimePaths.js`, and `Backend/scripts/build.js`.
+> **Source:** `Backend/server.js` (the surface-root entry point — **not** `src/`), `Backend/src/config/` (`index.js`, `bootGuard.js`, `database.js`, `demoMode.js`, `adapters/oracle.js`), `Backend/src/utils/runtimePaths.ts`, and `Backend/scripts/build.js`.
 > **Generated:** 2026-09-04; build and runtime sections revised 2026-11-21 for the move from Node + pkg to Bun. **Authority:** the code. Where `Backend/CLAUDE.md` disagrees with the code, the code wins and the disagreement is recorded in [§9.1](#91-known-documentation-drift).
 > **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
@@ -13,7 +13,7 @@
 
 The first ordering-critical step: before any async I/O can create the libuv thread pool, it sizes that pool: if `UV_THREADPOOL_SIZE` is unset it is set to `"48"`. This is because `node-oracledb` in Thick mode runs **every** database call on a libuv worker thread, and the default pool of four threads would serialise concurrent Oracle work no matter how large the connection pool is. The value must be set before the first async I/O creates the pool, which is why it lives in code and not `.env` — a real OS environment variable can override it.
 
-Only then does `server.js` load `.env` — from **next to the executable** in the compiled exe (`IS_COMPILED ? appPath(".env") : ".env"`, from `src/utils/runtimePaths.js`), because a service or scheduled task can launch the exe with its working directory anywhere (e.g. `System32`). Immediately after `dotenv.config()` it runs the **boot guard** (`validateSecrets()`), which fails the process closed in production if any secret is missing, too short, or still a template placeholder.
+Only then does `server.js` load `.env` — from **next to the executable** in the compiled exe (`IS_COMPILED ? appPath(".env") : ".env"`, from `src/utils/runtimePaths.ts`), because a service or scheduled task can launch the exe with its working directory anywhere (e.g. `System32`). Immediately after `dotenv.config()` it runs the **boot guard** (`validateSecrets()`), which fails the process closed in production if any secret is missing, too short, or still a template placeholder.
 
 From there the process either forks a cluster of workers (with a single elected cron leader) or boots a single worker directly: it initialises the console manager, requires the Express `app` and the config adapter, runs a native-module preflight for `argon2`, creates an HTTP or HTTPS server, listens, eagerly initialises the Oracle pools (lazily-retried on failure), and installs graceful-shutdown and fatal-error handlers.
 
@@ -248,11 +248,11 @@ Merges the former `oracleEnvironment`, `oracleLoader` and `oracleConnectionPool`
 
 Any step that stages nothing fails the build (exit 1).
 
-**Why files are staged rather than embedded.** `bun build --compile` bakes the build machine's absolute `__dirname` into the bundle (e.g. `C:\build\CATHERINE\Backend\src\services`). Every runtime read therefore goes through `src/utils/runtimePaths.js`: `IS_COMPILED` (Bun reports its entry as `/$bunfs/…` or `B:\~BUN\…`), `APP_ROOT` (exe folder when compiled, Backend folder otherwise) and `appPath(...)`. Logs, `data/`, `dev-docs/`, `certs/`, the backup folder and `.env` resolve the same way.
+**Why files are staged rather than embedded.** `bun build --compile` bakes the build machine's absolute `__dirname` into the bundle (e.g. `C:\build\CATHERINE\Backend\src\services`). Every runtime read therefore goes through `src/utils/runtimePaths.ts`: `IS_COMPILED` (Bun reports its entry as `/$bunfs/…` or `B:\~BUN\…`), `APP_ROOT` (exe folder when compiled, Backend folder otherwise) and `appPath(...)`. Logs, `data/`, `dev-docs/`, `certs/`, the backup folder and `.env` resolve the same way.
 
 **Source map.** Without `--sourcemap=inline`, every stack frame and log call-site reads `root/catherine-backend:<line>`. With it they read `src/…:<line>`. The map carries the source text — the same exposure as the old pkg build's `--public --no-bytecode`.
 
-**Engine differences found in the migration.** JavaScriptCore formats `toLocaleString("en-US", { dateStyle, timeStyle })` as "Nov 3, 2026 at 2:32 PM" where V8 writes "Nov 3, 2026, 2:32 PM"; email stamps now use `src/utils/formatUtcStamp.js` (built from `formatToParts`). Clustering shares the listen port through SO_REUSEPORT — verified on macOS, load-balanced on Linux, not verified on Windows.
+**Engine differences found in the migration.** JavaScriptCore formats `toLocaleString("en-US", { dateStyle, timeStyle })` as "Nov 3, 2026 at 2:32 PM" where V8 writes "Nov 3, 2026, 2:32 PM"; email stamps now use `src/utils/formatUtcStamp.ts` (built from `formatToParts`). Clustering shares the listen port through SO_REUSEPORT — verified on macOS, load-balanced on Linux, not verified on Windows.
 
 ---
 
@@ -297,7 +297,7 @@ Grounded in the code read for this document. See `.env.example` for the full cat
 
 Recorded per the authority rule: **the code wins**; each item is a place where `Backend/CLAUDE.md` does not match the boot/config/build source as read on 2026-09-04.
 
-- **DB connection names.** `Backend/CLAUDE.md` (Database — OracleDB Adapter Rules) describes a "dual-pool pattern" with connections named `userAccount` and `unitInventory`. `src/config/database.js` ships exactly **one** connection, `appDb`; `userAccount`/`unitInventory` do not exist in the template registry. **The code is authoritative: one pool, `appDb`.** The `oracle.js` adapter's own docstring also lists backward-compatible shorthands `withDbConnection → withConnection('userAccount')` and `withDbConnectionUnit → withConnection('unitInventory')` (`adapters/oracle.js` header) — those shorthands reference connection names the shipped `database.js` does not register, so they would throw "Unknown connection" if called against the bare template.
+- **DB connection names.** `Backend/CLAUDE.md` (Database — OracleDB Adapter Rules) describes a "dual-pool pattern" with connections named `userAccount` and `unitInventory`. `src/config/database.ts` ships exactly **one** connection, `appDb`; `userAccount`/`unitInventory` do not exist in the template registry. **The code is authoritative: one pool, `appDb`.** The `oracle.js` adapter's own docstring also lists backward-compatible shorthands `withDbConnection → withConnection('userAccount')` and `withDbConnectionUnit → withConnection('unitInventory')` (`adapters/oracle.js` header) — those shorthands reference connection names the shipped `database.js` does not register, so they would throw "Unknown connection" if called against the bare template.
 
 - **Boot guard scope vs CLAUDE.md summaries.** The boot guard enforces more than secrets (it also guards `DEMO_MODE`, `CORS_ORIGINS` and the money base-currency in production). Where any CLAUDE.md summary describes the guard as secrets-only, the code is broader — read `bootGuard.js`'s `validateSecrets`/`validateMoneyConfig` for the full set.
 

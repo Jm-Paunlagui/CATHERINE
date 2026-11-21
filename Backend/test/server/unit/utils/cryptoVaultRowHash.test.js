@@ -2,7 +2,7 @@
 
 // Unit tests for the feature-agnostic CryptoVault.verifyRowHash primitive
 // (plain SHA-256, for Oracle STANDARD_HASH columns). This is NOT the HMAC
-// ROW_HASH path: src/services/TamperDetectionService.js still exists and
+// ROW_HASH path: src/services/TamperDetectionService.ts still exists and
 // verifies HMAC-signed rows (T_SYSTEM_CONFIG in the template) through
 // CryptoVault.verifyRecord — it is not exercised here.
 

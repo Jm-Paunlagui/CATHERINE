@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview Log message templates for the cluster primary
- * (`src/utils/cluster/ClusterSupervisor.js`) and the worker IPC handlers in
+ * (`src/utils/cluster/ClusterSupervisor.ts`) and the worker IPC handlers in
  * server.js. Used ONLY in logger.* calls.
  *
  * ⚠ `messages/index.js` spreads every namespace into ONE flat object — every
