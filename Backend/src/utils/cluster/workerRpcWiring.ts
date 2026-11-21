@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -20,7 +19,7 @@ import { CLUSTER_TOPICS, CLUSTER_RPC_METHODS } from "../../constants/clusterIpc"
  * @param {boolean} deps.isLeader - this worker is the cron leader
  * @returns {void}
  */
-function wireWorkerRpc({ client, isLeader }) {
+function wireWorkerRpc({ client, isLeader }: { client: import("./ClusterRpcClient").ClusterRpcClient; isLeader: boolean; }): void {
 
     // ── Metrics: every worker answers a gather with its mergeable snapshot ──
     const { metricsStore } = require("../../middleware/metrics/MetricsStore");

@@ -65,6 +65,10 @@ import { RetryPolicy } from "./RetryPolicy";
 import { currentScope } from "../progress/progress";
 
 class BatchGuard {
+    declare _retryBudget: number;
+    declare _label: string;
+    declare _concurrency: number;
+    declare _retryPolicy: RetryPolicy;
     /**
      * @param {object} options
      * @param {import("./RetryPolicy").RetryPolicy} options.retryPolicy - Retry policy applied to every item.
@@ -78,7 +82,7 @@ class BatchGuard {
         concurrency = 16,
         label = "batch",
         retryBudget = Infinity,
-    } = {}) {
+    }: { retryPolicy: import("./RetryPolicy").RetryPolicy; concurrency?: number; label?: string; retryBudget?: number; } = {}) {
         if (!retryPolicy || typeof retryPolicy.execute !== "function") {
             throw new TypeError(
                 "BatchGuard: retryPolicy must be a RetryPolicy instance (or an object exposing an execute() method).",
@@ -113,12 +117,16 @@ class BatchGuard {
      *   pending: Array<{item: T, reason: string}>
      * }>}
      */
-    async run(items, worker, options = {}) {
+    async run<T,     R>(items: Array<T>, worker: (item: T, index: number) => Promise<R>, options: { hooks?: Record<string, any> | ((item: T, index: number) => Record<string, any>); } = {}): Promise<{
+        succeeded: Array<{ item: T; result: R; }>;
+        failed: Array<{ item: T; error: any; attempts: number; classification: string | null; }>;
+        pending: Array<{ item: T; reason: string; }>;
+    }> {
         const list = Array.isArray(items) ? items : [];
         const n = list.length;
-        const succeeded = [];
-        const failed = [];
-        const pending = [];
+        const succeeded: any[] = [];
+        const failed: any[] = [];
+        const pending: any[] = [];
         const startedAt = Date.now();
 
         logger.debug(
@@ -141,7 +149,7 @@ class BatchGuard {
                 : () => options.hooks ?? {};
 
         let aborted = false;
-        let abortReason = null;
+        let abortReason: any = null;
         // Cumulative retries spent across FAILED items only. We deliberately do
         // NOT count retries that ended in success (including idempotency-probe
         // "resolved" outcomes): a success-after-retry is RECOVERY, not budget
@@ -265,7 +273,7 @@ class BatchGuard {
      * @param {{succeeded: Array, failed: Array, pending: Array}} report
      * @returns {200|207|null}
      */
-    static httpStatusFor(report) {
+    static httpStatusFor(report: { succeeded: Array<any>; failed: Array<any>; pending: Array<any>; }): 200 | 207 | null {
         const succeededCount = report?.succeeded?.length ?? 0;
         const failedCount = report?.failed?.length ?? 0;
         const pendingCount = report?.pending?.length ?? 0;

@@ -22,7 +22,7 @@ import { logger } from "../utils/logger";
 /** Pool the scan helpers read from. */
 const _db = createDb("appDb");
 
-const _str = (v) => (v == null ? "" : String(v));
+const _str = (v: any) => (v == null ? "" : String(v));
 
 /**
  * T_SYSTEM_CONFIG — the key/value application config store. CONFIG_KEY is the
@@ -32,7 +32,7 @@ const _str = (v) => (v == null ? "" : String(v));
  * @param {object} row
  * @returns {{ CONFIG_KEY: string, CONFIG_VALUE: string }}
  */
-function _fieldsSystemConfig(row) {
+function _fieldsSystemConfig(row: Record<string, any>): { CONFIG_KEY: string; CONFIG_VALUE: string; } {
     return {
         CONFIG_KEY: _str(row.CONFIG_KEY),
         CONFIG_VALUE: _str(row.CONFIG_VALUE),
@@ -62,7 +62,7 @@ class TamperDetectionService {
      * const fields = TamperDetectionService.buildSignedFields("T_SYSTEM_CONFIG", row);
      * const rowHash = await CryptoVault.signRecord("T_SYSTEM_CONFIG", fields);
      */
-    static buildSignedFields(domain, row) {
+    static buildSignedFields(domain: string, row: Record<string, any>): Record<string, number | string> {
         const builder = _FIELD_BUILDERS[domain];
         if (!builder) {
             throw new Error(`TamperDetectionService.buildSignedFields: unknown ROW_HASH domain "${domain}".`);
@@ -71,7 +71,7 @@ class TamperDetectionService {
     }
 
     /** @returns {string[]} every registered ROW_HASH domain */
-    static listDomains() {
+    static listDomains(): string[] {
         return Object.keys(_FIELD_BUILDERS);
     }
 
@@ -82,7 +82,7 @@ class TamperDetectionService {
      * @param {object} row - must carry ROW_HASH and every signed column
      * @returns {Promise<boolean>} true = intact, false = tampered
      */
-    static verifyRow(domain, row) {
+    static verifyRow(domain: string, row: Record<string, any>): Promise<boolean> {
         return CryptoVault.verifyRecord(
             domain,
             TamperDetectionService.buildSignedFields(domain, row),
@@ -98,7 +98,7 @@ class TamperDetectionService {
      * @param {object} row
      * @returns {Promise<boolean>}
      */
-    static verifySystemConfigRow(row) {
+    static verifySystemConfigRow(row: Record<string, any>): Promise<boolean> {
         return TamperDetectionService.verifyRow("T_SYSTEM_CONFIG", row);
     }
 
@@ -112,7 +112,7 @@ class TamperDetectionService {
      * @param {Record<string, 1>} projection - must include ROW_HASH and every signed column
      * @returns {Promise<{ intact: object[], tampered: object[] }>}
      */
-    static async scanTable(tableName, domain, projection) {
+    static async scanTable(tableName: string, domain: string, projection: Record<string, 1>): Promise<{ intact: Record<string, any>[]; tampered: Record<string, any>[]; }> {
         const col = new OracleCollection(tableName, _db);
         const rows = await col
             .find({ ROW_HASH: { $exists: true } })

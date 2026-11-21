@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -29,6 +28,7 @@
  * @author senior-nodejs-engineer
  */
 
+import type { Request, Response } from "express";
 import { RateLimiterMiddleware, RateLimiterGroup } from "./RateLimiterMiddleware";
 import { AUTH_RATE_LIMITS, RATE_LIMIT_COUNT_MODES } from "../../constants/authRateLimits";
 import { canonicalUserKey } from "../../utils/auth/userKey";
@@ -40,7 +40,7 @@ import { hashJti } from "../../utils/auth/tokenClaims";
 /** Name of the refresh cookie (shared constant; never import AuthService here). */
 const REFRESH_COOKIE = COOKIE_NAMES.REFRESH;
 
-const ipOf = (req) => RateLimiterMiddleware.extractIp(req);
+const ipOf = (req: any) => RateLimiterMiddleware.extractIp(req);
 
 /**
  * Canonical user segment for a login key, or `-` when unusable.
@@ -48,7 +48,7 @@ const ipOf = (req) => RateLimiterMiddleware.extractIp(req);
  * @param {unknown} userId
  * @returns {string}
  */
-function userSegment(userId) {
+function userSegment(userId: unknown): string {
   const usable =
     typeof userId === "string" ||
     (typeof userId === "number" && Number.isFinite(userId));
@@ -60,31 +60,31 @@ function userSegment(userId) {
 }
 
 /** @param {import("express").Request} req @returns {string} */
-function loginIpKey(req) {
+function loginIpKey(req: import("express").Request): string {
   return `rl:login:ip:${ipOf(req)}`;
 }
 
 /** @param {import("express").Request} req @returns {string} */
-function loginUserKey(req) {
+function loginUserKey(req: import("express").Request): string {
   return `rl:login:u:${ipOf(req)}:${userSegment(req.body?.userId)}`;
 }
 
 /** @param {import("express").Request} req @returns {string} */
-function refreshKey(req) {
+function refreshKey(req: import("express").Request): string {
   const fid = refreshFamilyOf(req.signedCookies?.[REFRESH_COOKIE]);
   // Hashed: the limiter key is logged, and the raw family id must not be (CWE-532).
   return fid ? `rl:refresh:f:${hashJti(fid).slice(0, 32)}` : `rl:refresh:ip:${ipOf(req)}`;
 }
 
 /** @param {import("express").Request} req @returns {string} */
-function changePasswordKey(req) {
+function changePasswordKey(req: import("express").Request): string {
   const sub = req.user?.sub;
   if (sub === undefined || sub === null || sub === "") return `rl:pwchange:ip:${ipOf(req)}`;
   return `rl:pwchange:${canonicalUserKey(sub)}`;
 }
 
 /** Shared 429 body (unchanged from the former auth limiter; the UI parses it). */
-const onLimit = (req, res, { retryAfter }) =>
+const onLimit = (req: Request, res: Response, { retryAfter }: any) =>
   res.status(429).json({
     status: "error",
     code: 429,
@@ -96,7 +96,7 @@ const onLimit = (req, res, { retryAfter }) =>
     },
   });
 
-const make = (cfg, keyBy, countMode) =>
+const make = (cfg: any, keyBy: any, countMode: any) =>
   new RateLimiterMiddleware({
     max: cfg.MAX,
     windowMs: cfg.WINDOW_MS,

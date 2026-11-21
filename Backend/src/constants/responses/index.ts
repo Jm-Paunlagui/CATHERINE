@@ -53,7 +53,7 @@ const HTTP_STATUS_TITLES = {
  * @param {number} code
  * @returns {string}
  */
-function getStatusTitle(code) {
+function getStatusTitle(code: number): string {
     if (HTTP_STATUS_TITLES[code]) return HTTP_STATUS_TITLES[code];
     if (code >= 500) return "Server Error";
     if (code >= 400) return "Client Error";
@@ -70,7 +70,7 @@ function getStatusTitle(code) {
  * @param {number} [code=200]
  * @returns {{ status: string, code: number, message: string, data: * }}
  */
-function sendSuccess(message, data = null, code = 200, requestId = null) {
+function sendSuccess(message: string, data: any = null, code: number = 200, requestId = null): { status: string; code: number; message: string; data: any; } {
     return {
         status: "success",
         code,
@@ -93,7 +93,9 @@ function sendSuccess(message, data = null, code = 200, requestId = null) {
  * @param {number} [code=500]
  * @param {{ type?: string, details?: Array, hint?: string, reasons?: string[], stack?: string }} [opts]
  */
-function sendError(message, code = 500, opts = {}) {
+function sendError(message: string, code: number = 500, opts: {
+    requestId: null; type?: string; details?: Array<any>; hint?: string; reasons?: string[]; stack?: string; 
+} = {}) {
     return {
         status: "error",
         code,

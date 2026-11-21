@@ -35,12 +35,14 @@ const KNOWN_STATUS = new Set(Object.values(HTTP_STATUS));
 
 /** Error thrown by `call()`; `code` is one of CLUSTER_RPC_ERROR_CODES. */
 class ClusterRpcError extends Error {
+    declare appError: { statusCode: number; message: string; type: string; };
+    declare code: string;
     /**
      * @param {string} code
      * @param {string} message
      * @param {{statusCode: number, message: string, type: string}} [appError]
      */
-    constructor(code, message, appError) {
+    constructor(code: string, message: string, appError: { statusCode: number; message: string; type: string; }) {
         super(message);
         this.name = "ClusterRpcError";
         this.code = code;
@@ -54,15 +56,17 @@ class ClusterRpcError extends Error {
  */
 class ClusterRpcClient {
     /** @type {Map<string, {resolve: Function, reject: Function, timer: any, method: string}>} */
-    #pending = new Map();
+    #pending: Map<string, { resolve: ((...args: any[]) => any); reject: ((...args: any[]) => any); timer: any; method: string; }> = new Map();
     /** @type {Map<string, Function>} */
-    #handlers = new Map();
+    #handlers: Map<string, ((...args: any[]) => any)> = new Map();
     /** @type {Map<string, Function>} */
-    #topics = new Map();
+    #topics: Map<string, ((...args: any[]) => any)> = new Map();
     #active = false;
     #isLeader = false;
     #seq = 0;
     #listener = null;
+    declare _proc: NodeJS.Process;
+    declare _canSend: () => boolean;
 
     constructor() {
         /** Injectable IPC-availability predicate (tests). */
@@ -72,17 +76,17 @@ class ClusterRpcClient {
     }
 
     /** @returns {boolean} IPC endpoint installed (cluster worker only) */
-    get active() {
+    get active(): boolean {
         return this.#active;
     }
 
     /** @returns {boolean} this worker is the cron leader */
-    get isLeader() {
+    get isLeader(): boolean {
         return this.#isLeader;
     }
 
     /** @returns {number} pending calls (diagnostics/tests) */
-    get pendingCount() {
+    get pendingCount(): number {
         return this.#pending.size;
     }
 
@@ -92,10 +96,10 @@ class ClusterRpcClient {
      * @param {{isLeader?: boolean}} [opts]
      * @returns {boolean} true when installed
      */
-    init({ isLeader = false } = {}) {
+    init({ isLeader = false }: { isLeader?: boolean; } = {}): boolean {
         if (this.#active || !this._canSend()) return false;
         this.#isLeader = isLeader === true;
-        this.#listener = (msg) => this.#onMessage(msg);
+        this.#listener = (msg: any) => this.#onMessage(msg);
         this._proc.on("message", this.#listener);
         this.#active = true;
         return true;
@@ -122,7 +126,7 @@ class ClusterRpcClient {
      * @param {string} method
      * @param {(args: object) => any} fn
      */
-    handle(method, fn) {
+    handle(method: string, fn: (args: Record<string, any>) => any) {
         this.#handlers.set(method, fn);
     }
 
@@ -132,7 +136,7 @@ class ClusterRpcClient {
      * @param {string} topic
      * @param {(payload: object) => void} fn
      */
-    onTopic(topic, fn) {
+    onTopic(topic: string, fn: (payload: Record<string, any>) => void) {
         this.#topics.set(topic, fn);
     }
 
@@ -145,7 +149,7 @@ class ClusterRpcClient {
      * @param {{timeoutMs?: number}} [opts]
      * @returns {Promise<any>} result; rejects with ClusterRpcError
      */
-    call(target, method, args = {}, { timeoutMs = CLUSTER_RPC_TIMEOUTS.DEFAULT_MS } = {}) {
+    call(target: "primary" | "leader" | "all", method: string, args: Record<string, any> = {}, { timeoutMs = CLUSTER_RPC_TIMEOUTS.DEFAULT_MS }: { timeoutMs?: number; } = {}): Promise<any> {
         if (!this.#active) return Promise.reject(new ClusterRpcError(E.REJECTED, "cluster rpc inactive"));
         // A leader call made by the leader itself runs locally, no IPC.
         if (target === CLUSTER_RPC_TARGETS.LEADER && this.#isLeader) {
@@ -178,7 +182,7 @@ class ClusterRpcClient {
      * @param {object} [args]
      * @returns {boolean} whether the send was attempted successfully
      */
-    notify(method, args = {}) {
+    notify(method: string, args: Record<string, any> = {}): boolean {
         if (!this.#active) return false;
         return this.#trySend({ cmd: CLUSTER_IPC.NOTIFY, method, args });
     }
@@ -191,7 +195,7 @@ class ClusterRpcClient {
      * @param {string} fallbackMessage - Message from `constants/errors`.
      * @returns {AppError}
      */
-    static toAppError(err, fallbackMessage) {
+    static toAppError(err: Error, fallbackMessage: string): AppError {
         const a = err?.appError;
         if (a && KNOWN_STATUS.has(a.statusCode) && typeof a.message === "string") {
             // Built with a catalogued literal, then re-stamped: the status was
@@ -205,7 +209,7 @@ class ClusterRpcClient {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    #trySend(message) {
+    #trySend(message: any) {
         try {
             this._proc.send(message);
             return true;
@@ -214,7 +218,7 @@ class ClusterRpcClient {
         }
     }
 
-    #onMessage(msg) {
+    #onMessage(msg: any) {
         if (!isPlainObject(msg)) return;
         switch (msg.cmd) {
             case CLUSTER_IPC.RPC_RESPONSE:
@@ -227,7 +231,7 @@ class ClusterRpcClient {
         }
     }
 
-    #onResponse(msg) {
+    #onResponse(msg: any) {
         if (typeof msg.id !== "string") return;
         const p = this.#pending.get(msg.id);
         if (!p) return;
@@ -256,10 +260,10 @@ class ClusterRpcClient {
         p.reject(new ClusterRpcError(code, text, appError));
     }
 
-    #onCall(msg) {
+    #onCall(msg: any) {
         const { callId, method } = msg;
         if (typeof callId !== "string" || callId.length > CLUSTER_RPC_LIMITS.MAX_ID_LENGTH) return;
-        const reply = (ok, result, error) => {
+        const reply = (ok: any, result: any, error: any) => {
             const out = { cmd: CLUSTER_IPC.RPC_RETURN, callId, ok };
             if (ok) out.result = result === undefined ? null : result;
             else out.error = error;
@@ -295,7 +299,7 @@ class ClusterRpcClient {
             );
     }
 
-    #onBroadcast(msg) {
+    #onBroadcast(msg: any) {
         const fn = typeof msg.topic === "string" ? this.#topics.get(msg.topic) : undefined;
         if (!fn) return;
         const v = validateTopic(msg.topic, msg.payload);

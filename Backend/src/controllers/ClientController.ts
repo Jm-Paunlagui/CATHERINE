@@ -9,6 +9,7 @@
  * rejections route to ErrorHandlerMiddleware.
  */
 
+import type { Request, Response } from "express";
 import { catchAsync } from "../utils/catchAsync";
 import { sendSuccess, RESPONSE_MESSAGES, HTTP_STATUS } from "../constants";
 import ClientService from "../services/ClientService";
@@ -19,7 +20,7 @@ class ClientController {
      * Ingests a structured client-side render error report (from the
      * frontend ErrorBoundary via clientLogger).
      */
-    static logError = catchAsync(async (req, res) => {
+    static logError = catchAsync(async (req: Request, res: Response) => {
         await ClientService.logError(req.body, req.user);
         res
             .status(HTTP_STATUS.OK)
@@ -32,7 +33,7 @@ class ClientController {
      * Help Assistant). Fire-and-forget telemetry — always returns 200 so a
      * failed search's telemetry never becomes a second visible failure.
      */
-    static logHelpMiss = catchAsync(async (req, res) => {
+    static logHelpMiss = catchAsync(async (req: Request, res: Response) => {
         await ClientService.logHelpMiss(req.body, req.user);
         res
             .status(HTTP_STATUS.OK)

@@ -15,6 +15,7 @@
  *   POST /api/v1/integrity/:table/rescan   (same query as body/query — re-sweeps)
  */
 
+import type { Request, Response } from "express";
 import { HTTP_STATUS, AppError, INTEGRITY_ERRORS } from "../constants";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { catchAsync } from "../utils/catchAsync";
@@ -34,7 +35,7 @@ const FILTER_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{0,39}$/;
  * @param {string} field
  * @returns {Date|null}
  */
-function _parseDate(raw, field) {
+function _parseDate(raw: string | undefined, field: string): Date | null {
     if (raw == null || raw === "") return null;
     const d = new Date(raw);
     if (isNaN(d.getTime())) {
@@ -57,7 +58,7 @@ class IntegrityController {
      * @param {object} src - req.query (and/or req.body)
      * @returns {object} `{ [filterKey]: string, from: Date|null, to: Date|null }`
      */
-    static parseFilters(src = {}) {
+    static parseFilters(src: Record<string, any> = {}): Record<string, any> {
         const from = _parseDate(src.from, "from");
         const to = _parseDate(src.to, "to");
         if (from && to && from.getTime() > to.getTime()) {
@@ -81,7 +82,7 @@ class IntegrityController {
      * GET /api/v1/integrity/tables
      * Returns the table catalog (key, label, pk, filters, live) — no SQL surface.
      */
-    static getTables = catchAsync(async (_req, res) => {
+    static getTables = catchAsync(async (_req: any, res: any) => {
         const tables = IntegrityService.listTables();
         res.status(HTTP_STATUS.OK).json(
             sendSuccess(RESPONSE_MESSAGES.INTEGRITY_TABLES_FETCHED, { tables }),
@@ -94,7 +95,7 @@ class IntegrityController {
      * GET /api/v1/integrity/:table/tamper
      * The headline tampered-only feed (paginated from a cached sweep result).
      */
-    static getTamper = catchAsync(async (req, res) => {
+    static getTamper = catchAsync(async (req: Request, res: Response) => {
         const { table } = req.params;
         const filters = IntegrityController.parseFilters(req.query);
         const page = Number(req.query.page) || 1;
@@ -112,7 +113,7 @@ class IntegrityController {
      * GET /api/v1/integrity/:table/filter-options
      * Distinct dropdown options for the table's enum filters.
      */
-    static getFilterOptions = catchAsync(async (req, res) => {
+    static getFilterOptions = catchAsync(async (req: Request, res: Response) => {
         const options = await IntegrityService.getFilterOptions(req.params.table);
         res.status(HTTP_STATUS.OK).json(
             sendSuccess(RESPONSE_MESSAGES.INTEGRITY_FILTER_OPTIONS_FETCHED, { options }),
@@ -125,7 +126,7 @@ class IntegrityController {
      * GET /api/v1/integrity/:table/browse
      * Browse-all: an offset page over the scoped slice with a per-row verdict.
      */
-    static browse = catchAsync(async (req, res) => {
+    static browse = catchAsync(async (req: Request, res: Response) => {
         const { table } = req.params;
         const filters = IntegrityController.parseFilters(req.query);
         const page = Number(req.query.page) || 1;
@@ -156,7 +157,7 @@ class IntegrityController {
      * integrity boundary the rest of the feature enforces, and a bulk dump is
      * the last place to relax it.
      */
-    static exportRows = catchAsync(async (req, res) => {
+    static exportRows = catchAsync(async (req: Request, res: Response) => {
         const { table } = req.params;
         const filters = IntegrityController.parseFilters(req.query);
         const mode = req.query.mode === "all" ? "all" : "tamper";
@@ -174,7 +175,7 @@ class IntegrityController {
      * Invalidates the cached sweep for the scope and re-runs it (returns page 1).
      * CSRF token is auto-required (all POST routes are CSRF-covered).
      */
-    static rescan = catchAsync(async (req, res) => {
+    static rescan = catchAsync(async (req: Request, res: Response) => {
         const { table } = req.params;
         // Scope may come from query or body — accept both.
         const filters = IntegrityController.parseFilters({ ...req.query, ...req.body });

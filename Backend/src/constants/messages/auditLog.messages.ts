@@ -1,66 +1,65 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 const auditLogMessages = {
-  INSERT_FAILED: (requestId, err) =>
+  INSERT_FAILED: (requestId: any, err: any) =>
     `Audit log insert failed for REQUEST_ID ${requestId}: ${err}.`,
-  BATCH_INSERT_FAILED: (count, err) =>
+  BATCH_INSERT_FAILED: (count: any, err: any) =>
     `Audit log batch insert failed for ${count} record(s): ${err}.`,
-  PENDING_OVERFLOW_DROPPED: (dropped, cap) =>
+  PENDING_OVERFLOW_DROPPED: (dropped: any, cap: any) =>
     `Audit log queue over cap ${cap} during DB outage — ${dropped} oldest record(s) dropped.`,
-  SHUTDOWN_ROWS_UNPERSISTED: (count, reason) =>
+  SHUTDOWN_ROWS_UNPERSISTED: (count: any, reason: any) =>
     `Shutdown: ${count} audit record(s) could not be persisted (${reason}) and are lost.`,
   INSERT_SKIPPED_DISABLED: () =>
     `Audit log middleware is disabled — skipping DB insert.`,
-  LIST_FETCHED: (count, page) =>
+  LIST_FETCHED: (count: any, page: any) =>
     `Audit log list fetched — ${count} rows, page ${page}.`,
-  STATS_FETCHED: (fromDate, toDate) =>
+  STATS_FETCHED: (fromDate: any, toDate: any) =>
     `Audit log stats fetched — range: ${fromDate} to ${toDate}.`,
-  INVALID_DATE_RANGE_WARN: (fromDate, toDate) =>
+  INVALID_DATE_RANGE_WARN: (fromDate: any, toDate: any) =>
     `Audit log query called with invalid date range: fromDate=${fromDate}, toDate=${toDate}.`,
-  LOG_TRACE_FETCHED: (requestId, count) =>
+  LOG_TRACE_FETCHED: (requestId: any, count: any) =>
     `Request log trace fetched — ${requestId}: ${count} line(s).`,
-  EXPORT_EXCEL_STARTED: (from, to) =>
+  EXPORT_EXCEL_STARTED: (from: any, to: any) =>
     `Audit log Excel export started — range: ${from} to ${to}.`,
-  EXPORT_ZIP_STARTED: (from, to) =>
+  EXPORT_ZIP_STARTED: (from: any, to: any) =>
     `Audit log ZIP export started — range: ${from} to ${to}.`,
-  EXPORT_ZIP_TRAVERSAL_BLOCKED: (file) =>
+  EXPORT_ZIP_TRAVERSAL_BLOCKED: (file: any) =>
     `AuditLogService.exportToZip: path traversal attempt blocked — ${file}`,
-  DELETE_RANGE_STARTED: (from, to) =>
+  DELETE_RANGE_STARTED: (from: any, to: any) =>
     `Audit log delete range started — ${from} to ${to}.`,
-  DELETE_RANGE_DONE: (rows, days) =>
+  DELETE_RANGE_DONE: (rows: any, days: any) =>
     `Audit log delete complete — ${rows} DB rows, ${days} log day(s) removed.`,
-  DELETE_DAY_FAILED: (day, err) =>
+  DELETE_DAY_FAILED: (day: any, err: any) =>
     `Audit log day folder delete failed — ${day}: ${err}.`,
-  EXPORT_TRACE_STARTED: (requestId) =>
+  EXPORT_TRACE_STARTED: (requestId: any) =>
     `Audit log trace Excel export started — requestId: ${requestId}.`,
 
   // ── SSE (real-time stream) ───────────────────────────────────────────────────
-  SSE_CONNECTED: (userId) =>
+  SSE_CONNECTED: (userId: any) =>
     `Audit log SSE connected — userId: ${userId}.`,
-  SSE_DISCONNECTED: (userId) =>
+  SSE_DISCONNECTED: (userId: any) =>
     `Audit log SSE disconnected — userId: ${userId}.`,
-  SSE_DUPLICATE_CONNECTION: (userId) =>
+  SSE_DUPLICATE_CONNECTION: (userId: any) =>
     `Audit log SSE duplicate connection rejected — userId: ${userId}.`,
-  SSE_BASELINE_ESTABLISHED: (userId, latestTs) =>
+  SSE_BASELINE_ESTABLISHED: (userId: any, latestTs: any) =>
     `Audit log SSE baseline established — userId: ${userId}, latestTs: ${latestTs ?? 'none'}.`,
-  SSE_UPDATE_SENT: (userId) =>
+  SSE_UPDATE_SENT: (userId: any) =>
     `Audit log SSE update pushed — userId: ${userId}.`,
-  SSE_POLL_ERROR: (err) =>
+  SSE_POLL_ERROR: (err: any) =>
     `Audit log SSE poll error: ${err}.`,
   SSE_SHARED_POLL_STARTED: () =>
     `Audit log SSE shared poller started.`,
   SSE_SHARED_POLL_STOPPED: () =>
     `Audit log SSE shared poller stopped.`,
-  SSE_SHARED_POLL_MAX_ERRORS: (size, max) =>
+  SSE_SHARED_POLL_MAX_ERRORS: (size: any, max: any) =>
     `Audit log SSE shared poller hit ${max} consecutive errors with ${size} client(s) — stopping and notifying all.`,
-  SSE_CONNECTED_EVENT_SENT: (userId) =>
+  SSE_CONNECTED_EVENT_SENT: (userId: any) =>
     `Audit log SSE connected event sent — userId: ${userId}.`,
 
   // ── System log file view (RFC 5424 level files, System sub-tab) ─────────────
-  SYSTEM_LOGS_FETCHED: (date, count, page) =>
+  SYSTEM_LOGS_FETCHED: (date: any, count: any, page: any) =>
     `System log entries fetched — date: ${date}, ${count} row(s), page ${page}.`,
-  SYSTEM_LOG_DIR_MISSING: (date) =>
+  SYSTEM_LOG_DIR_MISSING: (date: any) =>
     `System log directory not found for date ${date} — returning empty result.`,
 
   // ── System log SSE live tail (SystemLogTailService) ─────────────────────────
@@ -68,19 +67,19 @@ const auditLogMessages = {
     `System log tail poller started.`,
   SYSTEM_TAIL_STOPPED: () =>
     `System log tail poller stopped — no active connections.`,
-  SYSTEM_TAIL_CONNECTED: (connId) =>
+  SYSTEM_TAIL_CONNECTED: (connId: any) =>
     `System log tail SSE connected — connId: ${connId}.`,
-  SYSTEM_TAIL_DISCONNECTED: (connId) =>
+  SYSTEM_TAIL_DISCONNECTED: (connId: any) =>
     `System log tail SSE disconnected — connId: ${connId}.`,
-  SYSTEM_TAIL_DUPLICATE_CONNECTION: (connId) =>
+  SYSTEM_TAIL_DUPLICATE_CONNECTION: (connId: any) =>
     `System log tail SSE duplicate connection rejected — connId: ${connId}.`,
-  SYSTEM_TAIL_ROTATION_DETECTED: (file) =>
+  SYSTEM_TAIL_ROTATION_DETECTED: (file: any) =>
     `System log tail detected rotation/truncation on ${file} — offset reset to 0.`,
-  SYSTEM_TAIL_DIR_ROLLOVER: (dir) =>
+  SYSTEM_TAIL_DIR_ROLLOVER: (dir: any) =>
     `System log tail day directory changed — now tailing ${dir}.`,
-  SYSTEM_TAIL_TICK_ERROR: (err) =>
+  SYSTEM_TAIL_TICK_ERROR: (err: any) =>
     `System log tail poll tick error: ${err}.`,
-  SYSTEM_TAIL_MAX_ERRORS: (size, max) =>
+  SYSTEM_TAIL_MAX_ERRORS: (size: any, max: any) =>
     `System log tail poller hit ${max} consecutive errors with ${size} client(s) — stopping and notifying all.`,
 };
 

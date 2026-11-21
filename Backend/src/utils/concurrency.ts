@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -43,7 +42,7 @@
  * @param {(item: T, index: number) => Promise<R>} fn - Async mapper
  * @returns {Promise<Array<R>>} Results in input order
  */
-async function mapWithConcurrency(items, limit, fn) {
+async function mapWithConcurrency<T, R>(items: Array<T>, limit: number, fn: (item: T, index: number) => Promise<R>): Promise<Array<R>> {
     const list = Array.isArray(items) ? items : [];
     const n = list.length;
     const results = new Array(n);

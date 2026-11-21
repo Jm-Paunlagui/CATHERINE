@@ -25,6 +25,7 @@
  *   DELETE /api/v1/data-purge/backups/:id/delete-request — cancelDeleteRequest
  */
 
+import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../constants";
 import { AppError, PURGE_ERRORS } from "../constants/errors";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
@@ -42,7 +43,7 @@ import DataRestoreService from "../services/DataRestoreService";
  * @returns {number|string|undefined}
  * @private
  */
-function _callerAdminId(req) {
+function _callerAdminId(req: import('express').Request): number | string | undefined {
     return req.user?.id ?? req.user?.userId;
 }
 
@@ -54,7 +55,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static getScopes = catchAsync(async (req, res) => {
+    static getScopes = catchAsync(async (req: Request, res: Response) => {
         const data = await DataPurgeService.getScopeCatalogue();
         res.status(HTTP_STATUS.OK).json(
             sendSuccess(RESPONSE_MESSAGES.PURGE_SCOPES_FETCHED, data),
@@ -71,7 +72,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static preview = catchAsync(async (req, res) => {
+    static preview = catchAsync(async (req: Request, res: Response) => {
         const { groups, tables } = req.body ?? {};
         const data = await DataPurgeService.getPreview({ groups, tables });
         res.status(HTTP_STATUS.OK).json(
@@ -92,7 +93,7 @@ class DataPurgeController {
      * independently, so this endpoint is neither necessary nor sufficient for
      * a purge.
      */
-    static authorise = catchAsync(async (req, res) => {
+    static authorise = catchAsync(async (req: Request, res: Response) => {
         const { adminPassword } = req.body ?? {};
         const data = await DataPurgeService.authorise({
             adminId: _callerAdminId(req),
@@ -120,7 +121,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static backup = catchAsync(async (req, res) => {
+    static backup = catchAsync(async (req: Request, res: Response) => {
         const { groups, tables } = req.body ?? {};
         const adminId = _callerAdminId(req);
 
@@ -150,7 +151,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static execute = catchAsync(async (req, res) => {
+    static execute = catchAsync(async (req: Request, res: Response) => {
         const {
             scope,
             backupToken,
@@ -185,7 +186,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static restorePreview = catchAsync(async (req, res) => {
+    static restorePreview = catchAsync(async (req: Request, res: Response) => {
         if (!req.file) {
             throw new AppError(
                 PURGE_ERRORS.RESTORE_NO_FILE,
@@ -219,7 +220,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static restore = catchAsync(async (req, res) => {
+    static restore = catchAsync(async (req: Request, res: Response) => {
         if (!req.file) {
             throw new AppError(
                 PURGE_ERRORS.RESTORE_NO_FILE,
@@ -265,13 +266,13 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static listBackups = catchAsync(async (_req, res) => {
+    static listBackups = catchAsync(async (_req: any, res: any) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const archives = await BackupStoreService.listArchives();
 
         // Derive aggregate disk usage from the index entries.
         const totalSizeBytes = archives.reduce(
-            (sum, a) => sum + (a.sizeBytes ?? 0),
+            (sum: any, a: any) => sum + (a.sizeBytes ?? 0),
             0,
         );
 
@@ -293,7 +294,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static runManualBackup = catchAsync(async (req, res) => {
+    static runManualBackup = catchAsync(async (req: Request, res: Response) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const { getAllTableNames } = require("../constants/purgeTables");
         const adminId = _callerAdminId(req);
@@ -340,7 +341,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static downloadBackup = catchAsync(async (req, res) => {
+    static downloadBackup = catchAsync(async (req: Request, res: Response) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id;
@@ -369,7 +370,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static verifyBackup = catchAsync(async (req, res) => {
+    static verifyBackup = catchAsync(async (req: Request, res: Response) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id;
@@ -401,7 +402,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static requestDeleteBackup = catchAsync(async (req, res) => {
+    static requestDeleteBackup = catchAsync(async (req: Request, res: Response) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);
@@ -463,7 +464,7 @@ class DataPurgeController {
                 archiveId,
                 votesNeeded,
                 votesCast: votes.length,
-                voters: votes.map((v) => ({
+                voters: votes.map((v: any) => ({
                     votedBy: v.VOTED_BY,
                     votedAt: v.VOTED_AT,
                 })),
@@ -479,7 +480,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static voteDeleteBackup = catchAsync(async (req, res) => {
+    static voteDeleteBackup = catchAsync(async (req: Request, res: Response) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);
@@ -554,7 +555,7 @@ class DataPurgeController {
                 archiveId,
                 votesNeeded,
                 votesCast,
-                voters: votes.map((v) => ({
+                voters: votes.map((v: any) => ({
                     votedBy: v.VOTED_BY,
                     votedAt: v.VOTED_AT,
                 })),
@@ -570,7 +571,7 @@ class DataPurgeController {
      * @param {import('express').Request}  req
      * @param {import('express').Response} res
      */
-    static cancelDeleteRequest = catchAsync(async (req, res) => {
+    static cancelDeleteRequest = catchAsync(async (req: Request, res: Response) => {
         const BackupStoreService = require("../services/BackupStoreService").default;
         const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);

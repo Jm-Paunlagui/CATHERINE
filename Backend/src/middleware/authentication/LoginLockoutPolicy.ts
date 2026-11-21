@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -34,6 +33,12 @@ const DEFAULT_MAX_LOCKOUT_CYCLES = 3;
 const DEFAULT_RETRY_DECREMENT = 1;
 
 class LoginLockoutPolicy {
+    declare retryDecrement: number;
+    declare maxLockoutCycles: number;
+    declare lockoutMultiplier: number;
+    declare lockoutDurationMs: number;
+    declare lockoutMode: string;
+    declare maxAttempts: number;
     /**
      * Each option falls back to its LOGIN_* environment variable, then to the
      * default (read once, at construction).
@@ -46,7 +51,7 @@ class LoginLockoutPolicy {
      * @param {number} [options.maxLockoutCycles]  - LOGIN_MAX_LOCKOUT_CYCLES. Default 3.
      * @param {number} [options.retryDecrement]    - LOGIN_RETRY_DECREMENT. Default 1.
      */
-    constructor(options = {}) {
+    constructor(options: { maxAttempts?: number; lockoutMode?: string; lockoutDurationMs?: number; lockoutMultiplier?: number; maxLockoutCycles?: number; retryDecrement?: number; } = {}) {
         this.maxAttempts =
             options.maxAttempts ??
             parseInt(process.env.LOGIN_MAX_ATTEMPTS || String(DEFAULT_MAX_ATTEMPTS), 10);
@@ -72,7 +77,7 @@ class LoginLockoutPolicy {
      *
      * @returns {LoginLockoutPolicy}
      */
-    static fromEnv() {
+    static fromEnv(): LoginLockoutPolicy {
         return new LoginLockoutPolicy();
     }
 
@@ -81,7 +86,7 @@ class LoginLockoutPolicy {
      *
      * @returns {{cycles: number, currentMax: number, failCount: number, lockUntil: number|null}}
      */
-    initial() {
+    initial(): { cycles: number; currentMax: number; failCount: number; lockUntil: number | null; } {
         return {
             cycles: 0,
             currentMax: this.maxAttempts,
@@ -99,7 +104,7 @@ class LoginLockoutPolicy {
      * @param {number} now - epoch ms
      * @returns {{state: object, changed: boolean, locked: boolean, retryAfter?: number, hrReset?: boolean}}
      */
-    evaluate(state, now) {
+    evaluate(state: Record<string, any>, now: number): { state: Record<string, any>; changed: boolean; locked: boolean; retryAfter?: number; hrReset?: boolean; } {
         if (state.lockUntil && now < state.lockUntil) {
             return {
                 state,
@@ -135,7 +140,7 @@ class LoginLockoutPolicy {
      * @param {number} now - epoch ms
      * @returns {{state: object, failCount: number, currentMax: number, cycles: number, engaged: boolean, ignored: boolean, lockDurationMs: number|null}}
      */
-    fail(state, now) {
+    fail(state: Record<string, any>, now: number): { state: Record<string, any>; failCount: number; currentMax: number; cycles: number; engaged: boolean; ignored: boolean; lockDurationMs: number | null; } {
         if (state.lockUntil && now < state.lockUntil) {
             return {
                 state,

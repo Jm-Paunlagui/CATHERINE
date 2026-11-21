@@ -69,12 +69,21 @@ const MAX_ROWS_PER_TICK = 200;
 const MAX_CONSECUTIVE_ERRORS = 5;
 
 class SystemLogTailService {
+    declare SystemLogTailService: typeof SystemLogTailService;
+    declare _ticking: boolean;
+    declare _consecutiveErrors: number;
+    declare _initializedDir: boolean;
+    declare _currentDir: null;
+    declare _offsets: Map<any, any>;
+    declare _timer: null;
+    declare _connections: Map<any, any>;
+    declare _logBaseDir: string;
     /**
      * @param {object} [opts]
      * @param {string} [opts.logBaseDir] - Override for `AuditLogService.LOG_BASE_DIR`,
      *   used only by tests to point the poller at a fixture directory.
      */
-    constructor(opts = {}) {
+    constructor(opts: { logBaseDir?: string; } = {}) {
         /** @type {string} */
         this._logBaseDir = opts.logBaseDir || AuditLogService.LOG_BASE_DIR;
 
@@ -105,7 +114,7 @@ class SystemLogTailService {
      * tests can override it via `process.env` without restarting the module.
      * @returns {number}
      */
-    _pollIntervalMs() {
+    _pollIntervalMs(): number {
         return Number(process.env.SYSTEM_LOG_STREAM_POLL_MS) || 5000;
     }
 
@@ -122,7 +131,7 @@ class SystemLogTailService {
      *   for dispatch when set. Mirrors `AuditLogService.getSystemLogs`'
      *   `level` param overriding `maxPriority` on the browse endpoint.
      */
-    addConnection(connId, res, maxPriority, level = null) {
+    addConnection(connId: string, res: import('express').Response, maxPriority: number, level: string | null = null) {
         this._connections.set(connId, {
             res,
             maxPriority: Number.isInteger(maxPriority) ? maxPriority : 5,
@@ -139,7 +148,7 @@ class SystemLogTailService {
      *
      * @param {string} connId
      */
-    removeConnection(connId) {
+    removeConnection(connId: string) {
         if (this._connections.delete(connId)) {
             logger.info(auditLogMessages.SYSTEM_TAIL_DISCONNECTED(connId));
         }
@@ -147,7 +156,7 @@ class SystemLogTailService {
     }
 
     /** @returns {boolean} */
-    hasConnection(connId) {
+    hasConnection(connId: any): boolean {
         return this._connections.has(connId);
     }
 
@@ -182,7 +191,7 @@ class SystemLogTailService {
      * the exact path convention `AuditLogService.getSystemLogs` reads from.
      * @returns {string}
      */
-    _todayDir() {
+    _todayDir(): string {
         const fmt = new Intl.DateTimeFormat("en-CA", {
             timeZone: "Asia/Manila",
             year: "numeric",
@@ -202,7 +211,7 @@ class SystemLogTailService {
      * `_start()` and counted toward `MAX_CONSECUTIVE_ERRORS`.
      * @returns {Promise<void>}
      */
-    async _tick() {
+    async _tick(): Promise<void> {
         if (this._connections.size === 0) return;
 
         const dir = this._todayDir();
@@ -228,7 +237,7 @@ class SystemLogTailService {
 
         const isFirstScan = !this._initializedDir;
         /** @type {Map<string, Array<object>>} connId -> parsed rows this tick */
-        const perConnRows = new Map();
+        const perConnRows: Map<string, Array<Record<string, any>>> = new Map();
         for (const connId of this._connections.keys()) perConnRows.set(connId, []);
 
         for (const filename of filenames) {
@@ -308,7 +317,7 @@ class SystemLogTailService {
      * @returns {Promise<string>}
      * @private
      */
-    async _readDelta(filePath, start, end) {
+    async _readDelta(filePath: string, start: number, end: number): Promise<string> {
         const length = end - start;
         if (length <= 0) return "";
         let handle;
@@ -330,7 +339,7 @@ class SystemLogTailService {
      * @param {Map<string, Array<object>>} perConnRows
      * @private
      */
-    _dispatch(perConnRows) {
+    _dispatch(perConnRows: Map<string, Array<Record<string, any>>>) {
         const ts = new Date().toISOString();
         for (const [connId, conn] of this._connections) {
             conn.pollCount++;
@@ -369,7 +378,7 @@ class SystemLogTailService {
      * @param {object} payload
      * @private
      */
-    _safeSend(res, eventName, payload) {
+    _safeSend(res: import('express').Response, eventName: string, payload: Record<string, any>) {
         try {
             res.write(`event: ${eventName}\n`);
             res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -386,7 +395,7 @@ class SystemLogTailService {
      * @param {Error} err
      * @private
      */
-    _onTickError(err) {
+    _onTickError(err: Error) {
         this._consecutiveErrors++;
         logger.error(
             auditLogMessages.SYSTEM_TAIL_TICK_ERROR(err?.message ?? String(err)),

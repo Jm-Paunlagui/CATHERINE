@@ -50,7 +50,7 @@ import { quoteIdentifier } from "../utils";
  *   buildScalarSubquery({ collection: "orders", fn: "sum", field: "total", filter: { userId: "$id" } })
  *   // → '(SELECT SUM("total") FROM "orders" WHERE "userId" = t0."id")'
  */
-function buildScalarSubquery(spec, outerAlias = "t0") {
+function buildScalarSubquery(spec: { collection: string; fn?: string; filter?: Record<string, any>; field?: string; }, outerAlias: string = "t0"): string {
   const { collection, fn, filter = {}, field } = spec;
   const fnUpper = (fn || "count").toUpperCase();
 
@@ -101,7 +101,7 @@ function buildScalarSubquery(spec, outerAlias = "t0") {
  * @param {string} [outerAlias='t0'] - Alias of the outer table
  * @returns {string} e.g. 'EXISTS (SELECT 1 FROM "orders" WHERE "userId" = t0."id")'
  */
-function buildExistsSubquery(spec, outerAlias = "t0") {
+function buildExistsSubquery(spec: { collection: string; match: Record<string, any>; }, outerAlias: string = "t0"): string {
   const { collection, match } = spec;
   const whereParts = [];
   for (const [col, val] of Object.entries(match)) {
@@ -125,7 +125,7 @@ function buildExistsSubquery(spec, outerAlias = "t0") {
  * @param {string} [outerAlias='t0']
  * @returns {string} e.g. 'NOT EXISTS (SELECT 1 FROM "orders" WHERE ...)'
  */
-function buildNotExistsSubquery(spec, outerAlias = "t0") {
+function buildNotExistsSubquery(spec: Record<string, any>, outerAlias: string = "t0"): string {
   const inner = buildExistsSubquery(spec, outerAlias);
   return `NOT ${inner}`;
 }
@@ -142,7 +142,7 @@ function buildNotExistsSubquery(spec, outerAlias = "t0") {
  * @param {string} [outerAlias='t0']
  * @returns {string} e.g. '(SELECT AVG("salary") FROM "employees" WHERE "dept" = t0."dept")'
  */
-function buildCorrelatedSubquery(spec, outerAlias = "t0") {
+function buildCorrelatedSubquery(spec: { collection: string; field: string; aggregate?: string; where?: Record<string, any>; }, outerAlias: string = "t0"): string {
   const { collection, field, aggregate, where = {} } = spec;
   const aggFn = (aggregate || "$avg").replace("$", "").toUpperCase();
   const aggExpr = `${aggFn}(${quoteIdentifier(field)})`;
@@ -169,7 +169,7 @@ function buildCorrelatedSubquery(spec, outerAlias = "t0") {
  * @param {QueryBuilder} queryBuilder - A configured QueryBuilder (not yet executed)
  * @returns {string} e.g. 'IN (SELECT "id" FROM "users" WHERE ...)'
  */
-function buildInSelectSubquery(queryBuilder) {
+function buildInSelectSubquery(queryBuilder: QueryBuilder): string {
   const { sql } = queryBuilder._buildSQL();
   return `IN (${sql})`;
 }
@@ -182,7 +182,7 @@ function buildInSelectSubquery(queryBuilder) {
  * @param {string} [comparison='ANY'] - 'ANY' or 'ALL'
  * @returns {string} e.g. 'ANY (SELECT "salary" FROM "employees")'
  */
-function buildAnyAllSubquery(spec, comparison = "ANY") {
+function buildAnyAllSubquery(spec: Record<string, any>, comparison: string = "ANY"): string {
   const { collection, field } = spec;
   return `${comparison} (SELECT ${quoteIdentifier(field)} FROM ${quoteIdentifier(collection)})`;
 }

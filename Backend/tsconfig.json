@@ -17,6 +17,9 @@
         "skipLibCheck": true,
 
         "strict": true,
+        // Migration: catch bindings stay `any` (strict makes them `unknown`).
+        // ~200 catch blocks read err.message / err.code directly.
+        "useUnknownInCatchVariables": false,
         "noImplicitOverride": true,
         "noFallthroughCasesInSwitch": true,
         "forceConsistentCasingInFileNames": true

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -32,6 +31,7 @@ import { CacheStore } from "./CacheStore";
 import { logger } from "../../utils/logger";
 
 class CacheRegistry {
+  declare _stores: Map<any, any>;
   constructor() {
     /** @type {Map<string, CacheStore>} */
     this._stores = new Map();
@@ -50,7 +50,7 @@ class CacheRegistry {
    * @returns {CacheStore} The newly created store (useful for one-liner registration).
    * @throws {Error}  If the name is already registered.
    */
-  register(name, options = {}) {
+  register(name: string, options: { ttl?: number; checkPeriod?: number; maxKeys?: number; } = {}): CacheStore {
     if (this._stores.has(name)) {
       throw new Error(
         `CacheRegistry: store "${name}" is already registered. ` +
@@ -73,7 +73,7 @@ class CacheRegistry {
    *   e.g. { sessions: { ttl: 900 }, reports: { ttl: 0 } }
    * @returns {void}
    */
-  registerAll(definitions) {
+  registerAll(definitions: { [s: string]: Record<string, any>; }): void {
     for (const [name, options] of Object.entries(definitions)) {
       this.register(name, options);
     }
@@ -87,7 +87,7 @@ class CacheRegistry {
    * @returns {CacheStore}
    * @throws {Error} If the name has not been registered.
    */
-  resolve(name) {
+  resolve(name: string): CacheStore {
     const store = this._stores.get(name);
     if (!store) {
       const known = [...this._stores.keys()].join(", ") || "(none)";
@@ -104,7 +104,7 @@ class CacheRegistry {
    * @param {string} name
    * @returns {boolean}
    */
-  has(name) {
+  has(name: string): boolean {
     return this._stores.has(name);
   }
 
@@ -124,7 +124,7 @@ class CacheRegistry {
    * Flush a single store by name.
    * @param {string} name
    */
-  flush(name) {
+  flush(name: string) {
     this.resolve(name).flush();
   }
 
@@ -132,7 +132,7 @@ class CacheRegistry {
    * Returns a stats snapshot for every registered store.
    * @returns {Object[]}
    */
-  statsAll() {
+  statsAll(): Record<string, any>[] {
     return [...this._stores.values()].map((s) => s.stats());
   }
 
@@ -140,7 +140,7 @@ class CacheRegistry {
    * Returns aggregate stats plus per-store breakdown.
    * @returns {Object}
    */
-  report() {
+  report(): Record<string, any> {
     const perStore = this.statsAll();
     const totalHits = perStore.reduce((n, s) => n + s.hits, 0);
     const totalMisses = perStore.reduce((n, s) => n + s.misses, 0);
@@ -164,7 +164,7 @@ class CacheRegistry {
    * Returns all registered store names.
    * @returns {string[]}
    */
-  names() {
+  names(): string[] {
     return [...this._stores.keys()];
   }
 }

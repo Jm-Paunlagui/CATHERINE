@@ -125,7 +125,7 @@ const SMTP_MAX_DELAY_MS = 8000;
  * @param {number} fallbackValue
  * @returns {number}
  */
-function envInt(name, fallbackValue) {
+function envInt(name: string, fallbackValue: number): number {
     const raw = Number(process.env[name]);
     return Number.isInteger(raw) && raw > 0 ? raw : fallbackValue;
 }
@@ -138,7 +138,7 @@ function envInt(name, fallbackValue) {
  * @param {*} err
  * @returns {string|null}
  */
-function extractSmtpErrorCode(err) {
+function extractSmtpErrorCode(err: any): string | null {
     if (!err || typeof err !== "object") return null;
     if (err.responseCode !== undefined && err.responseCode !== null) {
         return String(err.responseCode);
@@ -157,7 +157,7 @@ function extractSmtpErrorCode(err) {
  * @param {number} maxAttempts
  * @returns {number}
  */
-function effectiveCap(classification, maxAttempts) {
+function effectiveCap(classification: string | null, maxAttempts: number): number {
     const capsTable = RetryPolicy.CLASSIFICATION_ATTEMPT_CAPS;
     if (
         classification &&
@@ -170,6 +170,15 @@ function effectiveCap(classification, maxAttempts) {
 }
 
 class EmailProtectionService {
+    declare EmailProtectionService: typeof EmailProtectionService;
+    declare STATUS: Readonly<{
+        DELIVERED: "DELIVERED"; FALLBACK: "FALLBACK"; FAILED: "FAILED";
+        // SMTP accepted the message but REJECTED some of its recipients
+        // (info.rejected non-empty). Only reachable for a multi-recipient send —
+        // a single rejected recipient makes sendMail throw. Deliberately not
+        // retried: a resend would duplicate the message to everyone who did get it.
+        PARTIAL: "PARTIAL";
+    }>;
     /**
      * Sends one email with retried primary delivery and an optional
      * fallback tier. **Never throws.**
@@ -196,7 +205,20 @@ class EmailProtectionService {
      *   smtpErrorCode: string|null,
      * }>}
      */
-    async sendProtected({ buildMailOptions, label = "email", fallback = null } = {}) {
+    async sendProtected({ buildMailOptions, label = "email", fallback = null }: {
+        buildMailOptions: () => Record<string, any>; label?: string; fallback?: {
+            resolveRecipients: () => Promise<string[]>;
+            buildMailOptions: (recipients: string[]) => Record<string, any>;
+        };
+    } = {}): Promise<{
+        status: "DELIVERED" | "FALLBACK" | "FAILED";
+        recipient: string | null;
+        fallbackRecipients: string[];
+        attempts: number;
+        fallbackAttempts: number;
+        cause: string | null;
+        smtpErrorCode: string | null;
+    }> {
         const primaryMaxAttempts = envInt("EMAIL_RETRY_ATTEMPTS", 3);
         const fallbackMaxAttempts = envInt("EMAIL_FALLBACK_RETRY_ATTEMPTS", 3);
         const baseDelayMs = envInt("EMAIL_RETRY_BASE_DELAY_MS", 500);
@@ -210,7 +232,7 @@ class EmailProtectionService {
         });
 
         let primaryAttempts = 0;
-        let primaryRecipient = null;
+        let primaryRecipient: any = null;
         let primaryCause = null;
         let primaryErrorCode = null;
 
@@ -313,7 +335,7 @@ class EmailProtectionService {
             };
         }
 
-        let fallbackRecipients = [];
+        let fallbackRecipients: any[] = [];
         let resolveError = null;
         try {
             fallbackRecipients = (await fallback.resolveRecipients()) ?? [];
@@ -365,7 +387,7 @@ class EmailProtectionService {
             await fallbackPolicy.execute(
                 async (attempt) => {
                     fallbackAttempts = attempt;
-                    const mailOptions = fallback.buildMailOptions(fallbackRecipients);
+                    const mailOptions: any[] = fallback.buildMailOptions(fallbackRecipients);
                     return SharedTransporter.getTransporter().sendMail(mailOptions);
                 },
                 {
@@ -386,7 +408,7 @@ class EmailProtectionService {
                 },
             );
 
-            const maskedFallbackRecipients = fallbackRecipients
+            const maskedFallbackRecipients: any[] = fallbackRecipients
                 .map(maskEmail)
                 .join(", ");
             logger.debug(

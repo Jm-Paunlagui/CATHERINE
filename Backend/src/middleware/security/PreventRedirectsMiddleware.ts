@@ -7,9 +7,11 @@
  * predictable for SPA / mobile clients.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { getStatusTitle } from "../../constants/responses";
 
 class PreventRedirectsMiddleware {
+  declare _redirectStatusMessages: { 300: string; 301: string; 302: string; 303: string; 304: string; 307: string; 308: string; };
   constructor() {
     this._redirectStatusMessages = {
       300: "Multiple Choices",
@@ -24,7 +26,7 @@ class PreventRedirectsMiddleware {
     this.handle = this.handle.bind(this);
   }
 
-  handle(req, res, next) {
+  handle(req: Request, res: Response, next: NextFunction) {
     const messages = this._redirectStatusMessages;
 
     res.redirect = function (statusOrUrl, url) {

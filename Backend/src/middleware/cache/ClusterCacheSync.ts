@@ -59,7 +59,7 @@ class ClusterCacheSync {
     static _cluster = cluster;
 
     /** Injectable sender (defaults to process.send when available). */
-    static _send = (msg) => process.send(msg);
+    static _send = (msg: any) => process.send(msg);
 
     /**
      * Injectable IPC-availability predicate (substituted in unit tests).
@@ -97,7 +97,7 @@ class ClusterCacheSync {
      * @param {string|string[]} [arg] - Keys (del) or pattern (delByPattern)
      * @returns {void}
      */
-    static broadcast(storeName, op, arg) {
+    static broadcast(storeName: string, op: 'del' | 'delByPattern' | 'flush', arg: string | string[]): void {
         if (!ClusterCacheSync.isWorker) return;
         if (ClusterCacheSync._applyingRemote) return;
         try {
@@ -120,7 +120,7 @@ class ClusterCacheSync {
      * @param {{ ch: string, store: string, op: string, arg: * }} msg
      * @returns {boolean} true when the message was a cache-sync op and applied
      */
-    static applyRemote(registry, msg) {
+    static applyRemote(registry: import('./CacheRegistry').CacheRegistry, msg: { ch: string; store: string; op: string; arg: any; }): boolean {
         if (!msg || msg.ch !== CHANNEL) return false;
 
         let store;
@@ -164,7 +164,7 @@ class ClusterCacheSync {
      * @param {import('./CacheRegistry').CacheRegistry} registry
      * @returns {boolean} true when the listener was installed
      */
-    static initWorker(registry) {
+    static initWorker(registry: import('./CacheRegistry').CacheRegistry): boolean {
         if (!ClusterCacheSync.isWorker) return false;
         process.on("message", (msg) =>
             ClusterCacheSync.applyRemote(registry, msg),
@@ -179,7 +179,7 @@ class ClusterCacheSync {
      *
      * @returns {void}
      */
-    static initPrimary() {
+    static initPrimary(): void {
         const c = ClusterCacheSync._cluster;
         c.on("message", (worker, msg) => {
             if (!msg || msg.ch !== CHANNEL) return;

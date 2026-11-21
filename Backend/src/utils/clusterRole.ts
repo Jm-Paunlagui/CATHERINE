@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -103,7 +102,7 @@ class ClusterRole {
      * @param {string}  [opts.cronLeaderEnv] - process.env.CRON_LEADER value
      * @returns {boolean}
      */
-    static isCronLeader({ isWorker = false, cronLeaderEnv } = {}) {
+    static isCronLeader({ isWorker = false, cronLeaderEnv }: { isWorker?: boolean; cronLeaderEnv?: string; } = {}): boolean {
         if (!isWorker) return true; // single-process / primary-as-worker
         return cronLeaderEnv === CRON_LEADER_TRUE;
     }
@@ -115,7 +114,7 @@ class ClusterRole {
      * @param {boolean} isLeader
      * @returns {"true"|"false"}
      */
-    static cronLeaderEnv(isLeader) {
+    static cronLeaderEnv(isLeader: boolean): "true" | "false" {
         return isLeader ? CRON_LEADER_TRUE : CRON_LEADER_FALSE;
     }
 
@@ -145,7 +144,7 @@ class ClusterRole {
      *   ClusterRole.electionHealth(["true", "true", "false"]);
      *   // => { leaderCount: 2, healthy: false, severity: "critical" }
      */
-    static electionHealth(envs = []) {
+    static electionHealth(envs: Array<string | undefined> = []): { leaderCount: number; healthy: boolean; severity: "ok" | "critical"; } {
         const leaderCount = envs.filter(
             (env) => env === CRON_LEADER_TRUE,
         ).length;

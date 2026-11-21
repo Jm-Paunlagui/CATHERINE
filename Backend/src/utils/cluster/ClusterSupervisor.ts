@@ -44,23 +44,34 @@ class ClusterSupervisor {
     static SIGNALS = Object.freeze(["SIGTERM", "SIGINT", "SIGBREAK"]);
 
     /** @type {Map<number, object>} live workers by id */
-    #live = new Map();
+    #live: Map<number, Record<string, any>> = new Map();
     /** @type {Map<number, string>} worker.id -> "true" | "false" (CRON_LEADER env) */
-    #workerLeaderEnv = new Map();
+    #workerLeaderEnv: Map<number, string> = new Map();
     /** @type {Map<ReturnType<typeof setTimeout>, boolean>} pending respawn timer -> wasLeader */
-    #pendingRespawns = new Map();
+    #pendingRespawns: Map<ReturnType<typeof setTimeout>, boolean> = new Map();
     /** @type {Set<number>} workers that emitted `listening` (past boot) */
-    #listening = new Set();
+    #listening: Set<number> = new Set();
     #cronLeaderId = null;
     #stopping = false;
     #fatal = false;
     #maxExitCode = 0;
     #minExitCode = 0;
     /** @type {number[]} timestamps of recent worker exits */
-    #exitTimes = [];
+    #exitTimes: number[] = [];
     #failsafeTimer = null;
     #started = false;
     #finished = false;
+    declare _runId: string;
+    declare _rpcHub: import("./ClusterRpcHub").ClusterRpcHub;
+    declare _now: () => number;
+    declare _process: NodeJS.EventEmitter & { exit: ((...args: any[]) => any); pid?: number; };
+    declare _clusterRole: { electionHealth: ((...args: any[]) => any); cronLeaderEnv: ((...args: any[]) => any); };
+    declare _notifyCritical: (message: string) => Promise<any>;
+    declare _logger: Record<string, any>;
+    declare _marginMs: number;
+    declare _forcedExitMs: number;
+    declare _numWorkers: number;
+    declare _cluster: import("cluster").Cluster;
 
     /**
      * @param {object} deps
@@ -90,7 +101,7 @@ class ClusterSupervisor {
         now = Date.now,
         rpcHub = null,
         runId = crypto.randomUUID(),
-    }) {
+    }: { cluster: import("cluster").Cluster; numWorkers: number; forcedExitMs: number; marginMs: number; logger: Record<string, any>; notifyCritical: (message: string) => Promise<any>; clusterRole: { electionHealth: ((...args: any[]) => any); cronLeaderEnv: ((...args: any[]) => any); }; processRef?: NodeJS.EventEmitter & { exit: ((...args: any[]) => any); pid?: number; }; now?: () => number; rpcHub?: import("./ClusterRpcHub").ClusterRpcHub; runId?: string; }) {
         this._cluster = cluster;
         this._numWorkers = numWorkers;
         this._forcedExitMs = forcedExitMs;
@@ -105,27 +116,27 @@ class ClusterSupervisor {
     }
 
     /** @returns {boolean} a stop is in progress */
-    get stopping() {
+    get stopping(): boolean {
         return this.#stopping;
     }
 
     /** @returns {boolean} respawning is permanently disabled */
-    get fatal() {
+    get fatal(): boolean {
         return this.#fatal;
     }
 
     /** @returns {number} live worker count */
-    get liveCount() {
+    get liveCount(): number {
         return this.#live.size;
     }
 
     /** @returns {object[]} live worker objects (snapshot array) */
-    getLiveWorkers() {
+    getLiveWorkers(): Record<string, any>[] {
         return [...this.#live.values()];
     }
 
     /** @returns {object|null} the live cron-leader worker, or null */
-    getLeader() {
+    getLeader(): Record<string, any> | null {
         return this.#live.get(this.#cronLeaderId) ?? null;
     }
 
@@ -166,7 +177,7 @@ class ClusterSupervisor {
      * @param {string} signal
      * @param {{minExitCode?: number}} [opts] - `minExitCode` 1 for fatal-driven stops.
      */
-    shutdown(signal, { minExitCode = 0 } = {}) {
+    shutdown(signal: string, { minExitCode = 0 }: { minExitCode?: number; } = {}) {
         this.#minExitCode = Math.max(this.#minExitCode, minExitCode);
         if (this.#stopping) return;
         this.#stopping = true;
@@ -185,7 +196,7 @@ class ClusterSupervisor {
 
     // ── Election (moved verbatim from server.ts) ────────────────────────────
 
-    _forkWorker(isCronLeader) {
+    _forkWorker(isCronLeader: any) {
         const env = this._clusterRole.cronLeaderEnv(isCronLeader);
         const worker = this._cluster.fork({ CRON_LEADER: env, [SERVER_RUN_MARKER.CLUSTER_RUN_ID_ENV]: this._runId });
         this.#live.set(worker.id, worker);
@@ -203,7 +214,7 @@ class ClusterSupervisor {
      *
      * @param {string} message
      */
-    _notifyLeaderInvariantBreach(message) {
+    _notifyLeaderInvariantBreach(message: string) {
         try {
             Promise.resolve(this._notifyCritical(message)).catch(() => {});
         } catch (_) {
@@ -220,7 +231,7 @@ class ClusterSupervisor {
      * @param {string} context
      * @returns {number|null} leader count, null when skipped
      */
-    _verifyLeaderInvariant(context) {
+    _verifyLeaderInvariant(context: string): number | null {
         if (this.#stopping || this.#fatal || this.#pendingRespawns.size > 0) return null;
         const log = this._logger;
         const { leaderCount, severity } = this._clusterRole.electionHealth([...this.#workerLeaderEnv.values()]);
@@ -240,11 +251,11 @@ class ClusterSupervisor {
     // ── Cluster events ──────────────────────────────────────────────────────
 
     /** Visibility only; the respawn always happens on "exit". */
-    _onDisconnect(worker) {
+    _onDisconnect(worker: any) {
         this._logger.warning(middlewareMessages.CRON_WORKER_DISCONNECTED(worker.process?.pid, worker.id));
     }
 
-    _onExit(worker, code, signal) {
+    _onExit(worker: any, code: any, signal: any) {
         const wasCronLeader = worker.id === this.#cronLeaderId;
         this.#live.delete(worker.id);
         this.#workerLeaderEnv.delete(worker.id);
@@ -306,7 +317,7 @@ class ClusterSupervisor {
         this.#pendingRespawns.set(timer, wasCronLeader);
     }
 
-    _tripCrashLoop(exits) {
+    _tripCrashLoop(exits: any) {
         this.#fatal = true;
         this._clearPendingRespawns();
         const message = clusterMessages.CLUSTER_CRASH_LOOP_TRIPPED(exits, ClusterSupervisor.CRASH_LOOP_WINDOW_MS);
@@ -328,7 +339,7 @@ class ClusterSupervisor {
      * @param {object} worker
      * @param {*} msg
      */
-    _onMessage(worker, msg) {
+    _onMessage(worker: Record<string, any>, msg: any) {
         if (!msg || typeof msg !== "object") return;
         if (this._rpcHub?.handleMessage(worker, msg)) return;
         if (msg.cmd === CLUSTER_IPC.BOOT_FATAL) {
@@ -339,7 +350,7 @@ class ClusterSupervisor {
     }
 
     /** A worker cannot start (PFX missing, port taken): stop everything, no fork storm. Ignored once the worker has emitted `listening`. */
-    _onBootFatal(worker, code) {
+    _onBootFatal(worker: any, code: any) {
         if (this.#fatal) return;
         if (this.#listening.has(worker.id)) {
             // Already serving: not a boot failure (a runtime EACCES in one worker).
@@ -355,7 +366,7 @@ class ClusterSupervisor {
     }
 
     /** Forwards a non-leader worker's critical log to the current cron leader. */
-    _relayCritical(fromWorker, msg) {
+    _relayCritical(fromWorker: any, msg: any) {
         if (this.#stopping) return;
         const leader = this.#live.get(this.#cronLeaderId);
         if (!leader || leader.id === fromWorker.id) {
@@ -377,7 +388,7 @@ class ClusterSupervisor {
     }
 
     /** @returns {boolean} whether the send was attempted without throwing */
-    _send(worker, message) {
+    _send(worker: any, message: any): boolean {
         try {
             worker.send(message);
             return true;
@@ -395,7 +406,7 @@ class ClusterSupervisor {
     }
 
     /** Failsafe: SIGKILL what is left, bounded critical email, exit 1. */
-    async _forceExit(ms) {
+    async _forceExit(ms: any) {
         if (this.#finished) return;
         this.#finished = true;
         const log = this._logger;
@@ -442,7 +453,7 @@ class ClusterSupervisor {
         this._exit(1);
     }
 
-    _exit(code) {
+    _exit(code: any) {
         Promise.resolve(this._logger.flush?.(ClusterSupervisor.LOGGER_FLUSH_MS))
             .catch(() => {})
             .finally(() => this._process.exit(code));

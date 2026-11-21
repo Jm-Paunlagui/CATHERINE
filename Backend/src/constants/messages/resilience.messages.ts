@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -20,7 +19,7 @@ const resilienceMessages = {
      *   happens after a failure).
      * @returns {string}
      */
-    ATTEMPT_START: (label, attempt, max) =>
+    ATTEMPT_START: (label: string, attempt: number, max: number): string =>
         `[${label}] Attempt ${attempt}/${max} starting`,
 
     /**
@@ -30,7 +29,7 @@ const resilienceMessages = {
      * @param {number} ms - Elapsed time for the attempt, in milliseconds.
      * @returns {string}
      */
-    ATTEMPT_OK: (label, attempt, ms) =>
+    ATTEMPT_OK: (label: string, attempt: number, ms: number): string =>
         `[${label}] Attempt ${attempt} succeeded in ${ms}ms`,
 
     /**
@@ -43,7 +42,7 @@ const resilienceMessages = {
      * @param {string} cause - `err.message` of the failure.
      * @returns {string}
      */
-    ATTEMPT_FAIL: (label, attempt, classification, cause) =>
+    ATTEMPT_FAIL: (label: string, attempt: number, classification: string | null, cause: string): string =>
         `[${label}] Attempt ${attempt} failed (classification=${classification ?? "none"}): ${cause}`,
 
     /**
@@ -53,7 +52,7 @@ const resilienceMessages = {
      * @param {number} delayMs - The actual computed backoff delay (exponential + jitter), in milliseconds.
      * @returns {string}
      */
-    BACKOFF: (label, attempt, delayMs) =>
+    BACKOFF: (label: string, attempt: number, delayMs: number): string =>
         `[${label}] Backing off ${delayMs}ms before retrying attempt ${attempt + 1}`,
 
     /**
@@ -66,7 +65,7 @@ const resilienceMessages = {
      *   record (e.g. a TRXN_ID), when the `onRetry` hook or its resolved value exposes one.
      * @returns {string}
      */
-    IDEMPOTENT_RESOLVE: (label, key) =>
+    IDEMPOTENT_RESOLVE: (label: string, key: string | number | null): string =>
         `[${label}] Idempotency probe found a prior committed result — ack-lost recovery${key ? ` (key=${key})` : ""}, retry loop short-circuited`,
 
     /**
@@ -77,7 +76,7 @@ const resilienceMessages = {
      * @param {string} cause - `err.message` of the failure that triggered the retry.
      * @returns {string}
      */
-    RETRYING: (label, attempt, max, cause) =>
+    RETRYING: (label: string, attempt: number, max: number, cause: string): string =>
         `[${label}] Retry ${attempt}/${max} after transient failure: ${cause}`,
 
     /**
@@ -87,7 +86,7 @@ const resilienceMessages = {
      * @param {string} cause - `err.message` of the final failure.
      * @returns {string}
      */
-    RETRY_EXHAUSTED: (label, attempts, cause) =>
+    RETRY_EXHAUSTED: (label: string, attempts: number, cause: string): string =>
         `[${label}] Retry budget exhausted after ${attempts} attempt(s): ${cause}`,
 
     // ── BatchGuard ───────────────────────────────────────────────────────────
@@ -99,7 +98,7 @@ const resilienceMessages = {
      * @param {number} concurrency - Configured max concurrent in-flight items.
      * @returns {string}
      */
-    BATCH_START: (label, total, concurrency) =>
+    BATCH_START: (label: string, total: number, concurrency: number): string =>
         `[${label}] Batch starting — ${total} item(s), concurrency ${concurrency}`,
 
     /**
@@ -112,7 +111,7 @@ const resilienceMessages = {
      * @param {number} ms - Total elapsed wall-clock time for the batch, in milliseconds.
      * @returns {string}
      */
-    BATCH_DONE: (label, succeeded, failed, pending, ms) =>
+    BATCH_DONE: (label: string, succeeded: number, failed: number, pending: number, ms: number): string =>
         `[${label}] Batch done in ${ms}ms — succeeded=${succeeded} failed=${failed} pending=${pending}`,
 
     /**
@@ -123,7 +122,7 @@ const resilienceMessages = {
      * @param {string} cause - `err.message` of the fatal-session failure that triggered the abort.
      * @returns {string}
      */
-    BATCH_ABORTED: (label, remaining, cause) =>
+    BATCH_ABORTED: (label: string, remaining: number, cause: string): string =>
         `[${label}] Batch aborted after a fatal session error — ${remaining} remaining item(s) moved to pending: ${cause}`,
 
     /**
@@ -136,7 +135,7 @@ const resilienceMessages = {
      * @param {number} budget - The configured cumulative retry budget.
      * @returns {string}
      */
-    BATCH_BUDGET_EXHAUSTED: (label, used, budget) =>
+    BATCH_BUDGET_EXHAUSTED: (label: string, used: number, budget: number): string =>
         `[${label}] Batch retry budget exhausted — ${used}/${budget} retries spent across failed items; remaining un-started item(s) moved to pending to avoid amplifying the outage.`,
 
     /**
@@ -145,7 +144,7 @@ const resilienceMessages = {
      * @param {string} label - BatchGuard label identifying the batch operation.
      * @returns {string}
      */
-    BATCH_REQUEST_ABORTED: (label) =>
+    BATCH_REQUEST_ABORTED: (label: string): string =>
         `REQUEST_ABORTED — [${label}] request was cancelled by the server (no progress); item not attempted.`,
 
     // ── Generic phase marker ─────────────────────────────────────────────────
@@ -157,7 +156,7 @@ const resilienceMessages = {
      * @param {string} detail - Human-readable detail (e.g. "12 stub(s)").
      * @returns {string}
      */
-    PHASE: (label, detail) => `[${label}] ${detail}`,
+    PHASE: (label: string, detail: string): string => `[${label}] ${detail}`,
 
     // ── Email protection ─────────────────────────────────────────────────────
 
@@ -169,7 +168,7 @@ const resilienceMessages = {
      * @param {number} attempt - 1-indexed attempt number that succeeded within its tier.
      * @returns {string}
      */
-    EMAIL_ATTEMPT_OK: (label, recipient, tier, attempt) =>
+    EMAIL_ATTEMPT_OK: (label: string, recipient: string | null, tier: "primary" | "fallback", attempt: number): string =>
         `[${label}] Email delivered via ${tier} tier on attempt ${attempt} to ${recipient ?? "unknown"}`,
 
     /**
@@ -181,7 +180,7 @@ const resilienceMessages = {
      * @param {number} failed - 1 when both tiers failed (or no fallback was usable), else 0.
      * @returns {string}
      */
-    EMAIL_DELIVERY_SUMMARY: (label, delivered, fallbackDelivered, failed) =>
+    EMAIL_DELIVERY_SUMMARY: (label: string, delivered: number, fallbackDelivered: number, failed: number): string =>
         `[${label}] Email delivery summary — delivered=${delivered} fallbackDelivered=${fallbackDelivered} failed=${failed}`,
 
     /**
@@ -192,7 +191,7 @@ const resilienceMessages = {
      * @param {string} cause
      * @returns {string}
      */
-    EMAIL_RETRYING: (label, attempt, max, cause) =>
+    EMAIL_RETRYING: (label: string, attempt: number, max: number, cause: string): string =>
         `[${label}] Email retry ${attempt}/${max} after transient SMTP failure: ${cause}`,
 
     /**
@@ -200,7 +199,7 @@ const resilienceMessages = {
      * @param {string[]|string} recipients - Fallback recipient address(es).
      * @returns {string}
      */
-    EMAIL_FALLBACK: (recipients) =>
+    EMAIL_FALLBACK: (recipients: string[] | string): string =>
         `Primary email delivery failed — falling back to: ${Array.isArray(recipients) ? recipients.join(", ") : recipients}`,
 
     /**
@@ -212,7 +211,7 @@ const resilienceMessages = {
      * @param {string} maskedList
      * @returns {string}
      */
-    EMAIL_PARTIALLY_REJECTED: (label, count, maskedList) =>
+    EMAIL_PARTIALLY_REJECTED: (label: string, count: number, maskedList: string): string =>
         `Email "${label}" was accepted by SMTP but ${count} recipient(s) were rejected: ${maskedList}. Reported as PARTIAL, not delivered.`,
 
     /**
@@ -221,7 +220,7 @@ const resilienceMessages = {
      * @param {string} cause
      * @returns {string}
      */
-    EMAIL_FAILED: (label, cause) =>
+    EMAIL_FAILED: (label: string, cause: string): string =>
         `[${label}] Email delivery failed on both primary and fallback tiers: ${cause}`,
 
     /**
@@ -232,7 +231,7 @@ const resilienceMessages = {
      * @param {string} label - Identifies the specific recipient/stub skipped.
      * @returns {string}
      */
-    EMAIL_BUDGET_EXHAUSTED: (label) =>
+    EMAIL_BUDGET_EXHAUSTED: (label: string): string =>
         `[${label}] Email phase budget exhausted — skipping remaining send(s).`,
 };
 

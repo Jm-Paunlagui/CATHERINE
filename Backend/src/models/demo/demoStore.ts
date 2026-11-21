@@ -25,7 +25,7 @@ const DEMO_PASSWORD = "Demo@123";
 
 // ── Accounts (lazy, memoised — Argon2 hashing is async) ───────────────────────
 
-let _accountsPromise = null;
+let _accountsPromise: any = null;
 
 async function _buildAccounts() {
     const pw = await CryptoVault.hashPassword(DEMO_PASSWORD);
@@ -81,7 +81,7 @@ async function _buildAccounts() {
  * Returns the memoised demo accounts ({ admins, users }), hashing on first call.
  * @returns {Promise<{admins: object[], users: object[]}>}
  */
-function accounts() {
+function accounts(): Promise<{ admins: Record<string, any>[]; users: Record<string, any>[]; }> {
     if (!_accountsPromise) _accountsPromise = _buildAccounts();
     return _accountsPromise;
 }
@@ -98,7 +98,7 @@ const ENDPOINTS = [
     "/api/v1/audit-logs",
 ];
 
-function _statusFor(i) {
+function _statusFor(i: any) {
     const m = i % 100;
     if (m < 80) return i % 2 === 0 ? 200 : 201;
     if (m < 88) return i % 2 === 0 ? 302 : 304;
@@ -146,7 +146,7 @@ function auditLogs() {
     return _auditLogs;
 }
 
-function auditInsert(record) {
+function auditInsert(record: any) {
     _auditLogs.push({ ID: ++_auditSeq, ...record });
     return { rowsAffected: 1 };
 }
@@ -170,7 +170,7 @@ const _fxRates = [
 let _fxSeq = _fxRates.length;
 
 /** All demo FX rate rows (append-only). @returns {object[]} */
-function fxRates() {
+function fxRates(): Record<string, any>[] {
     return _fxRates;
 }
 
@@ -179,7 +179,7 @@ function fxRates() {
  * @param {object} record
  * @returns {{rowsAffected: number, insertedId: number}}
  */
-function fxRateInsert(record) {
+function fxRateInsert(record: Record<string, any>): { rowsAffected: number; insertedId: number; } {
     const id = ++_fxSeq;
     _fxRates.push({ ID: id, ...record });
     return { rowsAffected: 1, insertedId: id };
@@ -199,7 +199,7 @@ const _ledger = [
 let _ledgerSeq = _ledger.length;
 
 /** All demo ledger rows (append-only). @returns {object[]} */
-function ledger() {
+function ledger(): Record<string, any>[] {
     return _ledger;
 }
 
@@ -208,7 +208,7 @@ function ledger() {
  * @param {{DIRECTION: string, AMOUNT: string, MEMO?: string, REVERSES_ID?: number}} record
  * @returns {{rowsAffected: number, insertedId: number}}
  */
-function ledgerInsert(record) {
+function ledgerInsert(record: { DIRECTION: string; AMOUNT: string; MEMO?: string; REVERSES_ID?: number; }): { rowsAffected: number; insertedId: number; } {
     const id = ++_ledgerSeq;
     _ledger.push({
         ID: id,
@@ -229,7 +229,7 @@ function ledgerInsert(record) {
  * @param {string} [memo]
  * @returns {{rowsAffected: number, insertedId: number}}
  */
-function reverseEntry(originalId, memo) {
+function reverseEntry(originalId: number, memo: string): { rowsAffected: number; insertedId: number; } {
     const original = _ledger.find((r) => r.ID === originalId);
     if (!original) {
         throw new Error(`Cannot reverse ledger row ${originalId}: not found.`);
@@ -247,7 +247,7 @@ function reverseEntry(originalId, memo) {
 // Supports the operators the audit/admin queries actually use so the same filter
 // objects work against the in-memory arrays.
 
-function _toComparable(v) {
+function _toComparable(v: any) {
     if (v instanceof Date) return v.getTime();
     if (typeof v === "string") {
         const t = Date.parse(v);
@@ -256,7 +256,7 @@ function _toComparable(v) {
     return v;
 }
 
-function _matchOp(value, op, expected) {
+function _matchOp(value: any, op: any, expected: any) {
     switch (op) {
         case "$eq":
             return value === expected;
@@ -287,16 +287,16 @@ function _matchOp(value, op, expected) {
  * @param {object} filter
  * @returns {boolean}
  */
-function match(row, filter) {
+function match(row: Record<string, any>, filter: Record<string, any>): boolean {
     if (!filter || typeof filter !== "object") return true;
 
     for (const [key, cond] of Object.entries(filter)) {
         if (key === "$or") {
-            if (!cond.some((sub) => match(row, sub))) return false;
+            if (!cond.some((sub: any) => match(row, sub))) return false;
             continue;
         }
         if (key === "$and") {
-            if (!cond.every((sub) => match(row, sub))) return false;
+            if (!cond.every((sub: any) => match(row, sub))) return false;
             continue;
         }
 
@@ -330,37 +330,37 @@ function match(row, filter) {
 // ── Platform tables (empty at boot, mutated in place by the models) ──────────
 
 /** T_AUTH_REFRESH_TOKEN_DEV rows (refresh-token ledger). */
-const _refreshTokens = [];
+const _refreshTokens: any[] = [];
 /** T_SERVER_BACKUP_TOKEN_CONSUMED_DEV — JTI → row. */
 const _backupTokensConsumed = new Map();
 /** T_SERVER_BACKUP_DELETE_VOTE_DEV rows. */
-const _backupVotes = [];
+const _backupVotes: any[] = [];
 let _backupVoteSeq = 0;
 /** T_SYSTEM_CONFIG_DEV — CONFIG_KEY → row. */
 const _systemConfig = new Map();
 
 /** @returns {object[]} live refresh-token ledger array */
-function refreshTokens() {
+function refreshTokens(): Record<string, any>[] {
     return _refreshTokens;
 }
 
 /** @returns {Map<string, object>} live consumed-backup-token map */
-function backupTokensConsumed() {
+function backupTokensConsumed(): Map<string, Record<string, any>> {
     return _backupTokensConsumed;
 }
 
 /** @returns {object[]} live backup-delete vote array */
-function backupVotes() {
+function backupVotes(): Record<string, any>[] {
     return _backupVotes;
 }
 
 /** @returns {number} next VOTE_ID (identity emulation) */
-function nextBackupVoteId() {
+function nextBackupVoteId(): number {
     return ++_backupVoteSeq;
 }
 
 /** @returns {Map<string, object>} live system-config map */
-function systemConfig() {
+function systemConfig(): Map<string, Record<string, any>> {
     return _systemConfig;
 }
 

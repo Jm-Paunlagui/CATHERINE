@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -34,7 +33,7 @@ class ClientService {
      * @param {object} [user]                 - Authenticated user (req.user); may be undefined.
      * @returns {Promise<void>}
      */
-    static async logError(payload, user) {
+    static async logError(payload: { message: string; stack?: string; componentStack?: string; url?: string; userAgent?: string; timestamp?: string; }, user: Record<string, any>): Promise<void> {
         const { message, stack, componentStack, url, userAgent, timestamp } =
             payload ?? {};
 
@@ -73,7 +72,7 @@ class ClientService {
      * @param {object} [user]           - Authenticated user (req.user); may be undefined.
      * @returns {Promise<void>}
      */
-    static async logHelpMiss(payload, user) {
+    static async logHelpMiss(payload: { query: string; surface?: string; }, user: Record<string, any>): Promise<void> {
         const MAX_QUERY_LEN = 120;
         const raw = typeof payload?.query === "string" ? payload.query : "";
         // Strip control chars (log-injection guard) then bound the length.

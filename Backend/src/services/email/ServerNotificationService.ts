@@ -79,7 +79,7 @@ import RecipientResolver from "./RecipientResolver";
  * filename stem: `<channel>.html` inside `email-templates/server-notification/`.
  * @type {readonly string[]}
  */
-const CHANNELS = Object.freeze([
+const CHANNELS: readonly string[] = Object.freeze([
     "server-critical-notification",
     "server-dependencies-notification",
     "server-red-metrics-notification",
@@ -107,7 +107,7 @@ const DETAILS_NOTE = Object.freeze({
  * @param {string|number|null|undefined} value
  * @returns {string}
  */
-function escapeHtml(value) {
+function escapeHtml(value: string | number | null | undefined): string {
     if (value == null) return "";
     return String(value)
         .replace(/&/g, "&amp;")
@@ -118,6 +118,14 @@ function escapeHtml(value) {
 }
 
 class ServerNotificationService {
+    declare DETAILS_NOTE: Readonly<{ ALERT_TAB: "Full details are in the server logs and the Logging & Observability alert tab."; LOGS_ONLY: "Full details are in the server logs."; }>;
+    declare ServerNotificationService: typeof ServerNotificationService;
+    declare _recentSends: never[];
+    declare _assetsDir: string;
+    declare _templateDir: string;
+    declare _transporter: import("nodemailer").Transporter<import("nodemailer").SentMessageInfo, import("nodemailer").TransportOptions>;
+    declare maskEmail: typeof maskEmail;
+    declare CHANNELS: any;
     constructor() {
         // CWE-400: SharedTransporter carries explicit connect/greeting/socket
         // timeouts — never a new transporter per service (established rule).
@@ -151,7 +159,7 @@ class ServerNotificationService {
      *
      * @returns {boolean}
      */
-    isEnabled() {
+    isEnabled(): boolean {
         return String(process.env.ENABLE_SERVER_NOTIFICATIONS).toLowerCase() === "true";
     }
 
@@ -180,7 +188,7 @@ class ServerNotificationService {
      * @param {string} channel - One of `CHANNELS`
      * @returns {Promise<string[]>} Deduplicated, trimmed recipient email addresses
      */
-    async resolveRecipients(channel) {
+    async resolveRecipients(channel: string): Promise<string[]> {
         const raw = process.env.SERVER_NOTIFY_TO || "";
         const envFloor = raw
             .split(",")
@@ -191,7 +199,7 @@ class ServerNotificationService {
         // With the database answering it is left out (an admin whose opt-in address
         // differs from it was emailed twice); with the database down, or with
         // nobody opted in, it is the only recipient.
-        let dbOptIns = [];
+        let dbOptIns: any[] = [];
         let dbUp = false;
         try {
             ({ dbUp, emails: dbOptIns } = await RecipientResolver.getDbRecipientsWithState(channel));
@@ -205,7 +213,7 @@ class ServerNotificationService {
             );
         }
 
-        const source = dbUp && dbOptIns.length > 0 ? dbOptIns : envFloor;
+        const source: any[] = dbUp && dbOptIns.length > 0 ? dbOptIns : envFloor;
         const seen = new Set();
         const out = [];
         for (const email of source) {
@@ -248,7 +256,7 @@ class ServerNotificationService {
      * @param {string}  [payload.firedAt]        - Pre-formatted local timestamp; computed when omitted
      * @returns {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string, recipientCount?: number }>}
      */
-    async sendChannelDigest(channel, payload = {}) {
+    async sendChannelDigest(channel: string, payload: { severity: string; headline: string; summary: string; rows?: Array<Record<string, any>>; throttleNote?: string; detailsNote?: string; kv?: Record<string, any>; notificationId?: string; firedAt?: string; } = {}): Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number; }> {
         const {
             severity,
             headline,
@@ -345,7 +353,7 @@ class ServerNotificationService {
      *
      * @returns {Array<{ channel: string, notificationId: string|null, sent: boolean, headline: string, reason: string|null, at: string }>}
      */
-    getRecentSends() {
+    getRecentSends(): Array<{ channel: string; notificationId: string | null; sent: boolean; headline: string; reason: string | null; at: string; }> {
         return [...this._recentSends];
     }
 
@@ -361,7 +369,7 @@ class ServerNotificationService {
      * @param {string} headline
      * @param {string|null} reason
      */
-    _recordSend(channel, notificationId, sent, headline, reason) {
+    _recordSend(channel: string, notificationId: string | null, sent: boolean, headline: string, reason: string | null) {
         if (this._recentSends.length >= RECENT_SENDS_MAX) this._recentSends.shift();
         this._recentSends.push({
             channel,
@@ -379,7 +387,7 @@ class ServerNotificationService {
      *
      * @returns {string} e.g. "Jul 20, 2026, 10:30 AM UTC+08:00"
      */
-    _formatLocalTime() {
+    _formatLocalTime(): string {
         const offsetMin = dbTimezoneOffsetMinutes();
         const localMs = Date.now() + offsetMin * 60_000;
         const shifted = new Date(localMs);
@@ -400,7 +408,7 @@ class ServerNotificationService {
      *
      * @returns {Array<{ filename: string, path: string, cid: string }>}
      */
-    _logoAttachments() {
+    _logoAttachments(): Array<{ filename: string; path: string; cid: string; }> {
         const logoPathDark = path.join(this._assetsDir, "AUMOVIO_Logo_orange_white_RGB.png");
         const logoPathLight = path.join(this._assetsDir, "AUMOVIO_Logo_orange_black_RGB.png");
 
@@ -424,7 +432,7 @@ class ServerNotificationService {
      * @param {string} channel - Channel key; doubles as the template filename stem
      * @returns {string} Raw HTML string
      */
-    _loadTemplate(channel) {
+    _loadTemplate(channel: string): string {
         return fs.readFileSync(path.join(this._templateDir, `${channel}.html`), "utf8");
     }
 
@@ -446,7 +454,7 @@ class ServerNotificationService {
      * @param {Record<string, string|number>} vars
      * @returns {string} Rendered HTML
      */
-    _fill(html, vars) {
+    _fill(html: string, vars: Record<string, string | number>): string {
         return html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
             if (!Object.prototype.hasOwnProperty.call(vars, key)) return match;
             return escapeHtml(vars[key]);
@@ -463,7 +471,7 @@ class ServerNotificationService {
      * @param {Record<string, string>} vars
      * @returns {string} Rendered HTML
      */
-    _fillRaw(html, vars) {
+    _fillRaw(html: string, vars: Record<string, string>): string {
         return html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
             if (!Object.prototype.hasOwnProperty.call(vars, key)) return match;
             return vars[key] ?? "";
@@ -481,7 +489,7 @@ class ServerNotificationService {
      * @param {boolean} isLast - Whether this is the last row (adds a bottom divider)
      * @returns {string}
      */
-    _buildRow(channel, row, isLast) {
+    _buildRow(channel: string, row: Record<string, any>, isLast: boolean): string {
         // The critical channel also carries metric-rule rows (ORACLE_POOL_DOWN
         // and its RESOLVED); dispatch on row shape like _buildPlainText does.
         return channel === "server-critical-notification" && row.level
@@ -495,7 +503,7 @@ class ServerNotificationService {
      * @param {boolean} isLast
      * @returns {string}
      */
-    _buildCriticalRow({ level, module, message, requestId, time }, isLast) {
+    _buildCriticalRow({ level, module, message, requestId, time }: { level: string; module?: string; message: string; requestId?: string | null; time: string; }, isLast: boolean): string {
         const borderBottom = isLast ? "border-bottom:1px solid #f0f0f0;" : "";
         const sub = requestId
             ? `${escapeHtml(message)} &middot; ${escapeHtml(requestId)}`
@@ -518,7 +526,7 @@ class ServerNotificationService {
      * @param {boolean} isLast
      * @returns {string}
      */
-    _buildMetricRow({ rule, scope, description, severity }, isLast) {
+    _buildMetricRow({ rule, scope, description, severity }: { rule: string; scope?: string; description: string; severity: string; }, isLast: boolean): string {
         const borderBottom = isLast ? "border-bottom:1px solid #f0f0f0;" : "";
         const label =
             scope && scope !== "global"
@@ -542,7 +550,7 @@ class ServerNotificationService {
      * @param {{ headline: string, summary: string, rows: Array<object>, throttleNote: string }} opts
      * @returns {string}
      */
-    _buildPlainText({ headline, summary, rows, throttleNote }) {
+    _buildPlainText({ headline, summary, rows, throttleNote }: { headline: string; summary: string; rows: Array<Record<string, any>>; throttleNote: string; }): string {
         const lines = [`[${process.env.APP_NAME || "CATHERINE"}] ${headline}`, "", summary || "", ""];
         for (const row of rows) {
             if (row.level) {

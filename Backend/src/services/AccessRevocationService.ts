@@ -50,7 +50,7 @@ class AccessRevocationService {
      *
      * @returns {number} ms
      */
-    static retentionMs() {
+    static retentionMs(): number {
         const { ttlMs, raw } = accessTokenTtl();
         if (ttlMs === null) {
             if (!warnedUnparseableTtl) {
@@ -71,7 +71,7 @@ class AccessRevocationService {
      * @param {number} [nowMs=Date.now()]
      * @returns {number} families newly recorded on this process
      */
-    static revoke(familyIds, nowMs = Date.now()) {
+    static revoke(familyIds: Iterable<string>, nowMs: number = Date.now()): number {
         const untilMs = nowMs + AccessRevocationService.retentionMs();
         const entries = [];
         for (const fid of new Set(Array.isArray(familyIds) ? familyIds : [])) {
@@ -88,7 +88,7 @@ class AccessRevocationService {
      * @param {number} [nowMs]
      * @returns {boolean} true when the token's session was ended
      */
-    static isRevoked(fid, nowMs = Date.now()) {
+    static isRevoked(fid: string | undefined, nowMs: number = Date.now()): boolean {
         return revokedSessions.has(fid, nowMs);
     }
 
@@ -99,7 +99,7 @@ class AccessRevocationService {
      * @param {{fid: string, untilMs: number}[]} entries
      * @returns {number} families newly recorded
      */
-    static applyRemote(entries) {
+    static applyRemote(entries: { fid: string; untilMs: number; }[]): number {
         return AccessRevocationService.#applyLocal(Array.isArray(entries) ? entries : []);
     }
 
@@ -111,7 +111,7 @@ class AccessRevocationService {
      * @param {number} [nowMs=Date.now()]
      * @returns {Promise<number>} families loaded
      */
-    static async loadRecent(nowMs = Date.now()) {
+    static async loadRecent(nowMs: number = Date.now()): Promise<number> {
         const retention = AccessRevocationService.retentionMs();
         try {
             const rows = await AuthRefreshTokenModel.findRevokedSince(
@@ -132,7 +132,7 @@ class AccessRevocationService {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    static #applyLocal(entries, { endStreams = true } = {}) {
+    static #applyLocal(entries: any, { endStreams = true } = {}) {
         let added = 0;
         for (const { fid, untilMs } of entries) {
             const r = revokedSessions.revoke(fid, untilMs);
@@ -141,11 +141,11 @@ class AccessRevocationService {
         }
         // Live streams were authenticated once, at open: end the ones of an
         // ended session too (none exist yet at boot).
-        if (endStreams && entries.length > 0) SseConnectionRegistry.endFamilies(entries.map((e) => e.fid));
+        if (endStreams && entries.length > 0) SseConnectionRegistry.endFamilies(entries.map((e: any) => e.fid));
         return added;
     }
 
-    static #broadcast(entries) {
+    static #broadcast(entries: any) {
         if (!clusterRpc.active || entries.length === 0) return;
         const max = ACCESS_REVOCATION_LIMITS.MAX_FIDS_PER_MESSAGE;
         for (let i = 0; i < entries.length; i += max) {

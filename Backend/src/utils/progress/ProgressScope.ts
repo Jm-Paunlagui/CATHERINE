@@ -26,6 +26,19 @@
  */
 
 class ProgressScope {
+    declare createdAt: any;
+    declare _abortError: null;
+    declare _controller: AbortController;
+    declare _hooks: Set<unknown>;
+    declare _children: Set<unknown>;
+    declare _busy: Map<any, any>;
+    declare _followed: null;
+    declare _lastSource: string;
+    declare _ownAt: number;
+    declare _now: () => number;
+    declare _parent: ProgressScope | null;
+    declare idleLimitMs: number;
+    declare label: string;
     /**
      * @param {object} options
      * @param {string} options.label - Human label for logs.
@@ -33,7 +46,7 @@ class ProgressScope {
      * @param {ProgressScope|null} [options.parent=null] - Parent scope (receives touches, propagates aborts down).
      * @param {() => number} [options.now=Date.now] - Clock (injectable for tests).
      */
-    constructor({ label, idleLimitMs, parent = null, now = Date.now } = {}) {
+    constructor({ label, idleLimitMs, parent = null, now = Date.now }: { label: string; idleLimitMs: number; parent?: ProgressScope | null; now?: () => number; } = {}) {
         this.label = label ?? "scope";
         this.idleLimitMs = idleLimitMs ?? Infinity;
         this._parent = parent;
@@ -56,22 +69,22 @@ class ProgressScope {
     }
 
     /** @returns {AbortSignal} Aborted when `abort()` is called. */
-    get signal() {
+    get signal(): AbortSignal {
         return this._controller.signal;
     }
 
     /** @returns {boolean} */
-    get aborted() {
+    get aborted(): boolean {
         return this._abortError !== null;
     }
 
     /** @returns {Error|null} The error passed to `abort()`. */
-    get abortError() {
+    get abortError(): Error | null {
         return this._abortError;
     }
 
     /** @returns {string} Source of the most recent own `touch()`. */
-    get lastSource() {
+    get lastSource(): string {
         return this._lastSource;
     }
 
@@ -79,7 +92,7 @@ class ProgressScope {
      * Effective last-progress time: max(own, followed scope's effective).
      * @returns {number} epoch ms
      */
-    get lastProgressAt() {
+    get lastProgressAt(): number {
         const followed = this._followed;
         return followed
             ? Math.max(this._ownAt, followed.lastProgressAt)
@@ -90,7 +103,7 @@ class ProgressScope {
      * Record that progress happened. Forwards to the parent. No-op once aborted.
      * @param {string} [source="unknown"] - What made progress (for the stall log).
      */
-    touch(source = "unknown") {
+    touch(source: string = "unknown") {
         if (this._abortError) return;
         this._ownAt = this._now();
         this._lastSource = source;
@@ -101,7 +114,7 @@ class ProgressScope {
      * Treat `scope`'s progress as our own until `unfollow()`.
      * @param {ProgressScope} scope
      */
-    follow(scope) {
+    follow(scope: ProgressScope) {
         this._followed = scope && scope !== this ? scope : null;
     }
 
@@ -111,8 +124,8 @@ class ProgressScope {
      * Propagates to the parent so a guarded child keeps its request alive.
      * @returns {() => void} release (idempotent)
      */
-    markBusy() {
-        const key = {};
+    markBusy(): () => void {
+        const key: Record<string, any> = {};
         this._busy.set(key, this._now());
         const releaseParent = this._parent ? this._parent.markBusy() : null;
         return () => {
@@ -125,7 +138,7 @@ class ProgressScope {
      * Start time of the oldest in-flight call, or null when none.
      * @returns {number|null} epoch ms
      */
-    oldestBusyAt() {
+    oldestBusyAt(): number | null {
         let oldest = null;
         for (const t of this._busy.values()) {
             if (oldest === null || t < oldest) oldest = t;
@@ -143,7 +156,7 @@ class ProgressScope {
      * @param {number} [now] - epoch ms; defaults to the scope clock.
      * @returns {number}
      */
-    idleMs(now = this._now()) {
+    idleMs(now: number = this._now()): number {
         return Math.max(0, now - this.lastProgressAt);
     }
 
@@ -151,7 +164,7 @@ class ProgressScope {
      * Abort the scope (idempotent — only the first error sticks).
      * @param {Error} err
      */
-    abort(err) {
+    abort(err: Error) {
         if (this._abortError) return;
         this._abortError = err ?? new Error("ProgressScope aborted");
         try {
@@ -184,7 +197,7 @@ class ProgressScope {
      * @param {(err: Error) => void} fn
      * @returns {() => void} dispose — unregisters the hook.
      */
-    onAbort(fn) {
+    onAbort(fn: (err: Error) => void): () => void {
         if (this._abortError) {
             try {
                 fn(this._abortError);

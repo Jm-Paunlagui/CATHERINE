@@ -124,7 +124,7 @@ const DEFAULT_RESTORE_BATCH_SIZE = 500;
  * @returns {number}
  * @private
  */
-function _restoreBatchSize() {
+function _restoreBatchSize(): number {
     const n = parseInt(process.env.RESTORE_BATCH_SIZE, 10);
     return Number.isInteger(n) && n > 0 ? n : DEFAULT_RESTORE_BATCH_SIZE;
 }
@@ -136,7 +136,7 @@ function _restoreBatchSize() {
  * @returns {T[][]}
  * @private
  */
-function _chunk(arr, size) {
+function _chunk<T>(arr: T[], size: number): T[][] {
     const out = [];
     for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
     return out;
@@ -163,7 +163,12 @@ class DataRestoreService {
      * @example
      * const report = await DataRestoreService.preview({ zipBuffer: req.file.buffer });
      */
-    static async preview({ zipBuffer }) {
+    static async preview({ zipBuffer }: { zipBuffer: Buffer; }): Promise<{
+        tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, any> | null;
+        rowCounts: Record<string, number>; tablesGettingNewPks: string[];
+        fidelityNotes: string[];
+        archiveMeta: { createdBy: any; createdAt: string | null; requestId: string | null; appVersion: string | null; scopeHash: string | null; };
+    }> {
         const { manifest, dataByTable } =
             await DataRestoreService._verifyAndParseArchive(zipBuffer);
         const report = await DataRestoreService._preflight({
@@ -221,7 +226,11 @@ class DataRestoreService {
         confirmPhrase,
         clientIp = null,
         requestId = null,
-    }) {
+    }: { zipBuffer: Buffer; adminId: number | string; adminPassword: string; confirmPhrase: string; clientIp?: string | null; requestId?: string | null; }): Promise<{
+        kind: string; tables: string[]; totalInserted: number; totalResigned: number;
+        perTable: Array<{ table: string; insertedCount: number; hashesResigned: number; }>;
+        durationMs: number; archiveMeta: Record<string, any>; fidelityNotes: string[];
+    }> {
         const startedAt = Date.now();
 
         // ── Step 0 — re-verify the caller + admin password (mirrors
@@ -324,7 +333,7 @@ class DataRestoreService {
         // remap, ROW_HASH re-sign, commit.
         /** table -> Map<oldPkString, newPkNumber> — identity tables only. */
         const pkMaps = new Map();
-        const perTable = [];
+        const perTable: any[] = [];
         let totalInserted = 0;
         let totalResigned = 0;
         let totalTampered = 0;
@@ -332,7 +341,7 @@ class DataRestoreService {
         const batchSize = _restoreBatchSize();
         const txManager = new Transaction(_db);
 
-        await txManager.withTransaction(async (session) => {
+        await txManager.withTransaction(async (session: any) => {
             for (const entry of getRestoreOrder(preflight.tables)) {
                 const archivedRows = dataByTable[entry.table] ?? [];
                 if (archivedRows.length === 0) {
@@ -371,7 +380,7 @@ class DataRestoreService {
                 let insertedCount = 0;
                 const newPkMap = entry.isIdentity ? new Map() : null;
                 /** @type {Array<{ row: object, original: object, newPk: number|string }>} */
-                const insertedForResign = [];
+                const insertedForResign: Array<{ row: Record<string, any>; original: Record<string, any>; newPk: number | string; }> = [];
 
                 for (const batch of _chunk(remappedRows, batchSize)) {
                     // Batches must run sequentially inside one transaction.
@@ -505,19 +514,19 @@ class DataRestoreService {
      * @param {{ execute: Function }} session - the restore transaction session
      * @returns {Promise<{ signRows: Array<object>, tampered: number }>} rows for bulkUpdateByKeys (ROW_HASH may be null)
      */
-    static async _verifyThenSign(entry, items, session) {
+    static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, any>; original: Record<string, any>; newPk: number | string; }>, session: { execute: ((...args: any[]) => any); }): Promise<{ signRows: Array<Record<string, any>>; tampered: number; }> {
         const domain = entry.rowHashDomain;
         const tsCols = entry.canonicalTimestampColumns ?? [];
         const canonical = new Map();
         if (tsCols.length > 0) {
             for (const group of _chunk(items, 1000)) {
-                const binds = {};
+                const binds: Record<string, any> = {};
                 group.forEach(({ newPk }, i) => {
                     binds[`p${i}`] = newPk;
                 });
                 const list = group.map((_, i) => `:p${i}`).join(", ");
                 // Identifiers come from the purgeTables registry (allow-list), values are binds.
-                const cols = tsCols.map((c) => `TO_CHAR("${c}",'${CANONICAL_TS_FORMAT}') AS "${c}"`).join(", ");
+                const cols = tsCols.map((c: any) => `TO_CHAR("${c}",'${CANONICAL_TS_FORMAT}') AS "${c}"`).join(", ");
                 const res = await session.execute(
                     `SELECT "${entry.pk}", ${cols} FROM "${entry.table}" WHERE "${entry.pk}" IN (${list})`,
                     binds,
@@ -579,7 +588,7 @@ class DataRestoreService {
      * @example
      * DataRestoreService.buildConfirmPhrase(["SERVER_"], 4213); // "RESTORE SERVER_ 4213 ROWS"
      */
-    static buildConfirmPhrase(groups, totalRows) {
+    static buildConfirmPhrase(groups: string[], totalRows: number): string {
         const groupList = [...new Set(groups)].sort().join(", ");
         return `RESTORE ${groupList} ${totalRows} ROWS`;
     }
@@ -598,7 +607,7 @@ class DataRestoreService {
      * @throws {AppError} 400/422 — unreadable, incomplete, malformed, or signature-invalid archive.
      * @private
      */
-    static async _verifyAndParseArchive(zipBuffer) {
+    static async _verifyAndParseArchive(zipBuffer: Buffer): Promise<{ manifest: Record<string, any>; signatureDoc: Record<string, any>; dataByTable: Record<string, Record<string, any>[]>; }> {
         if (!Buffer.isBuffer(zipBuffer) || zipBuffer.length === 0) {
             throw new AppError(
                 PURGE_ERRORS.RESTORE_NO_FILE,
@@ -690,7 +699,7 @@ class DataRestoreService {
                 name.endsWith(".jsonl") &&
                 !zip.files[name].dir,
         );
-        const dataBuffers = {};
+        const dataBuffers: Record<string, any> = {};
         for (const name of dataFileNames) {
             // Sequential zip entry extraction, archives are small.
             dataBuffers[name] = Buffer.from(
@@ -702,7 +711,7 @@ class DataRestoreService {
         // hashed (manifest.json + every data/*.jsonl — never
         // readable/backup-summary.xlsx, which was never part of the signed set).
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const recomputedHashes = {};
+        const recomputedHashes: Record<string, any> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             recomputedHashes[name] = crypto
                 .createHash("sha256")
@@ -776,7 +785,7 @@ class DataRestoreService {
 
         // Parse JSONL rows per table — only reached once the archive is
         // proven authentic.
-        const dataByTable = {};
+        const dataByTable: Record<string, any> = {};
         for (const [name, buf] of Object.entries(dataBuffers)) {
             const table = name.slice(
                 "data/".length,
@@ -785,8 +794,8 @@ class DataRestoreService {
             const text = buf.toString("utf8");
             const rows = text
                 .split("\n")
-                .filter((line) => line.trim() !== "")
-                .map((line) => JSON.parse(line));
+                .filter((line: any) => line.trim() !== "")
+                .map((line: any) => JSON.parse(line));
             dataByTable[table] = rows;
         }
 
@@ -811,7 +820,12 @@ class DataRestoreService {
      * @throws {AppError} 400/403/409/422 — see the individual checks below.
      * @private
      */
-    static async _preflight({ manifest, dataByTable }) {
+    static async _preflight({ manifest, dataByTable }: { manifest: Record<string, any>; dataByTable: Record<string, Record<string, any>[]>; }): Promise<{
+        tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, any> | null;
+        rowCounts: Record<string, number>; tablesGettingNewPks: string[];
+        fidelityNotes: string[];
+        archiveMeta: Record<string, any>;
+    }> {
         // ── schemaVersion ────────────────────────────────────────────────
         if (manifest?.schemaVersion !== BackupArchiveService.SCHEMA_VERSION) {
             throw new AppError(
@@ -873,7 +887,7 @@ class DataRestoreService {
             );
         }
 
-        const protectedNames = requestedTables.filter((t) =>
+        const protectedNames = requestedTables.filter((t: any) =>
             NEVER_PURGE.includes(t),
         );
         if (protectedNames.length > 0) {
@@ -885,7 +899,7 @@ class DataRestoreService {
                 HTTP_STATUS.FORBIDDEN,
                 {
                     type: "AuthorizationError",
-                    details: protectedNames.map((t) => ({
+                    details: protectedNames.map((t: any) => ({
                         field: "tables",
                         issue: `"${t}" is protected and can never be restored.`,
                     })),
@@ -893,7 +907,7 @@ class DataRestoreService {
             );
         }
 
-        const unknownNames = requestedTables.filter((t) => !getEntry(t));
+        const unknownNames = requestedTables.filter((t: any) => !getEntry(t));
         if (unknownNames.length > 0) {
             logger.alert(
                 dataPurgeMessages.RESTORE_MALICIOUS_MANIFEST(unknownNames),
@@ -903,7 +917,7 @@ class DataRestoreService {
                 HTTP_STATUS.FORBIDDEN,
                 {
                     type: "AuthorizationError",
-                    details: unknownNames.map((t) => ({
+                    details: unknownNames.map((t: any) => ({
                         field: "tables",
                         issue: `"${t}" is not a recognised table.`,
                     })),
@@ -958,15 +972,15 @@ class DataRestoreService {
         if (kind === "FULL_SCOPE") {
             const liveCounts = await DataPurgeModel.countRows(requestedTables);
             const nonEmpty = requestedTables
-                .filter((t) => (liveCounts[t] ?? 0) > 0)
-                .map((t) => ({ table: t, liveCount: liveCounts[t] }));
+                .filter((t: any) => (liveCounts[t] ?? 0) > 0)
+                .map((t: any) => ({ table: t, liveCount: liveCounts[t] }));
             if (nonEmpty.length > 0) {
                 throw new AppError(
                     PURGE_ERRORS.RESTORE_TARGET_NOT_EMPTY,
                     HTTP_STATUS.CONFLICT,
                     {
                         type: "ConflictError",
-                        details: nonEmpty.map((n) => ({
+                        details: nonEmpty.map((n: any) => ({
                             field: n.table,
                             issue: `"${n.table}" already has ${n.liveCount} row(s).`,
                         })),
@@ -1054,10 +1068,10 @@ class DataRestoreService {
         const fidelityNotes =
             DataPurgeService.buildFidelityNotes(requestedTables);
         const tablesGettingNewPks = requestedTables.filter(
-            (t) => getEntry(t).isIdentity,
+            (t: any) => getEntry(t).isIdentity,
         );
         const rowCounts = Object.fromEntries(
-            requestedTables.map((t) => [t, (dataByTable[t] ?? []).length]),
+            requestedTables.map((t: any) => [t, (dataByTable[t] ?? []).length]),
         );
 
         return {
@@ -1098,7 +1112,7 @@ class DataRestoreService {
         durationMs,
         clientIp,
         requestId,
-    }) {
+    }: Record<string, any>): Promise<void> {
         await AuditLogModel.insert({
             REQUEST_ID: requestId ?? `restore-${Date.now()}`,
             USER_ID: Number.isFinite(Number(adminId))

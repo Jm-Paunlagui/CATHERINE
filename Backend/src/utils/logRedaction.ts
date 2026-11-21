@@ -126,7 +126,7 @@ const TOKEN_PREFIX = Object.freeze({
 });
 
 /** Lazily-derived, memoised HKDF key. See module docblock. */
-let _cachedKey = null;
+let _cachedKey: any = null;
 
 /**
  * Derives (once) and returns the HMAC key used for pseudonymisation.
@@ -139,7 +139,7 @@ let _cachedKey = null;
  *
  * @returns {Buffer}
  */
-function getKey() {
+function getKey(): Buffer {
     if (_cachedKey) return _cachedKey;
     const secret = process.env.DATA_SIGNING_SECRET || "unkeyed-dev";
     _cachedKey = Buffer.from(
@@ -163,7 +163,7 @@ function getKey() {
  * @param {string|number} value - The raw identifier value.
  * @returns {string} e.g. "emp_a3f19c2b4d"
  */
-function pseudonymize(klass, value) {
+function pseudonymize(klass: string, value: string | number): string {
     const key = getKey();
     const digest = crypto
         .createHmac("sha256", key)
@@ -182,7 +182,7 @@ function pseudonymize(klass, value) {
  * @param {string} klass - Hash-input class for `pseudonymize`.
  * @returns {string}
  */
-function replaceTail(match, digits, klass) {
+function replaceTail(match: string, digits: string, klass: string): string {
     const prefix = match.slice(0, match.length - digits.length);
     return prefix + pseudonymize(klass, digits);
 }
@@ -206,7 +206,7 @@ function replaceTail(match, digits, klass) {
  * maskEmail("johndoe@example.com"); // "j******@example.com"
  * maskEmail(["a@example.com", "bee@example.com"]); // ["a*@example.com", "b**@example.com"]
  */
-function maskEmail(email) {
+function maskEmail(email: string | string[]): string | string[] {
     if (Array.isArray(email)) return email.map(maskEmail);
     const str = String(email ?? "");
     const at = str.indexOf("@");
@@ -228,7 +228,7 @@ function maskEmail(email) {
  *   `String.prototype.replace` returns the original reference when there
  *   is no match).
  */
-function scrubString(str) {
+function scrubString(str: string): string {
     return str.replace(IDENTIFIER_RE, (match, ...rest) => {
         const groups = rest[rest.length - 1];
         if (groups.gidList !== undefined) {
@@ -236,7 +236,7 @@ function scrubString(str) {
                 0,
                 match.length - groups.gidList.length,
             );
-            const tokenizedList = groups.gidList.replace(/\d{2,}/g, (d) =>
+            const tokenizedList = groups.gidList.replace(/\d{2,}/g, (d: any) =>
                 pseudonymize("gid", d),
             );
             return prefix + tokenizedList;
@@ -278,7 +278,7 @@ const IDENTIFIER_KEYS = Object.freeze({
 });
 
 /** @returns {string|undefined} The hash class for an identifier-named key. */
-function identifierClassOf(key) {
+function identifierClassOf(key: any): string | undefined {
     return IDENTIFIER_KEYS[String(key).toLowerCase().replace(/[_-]/g, "")];
 }
 
@@ -287,7 +287,7 @@ function identifierClassOf(key) {
  * Digit strings and integers only; anything else goes through the normal
  * scrub (arrays element by element).
  */
-function scrubIdentifierValue(value, klass, state, depth) {
+function scrubIdentifierValue(value: any, klass: any, state: any, depth: any) {
     if (typeof value === "number" && Number.isInteger(value) && value >= 10) {
         return pseudonymize(klass, String(value));
     }
@@ -306,7 +306,7 @@ function scrubIdentifierValue(value, klass, state, depth) {
  * Built-ins whose JSON form carries no own-property data worth walking
  * (or must keep their prototype to serialise at all: `Date#toJSON`).
  */
-function isOpaqueObject(value) {
+function isOpaqueObject(value: any) {
     return (
         value instanceof Date ||
         value instanceof RegExp ||
@@ -325,7 +325,7 @@ function isOpaqueObject(value) {
  * @param {*} value
  * @returns {*}
  */
-function scrubOverBudget(value) {
+function scrubOverBudget(value: any): any {
     if (typeof value === "string") return scrubString(value);
     if (value === null || typeof value !== "object") return value;
     if (isOpaqueObject(value)) return value;
@@ -352,7 +352,7 @@ function scrubOverBudget(value) {
  * with raw addresses. An Error's non-enumerable `message` / `stack` are
  * copied back non-enumerable, scrubbed.
  */
-function scrubInstance(value, state, depth) {
+function scrubInstance(value: any, state: any, depth: any) {
     const copy = Object.create(Object.getPrototypeOf(value));
     if (value instanceof Error) {
         for (const key of ["message", "stack"]) {
@@ -373,7 +373,7 @@ function scrubInstance(value, state, depth) {
 }
 
 /** Scrubs one keyed child, honouring identifier-named keys and the budget. */
-function scrubChild(key, child, state, depth) {
+function scrubChild(key: any, child: any, state: any, depth: any) {
     if (state.nodes >= MAX_NODES) return scrubOverBudget(child);
     state.nodes += 1;
     const klass = identifierClassOf(key);
@@ -383,7 +383,7 @@ function scrubChild(key, child, state, depth) {
 }
 
 /** @returns {boolean} Whether `value` is a plain `{}`/`Object.create(null)` object. */
-function isPlainObject(value) {
+function isPlainObject(value: any): boolean {
     if (value === null || typeof value !== "object") return false;
     const proto = Object.getPrototypeOf(value);
     return proto === Object.prototype || proto === null;
@@ -409,7 +409,7 @@ function isPlainObject(value) {
  * @param {number} [depth]
  * @returns {*}
  */
-function scrubValue(value, state = { nodes: 0 }, depth = 0) {
+function scrubValue(value: any, state: { nodes: number; } = { nodes: 0 }, depth: number = 0): any {
     if (typeof value === "string") return scrubString(value);
 
     if (Array.isArray(value)) {
@@ -429,7 +429,7 @@ function scrubValue(value, state = { nodes: 0 }, depth = 0) {
             return scrubOverBudget(value);
         }
         if (!isPlainObject(value)) return scrubInstance(value, state, depth);
-        const out = {};
+        const out: Record<string, any> = {};
         for (const key of Object.keys(value)) {
             out[key] = scrubChild(key, value[key], state, depth + 1);
         }
@@ -462,9 +462,9 @@ const INTERNAL_KEYS = new Set(["method", "url", "function", "file", "line"]);
  * @param {object} meta
  * @returns {object} A new object; `meta` itself is never modified.
  */
-function scrubMeta(meta) {
+function scrubMeta(meta: Record<string, any>): Record<string, any> {
     if (!meta || typeof meta !== "object") return meta;
-    const clone = {};
+    const clone: Record<string, any> = {};
     const state = { nodes: 0 };
     for (const key of Object.keys(meta)) {
         if (key.startsWith("_") || INTERNAL_KEYS.has(key)) {
@@ -492,7 +492,7 @@ function scrubMeta(meta) {
  * @returns {string[]} 1 element (the raw needle) for non-numeric input,
  *   4 elements (raw + gid/empid/userid tokens) for a digits-only needle.
  */
-function searchCandidates(needle) {
+function searchCandidates(needle: string): string[] {
     const candidates = [needle];
     if (/^\d{2,}$/.test(needle)) {
         candidates.push(pseudonymize("gid", needle));

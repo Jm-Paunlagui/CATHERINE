@@ -72,7 +72,7 @@ const PURGE_SQL = `DELETE FROM ${TABLE}
  * @param {object} rec
  * @returns {object} bind object for INSERT_SQL
  */
-function insertBinds(rec) {
+function insertBinds(rec: Record<string, any>): Record<string, any> {
     return {
         hash: rec.jtiHash,
         fid: rec.familyId,
@@ -90,7 +90,7 @@ function insertBinds(rec) {
  * @param {object} rec
  * @returns {object}
  */
-function demoRow(rec) {
+function demoRow(rec: Record<string, any>): Record<string, any> {
     return {
         JTI_HASH: rec.jtiHash,
         FAMILY_ID: rec.familyId,
@@ -109,7 +109,7 @@ function demoRow(rec) {
  * Demo insert honouring UQ_TARTD_JTI_HASH (a duplicate hash is rejected).
  * @param {object} rec
  */
-function demoInsert(rec) {
+function demoInsert(rec: Record<string, any>) {
     const rows = demo.refreshTokens();
     if (rows.some((r) => r.JTI_HASH === rec.jtiHash)) {
         throw new Error("ORA-00001: unique constraint (UQ_TARTD_JTI_HASH) violated");
@@ -124,12 +124,12 @@ class AuthRefreshTokenModel {
      * @param {{jtiHash: string, familyId: string, userKey: string, roleSource: "user"|"admin", issuedAtMs: number, expiresAtMs: number}} rec
      * @returns {Promise<void>}
      */
-    static async insert(rec) {
+    static async insert(rec: { jtiHash: string; familyId: string; userKey: string; roleSource: "user" | "admin"; issuedAtMs: number; expiresAtMs: number; }): Promise<void> {
         if (isDemoMode()) {
             demoInsert(rec);
             return;
         }
-        await _db.withTransaction((conn) => conn.execute(INSERT_SQL, insertBinds(rec)));
+        await _db.withTransaction((conn: any) => conn.execute(INSERT_SQL, insertBinds(rec)));
     }
 
     /**
@@ -143,7 +143,7 @@ class AuthRefreshTokenModel {
      *   per-process registry vouches for it; see RefreshTokenService)
      * @returns {Promise<{outcome: "ok"|"reused"|"revoked"|"absent"}>}
      */
-    static async rotate({ oldHash, next, now, allowAbsent }) {
+    static async rotate({ oldHash, next, now, allowAbsent }: { oldHash: string; next: Record<string, any>; now: Date; allowAbsent: boolean; }): Promise<{ outcome: "ok" | "reused" | "revoked" | "absent"; }> {
         if (isDemoMode()) {
             // Synchronous body: no await between check and mutation, so two
             // concurrent rotations of the same token cannot both win.
@@ -162,7 +162,7 @@ class AuthRefreshTokenModel {
             if (row.REVOKED_AT) return { outcome: "revoked" };
             return { outcome: "reused" };
         }
-        return _db.withTransaction(async (conn) => {
+        return _db.withTransaction(async (conn: any) => {
             const upd = await conn.execute(ROTATE_SQL, {
                 nowTs: now,
                 newHash: next.jtiHash,
@@ -197,7 +197,7 @@ class AuthRefreshTokenModel {
      * @param {Date} now
      * @returns {Promise<number>} rows revoked
      */
-    static async revokeFamily(familyId, reason, now) {
+    static async revokeFamily(familyId: string, reason: string, now: Date): Promise<number> {
         if (isDemoMode()) {
             let n = 0;
             for (const r of demo.refreshTokens()) {
@@ -209,7 +209,7 @@ class AuthRefreshTokenModel {
             }
             return n;
         }
-        const res = await _db.withTransaction((conn) =>
+        const res = await _db.withTransaction((conn: any) =>
             conn.execute(REVOKE_FAMILY_SQL, { nowTs: now, reason, fid: familyId }),
         );
         return res?.rowsAffected ?? 0;
@@ -223,7 +223,7 @@ class AuthRefreshTokenModel {
      * @param {Date} now
      * @returns {Promise<string[]>} distinct session family ids just revoked
      */
-    static async revokeUser(userKey, reason, now) {
+    static async revokeUser(userKey: string, reason: string, now: Date): Promise<string[]> {
         if (isDemoMode()) {
             const fids = new Set();
             for (const r of demo.refreshTokens()) {
@@ -236,7 +236,7 @@ class AuthRefreshTokenModel {
             return [...fids];
         }
         const { oracledb } = _db;
-        const res = await _db.withTransaction((conn) =>
+        const res = await _db.withTransaction((conn: any) =>
             conn.execute(REVOKE_USER_SQL, {
                 nowTs: now,
                 reason,
@@ -255,7 +255,7 @@ class AuthRefreshTokenModel {
      * @param {number} limit
      * @returns {Promise<{familyId: string, revokedAt: Date}[]>}
      */
-    static async findRevokedSince(since, limit) {
+    static async findRevokedSince(since: Date, limit: number): Promise<{ familyId: string; revokedAt: Date; }[]> {
         if (isDemoMode()) {
             const latest = new Map();
             for (const r of demo.refreshTokens()) {
@@ -267,7 +267,7 @@ class AuthRefreshTokenModel {
                 .slice(0, Math.max(0, Number(limit) || 0))
                 .map(([familyId, revokedAt]) => ({ familyId, revokedAt }));
         }
-        const res = await _db.withConnection((conn) =>
+        const res = await _db.withConnection((conn: any) =>
             conn.execute(
                 RECENTLY_REVOKED_SQL,
                 { sinceTs: since, lim: limit },
@@ -275,8 +275,8 @@ class AuthRefreshTokenModel {
             ),
         );
         return (res?.rows ?? [])
-            .filter((r) => typeof r.FAMILY_ID === "string" && r.REVOKED_AT instanceof Date)
-            .map((r) => ({ familyId: r.FAMILY_ID, revokedAt: r.REVOKED_AT }));
+            .filter((r: any) => typeof r.FAMILY_ID === "string" && r.REVOKED_AT instanceof Date)
+            .map((r: any) => ({ familyId: r.FAMILY_ID, revokedAt: r.REVOKED_AT }));
     }
 
     /**
@@ -286,7 +286,7 @@ class AuthRefreshTokenModel {
      * @param {number} limit
      * @returns {Promise<number>} rows deleted
      */
-    static async purgeExpired(cutoff, limit) {
+    static async purgeExpired(cutoff: Date, limit: number): Promise<number> {
         if (isDemoMode()) {
             const rows = demo.refreshTokens();
             const max = Math.max(0, Number(limit) || 0);
@@ -299,7 +299,7 @@ class AuthRefreshTokenModel {
             }
             return n;
         }
-        const res = await _db.withTransaction((conn) =>
+        const res = await _db.withTransaction((conn: any) =>
             conn.execute(PURGE_SQL, { cutoffTs: cutoff, lim: limit }),
         );
         return res?.rowsAffected ?? 0;

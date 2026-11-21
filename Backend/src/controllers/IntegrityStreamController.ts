@@ -42,9 +42,9 @@ const DELTA_CAP = 500;
  * Subscriptions keyed by `${table}|${scopeJSON}`.
  * @type {Map<string, { key: string, filters: object, cursor: number|null, conns: Map<string, import('express').Response> }>}
  */
-const _subs = new Map();
+const _subs: Map<string, { key: string; filters: Record<string, any>; cursor: number | null; conns: Map<string, import('express').Response>; }> = new Map();
 
-let _pollInterval = null;
+let _pollInterval: any = null;
 let _consecutiveErrors = 0;
 
 /**
@@ -54,7 +54,7 @@ let _consecutiveErrors = 0;
  * @param {string} event
  * @param {object} payload
  */
-function _safeSend(res, event, payload) {
+function _safeSend(res: import('express').Response, event: string, payload: Record<string, any>) {
     try {
         res.write(`event: ${event}\n`);
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -65,8 +65,8 @@ function _safeSend(res, event, payload) {
 }
 
 /** Deterministic subscription key from table + scope filters (sorted keys). */
-function _subKey(table, filters) {
-    const scope = {};
+function _subKey(table: any, filters: any) {
+    const scope: Record<string, any> = {};
     for (const k of Object.keys(filters).sort()) {
         const v = filters[k];
         if (v == null) continue;
@@ -170,7 +170,7 @@ class IntegrityStreamController {
      * @param {import('express').Request} req
      * @param {import('express').Response} res
      */
-    static stream = async (req, res) => {
+    static stream = async (req: import('express').Request, res: import('express').Response) => {
         if (!req.user) {
             sendSsePreflightError(
                 req,

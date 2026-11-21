@@ -75,7 +75,7 @@ const ROLE_LABELS = Object.freeze({
  * @param {*} value
  * @returns {string}
  */
-function _escapeHtml(value) {
+function _escapeHtml(value: any): string {
     if (value == null) return "";
     return String(value)
         .replace(/&/g, "&amp;")
@@ -94,7 +94,7 @@ function _escapeHtml(value) {
  * @param {*} raw
  * @returns {string|null|object}
  */
-function _normaliseOverride(raw) {
+function _normaliseOverride(raw: any): string | null | Record<string, any> {
     if (raw === undefined || raw === null) return null;
     if (typeof raw !== "string") return raw;
     const trimmed = raw.trim();
@@ -114,7 +114,7 @@ class AdminAccessEmailService {
      * @returns {Promise<{ address: string|null, conflict: boolean }>}
      * @throws whatever the account read throws — callers decide how to degrade
      */
-    static async profileContactFor(username) {
+    static async profileContactFor(username: string): Promise<{ address: string | null; conflict: boolean; }> {
         const admin = await AdminModel.findByUsername(String(username));
         let address = credentialAddressOf(admin);
         if (!address) {
@@ -140,7 +140,7 @@ class AdminAccessEmailService {
      * @returns {Promise<{ address: string, source: 'PROFILE'|'OVERRIDE', hint: string }>}
      * @throws {AppError}
      */
-    static async resolveRecipient(username, overrideEmail) {
+    static async resolveRecipient(username: string, overrideEmail: any): Promise<{ address: string; source: 'PROFILE' | 'OVERRIDE'; hint: string; }> {
         const override = _normaliseOverride(overrideEmail);
 
         let profileAddress;
@@ -203,7 +203,7 @@ class AdminAccessEmailService {
      * @param {'granted'|'reset'} params.kind
      * @returns {Promise<{ delivered: boolean, reason?: string, cause?: string }>}
      */
-    static async sendTemporaryPassword({ to, source, username, role, tempPassword, expiresAt, kind }) {
+    static async sendTemporaryPassword({ to, source, username, role, tempPassword, expiresAt, kind }: { to: string; source: 'PROFILE' | 'OVERRIDE'; username: string; role: string; tempPassword: string; expiresAt: number; kind: 'granted' | 'reset'; }): Promise<{ delivered: boolean; reason?: string; cause?: string; }> {
         try {
             const vars = AdminAccessEmailService._buildVars({ username, role, tempPassword, expiresAt, kind });
             const mailOptions = {
@@ -244,7 +244,7 @@ class AdminAccessEmailService {
      * @returns {string} e.g. "Sep 28, 2026, 2:02 PM UTC+08:00"
      * @private
      */
-    static _formatLocalTime(ms) {
+    static _formatLocalTime(ms: number): string {
         const offsetMin = dbTimezoneOffsetMinutes();
         const shifted = new Date(ms + offsetMin * 60_000);
         const sign = offsetMin >= 0 ? "+" : "-";
@@ -269,7 +269,7 @@ class AdminAccessEmailService {
      *
      * @private
      */
-    static _buildVars({ username, role, tempPassword, expiresAt, kind }) {
+    static _buildVars({ username, role, tempPassword, expiresAt, kind }: any) {
         const isReset = kind === EMAIL_KIND.RESET;
         const roleLabel = ROLE_LABELS[role] ?? String(role);
         const expiresAtLabel = AdminAccessEmailService._formatLocalTime(expiresAt);
@@ -304,7 +304,7 @@ class AdminAccessEmailService {
     }
 
     /** @private */
-    static _buildHtml(vars) {
+    static _buildHtml(vars: any) {
         const template = fs.readFileSync(TEMPLATE_PATH, "utf8");
         return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
             if (!Object.prototype.hasOwnProperty.call(vars, key)) return match;
@@ -313,7 +313,7 @@ class AdminAccessEmailService {
     }
 
     /** @private */
-    static _buildPlainText(vars) {
+    static _buildPlainText(vars: any) {
         const lines = [
             vars.headline,
             "",

@@ -33,7 +33,7 @@ const DURATION_MS = Object.freeze({ s: 1_000, m: 60_000, h: 3_600_000, d: 86_400
  * @param {object|null|undefined} payload - Output of jwt.verify.
  * @returns {"access"|"legacy"|"wrong-type"}
  */
-function classifyAccessClaims(payload) {
+function classifyAccessClaims(payload: Record<string, any> | null | undefined): "access" | "legacy" | "wrong-type" {
     if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
         return "wrong-type";
     }
@@ -56,7 +56,7 @@ function classifyAccessClaims(payload) {
  * @param {string} jti
  * @returns {string}
  */
-function hashJti(jti) {
+function hashJti(jti: string): string {
     return crypto.createHash("sha256").update(String(jti), "utf8").digest("hex");
 }
 
@@ -74,7 +74,7 @@ const CREDENTIAL_EPOCH_KDF_LABEL = "app-api:auth:credential-epoch:v1";
  * @param {string} storedHash - T_ADMINS_DEV.PASSWORD as stored
  * @returns {string|null} 16 hex chars, or null when no hash / no secret
  */
-function credentialEpoch(storedHash) {
+function credentialEpoch(storedHash: string): string | null {
     const secret = process.env.JWT_SECRET;
     if (typeof storedHash !== "string" || storedHash === "" || !secret) return null;
     const key = Buffer.from(
@@ -90,7 +90,7 @@ function credentialEpoch(storedHash) {
  * @returns {number}
  * @throws {Error} when the format is not <digits><s|m|h|d>
  */
-function parseDuration(str) {
+function parseDuration(str: string): number {
     const match = /^(\d+)([smhd])$/.exec(String(str).trim());
     if (!match) {
         throw new Error(`Unrecognised duration format: "${str}". Expected e.g. "30m", "8h", "7d".`);
@@ -105,7 +105,7 @@ function parseDuration(str) {
  * @returns {{ttlMs: number|null, raw: string}} `ttlMs` is null when `raw` is
  *   set but not in the s/m/h/d form (jsonwebtoken may still accept it)
  */
-function accessTokenTtl(raw = process.env.JWT_EXPIRES_IN) {
+function accessTokenTtl(raw: string | undefined = process.env.JWT_EXPIRES_IN): { ttlMs: number | null; raw: string; } {
     const value = raw || ACCESS_TOKEN_DEFAULT_EXPIRES_IN;
     try {
         return { ttlMs: parseDuration(value), raw: value };

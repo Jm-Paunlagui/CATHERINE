@@ -124,6 +124,8 @@ import { touch } from "../../utils/progress/progress";
 const kInstrumented = Symbol.for("app.progress.smtp");
 
 class SharedTransporter {
+    declare SharedTransporter: typeof SharedTransporter;
+    declare _transporter: null;
     constructor() {
         /** @type {import("nodemailer").Transporter|null} */
         this._transporter = null;
@@ -136,7 +138,7 @@ class SharedTransporter {
      *
      * @returns {import("nodemailer").TransportOptions}
      */
-    _baseConfig() {
+    _baseConfig(): import("nodemailer").TransportOptions {
         return {
             host: process.env.SMTP_HOST || "localhost",
             port: Number(process.env.SMTP_PORT) || 587,
@@ -172,7 +174,7 @@ class SharedTransporter {
      *
      * @returns {object} Pool options, or `{}` when pooling is disabled.
      */
-    _poolConfig() {
+    _poolConfig(): Record<string, any> {
         // Opt-out, not opt-in: an unthrottled shared transporter is the
         // behavior that lets a bulk path breach the relay cap.
         if (
@@ -181,7 +183,7 @@ class SharedTransporter {
             return {};
         }
 
-        const positiveInt = (raw, fallback) => {
+        const positiveInt = (raw: any, fallback: any) => {
             const n = parseInt(raw, 10);
             return Number.isInteger(n) && n > 0 ? n : fallback;
         };
@@ -205,7 +207,7 @@ class SharedTransporter {
      *
      * @returns {import("nodemailer").Transporter}
      */
-    getTransporter() {
+    getTransporter(): import("nodemailer").Transporter {
         if (!this._transporter) {
             this._transporter = this._instrumentSendMail(
                 nodemailer.createTransport({
@@ -225,12 +227,12 @@ class SharedTransporter {
      * @param {object} transporter - nodemailer transporter.
      * @returns {object} the same transporter.
      */
-    _instrumentSendMail(transporter) {
+    _instrumentSendMail(transporter: Record<string, any>): Record<string, any> {
         const original = transporter?.sendMail;
         if (typeof original !== "function" || transporter[kInstrumented]) {
             return transporter;
         }
-        transporter.sendMail = function instrumentedSendMail(...args) {
+        transporter.sendMail = function instrumentedSendMail(...args: any[]) {
             touch("smtp");
             if (typeof args[args.length - 1] === "function") {
                 return original.apply(this, args);
@@ -256,7 +258,7 @@ class SharedTransporter {
      *
      * @returns {void}
      */
-    closeTransporter() {
+    closeTransporter(): void {
         if (!this._transporter) return;
         try {
             if (typeof this._transporter.close === "function") {
@@ -292,7 +294,7 @@ class SharedTransporter {
      * @returns {import("nodemailer").Transporter} A fresh transporter — never
      *   reused, never shared.
      */
-    createTransport(overrides = {}) {
+    createTransport(overrides: import("nodemailer").TransportOptions = {}): import("nodemailer").Transporter {
         return nodemailer.createTransport({
             ...this._baseConfig(),
             ...overrides,
@@ -316,7 +318,7 @@ class SharedTransporter {
      *
      * @returns {{ ca: Buffer }|undefined}
      */
-    _buildTlsOptions() {
+    _buildTlsOptions(): { ca: Buffer; } | undefined {
         const caFilename = process.env.SMTP_CA_FILE;
         if (!caFilename) return undefined;
 
@@ -356,7 +358,7 @@ class SharedTransporter {
      * @returns {string} `SMTP_FROM` env var, or the documented fallback
      *   address when unset.
      */
-    getDefaultFrom() {
+    getDefaultFrom(): string {
         return process.env.SMTP_FROM || "noreply@app.internal";
     }
 }

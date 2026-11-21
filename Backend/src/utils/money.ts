@@ -60,8 +60,8 @@ const STORAGE_SCALE = 4;
 const MAX_INTEGER_DIGITS = 15;
 
 /** `10n ** BigInt(n)` memoised for small n. @type {Map<number, bigint>} */
-const _pow10Cache = new Map();
-function _pow10(n) {
+const _pow10Cache: Map<number, bigint> = new Map();
+function _pow10(n: any) {
     if (n < 0) throw new RangeError(`_pow10: negative exponent ${n}`);
     let v = _pow10Cache.get(n);
     if (v === undefined) {
@@ -72,17 +72,19 @@ function _pow10(n) {
 }
 
 /** Absolute value of a BigInt. */
-function _absBig(x) {
+function _absBig(x: any) {
     return x < 0n ? -x : x;
 }
 
 class Money {
+    s: number;
+    c: bigint;
     /**
      * @param {bigint} coefficient - Exact coefficient `c` where value = c / 10^scale.
      * @param {number} scale       - Non-negative integer number of decimal places.
      * @private Use {@link Money.from} / {@link Money.zero}.
      */
-    constructor(coefficient, scale) {
+    constructor(coefficient: bigint, scale: number) {
         if (typeof coefficient !== "bigint") {
             throw new AppError("Money coefficient must be a BigInt.", 500, {
                 type: "MoneyError",
@@ -118,7 +120,7 @@ class Money {
      * @param {string|bigint} value
      * @returns {Money}
      */
-    static from(value) {
+    static from(value: string | bigint): Money {
         if (typeof value === "bigint") return new Money(value, 0);
 
         if (typeof value === "number") {
@@ -159,7 +161,7 @@ class Money {
     }
 
     /** The exact zero at scale 0. @returns {Money} */
-    static zero() {
+    static zero(): Money {
         return new Money(0n, 0);
     }
 
@@ -171,7 +173,7 @@ class Money {
      * an exact multiply by a power of ten; it never rounds.
      * @private
      */
-    static _align(a, b) {
+    static _align(a: any, b: any) {
         if (a.s === b.s) return [a.c, b.c, a.s];
         if (a.s > b.s) return [a.c, b.c * _pow10(a.s - b.s), a.s];
         return [a.c * _pow10(b.s - a.s), b.c, b.s];
@@ -180,13 +182,13 @@ class Money {
     // ── Exact arithmetic (never rounds) ──────────────────────────────────────
 
     /** @param {Money} other @returns {Money} exact sum. */
-    add(other) {
+    add(other: Money): Money {
         const [cA, cB, s] = Money._align(this, other);
         return new Money(cA + cB, s);
     }
 
     /** @param {Money} other @returns {Money} exact difference. */
-    sub(other) {
+    sub(other: Money): Money {
         const [cA, cB, s] = Money._align(this, other);
         return new Money(cA - cB, s);
     }
@@ -199,17 +201,17 @@ class Money {
      * @param {Money} other
      * @returns {Money}
      */
-    mul(other) {
+    mul(other: Money): Money {
         return new Money(this.c * other.c, this.s + other.s);
     }
 
     /** @returns {Money} exact negation. */
-    negate() {
+    negate(): Money {
         return new Money(-this.c, this.s);
     }
 
     /** @returns {Money} exact absolute value. */
-    abs() {
+    abs(): Money {
         return new Money(_absBig(this.c), this.s);
     }
 
@@ -217,7 +219,7 @@ class Money {
      * Exact ordering. @param {Money} other
      * @returns {-1|0|1} sign of `this - other`.
      */
-    compare(other) {
+    compare(other: Money): -1 | 0 | 1 {
         const [cA, cB] = Money._align(this, other);
         if (cA < cB) return -1;
         if (cA > cB) return 1;
@@ -225,17 +227,17 @@ class Money {
     }
 
     /** @param {Money} other @returns {boolean} */
-    equals(other) {
+    equals(other: Money): boolean {
         return this.compare(other) === 0;
     }
 
     /** @returns {boolean} true when the exact value is zero. */
-    isZero() {
+    isZero(): boolean {
         return this.c === 0n;
     }
 
     /** @returns {boolean} true when the exact value is negative. */
-    isNegative() {
+    isNegative(): boolean {
         return this.c < 0n;
     }
 
@@ -257,7 +259,7 @@ class Money {
      *   of the quotient.
      * @returns {{ quotient: Money, remainder: Money }}
      */
-    divide(divisor, opts) {
+    divide(divisor: Money, opts: { precision: number; }): { quotient: Money; remainder: Money; } {
         if (!opts || !Number.isInteger(opts.precision) || opts.precision < 0) {
             throw new AppError(
                 "Money.divide requires an explicit non-negative integer precision option. " +
@@ -312,7 +314,7 @@ class Money {
      * @returns {Money[]} scale-4 parts, in the same order as `weights`, summing
      *   to `this` exactly.
      */
-    allocate(weights) {
+    allocate(weights: Array<number | bigint>): Money[] {
         if (!Array.isArray(weights) || weights.length === 0) {
             throw new AppError("Money.allocate requires a non-empty weights array.", 500, {
                 type: "MoneyError",
@@ -434,7 +436,7 @@ class Money {
      * @param {string} [label="allocation"]
      * @returns {void}
      */
-    static assertBalanced(parts, total, label = "allocation") {
+    static assertBalanced(parts: Money[], total: Money, label: string = "allocation"): void {
         const sum = parts.reduce((acc, p) => acc.add(p), Money.zero());
         if (!sum.equals(total)) {
             throw new AppError(
@@ -456,7 +458,7 @@ class Money {
      *
      * @returns {string} e.g. `"1500.0000"`, `"-0.5000"`.
      */
-    toStorage() {
+    toStorage(): string {
         // Re-base to scale 4 exactly if the current scale is <= 4; refuse if >4.
         let c = this.c;
         let s = this.s;
@@ -507,7 +509,7 @@ class Money {
      * @param {string} [localeOverride] - Force a locale instead of the registry's.
      * @returns {string} e.g. `"₱1,500.00"` (symbol resolved by the caller/registry).
      */
-    format(currencyCode, localeOverride) {
+    format(currencyCode: string, localeOverride: string): string {
         // Lazy require to avoid a constants<->utils cycle at module load.
         const { getCurrency } = require("../constants/currencies");
         const entry = getCurrency(currencyCode);
@@ -527,7 +529,7 @@ class Money {
      * lossy step is obvious and contained.
      * @private
      */
-    _toBoundedNumberForDisplay(displayScale) {
+    _toBoundedNumberForDisplay(displayScale: any) {
         // Truncate/round to displayScale via string first to keep the double as
         // close to the exact value as the format's own scale.
         const str = this.toStorage(); // scale 4 exact string

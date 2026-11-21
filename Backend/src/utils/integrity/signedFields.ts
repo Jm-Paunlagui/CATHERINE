@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -56,7 +55,7 @@ import { Money } from "../money";
  * @param {*} v
  * @returns {string}
  */
-function canonicalMoney(v) {
+function canonicalMoney(v: any): string {
     if (v === null || v === undefined || v === "") return Money.zero().toStorage();
     // Accept a string or Oracle-number-as-string; a bare JS number is coerced to
     // its string form first (the money-safe fetchTypeHandler means money
@@ -71,7 +70,7 @@ function canonicalMoney(v) {
  * @param {*} v
  * @returns {string}
  */
-function canonicalPlain(v) {
+function canonicalPlain(v: any): string {
     if (v === null || v === undefined) return "";
     return String(v);
 }
@@ -94,7 +93,12 @@ function canonicalPlain(v) {
  *   verify: (row: Object, signature: string) => Promise<boolean>,
  * }}
  */
-function makeSignedFields({ domain, fields, moneyFields = [] }) {
+function makeSignedFields({ domain, fields, moneyFields = [] }: { domain: string; fields: string[]; moneyFields?: string[]; }): {
+    domain: string;
+    project: (row: Record<string, any>) => Record<string, any>;
+    sign: (row: Record<string, any>) => Promise<string>;
+    verify: (row: Record<string, any>, signature: string) => Promise<boolean>;
+} {
     if (typeof domain !== "string" || domain.length === 0) {
         throw new Error("makeSignedFields: domain must be a non-empty string.");
     }
@@ -113,8 +117,8 @@ function makeSignedFields({ domain, fields, moneyFields = [] }) {
      * @param {Object} row
      * @returns {Object}
      */
-    function project(row) {
-        const out = {};
+    function project(row: Record<string, any>): Record<string, any> {
+        const out: Record<string, any> = {};
         for (const key of allFields) {
             const raw = row == null ? undefined : row[key];
             out[key] = moneySet.has(key) ? canonicalMoney(raw) : canonicalPlain(raw);
@@ -126,7 +130,7 @@ function makeSignedFields({ domain, fields, moneyFields = [] }) {
      * Signs `row`. Lazy-requires CryptoVault to avoid a load-time cycle.
      * @param {Object} row @returns {Promise<string>}
      */
-    async function sign(row) {
+    async function sign(row: Record<string, any>): Promise<string> {
         const { CryptoVault } = require("../encryption/CryptoVault");
         return CryptoVault.signRecord(domain, project(row));
     }
@@ -135,7 +139,7 @@ function makeSignedFields({ domain, fields, moneyFields = [] }) {
      * Verifies `row` against `signature`. Uses the SAME projection as `sign`.
      * @param {Object} row @param {string} signature @returns {Promise<boolean>}
      */
-    async function verify(row, signature) {
+    async function verify(row: Record<string, any>, signature: string): Promise<boolean> {
         const { CryptoVault } = require("../encryption/CryptoVault");
         return CryptoVault.verifyRecord(domain, project(row), signature);
     }

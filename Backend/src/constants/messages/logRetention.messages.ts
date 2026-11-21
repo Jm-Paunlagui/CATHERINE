@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -13,17 +12,17 @@
 const logRetentionMessages = {
   LOG_RETENTION_DISABLED: () =>
     `Log retention sweep disabled — LOG_RETENTION_DAYS=0.`,
-  LOG_RETENTION_INVALID_DAYS: (raw, fallback) =>
+  LOG_RETENTION_INVALID_DAYS: (raw: any, fallback: any) =>
     `Log retention: LOG_RETENTION_DAYS="${raw}" is not a valid positive number — falling back to ${fallback} day(s).`,
-  LOG_RETENTION_STARTED: (days, checkMs) =>
+  LOG_RETENTION_STARTED: (days: any, checkMs: any) =>
     `Log retention sweep started — retaining ${days} day(s), checked every ${checkMs}ms.`,
-  LOG_RETENTION_SWEEP_DONE: (removedDays, freedHuman, days) =>
+  LOG_RETENTION_SWEEP_DONE: (removedDays: any, freedHuman: any, days: any) =>
     `Log retention sweep complete — removed ${removedDays} day dir(s), freed ${freedHuman}, retention ${days} day(s).`,
-  LOG_RETENTION_DAY_FAILED: (dayLabel, errMsg) =>
+  LOG_RETENTION_DAY_FAILED: (dayLabel: any, errMsg: any) =>
     `Log retention: day dir ${dayLabel} removal failed: ${errMsg}.`,
-  LOG_RETENTION_BUDGET_ABORT: (failed, budget) =>
+  LOG_RETENTION_BUDGET_ABORT: (failed: any, budget: any) =>
     `Log retention sweep aborted — ${failed} failed day dir(s) reached the budget of ${budget}. Remaining days retried next sweep.`,
-  LOG_RETENTION_SWEEP_FAILED: (errMsg) =>
+  LOG_RETENTION_SWEEP_FAILED: (errMsg: any) =>
     `Log retention sweep failed unexpectedly: ${errMsg}.`,
 };
 

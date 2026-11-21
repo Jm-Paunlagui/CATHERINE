@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -28,7 +27,7 @@ const PROJECTION = {
     UPDATED_AT: 1,
 };
 
-let _col = null;
+let _col: any = null;
 /** Lazily resolves the T_USERS_DEV collection (never called in DEMO_MODE). */
 function col() {
     if (!_col) _col = new OracleCollection("T_USERS_DEV", createDb("appDb"));
@@ -41,7 +40,7 @@ class UserModel {
      * @param {string} username
      * @returns {Promise<object|null>}
      */
-    static async findByUsername(username) {
+    static async findByUsername(username: string): Promise<Record<string, any> | null> {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             return users.find((u) => u.USERNAME === username) ?? null;
@@ -53,7 +52,7 @@ class UserModel {
      * Returns all users ordered by USERNAME (PASSWORD excluded).
      * @returns {Promise<object[]>}
      */
-    static async findAll() {
+    static async findAll(): Promise<Record<string, any>[]> {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             return users
@@ -81,7 +80,7 @@ class UserModel {
      * @param {string} username
      * @returns {Promise<boolean>}
      */
-    static async existsByUsername(username) {
+    static async existsByUsername(username: string): Promise<boolean> {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             return users.some((u) => u.USERNAME === username);
@@ -94,7 +93,7 @@ class UserModel {
      * @param {{username:string, password:string, firstName?:string, lastName?:string, email?:string, isActive?:string}} data
      * @returns {Promise<void>}
      */
-    static async insertUser(data) {
+    static async insertUser(data: { username: string; password: string; firstName?: string; lastName?: string; email?: string; isActive?: string; }): Promise<void> {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             users.push({
@@ -126,7 +125,7 @@ class UserModel {
      * @param {string} passwordHash
      * @returns {Promise<void>}
      */
-    static async updatePassword(username, passwordHash) {
+    static async updatePassword(username: string, passwordHash: string): Promise<void> {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             const row = users.find((u) => u.USERNAME === username);
@@ -148,7 +147,7 @@ class UserModel {
      * @param {string} username
      * @returns {Promise<void>}
      */
-    static async deleteUser(username) {
+    static async deleteUser(username: string): Promise<void> {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             const idx = users.findIndex((u) => u.USERNAME === username);

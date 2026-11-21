@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -12,7 +11,7 @@ const cacheMessages = {
      * @param {string} key
      * @returns {string}
      */
-    CACHE_HIT: (storeName, key) =>
+    CACHE_HIT: (storeName: string, key: string): string =>
         `Cache HIT — store: ${storeName}, key: ${key}`,
 
     /**
@@ -20,7 +19,7 @@ const cacheMessages = {
      * @param {string} key
      * @returns {string}
      */
-    CACHE_MISS: (storeName, key) =>
+    CACHE_MISS: (storeName: string, key: string): string =>
         `Cache MISS — store: ${storeName}, key: ${key}`,
 
     /**
@@ -28,7 +27,7 @@ const cacheMessages = {
      * @param {string} reason
      * @returns {string}
      */
-    CACHE_BYPASS: (storeName, reason) =>
+    CACHE_BYPASS: (storeName: string, reason: string): string =>
         `Cache BYPASS — store: ${storeName}, keyFn threw, falling through to controller: ${reason}`,
 
     /**
@@ -36,7 +35,7 @@ const cacheMessages = {
      * @param {string} key
      * @returns {string}
      */
-    CACHE_STORE: (storeName, key) =>
+    CACHE_STORE: (storeName: string, key: string): string =>
         `Cache STORE — store: ${storeName}, key: ${key}`,
 
     /**
@@ -44,7 +43,7 @@ const cacheMessages = {
      * @param {string} key
      * @returns {string}
      */
-    CACHE_SET_SKIPPED_STALE: (storeName, key) =>
+    CACHE_SET_SKIPPED_STALE: (storeName: string, key: string): string =>
         `Cache SET skipped — store: ${storeName}, key: ${key} (store was invalidated while this value was being built; next read reloads)`,
 
     /**
@@ -53,7 +52,7 @@ const cacheMessages = {
      * @param {number} count
      * @returns {string}
      */
-    CACHE_INVALIDATE:(storeName, keys, count) =>
+    CACHE_INVALIDATE:(storeName: string, keys: string, count: number): string =>
         `Cache INVALIDATE — store: ${storeName}, keys: [${keys}], ${count} key(s) removed`,
 
     /**
@@ -62,7 +61,7 @@ const cacheMessages = {
      * @param {number} count
      * @returns {string}
      */
-    CACHE_INVALIDATE_PATTERN: (storeName, pattern, count) =>
+    CACHE_INVALIDATE_PATTERN: (storeName: string, pattern: string, count: number): string =>
         `Cache INVALIDATE — store: ${storeName}, pattern: "${pattern}", ${count} key(s) removed`,
 
     /**
@@ -70,7 +69,7 @@ const cacheMessages = {
      * @param {number} count
      * @returns {string}
      */
-    CACHE_INVALIDATE_WHERE: (storeName, count) =>
+    CACHE_INVALIDATE_WHERE: (storeName: string, count: number): string =>
         `Cache INVALIDATE — store: ${storeName}, predicate match, ${count} key(s) removed`,
 
     /**
@@ -78,21 +77,21 @@ const cacheMessages = {
      * @param {string} key
      * @returns {string}
      */
-    CACHE_COALESCED: (storeName, key) =>
+    CACHE_COALESCED: (storeName: string, key: string): string =>
         `Cache COALESCED — store: ${storeName}, key: ${key} (awaited in-flight leader, served from cache)`,
 
     /**
      * @param {string} reason
      * @returns {string}
      */
-    CACHE_ERROR: (reason) =>
+    CACHE_ERROR: (reason: string): string =>
         `Cache INVALIDATE ERROR — keyFn threw: ${reason}`,
 
     /**
      * @param {string} reason
      * @returns {string}
      */
-    CACHE_PREDICATE_ERROR: (reason) =>
+    CACHE_PREDICATE_ERROR: (reason: string): string =>
         `Cache INVALIDATE ERROR — predicateFn threw: ${reason}`,
 
     /**
@@ -101,19 +100,19 @@ const cacheMessages = {
      * @param {*}      arg       - Keys or pattern, null for flush
      * @returns {string}
      */
-    CACHE_CLUSTER_SYNC_APPLIED: (storeName, op, arg) =>
+    CACHE_CLUSTER_SYNC_APPLIED: (storeName: string, op: string, arg: any): string =>
         `Cache cluster-sync applied — store: ${storeName}, op: ${op}, arg: ${JSON.stringify(arg)}`,
 
     /**
      * @returns {string}
      */
-    CACHE_CLUSTER_SYNC_WORKER_READY: () =>
+    CACHE_CLUSTER_SYNC_WORKER_READY: (): string =>
         `Cache cluster-sync listener installed — invalidations from sibling workers will be applied locally.`,
 
     /**
      * @returns {string}
      */
-    CACHE_CLUSTER_SYNC_PRIMARY_READY: () =>
+    CACHE_CLUSTER_SYNC_PRIMARY_READY: (): string =>
         `Cache cluster-sync relay installed on primary — worker invalidations will be broadcast to all siblings.`,
 };
 

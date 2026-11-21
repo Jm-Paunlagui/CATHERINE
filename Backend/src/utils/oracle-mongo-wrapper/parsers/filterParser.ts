@@ -93,7 +93,7 @@ const ORACLE_IN_LIST_MAX = 1000;
  *   counter.next("where_name")   // → "where_name_1"
  *   counter.next("where_status") // → "where_status_2"
  */
-function _createCounter() {
+function _createCounter(): { next: (prefix: string) => string; } {
   let _count = 0;
   return {
     next(prefix) {
@@ -160,7 +160,7 @@ const COMPARISON_OPS = {
  *   _parseFieldExpr("age", { $gte: 18, $lt: 65 }, binds, null, counter)
  *   // → '("age" >= :where_age_0 AND "age" < :where_age_1)'
  */
-function _parseFieldExpr(field, expr, binds, outerAlias, counter) {
+function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, outerAlias: string, counter: Record<string, any>): string {
   const qField = quoteIdentifier(field);
 
   // Simple equality: { field: value }
@@ -282,14 +282,14 @@ function _parseFieldExpr(field, expr, binds, outerAlias, counter) {
       binds[bname] = val;
       conditions.push(`${qField} LIKE :${bname}`);
     } else if (op === "$any") {
-      const placeholders = val.map((v) => {
+      const placeholders = val.map((v: any) => {
         const bname = counter.next(`where_${field}`);
         binds[bname] = v;
         return `:${bname}`;
       });
       conditions.push(`${qField} = ANY(${placeholders.join(", ")})`);
     } else if (op === "$all") {
-      const placeholders = val.map((v) => {
+      const placeholders = val.map((v: any) => {
         const bname = counter.next(`where_${field}`);
         binds[bname] = v;
         return `:${bname}`;
@@ -297,7 +297,7 @@ function _parseFieldExpr(field, expr, binds, outerAlias, counter) {
       conditions.push(`${qField} = ALL(${placeholders.join(", ")})`);
     } else if (op === "$case") {
       // { $case: [{when, then}], $else: v }
-      const whenParts = val.map((c) => {
+      const whenParts = val.map((c: any) => {
         const { whereClause: wWhen, binds: wBinds } = parseFilter(
           c.when,
           null,
@@ -320,7 +320,7 @@ function _parseFieldExpr(field, expr, binds, outerAlias, counter) {
     } else if (op === "$else") {
       // Handled inside $case
     } else if (op === "$coalesce") {
-      const parts = val.map((v) => {
+      const parts = val.map((v: any) => {
         if (typeof v === "string" && !v.startsWith("$")) {
           const bname = counter.next(`where_${field}`);
           binds[bname] = v;
@@ -439,7 +439,7 @@ function _parseFieldExpr(field, expr, binds, outerAlias, counter) {
  *   }, binds, "t0", counter)
  *   // → '(SELECT AVG("salary") FROM "employees" WHERE "dept_id" = t0."dept_id")'
  */
-function _buildCorrelatedSubquery(field, spec, binds, outerAlias, counter) {
+function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, binds: Record<string, any>, outerAlias: string, counter: Record<string, any>): string {
   const collection = quoteIdentifier(spec.collection);
   const aggFn = spec.aggregate
     ? spec.aggregate.replace("$", "").toUpperCase()
@@ -524,7 +524,7 @@ function _buildCorrelatedSubquery(field, spec, binds, outerAlias, counter) {
  *   // → { whereClause: 'WHERE "status" = :where_status_0 AND ("age" >= :where_age_1 OR "vip" = :where_vip_2)',
  *   //     binds: { where_status_0: "active", where_age_1: 18, where_vip_2: true } }
  */
-function parseFilter(filter, tableAlias, _counter) {
+function parseFilter(filter: Record<string, any>, tableAlias: string, _counter: Record<string, any>): { whereClause: string; binds: Record<string, any>; } {
   if (
     !filter ||
     typeof filter !== "object" ||
@@ -536,12 +536,12 @@ function parseFilter(filter, tableAlias, _counter) {
   // Create counter once at the top-level call; reuse for recursive calls
   const counter = _counter || _createCounter();
 
-  const binds = {};
+  const binds: Record<string, any> = {};
   const conditions = [];
 
   for (const [key, value] of Object.entries(filter)) {
     if (key === "$and") {
-      const parts = value.map((sub) => {
+      const parts = value.map((sub: any) => {
         const { whereClause: wc, binds: wb } = parseFilter(
           sub,
           tableAlias,
@@ -552,7 +552,7 @@ function parseFilter(filter, tableAlias, _counter) {
       });
       conditions.push(`(${parts.join(" AND ")})`);
     } else if (key === "$or") {
-      const parts = value.map((sub) => {
+      const parts = value.map((sub: any) => {
         const { whereClause: wc, binds: wb } = parseFilter(
           sub,
           tableAlias,
@@ -563,7 +563,7 @@ function parseFilter(filter, tableAlias, _counter) {
       });
       conditions.push(`(${parts.join(" OR ")})`);
     } else if (key === "$nor") {
-      const parts = value.map((sub) => {
+      const parts = value.map((sub: any) => {
         const { whereClause: wc, binds: wb } = parseFilter(
           sub,
           tableAlias,

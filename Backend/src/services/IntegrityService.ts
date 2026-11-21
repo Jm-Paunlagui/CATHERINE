@@ -30,7 +30,7 @@ class IntegrityService {
      * The FE table catalog (no SQL surface).
      * @returns {Array<object>}
      */
-    static listTables() {
+    static listTables(): Array<Record<string, any>> {
         return IntegrityModel.listTables();
     }
 
@@ -41,7 +41,7 @@ class IntegrityService {
      * @param {string} key
      * @returns {Promise<Object<string, Array<{ value, label }>>>}
      */
-    static async getFilterOptions(key) {
+    static async getFilterOptions(key: string): Promise<{ [s: string]: Array<{ value; label; }>; }> {
         const cfg = IntegrityService._requireTable(key);
         if (!cfg.enums) return {};
         const cacheKey = CacheKeyBuilder.build("integrity", { table: key, resource: "filterOptions" });
@@ -55,7 +55,7 @@ class IntegrityService {
      * @param {string} key
      * @returns {import('../models/integrity.model').TableConfig}
      */
-    static _requireTable(key) {
+    static _requireTable(key: string): import('../models/integrity.model').TableConfig {
         const cfg = IntegrityModel.getTableConfig(key);
         if (!cfg) {
             throw new AppError(INTEGRITY_ERRORS.UNKNOWN_TABLE, HTTP_STATUS.BAD_REQUEST, {
@@ -76,7 +76,7 @@ class IntegrityService {
      * @returns {string}
      * @private
      */
-    static _sweepKey(key, cfg, filters) {
+    static _sweepKey(key: string, cfg: Record<string, any>, filters: Record<string, any>): string {
         const parts = { table: key, mode: "tamper" };
         for (const name of Object.keys(cfg.filters ?? {})) {
             if (name === "date") continue;
@@ -96,7 +96,7 @@ class IntegrityService {
      * @param {object} [opts] - { page, limit, forceRescan }
      * @returns {Promise<{ rows: object[], total: number, page: number, limit: number, rowsScanned: number, truncated: boolean, scannedAt: string }>}
      */
-    static async getTamperFeed(key, filters = {}, opts = {}) {
+    static async getTamperFeed(key: string, filters: Record<string, any> = {}, opts: Record<string, any> = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; rowsScanned: number; truncated: boolean; scannedAt: string; }> {
         const cfg = IntegrityService._requireTable(key);
         const page = Math.max(1, Number(opts.page) || 1);
         const limit = Math.min(200, Math.max(1, Number(opts.limit) || 50));
@@ -127,7 +127,7 @@ class IntegrityService {
      * @returns {Promise<{ tampered: object[], rowsScanned: number, truncated: boolean, scannedAt: string }>}
      * @private
      */
-    static async _sweptTampered(key, cfg, filters, forceRescan = false) {
+    static async _sweptTampered(key: string, cfg: Record<string, any>, filters: Record<string, any>, forceRescan: boolean = false): Promise<{ tampered: Record<string, any>[]; rowsScanned: number; truncated: boolean; scannedAt: string; }> {
         const cacheKey = IntegrityService._sweepKey(key, cfg, filters);
 
         if (forceRescan) _store.del(cacheKey);
@@ -162,7 +162,7 @@ class IntegrityService {
      * @param {object} [opts] - { limit, actor }
      * @returns {Promise<object>}
      */
-    static async rescan(key, filters = {}, opts = {}) {
+    static async rescan(key: string, filters: Record<string, any> = {}, opts: Record<string, any> = {}): Promise<Record<string, any>> {
         const cfg = IntegrityService._requireTable(key);
         logger.notice(
             integrityMessages.RESCAN_REQUESTED(key, IntegrityService._sweepKey(key, cfg, filters), opts.actor ?? "SYSTEM"),
@@ -180,7 +180,7 @@ class IntegrityService {
      * @param {object} [opts] - { page, limit }
      * @returns {Promise<{ rows: object[], total: number, page: number, limit: number, tamperedInScope: number, sweepTruncated: boolean }>}
      */
-    static async browsePage(key, filters = {}, opts = {}) {
+    static async browsePage(key: string, filters: Record<string, any> = {}, opts: Record<string, any> = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; tamperedInScope: number; sweepTruncated: boolean; }> {
         const cfg = IntegrityService._requireTable(key);
         const page = Math.max(1, Number(opts.page) || 1);
         const limit = Math.min(200, Math.max(1, Number(opts.limit) || 50));
@@ -216,7 +216,7 @@ class IntegrityService {
      * @param {object} [opts] - { mode: 'tamper'|'all', maxRows }
      * @returns {Promise<{ rows: object[], total: number, mode: 'tamper'|'all', truncated: boolean, sweepTruncated: boolean, rowsScanned: number, scannedAt: string|null }>}
      */
-    static async exportRows(key, filters = {}, opts = {}) {
+    static async exportRows(key: string, filters: Record<string, any> = {}, opts: Record<string, any> = {}): Promise<{ rows: Record<string, any>[]; total: number; mode: 'tamper' | 'all'; truncated: boolean; sweepTruncated: boolean; rowsScanned: number; scannedAt: string | null; }> {
         const cfg = IntegrityService._requireTable(key);
         const mode = opts.mode === "all" ? "all" : "tamper";
         const maxRows = Math.min(50_000, Math.max(1, Number(opts.maxRows) || 10_000));
@@ -259,7 +259,7 @@ class IntegrityService {
      * @param {object[]} rows
      * @returns {Promise<object[]>}
      */
-    static async _annotate(cfg, rows) {
+    static async _annotate(cfg: Record<string, any>, rows: Record<string, any>[]): Promise<Record<string, any>[]> {
         const verdicts = await Promise.all((rows ?? []).map((r) => cfg.verifyFn(r)));
         return (rows ?? []).map((r, i) => ({
             ...r,
@@ -277,7 +277,7 @@ class IntegrityService {
      * @param {object} [filters]
      * @returns {Promise<number|null>}
      */
-    static async getMaxPk(key, filters = {}) {
+    static async getMaxPk(key: string, filters: Record<string, any> = {}): Promise<number | null> {
         IntegrityService._requireTable(key);
         return IntegrityModel.getMaxPk(key, filters);
     }
@@ -292,7 +292,7 @@ class IntegrityService {
      * @param {number} [cap=500]
      * @returns {Promise<{ newCount: number, maxPk: number|null, tampered: object[] }>}
      */
-    static async getLiveDelta(key, filters = {}, afterPk, cap = 500) {
+    static async getLiveDelta(key: string, filters: Record<string, any> = {}, afterPk: number, cap: number = 500): Promise<{ newCount: number; maxPk: number | null; tampered: Record<string, any>[]; }> {
         const cfg = IntegrityService._requireTable(key);
         const rows = await IntegrityModel.listSince(key, filters, afterPk, cap);
         if (!rows.length) return { newCount: 0, maxPk: afterPk ?? null, tampered: [] };

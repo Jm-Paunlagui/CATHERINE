@@ -29,7 +29,7 @@ const PURGE_POOL = "appDbBulk";
  *
  * @type {ReadonlyArray<string>}
  */
-const NEVER_PURGE = Object.freeze([]);
+const NEVER_PURGE: ReadonlyArray<string> = Object.freeze([]);
 
 /**
  * Trigger-stamped, update-immutable timestamp columns per table. A purge loses
@@ -39,7 +39,7 @@ const NEVER_PURGE = Object.freeze([]);
  *
  * @type {Readonly<Record<string, ReadonlyArray<string>>>}
  */
-const IMMUTABLE_TIMESTAMP_COLUMNS = Object.freeze({});
+const IMMUTABLE_TIMESTAMP_COLUMNS: Readonly<Record<string, ReadonlyArray<string>>> = Object.freeze({});
 
 /**
  * Purge groups, keyed by a short identifier. Values are the literal group
@@ -47,7 +47,7 @@ const IMMUTABLE_TIMESTAMP_COLUMNS = Object.freeze({});
  *
  * @type {Readonly<Record<string, string>>}
  */
-const PURGE_GROUP_KEYS = Object.freeze({
+const PURGE_GROUP_KEYS: Readonly<Record<string, string>> = Object.freeze({
     T: "T_",
     SERVER: "SERVER_",
 });
@@ -59,7 +59,7 @@ const PURGE_GROUP_KEYS = Object.freeze({
  *
  * @type {Readonly<Record<string, ReadonlyArray<string>>>}
  */
-const GROUP_CLOSURE_HINTS = Object.freeze({
+const GROUP_CLOSURE_HINTS: Readonly<Record<string, ReadonlyArray<string>>> = Object.freeze({
     [PURGE_GROUP_KEYS.T]: Object.freeze([]),
     [PURGE_GROUP_KEYS.SERVER]: Object.freeze([]),
 });
@@ -93,7 +93,7 @@ const GROUP_CLOSURE_HINTS = Object.freeze({
  *
  * @type {ReadonlyArray<Readonly<PurgeTableEntry>>}
  */
-const PURGE_TABLES = Object.freeze(
+const PURGE_TABLES: ReadonlyArray<Readonly<PurgeTableEntry>> = Object.freeze(
     [
         {
             // Registered so the Access Control revoke-backup can archive an admin's row;
@@ -163,7 +163,7 @@ const PURGE_TABLES = Object.freeze(
 );
 
 /** @type {Map<string, Readonly<PurgeTableEntry>>} */
-const _byName = new Map(PURGE_TABLES.map((e) => [e.table, e]));
+const _byName: Map<string, Readonly<PurgeTableEntry>> = new Map(PURGE_TABLES.map((e) => [e.table, e]));
 
 /**
  * Returns the registry entry for a table name, or null when unregistered.
@@ -173,7 +173,7 @@ const _byName = new Map(PURGE_TABLES.map((e) => [e.table, e]));
  * @returns {Readonly<PurgeTableEntry>|null}
  * @throws {Error} On registry corruption (wrong pool).
  */
-function getEntry(tableName) {
+function getEntry(tableName: string): Readonly<PurgeTableEntry> | null {
     const entry = _byName.get(tableName);
     if (!entry) return null;
     if (entry.pool !== PURGE_POOL) {
@@ -188,12 +188,12 @@ function getEntry(tableName) {
  * @param {string} group - One of {@link PURGE_GROUP_KEYS}'s values.
  * @returns {ReadonlyArray<Readonly<PurgeTableEntry>>}
  */
-function getTablesByGroup(group) {
+function getTablesByGroup(group: string): ReadonlyArray<Readonly<PurgeTableEntry>> {
     return PURGE_TABLES.filter((e) => e.group === group);
 }
 
 /** @returns {string[]} Every registered table name. */
-function getAllTableNames() {
+function getAllTableNames(): string[] {
     return PURGE_TABLES.map((e) => e.table);
 }
 
@@ -204,7 +204,7 @@ function getAllTableNames() {
  * @param {ReadonlyArray<string>} [tableNames] - Optional subset; defaults to all.
  * @returns {Readonly<PurgeTableEntry>[]}
  */
-function getDeleteOrder(tableNames) {
+function getDeleteOrder(tableNames: ReadonlyArray<string>): Readonly<PurgeTableEntry>[] {
     const names = tableNames ? new Set(tableNames) : null;
     return PURGE_TABLES.filter((e) => !names || names.has(e.table))
         .slice()
@@ -217,7 +217,7 @@ function getDeleteOrder(tableNames) {
  * @param {ReadonlyArray<string>} [tableNames] - Optional subset; defaults to all.
  * @returns {Readonly<PurgeTableEntry>[]}
  */
-function getRestoreOrder(tableNames) {
+function getRestoreOrder(tableNames: ReadonlyArray<string>): Readonly<PurgeTableEntry>[] {
     const names = tableNames ? new Set(tableNames) : null;
     return PURGE_TABLES.filter((e) => !names || names.has(e.table))
         .slice()

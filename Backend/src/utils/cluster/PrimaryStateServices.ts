@@ -30,13 +30,22 @@ const TOPIC = CLUSTER_TOPICS;
  * @class PrimaryStateServices
  */
 class PrimaryStateServices {
+    declare _hub: import("./ClusterRpcHub").ClusterRpcHub;
+    declare _revoked: RevokedSessionSet;
+    declare _counters: Map<any, any>;
+    declare _lockout: LoginLockoutState;
+    declare _ipTracker: SuspiciousIpTracker;
+    declare _sched: Map<any, any>;
+    declare _lastStoreFullLog: number;
+    declare _now: () => number;
+    declare _logger: Record<string, any>;
     /**
      * @param {object} deps
      * @param {object} deps.logger
      * @param {() => number} [deps.now=Date.now]
      * @param {LoginLockoutPolicy} [deps.lockoutPolicy] - default `LoginLockoutPolicy.fromEnv()`
      */
-    constructor({ logger, now = Date.now, lockoutPolicy = LoginLockoutPolicy.fromEnv() }) {
+    constructor({ logger, now = Date.now, lockoutPolicy = LoginLockoutPolicy.fromEnv() }: { logger: Record<string, any>; now?: () => number; lockoutPolicy?: LoginLockoutPolicy; }) {
         this._logger = logger;
         this._now = now;
         this._lastStoreFullLog = -Infinity;
@@ -58,7 +67,7 @@ class PrimaryStateServices {
      *
      * @param {import("./ClusterRpcHub").ClusterRpcHub} hub
      */
-    attach(hub) {
+    attach(hub: import("./ClusterRpcHub").ClusterRpcHub) {
         this._hub = hub;
         this.#attachScheduler(hub);
         this.#attachSecurityFilter(hub);
@@ -74,13 +83,13 @@ class PrimaryStateServices {
      * A worker ended some session families: keep a copy (for workers that start
      * later) and fan the entries out to every other live worker.
      */
-    #attachAccessRevocation(hub) {
-        hub.register(M.AUTH_REVOKE, ({ entries }, { worker }) => {
+    #attachAccessRevocation(hub: any) {
+        hub.register(M.AUTH_REVOKE, ({ entries }: any, { worker }: any) => {
             for (const { fid, untilMs } of entries) this._revoked.revoke(fid, untilMs);
             hub.broadcast(TOPIC.AUTH_REVOKED, { entries }, { exceptId: worker.id });
             return null;
         });
-        hub.addListeningHook((worker) => {
+        hub.addListeningHook((worker: any) => {
             const entries = this._revoked.snapshot(this._now(), ACCESS_REVOCATION_LIMITS.MAX_SYNC_ENTRIES);
             if (entries.length > 0) hub.sendTo(worker, TOPIC.AUTH_SYNC, { entries });
         });
@@ -88,8 +97,8 @@ class PrimaryStateServices {
 
     // ── Recipient cache ──────────────────────────────────────────────────────
 
-    #attachRecipients(hub) {
-        hub.register(M.RECIPIENTS_INVALIDATE, (_args, { worker }) => {
+    #attachRecipients(hub: any) {
+        hub.register(M.RECIPIENTS_INVALIDATE, (_args: any, { worker }: any) => {
             hub.broadcast(TOPIC.RECIPIENTS_INVALIDATE, {}, { exceptId: worker.id });
             return null;
         });
@@ -97,8 +106,8 @@ class PrimaryStateServices {
 
     // ── Rate limiter ─────────────────────────────────────────────────────────
 
-    #attachRateLimiter(hub) {
-        hub.register(M.RL_HIT, ({ label, key, max, windowMs }) => {
+    #attachRateLimiter(hub: any) {
+        hub.register(M.RL_HIT, ({ label, key, max, windowMs }: any) => {
             const id = `${label}|${windowMs}`;
             let counter = this._counters.get(id);
             if (!counter) {
@@ -114,12 +123,12 @@ class PrimaryStateServices {
                 return { fallback: true };
             }
         });
-        hub.register(M.RL_REFUND, ({ label, key, windowMs, bucket }) => {
+        hub.register(M.RL_REFUND, ({ label, key, windowMs, bucket }: any) => {
             const counter = this._counters.get(`${label}|${windowMs}`);
             if (counter) counter.refund(key, bucket, windowMs, this._now());
             return null;
         });
-        hub.register(M.RL_CLEAR, ({ label, key }) => {
+        hub.register(M.RL_CLEAR, ({ label, key }: any) => {
             for (const [id, counter] of this._counters) {
                 if (!id.startsWith(`${label}|`)) continue;
                 if (key === null) counter.flushAll();
@@ -137,15 +146,15 @@ class PrimaryStateServices {
      * key cap the call answers `{ fallback: true }` and the asking worker counts
      * locally (fail open to today's per-worker behaviour, never a refusal).
      */
-    #attachLoginLockout(hub) {
-        hub.register(M.LOCKOUT_CHECK, ({ key }) => {
+    #attachLoginLockout(hub: any) {
+        hub.register(M.LOCKOUT_CHECK, ({ key }: any) => {
             try {
                 return this._lockout.check(key, this._now());
             } catch {
                 return { fallback: true };
             }
         });
-        hub.register(M.LOCKOUT_FAIL, ({ key }) => {
+        hub.register(M.LOCKOUT_FAIL, ({ key }: any) => {
             try {
                 const r = this._lockout.fail(key, this._now());
                 if (r.fallback === true) this.#logStoreFull();
@@ -154,7 +163,7 @@ class PrimaryStateServices {
                 return { fallback: true };
             }
         });
-        hub.register(M.LOCKOUT_CLEAR, ({ key }) => {
+        hub.register(M.LOCKOUT_CLEAR, ({ key }: any) => {
             this._lockout.clear(key);
             return null;
         });
@@ -170,19 +179,19 @@ class PrimaryStateServices {
 
     // ── Security filter ──────────────────────────────────────────────────────
 
-    #attachSecurityFilter(hub) {
-        hub.register(M.SF_STRIKE, ({ ip }) => {
+    #attachSecurityFilter(hub: any) {
+        hub.register(M.SF_STRIKE, ({ ip }: any) => {
             const r = this._ipTracker.strike(ip, this._now());
             if (r.justBlocked) hub.broadcast(TOPIC.SF_BLOCK, { ip, blockedUntil: r.blockedUntil });
             return null;
         });
-        hub.register(M.SF_UNBLOCK, ({ ip, actor }) => {
+        hub.register(M.SF_UNBLOCK, ({ ip, actor }: any) => {
             const cleared = this._ipTracker.unblock(ip);
             if (cleared) this._logger.notice(middlewareMessages.SUSPICIOUS_IP_UNBLOCKED(ip, actor ?? "system"));
             hub.broadcast(TOPIC.SF_UNBLOCKED, { ip });
             return { cleared };
         });
-        hub.addListeningHook((worker) => {
+        hub.addListeningHook((worker: any) => {
             const blocks = this._ipTracker.blocksSnapshot(this._now(), CLUSTER_RPC_LIMITS.SF_SYNC_MAX_ENTRIES);
             if (blocks.length > 0) hub.sendTo(worker, TOPIC.SF_SYNC, { blocks });
         });
@@ -190,13 +199,13 @@ class PrimaryStateServices {
 
     // ── Scheduler state ──────────────────────────────────────────────────────
 
-    #attachScheduler(hub) {
-        hub.register(M.SCHED_RECORD, ({ job, outcome }, { worker }) => {
+    #attachScheduler(hub: any) {
+        hub.register(M.SCHED_RECORD, ({ job, outcome }: any, { worker }: any) => {
             this._sched.set(job, outcome);
             hub.broadcast(TOPIC.SCHED_STATE, { job, outcome }, { exceptId: worker.id });
             return null;
         });
-        hub.addListeningHook((worker) => {
+        hub.addListeningHook((worker: any) => {
             if (this._sched.size === 0) return;
             hub.sendTo(worker, TOPIC.SCHED_SYNC, { state: Object.fromEntries(this._sched) });
         });

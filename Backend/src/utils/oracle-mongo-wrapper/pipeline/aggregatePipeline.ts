@@ -81,7 +81,7 @@ import { parseFilter } from "../parsers/filterParser";
  *
  * @returns {{ next: (prefix: string) => string }}
  */
-function _createCounter() {
+function _createCounter(): { next: (prefix: string) => string; } {
   let c = 0;
   return {
     next(prefix) {
@@ -104,10 +104,10 @@ function _createCounter() {
  *     { $group: { _id: "$region", total: { $sum: "$amount" } } },
  *   ], db);
  */
-function buildAggregateSQL(tableName, pipeline, db) {
+function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<string, any>): { sql: string; binds: Record<string, any>; } {
   const counter = _createCounter();
   const ctes = [];
-  const allBinds = {};
+  const allBinds: Record<string, any> = {};
   let prevSource = quoteIdentifier(tableName);
   let stageIdx = 0;
   let outTable = null;
@@ -367,8 +367,8 @@ function buildAggregateSQL(tableName, pipeline, db) {
  * @param {Object} counter - Bind variable counter
  * @returns {{ sql: string, binds: Object }}
  */
-function _buildGroup(group, source, having, counter) {
-  const binds = {};
+function _buildGroup(group: Record<string, any>, source: string, having: Record<string, any>, counter: Record<string, any>): { sql: string; binds: Record<string, any>; } {
+  const binds: Record<string, any> = {};
   const selectParts = [];
   const groupByParts = [];
 
@@ -384,15 +384,15 @@ function _buildGroup(group, source, having, counter) {
   } else if (typeof idSpec === "object" && !Array.isArray(idSpec)) {
     // Check for $rollup, $cube, $groupingSets
     if (idSpec.$rollup) {
-      const cols = idSpec.$rollup.map((c) => quoteIdentifier(c));
+      const cols = idSpec.$rollup.map((c: any) => quoteIdentifier(c));
       selectParts.push(...idSpec.$rollup.map(quoteIdentifier));
       groupByParts.push(`ROLLUP(${cols.join(", ")})`);
     } else if (idSpec.$cube) {
-      const cols = idSpec.$cube.map((c) => quoteIdentifier(c));
+      const cols = idSpec.$cube.map((c: any) => quoteIdentifier(c));
       selectParts.push(...idSpec.$cube.map(quoteIdentifier));
       groupByParts.push(`CUBE(${cols.join(", ")})`);
     } else if (idSpec.$groupingSets) {
-      const sets = idSpec.$groupingSets.map((set) => {
+      const sets = idSpec.$groupingSets.map((set: any) => {
         if (Array.isArray(set) && set.length === 0) return "()";
         if (Array.isArray(set))
           return `(${set.map(quoteIdentifier).join(", ")})`;
@@ -400,7 +400,7 @@ function _buildGroup(group, source, having, counter) {
       });
       // Collect all unique columns
       const allCols = new Set();
-      idSpec.$groupingSets.forEach((set) => {
+      idSpec.$groupingSets.forEach((set: any) => {
         if (Array.isArray(set)) set.forEach((c) => allCols.add(c));
         else if (set) allCols.add(set);
       });
@@ -422,7 +422,7 @@ function _buildGroup(group, source, having, counter) {
   }
 
   // Aggregate expressions
-  const aliasToExpr = {};
+  const aliasToExpr: Record<string, any> = {};
   for (const [alias, expr] of Object.entries(group)) {
     if (alias === "_id") continue;
     const aggSql = _buildAggExpr(expr, binds, counter);
@@ -480,7 +480,7 @@ function _buildGroup(group, source, having, counter) {
  * @param {Object} counter - Bind name counter
  * @returns {string} Oracle SQL expression
  */
-function _buildAggExpr(expr, binds, counter) {
+function _buildAggExpr(expr: Record<string, any>, binds: Record<string, any>, counter: Record<string, any>): string {
   if (typeof expr === "object") {
     for (const [op, val] of Object.entries(expr)) {
       switch (op) {
@@ -578,7 +578,7 @@ function _buildAggExpr(expr, binds, counter) {
  * "*"       → '*'
  * 42        → '42'
  */
-function _fieldRef(val) {
+function _fieldRef(val: any) {
   if (typeof val === "string" && val.startsWith("$")) {
     return quoteIdentifier(val.substring(1));
   }
@@ -592,7 +592,7 @@ function _fieldRef(val) {
  * or a bind variable (if it's a literal string/number/boolean).
  * This ensures literal values are NEVER interpolated into SQL.
  */
-function _fieldRefOrBind(val, binds, counter) {
+function _fieldRefOrBind(val: any, binds: any, counter: any) {
   if (typeof val === "string" && val.startsWith("$")) {
     return quoteIdentifier(val.substring(1));
   }
@@ -613,7 +613,7 @@ function _fieldRefOrBind(val, binds, counter) {
  * Build a SQL condition for $cond expressions.
  * { $amount: { $gt: 100 } } → '"amount" > :cond_0'
  */
-function _buildCondExpr(cond, binds, counter) {
+function _buildCondExpr(cond: any, binds: any, counter: any) {
   // Simple condition: { field: { $gt: value } }
   if (typeof cond === "object") {
     for (const [field, ops] of Object.entries(cond)) {
@@ -647,7 +647,7 @@ function _buildCondExpr(cond, binds, counter) {
  * Build an ORDER BY string from a sort spec.
  * { total: -1, name: 1 } → '"TOTAL" DESC, "NAME" ASC'
  */
-function _buildSortString(sortSpec) {
+function _buildSortString(sortSpec: any) {
   return Object.entries(sortSpec)
     .map(
       ([col, dir]) =>
@@ -664,9 +664,9 @@ function _buildSortString(sortSpec) {
  *   - { alias: "$col" }      → rename a column
  *   - { alias: { $sum: .. }} → computed expression with alias
  */
-function _buildProjectCols(project, counter) {
+function _buildProjectCols(project: any, counter: any) {
   const parts = [];
-  const binds = {};
+  const binds: Record<string, any> = {};
   for (const [col, spec] of Object.entries(project)) {
     if (spec === 1 || spec === true) {
       parts.push(quoteIdentifier(col));
@@ -686,8 +686,8 @@ function _buildProjectCols(project, counter) {
  * Build extra computed columns for $addFields stage.
  * Existing columns are kept (SELECT prev.*, newCol1, newCol2).
  */
-function _buildAddFieldsCols(addFields, counter) {
-  const binds = {};
+function _buildAddFieldsCols(addFields: any, counter: any) {
+  const binds: Record<string, any> = {};
   const parts = [];
   for (const [alias, spec] of Object.entries(addFields)) {
     if (typeof spec === "object") {
@@ -712,7 +712,7 @@ function _buildAddFieldsCols(addFields, counter) {
  * A lateral join is like a correlated subquery used as a join source.
  * Values prefixed with "$outer." reference the outer table's columns.
  */
-function _buildLateralSub(lj, prevSource) {
+function _buildLateralSub(lj: any, prevSource: any) {
   if (lj.subquery && typeof lj.subquery._buildSQL === "function") {
     const { sql: builtSql, binds } = lj.subquery._buildSQL();
     let sql = builtSql;
@@ -737,7 +737,7 @@ function _buildLateralSub(lj, prevSource) {
  * Build a MERGE INTO statement for the $merge pipeline stage.
  * Merges results from the pipeline into a target table.
  */
-function _buildMergeStage(merge, source) {
+function _buildMergeStage(merge: any, source: any) {
   const into = quoteIdentifier(merge.into);
   const onCols = Object.entries(merge.on)
     .map(([l, r]) => `tgt.${quoteIdentifier(l)} = src.${quoteIdentifier(r)}`)
@@ -751,15 +751,15 @@ function _buildMergeStage(merge, source) {
  * Groups values into ranges using CASE WHEN expressions.
  * Example: boundaries [0, 100, 500] creates buckets: 0-99, 100-499
  */
-function _buildBucket(bucket, source, counter) {
-  const binds = {};
+function _buildBucket(bucket: any, source: any, counter: any) {
+  const binds: Record<string, any> = {};
   const { groupBy, boundaries, default: defaultBucket, output } = bucket;
   const col = groupBy.startsWith("$") ? groupBy.substring(1) : groupBy;
   const cases = [];
 
   // Determine if boundaries are numeric — if so, use TO_CHAR for THEN labels
   // so that the default bucket string doesn't cause ORA-00932 (inconsistent datatypes).
-  const numericBoundaries = boundaries.every((b) => typeof b === "number");
+  const numericBoundaries = boundaries.every((b: any) => typeof b === "number");
 
   for (let i = 0; i < boundaries.length - 1; i++) {
     const lo = counter.next("bkt");

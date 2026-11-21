@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -29,10 +28,10 @@ let nextId = 1;
 
 class InFlightTaskRegistry {
     /** @type {Map<number, { label: string, promise: Promise<any> }>} */
-    #tasks = new Map();
+    #tasks: Map<number, { label: string; promise: Promise<any>; }> = new Map();
 
     /** @type {boolean} */
-    #shuttingDown = false;
+    #shuttingDown: boolean = false;
 
     /**
      * Track a detached promise so `drain()` can wait on it during shutdown.
@@ -52,7 +51,7 @@ class InFlightTaskRegistry {
      * @param {Promise<any>} promise - The detached promise to observe.
      * @returns {Promise<any>} The same `promise`, untouched.
      */
-    track(label, promise) {
+    track(label: string, promise: Promise<any>): Promise<any> {
         if (!promise || typeof promise.then !== "function") {
             return promise;
         }
@@ -71,7 +70,7 @@ class InFlightTaskRegistry {
     /**
      * @returns {number} Count of currently tracked tasks.
      */
-    size() {
+    size(): number {
         return this.#tasks.size;
     }
 
@@ -81,7 +80,7 @@ class InFlightTaskRegistry {
      * posture as `SseConnectionRegistry.endAll`.
      * @returns {void}
      */
-    beginShutdown() {
+    beginShutdown(): void {
         this.#shuttingDown = true;
     }
 
@@ -91,7 +90,7 @@ class InFlightTaskRegistry {
      * so they can stop early once shutdown has begun.
      * @returns {boolean}
      */
-    isShuttingDown() {
+    isShuttingDown(): boolean {
         return this.#shuttingDown;
     }
 
@@ -113,7 +112,7 @@ class InFlightTaskRegistry {
      * @param {number} ms - Bounded wait, in milliseconds.
      * @returns {Promise<{drained: number, abandoned: number, labels: string[]}>}
      */
-    async drain(ms) {
+    async drain(ms: number): Promise<{ drained: number; abandoned: number; labels: string[]; }> {
         this.#shuttingDown = true;
 
         const entries = [...this.#tasks.entries()];

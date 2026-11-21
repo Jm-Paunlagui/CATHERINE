@@ -67,7 +67,7 @@ import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
  *     .join({ from: "activity", localField: "id", foreignField: "userId" })
  *     .toArray();
  */
-function withCTE(db, cteDefs) {
+function withCTE(db: Record<string, any>, cteDefs: Record<string, any>): CTEResult {
   return new CTEResult(db, cteDefs);
 }
 
@@ -93,7 +93,7 @@ function withCTE(db, cteDefs) {
  *     }
  *   }).sort({ LVL: 1, name: 1 }).toArray();
  */
-function withRecursiveCTE(db, cteName, def) {
+function withRecursiveCTE(db: Record<string, any>, cteName: string, def: { anchor: QueryBuilder; recursive: { collection: string; joinOn: Record<string, any>; }; }): RecursiveCTEResult {
   return new RecursiveCTEResult(db, cteName, def);
 }
 
@@ -111,7 +111,14 @@ function withRecursiveCTE(db, cteName, def) {
  *   .toArray()      — Execute and return rows
  */
 class CTEResult {
-  constructor(db, cteDefs) {
+  declare _skipVal: null;
+  declare _limitVal: null;
+  declare _sort: null;
+  declare _join: null;
+  declare _from: null;
+  declare _cteDefs: any;
+  declare _db: any;
+  constructor(db: any, cteDefs: any) {
     this._db = db;
     this._cteDefs = cteDefs;
     this._from = null;
@@ -121,34 +128,34 @@ class CTEResult {
     this._skipVal = null;
   }
 
-  from(cteName) {
+  from(cteName: any) {
     this._from = cteName;
     return this;
   }
 
-  join(joinSpec) {
+  join(joinSpec: any) {
     this._join = joinSpec;
     return this;
   }
 
-  sort(sortSpec) {
+  sort(sortSpec: any) {
     this._sort = sortSpec;
     return this;
   }
 
-  limit(n) {
+  limit(n: any) {
     this._limitVal = n;
     return this;
   }
 
-  skip(n) {
+  skip(n: any) {
     this._skipVal = n;
     return this;
   }
 
   _buildSQL() {
     const withParts = [];
-    const allBinds = {};
+    const allBinds: Record<string, any> = {};
 
     for (const [name, qb] of Object.entries(this._cteDefs)) {
       const { sql, binds } = qb._buildSQL();
@@ -196,7 +203,7 @@ class CTEResult {
 
   async toArray() {
     const { sql, binds } = this._buildSQL();
-    return this._db.withConnection(async (conn) => {
+    return this._db.withConnection(async (conn: any) => {
       try {
         const result = await conn.execute(sql, binds, {
           outFormat: this._db.oracledb.OUT_FORMAT_OBJECT,
@@ -220,7 +227,13 @@ class CTEResult {
  * Terminal method: .toArray()
  */
 class RecursiveCTEResult {
-  constructor(db, cteName, def) {
+  declare _skipVal: null;
+  declare _limitVal: null;
+  declare _sort: null;
+  declare _def: any;
+  declare _cteName: any;
+  declare _db: any;
+  constructor(db: any, cteName: any, def: any) {
     this._db = db;
     this._cteName = cteName;
     this._def = def;
@@ -229,24 +242,24 @@ class RecursiveCTEResult {
     this._skipVal = null;
   }
 
-  sort(sortSpec) {
+  sort(sortSpec: any) {
     this._sort = sortSpec;
     return this;
   }
 
-  limit(n) {
+  limit(n: any) {
     this._limitVal = n;
     return this;
   }
 
-  skip(n) {
+  skip(n: any) {
     this._skipVal = n;
     return this;
   }
 
   _buildSQL(colNames = []) {
     const { anchor, recursive } = this._def;
-    const allBinds = {};
+    const allBinds: Record<string, any> = {};
 
     // Anchor query
     const { sql: anchorSql, binds: anchorBinds } = anchor._buildSQL();
@@ -332,17 +345,17 @@ class RecursiveCTEResult {
   async toArray() {
     // Fetch column names from anchor table to build CTE column alias list
     const anchorTableName = this._def.anchor.tableName;
-    const colNames = await this._db.withConnection(async (conn) => {
+    const colNames = await this._db.withConnection(async (conn: any) => {
       const result = await conn.execute(
         `SELECT COLUMN_NAME FROM USER_TAB_COLUMNS WHERE TABLE_NAME = UPPER(:t) ORDER BY COLUMN_ID`,
         { t: anchorTableName },
         { outFormat: this._db.oracledb.OUT_FORMAT_OBJECT },
       );
-      return result.rows.map((r) => r.COLUMN_NAME);
+      return result.rows.map((r: any) => r.COLUMN_NAME);
     });
 
     const { sql, binds } = this._buildSQL(colNames);
-    return this._db.withConnection(async (conn) => {
+    return this._db.withConnection(async (conn: any) => {
       try {
         const result = await conn.execute(sql, binds, {
           outFormat: this._db.oracledb.OUT_FORMAT_OBJECT,
@@ -357,7 +370,7 @@ class RecursiveCTEResult {
 }
 
 /** Map a join type string to Oracle JOIN keyword */
-function _resolveJoinType(type) {
+function _resolveJoinType(type: any) {
   switch ((type || "inner").toLowerCase()) {
     case "left":
       return "LEFT OUTER JOIN";

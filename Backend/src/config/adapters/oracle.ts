@@ -135,7 +135,7 @@ function _loadEnvForCompiled() {
     logger.warning("No .env found in compiled environment.");
 }
 
-function _initOracleClient(db) {
+function _initOracleClient(db: any) {
     if (db.oracleClientVersion) return;
     const clientPath = process.env.ORACLE_INSTANT_CLIENT;
     const isValid = validateOracleClient();
@@ -155,7 +155,7 @@ function _initOracleClient(db) {
     }
 }
 
-let oracledb;
+let oracledb: any;
 try {
     if (isCompiled) {
         logger.notice(
@@ -245,7 +245,7 @@ const POOL_DEFAULTS = Object.freeze({
 // It also means the legacy `convertTypes`/`rowToDoc` helpers in
 // `utils/oracle-mongo-wrapper/utils.js` must NOT re-coerce these strings back to
 // numbers — they are fenced off there (they would undo this protection).
-function moneySafeFetchTypeHandler(metaData) {
+function moneySafeFetchTypeHandler(metaData: any) {
     if (metaData.dbType === oracledb.DB_TYPE_NUMBER && metaData.scale > 0) {
         return { type: oracledb.STRING };
     }
@@ -282,6 +282,17 @@ let isShuttingDown = false;
  * recovery is noticed in seconds rather than in 30 s steps.
  */
 class PoolHealthMonitor extends EventEmitter {
+    declare _gap: any;
+    declare _nudges: Map<any, any>;
+    declare _inFlight: Set<unknown>;
+    declare _stopped: boolean;
+    declare _timer: null;
+    declare _watched: boolean;
+    declare _watchedIntervalMs: number;
+    declare _recoveryIntervalMs: number;
+    declare _checkIntervalMs: number;
+    declare _maxFailures: number;
+    declare _metrics: Map<any, any>;
     constructor() {
         super();
         this._metrics = new Map();
@@ -304,7 +315,7 @@ class PoolHealthMonitor extends EventEmitter {
      * @param {boolean} healthy
      * @returns {void}
      */
-    _setHealthy(name, healthy) {
+    _setHealthy(name: string, healthy: boolean): void {
         this._ensure(name);
         const meta = this._metrics.get(name);
         if (meta.healthy === healthy) return;
@@ -324,7 +335,7 @@ class PoolHealthMonitor extends EventEmitter {
      * @param {string} name
      * @returns {void}
      */
-    recordProbeSuccess(name) {
+    recordProbeSuccess(name: string): void {
         this._ensure(name);
         const meta = this._metrics.get(name);
         if (!meta.healthy) {
@@ -338,7 +349,7 @@ class PoolHealthMonitor extends EventEmitter {
     }
 
     /** Emits `"check"` `{ name, ok }` after every check; a listener fault never reaches the monitor. */
-    _emitCheck(name, ok) {
+    _emitCheck(name: any, ok: any) {
         try {
             this.emit("check", { name, ok });
         } catch (e) {
@@ -347,14 +358,14 @@ class PoolHealthMonitor extends EventEmitter {
     }
 
     /** @returns {boolean} true while any monitored pool has a failure on record. */
-    _anyFailing() {
+    _anyFailing(): boolean {
         for (const m of this._metrics.values()) {
             if (!m.healthy || m.consecutiveFailures > 0) return true;
         }
         return false;
     }
 
-    _ensure(name) {
+    _ensure(name: any) {
         if (!this._metrics.has(name))
             this._metrics.set(name, {
                 healthy: true,
@@ -363,7 +374,7 @@ class PoolHealthMonitor extends EventEmitter {
             });
     }
 
-    async checkPool(name) {
+    async checkPool(name: any) {
         this._ensure(name);
         const meta = this._metrics.get(name);
         try {
@@ -376,7 +387,7 @@ class PoolHealthMonitor extends EventEmitter {
                 // Release on every path: a ping that rejects (half-dead network)
                 // must not leave the connection checked out, one leak per tick.
                 if (conn) {
-                    await conn.close().catch((e) =>
+                    await conn.close().catch((e: any) =>
                         logger.warning(
                             oracleMessages.CLOSE_FAILED(name, e.message),
                         ),
@@ -500,7 +511,7 @@ class PoolHealthMonitor extends EventEmitter {
     }
 
     /** Runs one check unless one is already in flight for `name`. */
-    _runCheck(name) {
+    _runCheck(name: any) {
         if (this._inFlight.has(name)) return;
         this._inFlight.add(name);
         this.checkPool(name)
@@ -515,7 +526,7 @@ class PoolHealthMonitor extends EventEmitter {
      * @param {string} name
      * @returns {void}
      */
-    nudge(name) {
+    nudge(name: string): void {
         if (this._stopped || this._nudges.has(name)) return;
         const t = setTimeout(() => {
             this._nudges.delete(name);
@@ -541,7 +552,7 @@ class PoolHealthMonitor extends EventEmitter {
      * @param {boolean} watched
      * @returns {void}
      */
-    setWatched(watched) {
+    setWatched(watched: boolean): void {
         const next = Boolean(watched);
         if (this._watched === next) return;
         this._watched = next;
@@ -552,17 +563,17 @@ class PoolHealthMonitor extends EventEmitter {
     }
 
     /** @returns {boolean} true when every monitored pool's breaker is closed. */
-    allHealthy() {
+    allHealthy(): boolean {
         for (const m of this._metrics.values()) if (!m.healthy) return false;
         return true;
     }
 
-    isHealthy(name) {
+    isHealthy(name: any) {
         return this._metrics.get(name)?.healthy ?? true;
     }
 
     getMetrics() {
-        const out = {};
+        const out: Record<string, any> = {};
         for (const [n, m] of this._metrics) out[n] = { ...m };
         return out;
     }
@@ -581,7 +592,7 @@ const CONNECTIVITY_ERROR_RE =
 
 // ── Pool lifecycle ────────────────────────────────────────────────────────────
 
-function _validateConfig(config, name) {
+function _validateConfig(config: any, name: any) {
     const missing = ["user", "password", "connectString"].filter(
         (k) => !config[k],
     );
@@ -606,13 +617,13 @@ function _validateConfig(config, name) {
  * @param {number} ms - Timeout in milliseconds.
  * @returns {number} Whole seconds, >= 1.
  */
-function toDriverConnectTimeoutSec(ms) {
+function toDriverConnectTimeoutSec(ms: number): number {
     const n = Number(ms);
     const safeMs = Number.isFinite(n) && n > 0 ? n : POOL_DEFAULTS.connectTimeout;
     return Math.max(1, Math.ceil(safeMs / 1000));
 }
 
-async function _createPool(name, dbConfig, attempt = 0) {
+async function _createPool(name: any, dbConfig: any, attempt = 0) {
     const MAX_RETRIES = 3;
     const delay = Math.min(1000 * 2 ** attempt, 10_000);
 
@@ -686,7 +697,7 @@ async function _createPool(name, dbConfig, attempt = 0) {
     }
 }
 
-function _getOrCreatePool(name) {
+function _getOrCreatePool(name: any) {
     if (isShuttingDown)
         return Promise.reject(
             new Error("App is shutting down — no new connections."),
@@ -812,7 +823,7 @@ const ACQUIRE_BASE_DELAY_MS = 150;
  * @param {object} pool           oracledb pool
  * @returns {Promise<object>} An open connection the caller must close.
  */
-async function _acquireConnection(connectionName, pool) {
+async function _acquireConnection(connectionName: string, pool: Record<string, any>): Promise<Record<string, any>> {
     let lastErr;
 
     // B9 — honour the PER-POOL connectTimeout on the acquire-race timer.
@@ -845,7 +856,7 @@ async function _acquireConnection(connectionName, pool) {
             // Orphan guard — see the note above. Both handlers are attached so
             // a later rejection cannot become an unhandled rejection either.
             pending.then(
-                async (conn) => {
+                async (conn: any) => {
                     try {
                         await conn.close();
                         logger.warning(
@@ -898,12 +909,12 @@ const kInflight = Symbol.for("app.progress.inflight");
  * @param {object} conn - node-oracledb Connection.
  * @returns {object} the same connection.
  */
-function _instrumentConnection(conn) {
+function _instrumentConnection(conn: Record<string, any>): Record<string, any> {
     if (!conn || conn[kInstrumented] || !Object.isExtensible(conn)) return conn;
     for (const method of ["execute", "executeMany", "commit"]) {
         const original = conn[method];
         if (typeof original !== "function") continue;
-        conn[method] = function instrumented(...args) {
+        conn[method] = function instrumented(...args: any[]) {
             // Callback-style call: leave untouched (the codebase is promise-only).
             if (typeof args[args.length - 1] === "function") {
                 return original.apply(this, args);
@@ -941,7 +952,7 @@ function _instrumentConnection(conn) {
  * @param {import("../../utils/progress/ProgressScope").ProgressScope|undefined} scope
  * @returns {() => void}
  */
-function _bindScope(conn, scope) {
+function _bindScope(conn: Record<string, any>, scope: import("../../utils/progress/ProgressScope").ProgressScope | undefined): () => void {
     if (!scope || !Object.isExtensible(conn)) return () => {};
     conn[kScope] = scope;
     const off = scope.onAbort(() => {
@@ -964,7 +975,7 @@ function _bindScope(conn, scope) {
  *   health gate and attempt the acquire regardless of pool health. Reserved for
  *   the readiness probe, whose entire job is to report pool health directly.
  */
-async function withConnection(connectionName, callback, opts = {}) {
+async function withConnection(connectionName: string, callback: ((...args: any[]) => any), opts: { bypassBreaker?: boolean; } = {}) {
     if (typeof callback !== "function")
         throw new TypeError("withConnection: callback must be a function.");
 
@@ -1055,8 +1066,8 @@ async function withConnection(connectionName, callback, opts = {}) {
  * @param {string}   connectionName
  * @param {Function} callback  async (conn) => result
  */
-async function withTransaction(connectionName, callback) {
-    return withConnection(connectionName, async (conn) => {
+async function withTransaction(connectionName: string, callback: ((...args: any[]) => any)) {
+    return withConnection(connectionName, async (conn: any) => {
         try {
             const result = await callback(conn);
             await conn.commit();
@@ -1080,13 +1091,13 @@ async function withTransaction(connectionName, callback) {
  * @param {Function[]} operations  array of async (conn) => result
  * @returns {Promise<Array<{ success, result?, error?, index }>>}
  */
-async function withBatchConnection(connectionName, operations) {
+async function withBatchConnection(connectionName: string, operations: ((...args: any[]) => any)[]): Promise<Array<{ success; result?; error?; index; }>> {
     if (!Array.isArray(operations) || !operations.length)
         throw new TypeError(
             "withBatchConnection: operations must be a non-empty array.",
         );
 
-    return withConnection(connectionName, async (conn) => {
+    return withConnection(connectionName, async (conn: any) => {
         const FATAL = new Set(["ORA-00028", "ORA-00031"]);
         const results = [];
         for (let i = 0; i < operations.length; i++) {
@@ -1169,7 +1180,7 @@ async function closeAll() {
     for (const [name, poolPromise] of poolRegistry) {
         closures.push(
             Promise.race([
-                poolPromise.then((p) => p.close(10)),
+                poolPromise.then((p: any) => p.close(10)),
                 _timeout(30_000, `Shutdown timeout for "${name}"`),
             ])
                 .then(() => logger.notice(oracleMessages.POOL_CLOSED(name)))
@@ -1192,7 +1203,7 @@ async function closeAll() {
 // SECTION 4 — Internal utilities
 // ─────────────────────────────────────────────────────────────────────────────
 
-function _sleep(ms) {
+function _sleep(ms: any) {
     return new Promise((r) => setTimeout(r, ms));
 }
 /**
@@ -1204,10 +1215,10 @@ function _sleep(ms) {
  * @param {number} delayMs - The already-capped upper bound for the sleep.
  * @returns {number} A random delay in [0, delayMs).
  */
-function _jitter(delayMs) {
+function _jitter(delayMs: number): number {
     return Math.random() * delayMs;
 }
-function _timeout(ms, msg) {
+function _timeout(ms: any, msg: any) {
     return new Promise((_, reject) =>
         setTimeout(() => reject(new Error(msg)), ms),
     );
@@ -1219,9 +1230,9 @@ function _timeout(ms, msg) {
 // SECTION 5 — Exports
 // ─────────────────────────────────────────────────────────────────────────────
 
-const __export_isPoolHealthy = (name) => healthMonitor.isHealthy(name);
+const __export_isPoolHealthy = (name: any) => healthMonitor.isHealthy(name);
 const __export_getHealthMetrics = () => healthMonitor.getMetrics();
-const __export___setPoolHealthForTest = (name, healthy) => {
+const __export___setPoolHealthForTest = (name: any, healthy: any) => {
         if (process.env.NODE_ENV !== "test") {
             throw new Error(
                 "__setPoolHealthForTest is a test-only seam and must not be called outside NODE_ENV=test.",
@@ -1229,16 +1240,16 @@ const __export___setPoolHealthForTest = (name, healthy) => {
         }
         healthMonitor._setHealthy(name, Boolean(healthy));
     };
-const __export_onPoolHealthChange = (fn) => {
+const __export_onPoolHealthChange = (fn: any) => {
         healthMonitor.on("change", fn);
         return () => healthMonitor.off("change", fn);
     };
 const __export_allPoolsHealthy = () => healthMonitor.allHealthy();
-const __export_recordProbeSuccess = (name) => healthMonitor.recordProbeSuccess(name);
-const __export_nudgePoolHealth = (name) => healthMonitor.nudge(name);
-const __export_onPoolHealthCheck = (fn) => {
+const __export_recordProbeSuccess = (name: any) => healthMonitor.recordProbeSuccess(name);
+const __export_nudgePoolHealth = (name: any) => healthMonitor.nudge(name);
+const __export_onPoolHealthCheck = (fn: any) => {
         healthMonitor.on("check", fn);
         return () => healthMonitor.off("check", fn);
     };
-const __export_setPoolHealthWatched = (watched) => healthMonitor.setWatched(watched);
+const __export_setPoolHealthWatched = (watched: any) => healthMonitor.setWatched(watched);
 export { toDriverConnectTimeoutSec, POOL_DEFAULTS, withConnection, withTransaction, withBatchConnection, initializePools, closeAll, getPoolStats, __export_isPoolHealthy as isPoolHealthy, __export_getHealthMetrics as getHealthMetrics, __export___setPoolHealthForTest as __setPoolHealthForTest, __export_onPoolHealthChange as onPoolHealthChange, __export_allPoolsHealthy as allPoolsHealthy, __export_recordProbeSuccess as recordProbeSuccess, __export_nudgePoolHealth as nudgePoolHealth, __export_onPoolHealthCheck as onPoolHealthCheck, __export_setPoolHealthWatched as setPoolHealthWatched, validateOracleClient, setupOracleEnvironment, oracledb, OUT_FORMAT_OBJECT, SYSDBA_PRIVILEGE, EXECUTE_OPTIONS, moneySafeFetchTypeHandler };

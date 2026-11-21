@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -31,7 +30,7 @@ const SWEEP_MIN_GAP_MS = 1000;
 
 class RevokedSessionSet {
     /** @type {Map<string, number>} fid -> untilMs */
-    #entries = new Map();
+    #entries: Map<string, number> = new Map();
     #maxEntries;
     #now;
     #lastSweep = -Infinity;
@@ -41,13 +40,13 @@ class RevokedSessionSet {
      * @param {number} [options.maxEntries=ACCESS_REVOCATION_LIMITS.MAX_ENTRIES]
      * @param {() => number} [options.now=Date.now]
      */
-    constructor({ maxEntries = ACCESS_REVOCATION_LIMITS.MAX_ENTRIES, now = Date.now } = {}) {
+    constructor({ maxEntries = ACCESS_REVOCATION_LIMITS.MAX_ENTRIES, now = Date.now }: { maxEntries?: number; now?: () => number; } = {}) {
         this.#maxEntries = maxEntries;
         this.#now = now;
     }
 
     /** @returns {number} tracked families (expired ones included until swept) */
-    get size() {
+    get size(): number {
         return this.#entries.size;
     }
 
@@ -59,7 +58,7 @@ class RevokedSessionSet {
      * @returns {{added: boolean, dropped: boolean}} `dropped` = a live entry was
      *   evicted to make room (the set was full of live entries)
      */
-    revoke(fid, untilMs) {
+    revoke(fid: string, untilMs: number): { added: boolean; dropped: boolean; } {
         if (typeof fid !== "string" || fid === "" || !Number.isFinite(untilMs)) {
             return { added: false, dropped: false };
         }
@@ -79,7 +78,7 @@ class RevokedSessionSet {
      * @param {number} [nowMs]
      * @returns {boolean} true while the family is ended and its entry is live
      */
-    has(fid, nowMs = this.#now()) {
+    has(fid: string, nowMs: number = this.#now()): boolean {
         if (typeof fid !== "string") return false;
         const until = this.#entries.get(fid);
         if (until === undefined) return false;
@@ -98,7 +97,7 @@ class RevokedSessionSet {
      * @param {number} [limit=Infinity]
      * @returns {{fid: string, untilMs: number}[]}
      */
-    snapshot(nowMs = this.#now(), limit = Infinity) {
+    snapshot(nowMs: number = this.#now(), limit: number = Infinity): { fid: string; untilMs: number; }[] {
         const out = [];
         for (const [fid, untilMs] of this.#entries) {
             if (untilMs > nowMs) out.push({ fid, untilMs });
@@ -116,7 +115,7 @@ class RevokedSessionSet {
     // ── Internals ────────────────────────────────────────────────────────────
 
     /** @returns {boolean} true when a LIVE entry had to be dropped */
-    #makeRoom() {
+    #makeRoom(): boolean {
         const now = this.#now();
         if (now - this.#lastSweep >= SWEEP_MIN_GAP_MS) {
             this.#lastSweep = now;

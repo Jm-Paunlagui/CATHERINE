@@ -39,6 +39,7 @@
  * Class: holds a WeakMap + wraps the server + owns a shutdown hook.
  */
 
+import type { Request, Response } from "express";
 import { logger } from "../logger";
 import { AppError, REQUEST_ERRORS } from "../../constants/errors";
 import { sendError } from "../../constants/responses";
@@ -57,23 +58,28 @@ import { defaultBurstDetector } from "./WatchdogBurstDetector";
  * @param {string} p - Raw path without query string.
  * @returns {string}
  */
-const maskIds = (p) => {
+const maskIds = (p: string): string => {
     const m = /^(\/api\/v\d+)?(\/[^/]+)?/.exec(p);
     return `${m?.[1] ?? ""}${m?.[2] ?? ""}/…`;
 };
 
 class RequestWatchdog {
     /** @type {WeakMap<import("http").IncomingMessage, ProgressScope>} */
-    static #scopes = new WeakMap();
+    static #scopes: WeakMap<import("http").IncomingMessage, ProgressScope> = new WeakMap();
     /** @type {null | ((cut: { method: string, path: string, ageMs: number, idleMs: number }) => void)} */
-    static #shutdownHook = null;
+    static #shutdownHook: null | ((cut: { method: string; path: string; ageMs: number; idleMs: number; }) => void) = null;
+    declare _now: () => number;
+    declare _idleWatchdog: import("./IdleWatchdog").IdleWatchdog;
+    declare _limits: { defaultMs: number; longMs: number; };
+    declare _corsOverride: { applyToErrorResponse: ((...args: any[]) => any); } | null;
+    declare _burstDetector: { record: ((...args: any[]) => any); };
 
     /**
      * The ProgressScope of a request (undefined outside a watched server).
      * @param {import("http").IncomingMessage} req
      * @returns {ProgressScope|undefined}
      */
-    static scopeOf(req) {
+    static scopeOf(req: import("http").IncomingMessage): ProgressScope | undefined {
         return req ? RequestWatchdog.#scopes.get(req) : undefined;
     }
 
@@ -82,7 +88,7 @@ class RequestWatchdog {
      * decides whether a shutdown is in progress). Pass null to clear.
      * @param {null | ((cut: { method: string, path: string, ageMs: number, idleMs: number }) => void)} fn
      */
-    static setShutdownHook(fn) {
+    static setShutdownHook(fn: null | ((cut: { method: string; path: string; ageMs: number; idleMs: number; }) => void)) {
         RequestWatchdog.#shutdownHook = typeof fn === "function" ? fn : null;
     }
 
@@ -94,7 +100,7 @@ class RequestWatchdog {
      * @param {{ applyToErrorResponse: Function }} [options.cors] - CORS policy for the 504 (default: the one `app.js` mounts).
      * @param {{ record: Function }} [options.burstDetector=defaultBurstDetector] - Stall-burst alert (one critical log per burst).
      */
-    constructor({ limits, idleWatchdog = defaultIdleWatchdog, now = Date.now, cors, burstDetector = defaultBurstDetector } = {}) {
+    constructor({ limits, idleWatchdog = defaultIdleWatchdog, now = Date.now, cors, burstDetector = defaultBurstDetector }: { limits?: { defaultMs: number; longMs: number; }; idleWatchdog?: import("./IdleWatchdog").IdleWatchdog; now?: () => number; cors?: { applyToErrorResponse: ((...args: any[]) => any); }; burstDetector?: { record: ((...args: any[]) => any); }; } = {}) {
         this._burstDetector = burstDetector;
         this._corsOverride = cors ?? null;
         if (limits) {
@@ -113,7 +119,7 @@ class RequestWatchdog {
     }
 
     /** @returns {{ applyToErrorResponse: Function }} */
-    _corsPolicy() {
+    _corsPolicy(): { applyToErrorResponse: ((...args: any[]) => any); } {
         return (
             this._corsOverride ??
             require("../../middleware/security/CorsMiddleware").defaultCors
@@ -126,8 +132,8 @@ class RequestWatchdog {
      * @param {import("http").Server} server
      * @returns {RequestWatchdog} this
      */
-    attach(server) {
-        server.prependListener("request", (req, res) => this._watch(req, res));
+    attach(server: import("http").Server): RequestWatchdog {
+        server.prependListener("request", (req: Request, res: Response) => this._watch(req, res));
         return this;
     }
 
@@ -136,7 +142,7 @@ class RequestWatchdog {
      * @param {import("http").IncomingMessage} req
      * @returns {number}
      */
-    _limitFor(req) {
+    _limitFor(req: import("http").IncomingMessage): number {
         const cls = classifyRoute(req.method, req.url);
         if (cls === "exempt") return EXEMPT;
         return cls === "long" ? this._limits.longMs : this._limits.defaultMs;
@@ -146,7 +152,7 @@ class RequestWatchdog {
      * @param {import("http").IncomingMessage} req
      * @param {import("http").ServerResponse} res
      */
-    _watch(req, res) {
+    _watch(req: import("http").IncomingMessage, res: import("http").ServerResponse) {
         const scope = new ProgressScope({
             label: `${req.method} request`,
             idleLimitMs: this._limitFor(req),
@@ -158,7 +164,7 @@ class RequestWatchdog {
         const bytes = () => (socket?.bytesRead ?? 0) + (socket?.bytesWritten ?? 0);
         let lastBytes = bytes();
 
-        const probe = (s) => {
+        const probe = (s: any) => {
             // `writeHead(status, {headers})` does not populate getHeader(), so
             // fall back to the serialised head once it was flushed.
             const ct = String(res.getHeader?.("content-type") ?? "");
@@ -201,7 +207,7 @@ class RequestWatchdog {
      * @param {ProgressScope} scope
      * @param {number} idleMs
      */
-    _terminate(req, res, scope, idleMs) {
+    _terminate(req: import("http").IncomingMessage, res: import("http").ServerResponse, scope: ProgressScope, idleMs: number) {
         const method = req.method || "GET";
         const rawPath = String(req.originalUrl || req.url || "/").split("?")[0];
         const template = req.route?.path;

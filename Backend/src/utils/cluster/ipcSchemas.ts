@@ -28,14 +28,14 @@ const JOB_SET = new Set(KNOWN_JOBS);
 const IP_RE = /^[0-9A-Fa-f:.]+$/;
 const FORBIDDEN_KEYS = ["__proto__", "constructor", "prototype"];
 
-const ok = (value) => ({ ok: true, value });
-const bad = (reason) => ({ ok: false, reason });
+const ok = (value: any) => ({ ok: true, value });
+const bad = (reason: any) => ({ ok: false, reason });
 
 /**
  * @param {*} v
  * @returns {boolean} a plain JSON-style object (no exotic prototype, no poisoned own keys)
  */
-function isPlainObject(v) {
+function isPlainObject(v: any): boolean {
     if (v === null || typeof v !== "object" || Array.isArray(v)) return false;
     const proto = Object.getPrototypeOf(v);
     if (proto !== Object.prototype && proto !== null) return false;
@@ -51,7 +51,7 @@ function isPlainObject(v) {
  * @param {number} [min=0]
  * @returns {boolean} a string with min <= length <= max
  */
-function isBoundedString(v, max, min = 0) {
+function isBoundedString(v: any, max: number, min: number = 0): boolean {
     return typeof v === "string" && v.length >= min && v.length <= max;
 }
 
@@ -61,7 +61,7 @@ function isBoundedString(v, max, min = 0) {
  * @param {number} max
  * @returns {boolean} a finite number within [min, max]
  */
-function isFiniteInRange(v, min, max) {
+function isFiniteInRange(v: any, min: number, max: number): boolean {
     return typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
 }
 
@@ -71,7 +71,7 @@ function isFiniteInRange(v, min, max) {
  * @param {number} max
  * @returns {boolean} an integer within [min, max]
  */
-function isIntInRange(v, min, max) {
+function isIntInRange(v: any, min: number, max: number): boolean {
     return isFiniteInRange(v, min, max) && Number.isInteger(v);
 }
 
@@ -79,7 +79,7 @@ function isIntInRange(v, min, max) {
  * @param {*} v
  * @returns {boolean} a textual IP (v4/v6 charset, <= 64 chars) or the literal "unknown"
  */
-function isIp(v) {
+function isIp(v: any): boolean {
     return typeof v === "string" && v.length >= 1 && v.length <= L.IP_MAX && (v === "unknown" || IP_RE.test(v));
 }
 
@@ -89,7 +89,7 @@ function isIp(v) {
  * @param {*} msg
  * @returns {{ok: true, value: {id: string, target: string, method: string, args: object}}|{ok: false, reason: string}}
  */
-function validateRequest(msg) {
+function validateRequest(msg: any): { ok: true; value: { id: string; target: string; method: string; args: Record<string, any>; }; } | { ok: false; reason: string; } {
     if (!isPlainObject(msg)) return bad("not-object");
     if (msg.cmd !== CLUSTER_IPC.RPC_REQUEST) return bad("bad-cmd");
     if (!isBoundedString(msg.id, L.MAX_ID_LENGTH, 1)) return bad("bad-id");
@@ -106,7 +106,7 @@ function validateRequest(msg) {
  * @param {*} msg
  * @returns {{ok: true, value: {method: string, args: object}}|{ok: false, reason: string}}
  */
-function validateNotify(msg) {
+function validateNotify(msg: any): { ok: true; value: { method: string; args: Record<string, any>; }; } | { ok: false; reason: string; } {
     if (!isPlainObject(msg)) return bad("not-object");
     if (msg.cmd !== CLUSTER_IPC.NOTIFY) return bad("bad-cmd");
     if (typeof msg.method !== "string" || !METHOD_SET.has(msg.method)) return bad("bad-method");
@@ -121,7 +121,7 @@ function validateNotify(msg) {
  * @param {object} a
  * @returns {{ok: true, value: {key: string}}|{ok: false, reason: string}}
  */
-function lockoutKeyArgs(a) {
+function lockoutKeyArgs(a: Record<string, any>): { ok: true; value: { key: string; }; } | { ok: false; reason: string; } {
     return isBoundedString(a.key, L.LOCKOUT_KEY_MAX, 1) ? ok({ key: a.key }) : bad("bad-key");
 }
 
@@ -134,7 +134,7 @@ function lockoutKeyArgs(a) {
  * @param {number} now
  * @returns {{ok: true, value: {fid: string, untilMs: number}[]}|{ok: false, reason: string}}
  */
-function revokedEntries(list, max, now) {
+function revokedEntries(list: any, max: number, now: number): { ok: true; value: { fid: string; untilMs: number; }[]; } | { ok: false; reason: string; } {
     if (!Array.isArray(list) || list.length === 0 || list.length > max) return bad("bad-entries");
     const out = [];
     for (const e of list) {
@@ -148,7 +148,7 @@ function revokedEntries(list, max, now) {
 const ARG_VALIDATORS = new Map([
     [
         CLUSTER_RPC_METHODS.RL_HIT,
-        (a) => {
+        (a: any) => {
             if (typeof a.label !== "string" || !L.RL_LABEL_RE.test(a.label)) return bad("bad-label");
             if (!isBoundedString(a.key, L.RL_KEY_MAX, 1)) return bad("bad-key");
             if (!isIntInRange(a.max, L.RL_MAX_MIN, L.RL_MAX_MAX)) return bad("bad-max");
@@ -158,7 +158,7 @@ const ARG_VALIDATORS = new Map([
     ],
     [
         CLUSTER_RPC_METHODS.RL_CLEAR,
-        (a) => {
+        (a: any) => {
             if (typeof a.label !== "string" || !L.RL_LABEL_RE.test(a.label)) return bad("bad-label");
             const key = a.key === undefined ? null : a.key;
             if (key !== null && !isBoundedString(key, L.RL_KEY_MAX, 1)) return bad("bad-key");
@@ -167,7 +167,7 @@ const ARG_VALIDATORS = new Map([
     ],
     [
         CLUSTER_RPC_METHODS.RL_REFUND,
-        (a) => {
+        (a: any) => {
             if (typeof a.label !== "string" || !L.RL_LABEL_RE.test(a.label)) return bad("bad-label");
             if (!isBoundedString(a.key, L.RL_KEY_MAX, 1)) return bad("bad-key");
             if (!isIntInRange(a.windowMs, L.RL_WINDOW_MIN_MS, L.RL_WINDOW_MAX_MS)) return bad("bad-window");
@@ -175,10 +175,10 @@ const ARG_VALIDATORS = new Map([
             return ok({ label: a.label, key: a.key, windowMs: a.windowMs, bucket: a.bucket });
         },
     ],
-    [CLUSTER_RPC_METHODS.SF_STRIKE, (a) => (isIp(a.ip) ? ok({ ip: a.ip }) : bad("bad-ip"))],
+    [CLUSTER_RPC_METHODS.SF_STRIKE, (a: any) => (isIp(a.ip) ? ok({ ip: a.ip }) : bad("bad-ip"))],
     [
         CLUSTER_RPC_METHODS.SF_UNBLOCK,
-        (a) => {
+        (a: any) => {
             if (!isIp(a.ip)) return bad("bad-ip");
             const actor = a.actor === undefined || a.actor === null ? null : a.actor;
             if (actor !== null && !isBoundedString(actor, L.ACTOR_MAX)) return bad("bad-actor");
@@ -187,7 +187,7 @@ const ARG_VALIDATORS = new Map([
     ],
     [
         CLUSTER_RPC_METHODS.SCHED_RECORD,
-        (a) => {
+        (a: any) => {
             if (typeof a.job !== "string" || !JOB_SET.has(a.job)) return bad("bad-job");
             const o = a.outcome;
             if (!isPlainObject(o)) return bad("bad-outcome");
@@ -203,13 +203,13 @@ const ARG_VALIDATORS = new Map([
             });
         },
     ],
-    [CLUSTER_RPC_METHODS.LOCKOUT_CHECK, (a) => lockoutKeyArgs(a)],
-    [CLUSTER_RPC_METHODS.LOCKOUT_FAIL, (a) => lockoutKeyArgs(a)],
-    [CLUSTER_RPC_METHODS.LOCKOUT_CLEAR, (a) => lockoutKeyArgs(a)],
+    [CLUSTER_RPC_METHODS.LOCKOUT_CHECK, (a: any) => lockoutKeyArgs(a)],
+    [CLUSTER_RPC_METHODS.LOCKOUT_FAIL, (a: any) => lockoutKeyArgs(a)],
+    [CLUSTER_RPC_METHODS.LOCKOUT_CLEAR, (a: any) => lockoutKeyArgs(a)],
     [CLUSTER_RPC_METHODS.RECIPIENTS_INVALIDATE, () => ok({})],
     [
         CLUSTER_RPC_METHODS.AUTH_REVOKE,
-        (a) => {
+        (a: any) => {
             const v = revokedEntries(a.entries, AR.MAX_FIDS_PER_MESSAGE, Date.now());
             return v.ok ? ok({ entries: v.value }) : v;
         },
@@ -217,7 +217,7 @@ const ARG_VALIDATORS = new Map([
     [CLUSTER_RPC_METHODS.METRICS_SNAPSHOT, () => ok({})],
     [
         CLUSTER_RPC_METHODS.ALERTS_ACK,
-        (a) => {
+        (a: any) => {
             if (!isBoundedString(a.alertKey, L.ALERT_KEY_MAX, 1)) return bad("bad-alert-key");
             if (!isBoundedString(a.ackedBy, L.ACTOR_MAX, 1)) return bad("bad-acked-by");
             const note = a.note === undefined || a.note === null ? null : a.note;
@@ -227,7 +227,7 @@ const ARG_VALIDATORS = new Map([
     ],
     [
         CLUSTER_RPC_METHODS.ALERTS_UNACK,
-        (a) => (isBoundedString(a.alertKey, L.ALERT_KEY_MAX, 1) ? ok({ alertKey: a.alertKey }) : bad("bad-alert-key")),
+        (a: any) => (isBoundedString(a.alertKey, L.ALERT_KEY_MAX, 1) ? ok({ alertKey: a.alertKey }) : bad("bad-alert-key")),
     ],
     [CLUSTER_RPC_METHODS.ALERTS_STATUS, () => ok({})],
     [CLUSTER_RPC_METHODS.ALERTS_ACKS, () => ok({})],
@@ -240,7 +240,7 @@ const ARG_VALIDATORS = new Map([
  * @param {*} args
  * @returns {{ok: true, value: object}|{ok: false, reason: string}}
  */
-function validateArgs(method, args) {
+function validateArgs(method: string, args: any): { ok: true; value: Record<string, any>; } | { ok: false; reason: string; } {
     const fn = ARG_VALIDATORS.get(method);
     if (!fn) return bad("bad-method");
     if (!isPlainObject(args)) return bad("bad-args");
@@ -250,7 +250,7 @@ function validateArgs(method, args) {
 const RESULT_VALIDATORS = new Map([
     [
         CLUSTER_RPC_METHODS.RL_HIT,
-        (r) => {
+        (r: any) => {
             if (!isPlainObject(r)) return false;
             if (r.fallback === true) return true;
             return (
@@ -263,10 +263,10 @@ const RESULT_VALIDATORS = new Map([
             );
         },
     ],
-    [CLUSTER_RPC_METHODS.SF_UNBLOCK, (r) => isPlainObject(r) && typeof r.cleared === "boolean"],
+    [CLUSTER_RPC_METHODS.SF_UNBLOCK, (r: any) => isPlainObject(r) && typeof r.cleared === "boolean"],
     [
         CLUSTER_RPC_METHODS.LOCKOUT_CHECK,
-        (r) => {
+        (r: any) => {
             if (!isPlainObject(r)) return false;
             if (r.fallback === true) return true;
             return (
@@ -278,7 +278,7 @@ const RESULT_VALIDATORS = new Map([
     ],
     [
         CLUSTER_RPC_METHODS.LOCKOUT_FAIL,
-        (r) => {
+        (r: any) => {
             if (!isPlainObject(r)) return false;
             if (r.fallback === true) return true;
             return (
@@ -291,7 +291,7 @@ const RESULT_VALIDATORS = new Map([
             );
         },
     ],
-    [CLUSTER_RPC_METHODS.LOCKOUT_CLEAR, (r) => r === null || r === undefined],
+    [CLUSTER_RPC_METHODS.LOCKOUT_CLEAR, (r: any) => r === null || r === undefined],
 ]);
 
 /**
@@ -302,7 +302,7 @@ const RESULT_VALIDATORS = new Map([
  * @param {*} result
  * @returns {boolean}
  */
-function validateResult(method, result) {
+function validateResult(method: string, result: any): boolean {
     if (!METHOD_SET.has(method)) return false;
     const fn = RESULT_VALIDATORS.get(method);
     if (fn) return fn(result);
@@ -317,7 +317,7 @@ function validateResult(method, result) {
  * @param {number} [now=Date.now()]
  * @returns {{ok: true, value: object}|{ok: false, reason: string}}
  */
-function validateTopic(topic, payload, now = Date.now()) {
+function validateTopic(topic: string, payload: any, now: number = Date.now()): { ok: true; value: Record<string, any>; } | { ok: false; reason: string; } {
     if (typeof topic !== "string" || !TOPIC_SET.has(topic)) return bad("bad-topic");
     if (!isPlainObject(payload)) return bad("bad-payload");
     switch (topic) {

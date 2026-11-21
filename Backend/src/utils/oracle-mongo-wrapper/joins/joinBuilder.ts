@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -50,7 +49,7 @@ import { quoteIdentifier } from "../utils";
  * @param {string[]} [lookup.select] - Columns to take from the joined table (omit to take all)
  * @returns {string} Complete SELECT ... JOIN ... ON ... SQL
  */
-function buildJoinSQL(source, lookup) {
+function buildJoinSQL(source: string, lookup: { from: string; localField: string; foreignField: string; as?: string; joinType?: string; on?: Array<any>; select?: string[]; }): string {
   const {
     from,
     localField,
@@ -96,7 +95,7 @@ function buildJoinSQL(source, lookup) {
 }
 
 /** Map a join type string to Oracle JOIN keyword */
-function _resolveJoinType(type) {
+function _resolveJoinType(type: any) {
   switch ((type || "left").toLowerCase()) {
     case "left":
       return "LEFT OUTER JOIN";

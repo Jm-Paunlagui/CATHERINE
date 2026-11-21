@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -63,7 +62,7 @@ import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
  *   counter.next("name")    // → "upd_name_0"
  *   counter.next("status")  // → "upd_status_1"
  */
-function _createCounter() {
+function _createCounter(): { next: (prefix: string) => string; } {
   let c = 0;
   return {
     next(prefix) {
@@ -106,7 +105,7 @@ function resetUpdateCounter() {}
  *   parseUpdate({ $currentDate: { updatedAt: true } })
  *   // → { setClause: 'SET "updatedAt" = SYSDATE', binds: {} }
  */
-function parseUpdate(update) {
+function parseUpdate(update: Record<string, any>): { setClause: string; binds: Record<string, any>; } {
   if (
     !update ||
     typeof update !== "object" ||
@@ -117,7 +116,7 @@ function parseUpdate(update) {
 
   const counter = _createCounter();
   const parts = [];
-  const binds = {};
+  const binds: Record<string, any> = {};
   let hasOp = false;
 
   for (const [op, fields] of Object.entries(update)) {

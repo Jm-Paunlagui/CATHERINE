@@ -52,7 +52,7 @@ const API_PREFIX = "/api/v1";
  * Projects add their own bulk/export routes here.
  * @type {ReadonlyArray<{ method: string|null, path: RegExp }>}
  */
-const LONG_RULES = Object.freeze([
+const LONG_RULES: ReadonlyArray<{ method: string | null; path: RegExp; }> = Object.freeze([
     {
         method: "POST",
         path: /^\/data-purge\/(backup|execute|restore|restore\/preview|backups\/run)$/,
@@ -80,7 +80,7 @@ const LONG_RULES = Object.freeze([
  * `text/event-stream`.
  * @type {ReadonlyArray<{ method: string|null, path: RegExp }>}
  */
-const EXEMPT_RULES = Object.freeze([
+const EXEMPT_RULES: ReadonlyArray<{ method: string | null; path: RegExp; }> = Object.freeze([
     { method: "GET", path: /^\/health\/stream$/ },
     { method: "GET", path: /^\/audit-logs\/stream$/ },
     { method: "GET", path: /^\/audit-logs\/system-logs\/stream$/ },
@@ -95,7 +95,7 @@ const EXEMPT_RULES = Object.freeze([
  * @param {number} max
  * @returns {{ value: number, clamped: boolean, invalid: boolean }}
  */
-function _clamp(raw, fallback, min, max) {
+function _clamp(raw: string | undefined, fallback: number, min: number, max: number): { value: number; clamped: boolean; invalid: boolean; } {
     if (raw === undefined || raw === null || raw === "") {
         return { value: fallback, clamped: false, invalid: false };
     }
@@ -114,8 +114,8 @@ function _clamp(raw, fallback, min, max) {
  * @param {NodeJS.ProcessEnv} [env=process.env]
  * @returns {{ defaultMs: number, longMs: number, warnings: Array<{ name: string, raw: string, applied: number }> }}
  */
-function resolveIdleLimits(env = process.env) {
-    const warnings = [];
+function resolveIdleLimits(env: NodeJS.ProcessEnv = process.env): { defaultMs: number; longMs: number; warnings: Array<{ name: string; raw: string; applied: number; }>; } {
+    const warnings: any[] = [];
     const specs = [
         ["REQUEST_IDLE_TIMEOUT_MS", DEFAULT_IDLE_MS, DEFAULT_IDLE_MAX_MS],
         ["REQUEST_IDLE_TIMEOUT_LONG_MS", LONG_IDLE_MS, LONG_IDLE_MAX_MS],
@@ -136,7 +136,7 @@ function resolveIdleLimits(env = process.env) {
  * @param {NodeJS.ProcessEnv} [env=process.env]
  * @returns {{ capMs: number, warnings: Array<{ name: string, raw: string, applied: number }> }}
  */
-function resolveDbCallProgressCap(env = process.env) {
+function resolveDbCallProgressCap(env: NodeJS.ProcessEnv = process.env): { capMs: number; warnings: Array<{ name: string; raw: string; applied: number; }>; } {
     const name = "DB_CALL_PROGRESS_CAP_MS";
     const r = _clamp(
         env[name],
@@ -158,16 +158,16 @@ function resolveDbCallProgressCap(env = process.env) {
  * @param {string} url
  * @returns {string}
  */
-function normalizePath(url) {
+function normalizePath(url: string): string {
     let p = String(url || "/").split("?")[0].toLowerCase();
     if (p.startsWith(API_PREFIX)) p = p.slice(API_PREFIX.length) || "/";
     if (p.length > 1 && p.endsWith("/")) p = p.replace(/\/+$/, "") || "/";
     return p;
 }
 
-function _matches(rules, method, path) {
+function _matches(rules: any, method: any, path: any) {
     return rules.some(
-        (r) => (r.method === null || r.method === method) && r.path.test(path),
+        (r: any) => (r.method === null || r.method === method) && r.path.test(path),
     );
 }
 
@@ -178,7 +178,7 @@ function _matches(rules, method, path) {
  * @param {string} url - Raw request URL (query allowed, prefix allowed).
  * @returns {"default"|"long"|"exempt"}
  */
-function classifyRoute(method, url) {
+function classifyRoute(method: string, url: string): "default" | "long" | "exempt" {
     const m = String(method || "GET").toUpperCase();
     const path = normalizePath(url);
     if (_matches(EXEMPT_RULES, m, path)) return "exempt";

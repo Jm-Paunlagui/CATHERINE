@@ -10,7 +10,7 @@
 
 // const isDevelopment = process.env.NODE_ENV === "development";
 
-function buildSimpleConnectString(host, port, service) {
+function buildSimpleConnectString(host: any, port: any, service: any) {
     return `${host}:${port}/${service}`;
 }
 
@@ -22,12 +22,12 @@ function buildSimpleConnectString(host, port, service) {
  * @param {number} fallback
  * @returns {number}
  */
-function nonNegativeInt(raw, fallback) {
+function nonNegativeInt(raw: string | undefined, fallback: number): number {
   const s = String(raw ?? "").trim();
   return /^\d+$/.test(s) ? Number(s) : fallback;
 }
 
-function buildTNSConnectString(host, port, sid) {
+function buildTNSConnectString(host: any, port: any, sid: any) {
     return (
         `(DESCRIPTION=` +
         `(ADDRESS=(PROTOCOL=TCP)(HOST=${host})(PORT=${port}))` +
@@ -103,7 +103,7 @@ const connections = {
     // },
 };
 
-function getConnectionConfig(name) {
+function getConnectionConfig(name: any) {
     const config = connections[name];
     if (!config) {
         const available = Object.keys(connections).join(", ");

@@ -9,6 +9,7 @@
  * parameter is the account USERNAME.
  */
 
+import type { Request, Response } from "express";
 import net from "net";
 import { HTTP_STATUS } from "../constants";
 import { AppError, ADMIN_ERRORS } from "../constants/errors";
@@ -25,7 +26,7 @@ import { defaultSecurityFilter } from "../middleware/security/SecurityFilterMidd
  * @param {*} value
  * @returns {boolean}
  */
-const _flag = (value) =>
+const _flag = (value: any): boolean =>
     value === true || value === 1 || value === "true" || value === "1";
 
 /**
@@ -35,7 +36,7 @@ const _flag = (value) =>
  * @param {import('express').Request} req
  * @returns {{ username: string, role: string|undefined }}
  */
-const _caller = (req) => ({
+const _caller = (req: import('express').Request): { username: string; role: string | undefined; } => ({
     username: String(req.user?.userId ?? req.user?.sub ?? ""),
     role: req.user?.role,
 });
@@ -46,14 +47,14 @@ const _caller = (req) => ({
  * @param {import('express').Request} req
  * @returns {number|string|undefined}
  */
-const _actorId = (req) => req.user?.id ?? req.user?.userId;
+const _actorId = (req: import('express').Request): number | string | undefined => req.user?.id ?? req.user?.userId;
 
 class AdminManagementController {
     /**
      * GET /api/v1/admin-management/search?q=<query>
      * Search user accounts to grant admin access to.
      */
-    static search = catchAsync(async (req, res) => {
+    static search = catchAsync(async (req: Request, res: Response) => {
         const q = String(req.query.q ?? "").trim();
         const results = await AdminManagementService.searchAccounts(q);
         res.status(HTTP_STATUS.OK).json(
@@ -65,7 +66,7 @@ class AdminManagementController {
      * GET /api/v1/admin-management
      * List all current admins.
      */
-    static list = catchAsync(async (req, res) => {
+    static list = catchAsync(async (req: Request, res: Response) => {
         const admins = await AdminManagementService.listAdmins();
         res.status(HTTP_STATUS.OK).json(
             sendSuccess(RESPONSE_MESSAGES.FETCHED, admins),
@@ -79,7 +80,7 @@ class AdminManagementController {
      * `retainPassword` / `newPassword` are passed through RAW so the service
      * can refuse them (400) — they are no longer accepted.
      */
-    static create = catchAsync(async (req, res) => {
+    static create = catchAsync(async (req: Request, res: Response) => {
         const { username, role, retainPassword, newPassword, flags, overrideEmail } = req.body;
         const result = await AdminManagementService.addAdmin({
             username,
@@ -102,7 +103,7 @@ class AdminManagementController {
      * `changePassword: true` / `newPassword` are passed through so the service
      * can refuse them (400).
      */
-    static update = catchAsync(async (req, res) => {
+    static update = catchAsync(async (req: Request, res: Response) => {
         const { username } = req.params;
         const { role, changePassword, newPassword } = req.body;
         const result = await AdminManagementService.updateAdmin({
@@ -122,7 +123,7 @@ class AdminManagementController {
      * Body: { overrideEmail? }
      * Issue and email a new temporary password.
      */
-    static resetPassword = catchAsync(async (req, res) => {
+    static resetPassword = catchAsync(async (req: Request, res: Response) => {
         const { username } = req.params;
         const result = await AdminManagementService.resetPassword(username, {
             overrideEmail: req.body?.overrideEmail,
@@ -137,7 +138,7 @@ class AdminManagementController {
      * PATCH /api/v1/admin-management/:username/reset-signature
      * Recompute the SYSSIGNATURE for a tampered or broken admin record.
      */
-    static resetSignature = catchAsync(async (req, res) => {
+    static resetSignature = catchAsync(async (req: Request, res: Response) => {
         const { username } = req.params;
         const result = await AdminManagementService.resetSignature(username, {
             caller: _caller(req),
@@ -153,7 +154,7 @@ class AdminManagementController {
      * worker (SecurityFilterMiddleware.unblockClusterWide) — before this route
      * a restart was the only way to free an address.
      */
-    static unblockIp = catchAsync(async (req, res) => {
+    static unblockIp = catchAsync(async (req: Request, res: Response) => {
         const ip = String(req.body.ip ?? "").trim();
         // Literal IPv4/IPv6 only — anything else could never match a tracked
         // address and would only pollute the audit line (CWE-20).
@@ -177,7 +178,7 @@ class AdminManagementController {
      * Permanently removes an admin. Requires a revoke-backup token
      * (POST /:username/revoke-backup) bound to this admin and the caller.
      */
-    static remove = catchAsync(async (req, res) => {
+    static remove = catchAsync(async (req: Request, res: Response) => {
         const { username } = req.params;
         const { backupToken } = req.body;
         const caller = _caller(req);
@@ -201,7 +202,7 @@ class AdminManagementController {
      * ⚠ The archive contains a password hash and an integrity HMAC — treat the
      * downloaded file as credential material.
      */
-    static revokeBackup = catchAsync(async (req, res) => {
+    static revokeBackup = catchAsync(async (req: Request, res: Response) => {
         const { username } = req.params;
 
         const result = await AdminManagementService.buildRevokeBackup({
@@ -226,7 +227,7 @@ class AdminManagementController {
      * Deactivates an admin — IS_ACTIVE='N' (re-signed) and every notification
      * flag 'N'. The default, non-destructive way access is removed.
      */
-    static revoke = catchAsync(async (req, res) => {
+    static revoke = catchAsync(async (req: Request, res: Response) => {
         const { username } = req.params;
         const { backupToken } = req.body;
         const caller = _caller(req);
@@ -248,7 +249,7 @@ class AdminManagementController {
      *                  canReceiveSrvSys?, isActive? } }
      * SUPER_ADMIN only.
      */
-    static updatePermissions = catchAsync(async (req, res) => {
+    static updatePermissions = catchAsync(async (req: Request, res: Response) => {
         const { username } = req.params;
         const { flags } = req.body;
 

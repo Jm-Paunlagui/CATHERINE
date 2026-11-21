@@ -41,7 +41,7 @@ import { sendError } from "../../constants/responses";
  * @param {{ type?: string, details?: object[], hint?: string }} [opts]
  * @returns {void}
  */
-function sendSsePreflightError(req, res, message, code, opts = {}) {
+function sendSsePreflightError(req: import('express').Request, res: import('express').Response, message: string, code: number, opts: { type?: string; details?: Record<string, any>[]; hint?: string; } = {}): void {
     res.status(code).json(
         sendError(message, code, {
             ...opts,
@@ -68,7 +68,7 @@ function sendSsePreflightError(req, res, message, code, opts = {}) {
  *   "NOT_CURRENT_CUTOFF". Clients branch on this; do not localise it.
  * @returns {void}
  */
-function sendSseNotStreamable(res, reason) {
+function sendSseNotStreamable(res: import('express').Response, reason: string): void {
     res.status(200).json({ streamable: false, reason });
 }
 

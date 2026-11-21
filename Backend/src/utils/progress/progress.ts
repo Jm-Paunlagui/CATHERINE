@@ -21,7 +21,7 @@ import { defaultIdleWatchdog } from "./IdleWatchdog";
 /**
  * @returns {ProgressScope|undefined} The scope of the current async context.
  */
-function currentScope() {
+function currentScope(): ProgressScope | undefined {
     return requestContext.getStore()?.progress;
 }
 
@@ -29,7 +29,7 @@ function currentScope() {
  * Record progress on the current scope (no-op when none).
  * @param {string} source - What made progress (shown in the stall log).
  */
-function touch(source) {
+function touch(source: string) {
     currentScope()?.touch(source);
 }
 
@@ -48,7 +48,7 @@ function throwIfAborted() {
  * @param {() => T} fn
  * @returns {T}
  */
-function runInScope(scope, fn) {
+function runInScope<T>(scope: ProgressScope, fn: () => T): T {
     const store = { ...(requestContext.getStore() ?? {}), progress: scope };
     return requestContext.run(store, fn);
 }
@@ -64,7 +64,7 @@ function runInScope(scope, fn) {
  * @param {() => T} fn
  * @returns {T}
  */
-function runDetached(fn) {
+function runDetached<T>(fn: () => T): T {
     const store = { ...(requestContext.getStore() ?? {}), progress: undefined };
     return requestContext.run(store, fn);
 }
@@ -85,7 +85,7 @@ function runDetached(fn) {
  * @param {() => Promise<T>} fn
  * @returns {Promise<T>}
  */
-async function runGuarded({ label, idleLimitMs, onStall }, fn) {
+async function runGuarded<T>({ label, idleLimitMs, onStall }: { label: string; idleLimitMs: number; onStall?: (scope: ProgressScope, idleMs: number) => (Error | void); }, fn: () => Promise<T>): Promise<T> {
     const scope = new ProgressScope({
         label,
         idleLimitMs,

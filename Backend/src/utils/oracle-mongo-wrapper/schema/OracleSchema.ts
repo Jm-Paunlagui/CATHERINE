@@ -50,10 +50,11 @@ import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
  * All DDL statements use autoCommit: true (DDL is auto-committed by Oracle anyway).
  */
 class OracleSchema {
+  declare db: Record<string, any>;
   /**
    * @param {Object} db - db interface from createDb
    */
-  constructor(db) {
+  constructor(db: Record<string, any>) {
     this.db = db;
   }
 
@@ -82,10 +83,10 @@ class OracleSchema {
    *     categoryId: { type: "NUMBER", references: { table: "categories", column: "id" } }
    *   }, { ifNotExists: true });
    */
-  async createTable(tableName, columns, options = {}) {
-    return this.db.withConnection(async (conn) => {
+  async createTable(tableName: string, columns: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       const colDefs = [];
-      const constraints = [];
+      const constraints: any[] = [];
 
       for (const [colName, spec] of Object.entries(columns)) {
         const parts = [quoteIdentifier(colName), spec.type];
@@ -114,7 +115,7 @@ class OracleSchema {
         colDefs.push(parts.join(" "));
       }
 
-      const allDefs = [...colDefs, ...constraints].join(", ");
+      const allDefs: any[] = [...colDefs, ...constraints].join(", ");
       let sql = `CREATE TABLE ${quoteIdentifier(tableName)} (${allDefs})`;
 
       if (options.ifNotExists) {
@@ -150,8 +151,8 @@ class OracleSchema {
    *   await schema.alterTable("users", { addColumn: { phone: "VARCHAR2(20)" } });
    *   await schema.alterTable("users", { renameColumn: { from: "phone", to: "mobile" } });
    */
-  async alterTable(tableName, operation) {
-    return this.db.withConnection(async (conn) => {
+  async alterTable(tableName: string, operation: Record<string, any>): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       let sql;
 
       if (operation.addColumn) {
@@ -208,8 +209,8 @@ class OracleSchema {
    * @example
    *   await schema.dropTable("temp_data", { cascade: true, ifExists: true });
    */
-  async dropTable(tableName, options = {}) {
-    return this.db.withConnection(async (conn) => {
+  async dropTable(tableName: string, options: { cascade?: boolean; ifExists?: boolean; } = {}): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       let suffix = "";
       if (options.cascade) suffix = " CASCADE CONSTRAINTS PURGE";
 
@@ -233,8 +234,8 @@ class OracleSchema {
    * @param {string} tableName
    * @returns {Promise<{ acknowledged: boolean }>}
    */
-  async truncateTable(tableName) {
-    return this.db.withConnection(async (conn) => {
+  async truncateTable(tableName: string): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       const sql = `TRUNCATE TABLE ${quoteIdentifier(tableName)}`;
       try {
         await conn.execute(sql, {}, { autoCommit: true });
@@ -251,8 +252,8 @@ class OracleSchema {
    * @param {string} newName
    * @returns {Promise<{ acknowledged: boolean }>}
    */
-  async renameTable(oldName, newName) {
-    return this.db.withConnection(async (conn) => {
+  async renameTable(oldName: string, newName: string): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       const sql = `RENAME ${quoteIdentifier(oldName)} TO ${quoteIdentifier(newName)}`;
       try {
         await conn.execute(sql, {}, { autoCommit: true });
@@ -279,10 +280,10 @@ class OracleSchema {
    *     { orReplace: true }
    *   );
    */
-  async createView(viewName, queryBuilderOrSQL, options = {}) {
-    return this.db.withConnection(async (conn) => {
+  async createView(viewName: string, queryBuilderOrSQL: QueryBuilder | string, options: { orReplace?: boolean; force?: boolean; } = {}): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       let selectSql;
-      let binds = {};
+      let binds: Record<string, any> = {};
 
       if (typeof queryBuilderOrSQL === "string") {
         selectSql = queryBuilderOrSQL;
@@ -318,8 +319,8 @@ class OracleSchema {
    * @param {Object} [options] - ifExists
    * @returns {Promise<{ acknowledged: boolean }>}
    */
-  async dropView(viewName, options = {}) {
-    return this.db.withConnection(async (conn) => {
+  async dropView(viewName: string, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       let sql = `DROP VIEW ${quoteIdentifier(viewName)}`;
 
       if (options.ifExists) {
@@ -351,8 +352,8 @@ class OracleSchema {
    * @example
    *   await schema.createSequence("order_seq", { startWith: 1000, incrementBy: 1 });
    */
-  async createSequence(name, options = {}) {
-    return this.db.withConnection(async (conn) => {
+  async createSequence(name: string, options: { startWith?: number; incrementBy?: number; maxValue?: number; minValue?: number; cycle?: boolean; cache?: number; } = {}): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       const parts = [`CREATE SEQUENCE ${quoteIdentifier(name)}`];
 
       if (options.startWith != null)
@@ -382,8 +383,8 @@ class OracleSchema {
    * @param {string} schemaName
    * @returns {Promise<{ acknowledged: boolean }>}
    */
-  async createSchema(schemaName) {
-    return this.db.withConnection(async (conn) => {
+  async createSchema(schemaName: string): Promise<{ acknowledged: boolean; }> {
+    return this.db.withConnection(async (conn: any) => {
       const sql = `CREATE SCHEMA AUTHORIZATION ${quoteIdentifier(schemaName)}`;
       try {
         await conn.execute(sql, {}, { autoCommit: true });

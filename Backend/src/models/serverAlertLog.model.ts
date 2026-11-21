@@ -64,7 +64,7 @@ import { isDemoMode } from "../config/demoMode";
 import { normalizeText } from "../utils/textNormalize";
 
 /** @returns {string} Resolved table name (env override or NODE_ENV default). */
-function resolveTableName() {
+function resolveTableName(): string {
     if (process.env.SERVER_ALERT_LOG_TABLE)
         return process.env.SERVER_ALERT_LOG_TABLE;
     return process.env.NODE_ENV === "production"
@@ -72,7 +72,7 @@ function resolveTableName() {
         : "T_SERVER_ALERT_LOG_DEV";
 }
 
-let _db = null;
+let _db: any = null;
 /** Lazily resolves the appDb handle (never called in DEMO_MODE). */
 function db() {
     if (!_db) _db = createDb("appDb");
@@ -87,7 +87,7 @@ const DEFAULT_PAGE_LIMIT = 50;
 const DEMO_MAX_ROWS = 500;
 
 /** @type {object[]} DEMO_MODE store, newest last. */
-const _demoRows = [];
+const _demoRows: Record<string, any>[] = [];
 let _demoNextId = 1;
 
 const SELECT_COLUMNS = `
@@ -101,7 +101,7 @@ const SELECT_COLUMNS = `
  * @param {string|null} raw
  * @returns {object|null}
  */
-function parseDetails(raw) {
+function parseDetails(raw: string | null): Record<string, any> | null {
     if (raw == null) return null;
     try {
         return JSON.parse(raw);
@@ -118,9 +118,9 @@ function parseDetails(raw) {
  * @param {{ rule?: string, severity?: string, alertKey?: string, from?: Date, to?: Date }} [filters]
  * @returns {{ whereSql: string, binds: object }}
  */
-function buildWhere(filters = {}) {
+function buildWhere(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}): { whereSql: string; binds: Record<string, any>; } {
     const clauses = [];
-    const binds = {};
+    const binds: Record<string, any> = {};
     if (filters.rule) {
         clauses.push("RULE = :rule");
         binds.rule = filters.rule;
@@ -162,6 +162,7 @@ function demoFilter(filters = {}) {
 }
 
 class ServerAlertLogModel {
+    declare static resolveTableName: () => string;
     /**
      * Inserts one alert-log row. Never retried here — best-effort queueing and
      * retry-on-recovery is `AlertNotifierService`'s responsibility; this method
@@ -181,7 +182,7 @@ class ServerAlertLogModel {
      * @param {object|null} [row.details] - Already-sanitised object; JSON-stringified here
      * @returns {Promise<void>}
      */
-    static async insertOne(row) {
+    static async insertOne(row: { alertKey: string; rule: string; severity: "WARNING" | "CRITICAL" | "RESOLVED"; transition: "FIRED" | "ESCALATED" | "RENOTIFIED" | "RECOVERED" | "SUPPRESSED"; valueNum?: number | null; description?: string | null; channel: string; notificationId?: string | null; emailStatus: "SENT" | "FAILED" | "SKIPPED" | "DISABLED"; emailError?: string | null; details?: Record<string, any> | null; }): Promise<void> {
         const record = {
             alertKey: String(row.alertKey ?? "").slice(0, 200),
             rule: String(row.rule ?? "").slice(0, 64),
@@ -225,7 +226,7 @@ class ServerAlertLogModel {
         }
 
         const handle = db();
-        return handle.withConnection(async (conn) => {
+        return handle.withConnection(async (conn: any) => {
             await conn.execute(
                 `INSERT INTO ${resolveTableName()} (
                      ALERT_KEY, RULE, SEVERITY, TRANSITION, VALUE_NUM, DESCRIPTION,
@@ -257,7 +258,7 @@ class ServerAlertLogModel {
      * @param {{ page?: number, limit?: number }} [opts]
      * @returns {Promise<{ rows: object[], total: number, page: number, limit: number }>}
      */
-    static async findPage(filters = {}, opts = {}) {
+    static async findPage(filters: { rule?: string; severity?: string; from?: Date; to?: Date; } = {}, opts: { page?: number; limit?: number; } = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; }> {
         const page = Math.max(1, Number(opts.page) || 1);
         const limit = Math.min(
             MAX_PAGE_LIMIT,
@@ -281,7 +282,7 @@ class ServerAlertLogModel {
         const handle = db();
         const table = resolveTableName();
 
-        return handle.withConnection(async (conn) => {
+        return handle.withConnection(async (conn: any) => {
             const countResult = await conn.execute(
                 `SELECT COUNT(*) AS CNT FROM ${table} ${whereSql}`,
                 binds,
@@ -302,7 +303,7 @@ class ServerAlertLogModel {
                 },
             );
 
-            const rows = (rowsResult.rows ?? []).map((r) => ({
+            const rows = (rowsResult.rows ?? []).map((r: any) => ({
                 ...r,
                 DETAILS: parseDetails(r.DETAILS),
             }));
@@ -319,7 +320,7 @@ class ServerAlertLogModel {
      * @param {string} alertKey
      * @returns {Promise<object|null>} newest row (DETAILS parsed) or null
      */
-    static async findLatestByAlertKey(rule, alertKey) {
+    static async findLatestByAlertKey(rule: string, alertKey: string): Promise<Record<string, any> | null> {
         const { rows } = await ServerAlertLogModel.findPage(
             { rule, alertKey },
             { page: 1, limit: 1 },
@@ -334,7 +335,7 @@ class ServerAlertLogModel {
      * @param {number} [limit=20]
      * @returns {Promise<object[]>}
      */
-    static async findRecent(limit = 20) {
+    static async findRecent(limit: number = 20): Promise<Record<string, any>[]> {
         const { rows } = await ServerAlertLogModel.findPage(
             {},
             { page: 1, limit },
@@ -348,7 +349,7 @@ class ServerAlertLogModel {
      * @param {number} days
      * @returns {Promise<number>} Rows deleted
      */
-    static async purgeOlderThan(days) {
+    static async purgeOlderThan(days: number): Promise<number> {
         const cutoffDays = Math.max(1, Number(days) || 180);
 
         if (isDemoMode()) {
@@ -361,7 +362,7 @@ class ServerAlertLogModel {
             return before - _demoRows.length;
         }
 
-        return db().withConnection(async (conn) => {
+        return db().withConnection(async (conn: any) => {
             const result = await conn.execute(
                 `DELETE FROM ${resolveTableName()} WHERE CREATED_AT < SYSTIMESTAMP - :cutoffDays`,
                 { cutoffDays },

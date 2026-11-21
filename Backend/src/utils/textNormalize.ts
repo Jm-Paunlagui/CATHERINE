@@ -84,7 +84,7 @@
  *
  * @type {ReadonlyMap<string, string>}
  */
-const FOLD_MAP = new Map([
+const FOLD_MAP: ReadonlyMap<string, string> = new Map([
     ["—", "-"],     // — em dash        (common in hand-authored templates)
     ["–", "-"],     // – en dash        (Word auto-substitutes for "-")
     ["‒", "-"],     // ‒ figure dash
@@ -114,7 +114,7 @@ const FOLD_MAP = new Map([
  * therefore NOT encodable there.
  * @type {ReadonlySet<string>}
  */
-const NOT_IN_LATIN9 = new Set([
+const NOT_IN_LATIN9: ReadonlySet<string> = new Set([
     "¤", // ¤ currency sign  -> replaced by €
     "¦", // ¦ broken bar     -> replaced by Š
     "¨", // ¨ diaeresis      -> replaced by š
@@ -134,7 +134,7 @@ const LATIN9_ADDITIONS = new Set(["€", "Š", "š", "Ž", "ž", "Œ", "œ", "Ÿ
  * @param {string} ch - A single character.
  * @returns {boolean}
  */
-function isLatin9Encodable(ch) {
+function isLatin9Encodable(ch: string): boolean {
     if (LATIN9_ADDITIONS.has(ch)) return true;
     if (NOT_IN_LATIN9.has(ch)) return false;
     return ch.codePointAt(0) <= 0xff;
@@ -155,7 +155,7 @@ function isLatin9Encodable(ch) {
  * @example
  * normalizeText("Building — 2nd Floor"); // "Building - 2nd Floor"
  */
-function normalizeText(value) {
+function normalizeText(value: any): any {
     if (typeof value !== "string" || value.length === 0) return value;
 
     let out = "";
@@ -182,7 +182,7 @@ function normalizeText(value) {
  * @example
  * findUnencodable(normalizeText("Grüße 日本")); // ["日", "本"]
  */
-function findUnencodable(value) {
+function findUnencodable(value: any): string[] {
     if (typeof value !== "string" || value.length === 0) return [];
     const bad = [];
     const seen = new Set();

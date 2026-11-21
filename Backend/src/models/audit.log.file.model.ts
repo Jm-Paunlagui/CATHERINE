@@ -82,7 +82,7 @@ let writeChain = Promise.resolve();
  *
  * @returns {{year: string, month: string, day: string}}
  */
-function getDateComponents() {
+function getDateComponents(): { year: string; month: string; day: string; } {
     const formatter = new Intl.DateTimeFormat("en-CA", CONFIG.DATE_OPTIONS);
     const partsMap = Object.fromEntries(
         formatter
@@ -96,7 +96,7 @@ function getDateComponents() {
  * @param {string} dirPath
  * @returns {Promise<void>}
  */
-async function ensureDirectoryExists(dirPath) {
+async function ensureDirectoryExists(dirPath: string): Promise<void> {
     try {
         await fs.mkdir(dirPath, { recursive: true });
     } catch (error) {
@@ -108,7 +108,7 @@ async function ensureDirectoryExists(dirPath) {
  * @param {string} filePath
  * @returns {Promise<number>} Size in bytes, 0 when the file doesn't exist.
  */
-async function getFileSize(filePath) {
+async function getFileSize(filePath: string): Promise<number> {
     try {
         return (await fs.stat(filePath)).size;
     } catch (error) {
@@ -124,7 +124,7 @@ async function getFileSize(filePath) {
  * @param {string} baseDir
  * @returns {Promise<string>}
  */
-async function getAvailableFilePath(baseDir) {
+async function getAvailableFilePath(baseDir: string): Promise<string> {
     let fullPath = path.join(baseDir, `${CONFIG.BASE_NAME}.log`);
     if ((await getFileSize(fullPath)) < CONFIG.MAX_FILE_SIZE) return fullPath;
 
@@ -144,7 +144,7 @@ async function getAvailableFilePath(baseDir) {
  * @param {object} record
  * @returns {string}
  */
-function toJsonLine(record) {
+function toJsonLine(record: Record<string, any>): string {
     return `${JSON.stringify(record)}\n`;
 }
 
@@ -156,7 +156,7 @@ function toJsonLine(record) {
  * @param {string} content
  * @returns {Promise<void>}
  */
-function enqueueAppend(content) {
+function enqueueAppend(content: string): Promise<void> {
     writeChain = writeChain.then(async () => {
         try {
             const { year, month, day } = getDateComponents();
@@ -184,7 +184,7 @@ const MAX_READ_FILE_BYTES = CONFIG.MAX_FILE_SIZE;
  * @param {Date} date
  * @returns {string} Absolute path to `logs/Main/YYYY/MM/DD`.
  */
-function _dayDirPath(date) {
+function _dayDirPath(date: Date): string {
     const formatter = new Intl.DateTimeFormat("en-CA", CONFIG.DATE_OPTIONS);
     const parts = Object.fromEntries(
         formatter.formatToParts(date).map(({ type, value }) => [type, value]),
@@ -199,7 +199,7 @@ function _dayDirPath(date) {
  * @param {object} filter
  * @returns {{ fromDate: Date|null, toDate: Date|null }}
  */
-function _extractDateRange(filter) {
+function _extractDateRange(filter: Record<string, any>): { fromDate: Date | null; toDate: Date | null; } {
     const ca = filter?.CREATED_AT;
     if (!ca) return { fromDate: null, toDate: null };
     const fromDate = ca.$gte ? new Date(ca.$gte) : null;
@@ -216,7 +216,7 @@ function _extractDateRange(filter) {
  * @param {Date} toDate
  * @returns {Promise<string[]>} Absolute paths to day directories.
  */
-async function _resolveDayDirectories(fromDate, toDate) {
+async function _resolveDayDirectories(fromDate: Date, toDate: Date): Promise<string[]> {
     const dirs = [];
     const cursor = new Date(fromDate);
     cursor.setHours(0, 0, 0, 0);
@@ -237,7 +237,7 @@ async function _resolveDayDirectories(fromDate, toDate) {
  * @param {string} dirPath
  * @returns {Promise<string[]>} Absolute file paths sorted alphabetically.
  */
-async function _listAuditFiles(dirPath) {
+async function _listAuditFiles(dirPath: string): Promise<string[]> {
     try {
         const entries = await fs.readdir(dirPath);
         return entries
@@ -262,7 +262,7 @@ async function _listAuditFiles(dirPath) {
  * @param {string} filePath
  * @returns {Promise<object[]>} Parsed audit records.
  */
-async function _readJsonLines(filePath) {
+async function _readJsonLines(filePath: string): Promise<Record<string, any>[]> {
     try {
         const stat = await fs.stat(filePath);
         if (stat.size > MAX_READ_FILE_BYTES) return [];
@@ -299,7 +299,7 @@ async function _readJsonLines(filePath) {
  * @param {object} filter
  * @returns {boolean}
  */
-function _matchesFilter(record, filter) {
+function _matchesFilter(record: Record<string, any>, filter: Record<string, any>): boolean {
     for (const [key, condition] of Object.entries(filter)) {
         if (key === "$or") {
             if (!Array.isArray(condition)) return false;
@@ -380,7 +380,7 @@ function _matchesFilter(record, filter) {
  * @param {object} filter - oracle-mongo-wrapper-style filter.
  * @returns {Promise<object[]>} All matching records (unsorted).
  */
-async function _readAndFilter(filter) {
+async function _readAndFilter(filter: Record<string, any>): Promise<Record<string, any>[]> {
     let { fromDate, toDate } = _extractDateRange(filter);
 
     // Default to today when no date range is specified
@@ -434,7 +434,7 @@ class AuditLogFileModel {
      * @param {object} record
      * @returns {Promise<{rowsAffected: number}>}
      */
-    static async insert(record) {
+    static async insert(record: Record<string, any>): Promise<{ rowsAffected: number; }> {
         await enqueueAppend(toJsonLine(record));
         return { rowsAffected: 1 };
     }
@@ -446,7 +446,7 @@ class AuditLogFileModel {
      * @param {object[]} records
      * @returns {Promise<{rowsAffected: number}>}
      */
-    static async insertBatch(records) {
+    static async insertBatch(records: Record<string, any>[]): Promise<{ rowsAffected: number; }> {
         const list = Array.isArray(records) ? records : [];
         if (list.length === 0) return { rowsAffected: 0 };
         await enqueueAppend(list.map(toJsonLine).join(""));
@@ -468,7 +468,7 @@ class AuditLogFileModel {
      * @param {number} pageSize - Rows per page.
      * @returns {Promise<object[]>} Matching records for the requested page.
      */
-    static async findPaginated(filter, page, pageSize) {
+    static async findPaginated(filter: Record<string, any>, page: number, pageSize: number): Promise<Record<string, any>[]> {
         try {
             const records = await _readAndFilter(filter);
             records.sort(
@@ -489,7 +489,7 @@ class AuditLogFileModel {
      * @param {object} filter - oracle-mongo-wrapper-style filter object.
      * @returns {Promise<number>}
      */
-    static async countTotal(filter) {
+    static async countTotal(filter: Record<string, any>): Promise<number> {
         try {
             const records = await _readAndFilter(filter);
             return records.length;
@@ -509,7 +509,7 @@ class AuditLogFileModel {
      * @param {object} filter - Must contain CREATED_AT with $gte/$lte bounds.
      * @returns {Promise<{rowsAffected: number}>} Count of records in deleted directories.
      */
-    static async deleteMany(filter) {
+    static async deleteMany(filter: Record<string, any>): Promise<{ rowsAffected: number; }> {
         try {
             const { fromDate, toDate } = _extractDateRange(filter);
             if (!fromDate || !toDate) return { rowsAffected: 0 };
@@ -547,7 +547,7 @@ class AuditLogFileModel {
      *
      * @returns {Promise<number>} Epoch ms of latest CREATED_AT, or 0 if empty.
      */
-    static async getLatestCreatedAt() {
+    static async getLatestCreatedAt(): Promise<number> {
         try {
             // Scan today and yesterday to handle timezone boundary
             const today = new Date();
@@ -587,7 +587,7 @@ class AuditLogFileModel {
      * @param {object} matchFilter - Filter with CREATED_AT $gte/$lte bounds.
      * @returns {Promise<object>} Aggregate statistics.
      */
-    static async aggregate(matchFilter) {
+    static async aggregate(matchFilter: Record<string, any>): Promise<Record<string, any>> {
         try {
             const records = await _readAndFilter(matchFilter);
 
@@ -638,7 +638,7 @@ class AuditLogFileModel {
      *
      * @returns {Promise<void>}
      */
-    static async drain() {
+    static async drain(): Promise<void> {
         await writeChain;
     }
 }

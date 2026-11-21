@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -58,7 +57,7 @@ import { oracleMongoWrapperMessages as MSG } from "../../constants/messages";
  *   // Use it with OracleSchema:
  *   const schema = new OracleSchema(db);
  */
-function createDb(connectionName = "appDb") {
+function createDb(connectionName: string = "appDb"): Record<string, any> {
   if (!connectionName || typeof connectionName !== "string") {
     throw new TypeError(MSG.CREATEDB_INVALID_CONNECTION_NAME);
   }
@@ -82,7 +81,7 @@ function createDb(connectionName = "appDb") {
      *     return result.rows;
      *   });
      */
-    withConnection: (callback) =>
+    withConnection: (callback: ((...args: any[]) => any)): Promise<any> =>
       config.withConnection(connectionName, callback),
 
     /**
@@ -94,7 +93,7 @@ function createDb(connectionName = "appDb") {
      * @param {Function} callback - async (conn) => result
      * @returns {Promise<*>} Whatever your callback returns
      */
-    withTransaction: (callback) =>
+    withTransaction: (callback: ((...args: any[]) => any)): Promise<any> =>
       config.withTransaction(connectionName, callback),
 
     /**
@@ -104,7 +103,7 @@ function createDb(connectionName = "appDb") {
      *
      * @param {Function[]} operations - Array of async (conn) => result
      */
-    withBatchConnection: (operations) =>
+    withBatchConnection: (operations: ((...args: any[]) => any)[]) =>
       config.withBatchConnection(connectionName, operations),
 
     /** Gracefully close ALL database pools. Call during app shutdown. */

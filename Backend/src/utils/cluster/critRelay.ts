@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -31,7 +30,7 @@ const RELAY_META_MAX = 4000;
  * @param {*} meta
  * @returns {object}
  */
-function sanitizeMeta(meta) {
+function sanitizeMeta(meta: any): Record<string, any> {
     if (!meta || typeof meta !== "object") return {};
     const seen = new WeakSet();
     try {
@@ -60,7 +59,7 @@ function sanitizeMeta(meta) {
  * @param {number} pid - Originating worker pid.
  * @returns {{cmd: string, record: {level: string, message: string, meta: object, requestId: string|null, timestamp: string, pid: number}}}
  */
-function buildRelayMessage(record, pid) {
+function buildRelayMessage(record: { level: string; message: any; meta?: Record<string, any>; requestId?: string | null; timestamp?: string; }, pid: number): { cmd: string; record: { level: string; message: string; meta: Record<string, any>; requestId: string | null; timestamp: string; pid: number; }; } {
     return {
         cmd: CLUSTER_IPC.CRIT_RELAY,
         record: {
@@ -81,8 +80,8 @@ function buildRelayMessage(record, pid) {
  * @param {{send?: Function, connected?: boolean, pid: number}} proc - `process`-like
  * @returns {Function} unsubscribe
  */
-function subscribeCriticalRelay(logger, proc) {
-    return logger.onLevel(2, (record) => {
+function subscribeCriticalRelay(logger: { onLevel: (max: number, fn: ((...args: any[]) => any)) => ((...args: any[]) => any); }, proc: { send?: ((...args: any[]) => any); connected?: boolean; pid: number; }): ((...args: any[]) => any) {
+    return logger.onLevel(2, (record: any) => {
         // `_noNotify` records never reach onLevel subscribers (logger skips
         // them); checked again here so a direct caller keeps the loop guard.
         if (record?.meta?._noNotify) return;

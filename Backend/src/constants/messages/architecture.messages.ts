@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -21,7 +20,7 @@ const architectureMessages = {
      * @param {number} flowCount
      * @returns {string}
      */
-    MAP_SERVED: (name, adminId, nodeCount, flowCount) =>
+    MAP_SERVED: (name: string, adminId: number | string, nodeCount: number, flowCount: number): string =>
         `System map "${name}" served — ADMIN_ID: ${adminId}, nodes: ${nodeCount}, flows: ${flowCount}.`,
 
     /**
@@ -32,7 +31,7 @@ const architectureMessages = {
      * @param {string} reason - the validator's error message
      * @returns {string}
      */
-    MAP_BUILD_FAILED: (name, reason) =>
+    MAP_BUILD_FAILED: (name: string, reason: string): string =>
         `System map "${name}" could not be built (src/constants/${name}Model.ts): ${reason}`,
 };
 

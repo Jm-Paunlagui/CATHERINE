@@ -101,7 +101,7 @@ class BackupTokenService {
      *     rowCounts: { T_SERVER_ALERT_LOG_DEV: 42 },
      * });
      */
-    static async issue({ adminId, scopeHash, rowCounts, highWater, ttlMinutes }) {
+    static async issue({ adminId, scopeHash, rowCounts, highWater, ttlMinutes }: { adminId: number | string; scopeHash: string; rowCounts: Record<string, number>; highWater?: Record<string, string>; ttlMinutes?: number; }): Promise<{ token: string; issuedAt: number; expiresAt: number; }> {
         const ttl = Number.isFinite(ttlMinutes)
             ? ttlMinutes
             : parseInt(process.env.BACKUP_TOKEN_TTL_MINUTES, 10) || DEFAULT_TTL_MINUTES;
@@ -151,7 +151,10 @@ class BackupTokenService {
      * const result = await BackupTokenService.verify(req.body.backupToken);
      * if (!result.valid) throw new AppError(PURGE_ERRORS.BACKUP_TOKEN_INVALID, HTTP_STATUS.UNAUTHORIZED);
      */
-    static async verify(token) {
+    static async verify(token: string): Promise<{ valid: true; payload: {
+        jti: any; scopeHash: string; rowCounts: Record<string, number>; adminId: number | string; issuedAt: number; expiresAt: number; 
+}; } |
+    { valid: false; reason: "malformed" | "tampered" | "expired"; }> {
         if (typeof token !== "string" || token.length === 0 || !token.includes(".")) {
             return { valid: false, reason: "malformed" };
         }
@@ -238,7 +241,10 @@ class BackupTokenService {
      * const result = await BackupTokenService.consume(req.body.backupToken);
      * if (!result.valid) throw new AppError(PURGE_ERRORS.BACKUP_TOKEN_INVALID, HTTP_STATUS.UNAUTHORIZED);
      */
-    static async consume(token) {
+    static async consume(token: string): Promise<{ valid: true; payload: {
+        highWater(tables: string[], highWater: any): unknown; scopeHash: string; rowCounts: Record<string, number>; adminId: number | string; issuedAt: number; expiresAt: number; jti: string; 
+}; } |
+    { valid: false; reason: "malformed" | "tampered" | "expired" | "replayed"; }> {
         const result = await BackupTokenService.verify(token);
         if (!result.valid) return result;
 

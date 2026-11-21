@@ -21,12 +21,13 @@ import NodeCache from "node-cache";
  * @description Holds a NodeCache of window counters.
  */
 class SlidingWindowCounter {
+    declare _store: NodeCache;
     /**
      * @param {object} [opts]
      * @param {import("node-cache")} [opts.store] - Injected store (tests).
      * @param {number} [opts.maxKeys=-1] - NodeCache key cap (-1 = unlimited); a `set` past it throws.
      */
-    constructor({ store, maxKeys = -1 } = {}) {
+    constructor({ store, maxKeys = -1 }: { store?: import("node-cache"); maxKeys?: number; } = {}) {
         this._store =
             store ??
             new NodeCache({
@@ -39,7 +40,7 @@ class SlidingWindowCounter {
     }
 
     /** @returns {import("node-cache")} the backing store */
-    get store() {
+    get store(): import("node-cache") {
         return this._store;
     }
 
@@ -54,7 +55,7 @@ class SlidingWindowCounter {
      *   `bucket` (allowed): the window start the hit was counted in, for `refund`.
      *   `retryAt` (refused): integer epoch ms of the earliest admit with no further hits.
      */
-    hit(key, max, windowMs, now = Date.now()) {
+    hit(key: string, max: number, windowMs: number, now: number = Date.now()): { allowed: boolean; count: number; remaining: number; resetAt: number; bucket?: number; retryAt?: number; } {
         const windowSec = windowMs / 1000;
         const windowStart = Math.floor(now / windowMs) * windowMs;
         const prevKey = `${key}:${windowStart - windowMs}`;
@@ -103,7 +104,7 @@ class SlidingWindowCounter {
      * @param {number} windowStart
      * @returns {number}
      */
-    static _retryAt(prev, curr, max, W, windowStart) {
+    static _retryAt(prev: number, curr: number, max: number, W: number, windowStart: number): number {
         if (curr < max) {
             // prev > 0 here, otherwise the estimate would be curr < max.
             return windowStart + W - Math.floor(((max - curr) * W - 1) / prev);
@@ -123,7 +124,7 @@ class SlidingWindowCounter {
      * @param {number} [now=Date.now()]
      * @returns {boolean} true when a hit was given back
      */
-    refund(key, bucket, windowMs, now = Date.now()) {
+    refund(key: string, bucket: number, windowMs: number, now: number = Date.now()): boolean {
         const windowStart = Math.floor(now / windowMs) * windowMs;
         if (!Number.isFinite(bucket) || bucket < windowStart - windowMs) return false;
         const bucketKey = `${key}:${bucket}`;
@@ -142,7 +143,7 @@ class SlidingWindowCounter {
      * @param {string|string[]} key
      * @returns {number} entries deleted
      */
-    del(key) {
+    del(key: string | string[]): number {
         return this._store.del(key);
     }
 
@@ -152,12 +153,12 @@ class SlidingWindowCounter {
     }
 
     /** @returns {object} NodeCache stats */
-    getStats() {
+    getStats(): Record<string, any> {
         return this._store.getStats();
     }
 
     /** @returns {number} number of stored window keys */
-    get size() {
+    get size(): number {
         return this._store.keys().length;
     }
 

@@ -13,10 +13,14 @@
  * (including OPTIONS); only the per-route aggregation excludes CORS preflights.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger";
 import { captureRouteLabel, resolveRouteLabel, shouldRecordRouteMetrics } from "../../utils/routeLabel";
 
 class ResponseTimeMiddleware {
+  declare _metrics: Map<any, any>;
+  declare _verySlowThreshold: any;
+  declare _slowThreshold: any;
   constructor(options = {}) {
     this._slowThreshold = options.slowThreshold ?? 1000;
     this._verySlowThreshold = options.verySlowThreshold ?? 3000;
@@ -25,7 +29,7 @@ class ResponseTimeMiddleware {
     this.handle = this.handle.bind(this);
   }
 
-  handle(req, res, next) {
+  handle(req: Request, res: Response, next: NextFunction) {
     const startTime = process.hrtime.bigint();
 
     const originalWriteHead = res.writeHead;
@@ -82,7 +86,7 @@ class ResponseTimeMiddleware {
   }
 
   getPerformanceMetrics() {
-    const out = {};
+    const out: Record<string, any> = {};
     for (const [route, d] of this._metrics) {
       out[route] = {
         ...d,

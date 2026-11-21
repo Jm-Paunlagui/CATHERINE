@@ -6,10 +6,13 @@
  * Restricts access to trusted IP addresses or CIDR ranges.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger";
 import { getStatusTitle } from "../../constants/responses";
 
 class IpFilterMiddleware {
+  declare _allowedIps: any;
+  declare _enabled: any;
   constructor(options = {}) {
     this._enabled = options.enabled ?? process.env.ENABLE_IP_FILTER === "true";
     this._allowedIps =
@@ -21,11 +24,11 @@ class IpFilterMiddleware {
     this.handle = this.handle.bind(this);
   }
 
-  handle(req, res, next) {
+  handle(req: Request, res: Response, next: NextFunction) {
     if (!this._enabled || this._allowedIps.length === 0) return next();
 
     const clientIp = IpFilterMiddleware.extractClientIp(req);
-    const allowed = this._allowedIps.some((entry) =>
+    const allowed = this._allowedIps.some((entry: any) =>
       entry.includes("/")
         ? IpFilterMiddleware.ipInCidr(clientIp, entry)
         : clientIp === entry,
@@ -49,7 +52,7 @@ class IpFilterMiddleware {
     next();
   }
 
-  static ipInCidr(ip, cidr) {
+  static ipInCidr(ip: any, cidr: any) {
     const [range, bits] = cidr.split("/");
     const mask = bits ? ~((1 << (32 - parseInt(bits, 10))) - 1) : 0xffffffff;
     const ipNum = IpFilterMiddleware.ipToNum(ip);
@@ -57,15 +60,15 @@ class IpFilterMiddleware {
     return (ipNum & mask) === (rangeNum & mask);
   }
 
-  static ipToNum(ip) {
+  static ipToNum(ip: any) {
     return (
       ip
         .split(".")
-        .reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0
+        .reduce((acc: any, octet: any) => (acc << 8) + parseInt(octet, 10), 0) >>> 0
     );
   }
 
-  static extractClientIp(req) {
+  static extractClientIp(req: any) {
     let ip = req.ip || req.socket?.remoteAddress || "unknown";
     if (ip.startsWith("::ffff:")) ip = ip.slice(7);
     return ip;

@@ -71,6 +71,18 @@ import { parseFilter } from "../parsers/filterParser";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 class QueryBuilder {
+    declare _terminated: boolean;
+    declare _asOf: any;
+    declare _sample: any;
+    declare _forUpdate: any;
+    declare _projection: any;
+    declare _skip: any;
+    declare _limit: any;
+    declare _sort: any;
+    declare _conn: Record<string, any>;
+    declare db: Record<string, any>;
+    declare filter: Record<string, any>;
+    declare tableName: string;
     /**
      * Create a new QueryBuilder. Usually called internally by OracleCollection.find().
      *
@@ -80,7 +92,7 @@ class QueryBuilder {
      * @param {Object} [conn] - Raw connection (if inside a transaction/session)
      * @param {Object} [options] - Initial options: sort, limit, skip, projection, etc.
      */
-    constructor(tableName, filter, db, conn = null, options = {}) {
+    constructor(tableName: string, filter: Record<string, any>, db: Record<string, any>, conn: Record<string, any> = null, options: Record<string, any> = {}) {
         this.tableName = tableName;
         this.filter = filter || {};
         this.db = db;
@@ -114,7 +126,7 @@ class QueryBuilder {
      * @param {Object} sortSpec - e.g. { name: 1, age: -1 } (1=ASC, -1=DESC)
      * @returns {QueryBuilder} this (for chaining)
      */
-    sort(sortSpec) {
+    sort(sortSpec: Record<string, any>): QueryBuilder {
         this._checkTerminated();
         this._sort = sortSpec;
         return this;
@@ -125,7 +137,7 @@ class QueryBuilder {
      * @param {number} n - Maximum number of rows
      * @returns {QueryBuilder} this (for chaining)
      */
-    limit(n) {
+    limit(n: number): QueryBuilder {
         this._checkTerminated();
         this._limit = n;
         return this;
@@ -143,7 +155,7 @@ class QueryBuilder {
      *   // Page 2 (rows 11-20)
      *   const page2 = await users.find().skip(10).limit(10).toArray();
      */
-    skip(n) {
+    skip(n: number): QueryBuilder {
         this._checkTerminated();
         this._skip = n;
         return this;
@@ -161,7 +173,7 @@ class QueryBuilder {
      * @param {Object} projectionSpec - Columns to include (1) or exclude (0)
      * @returns {QueryBuilder} this (for chaining)
      */
-    project(projectionSpec) {
+    project(projectionSpec: Record<string, any>): QueryBuilder {
         this._checkTerminated();
         this._projection = projectionSpec;
         return this;
@@ -179,7 +191,7 @@ class QueryBuilder {
      *   - "skip locked" → FOR UPDATE SKIP LOCKED (skip locked rows)
      * @returns {QueryBuilder} this (for chaining)
      */
-    forUpdate(mode) {
+    forUpdate(mode: boolean | string): QueryBuilder {
         this._checkTerminated();
         this._forUpdate = mode === true ? true : mode;
         return this;
@@ -201,7 +213,7 @@ class QueryBuilder {
      *
      * @returns {{ sql: string, binds: Object }} The SQL string and bind variables
      */
-    _buildSQL() {
+    _buildSQL(): { sql: string; binds: Record<string, any>; } {
         const { whereClause, binds } = parseFilter(this.filter, "t0");
 
         // Projection
@@ -341,11 +353,11 @@ class QueryBuilder {
      * where a filter value is itself a Promise that needs to be awaited.
      */
     async _resolveFilterPromises() {
-        const resolve = async (obj) => {
+        const resolve = async (obj: any) => {
             if (obj && typeof obj.then === "function") return await obj;
             if (Array.isArray(obj)) return Promise.all(obj.map(resolve));
             if (obj && typeof obj === "object" && !(obj instanceof Date)) {
-                const result = {};
+                const result: Record<string, any> = {};
                 for (const [k, v] of Object.entries(obj)) {
                     result[k] = await resolve(v);
                 }
@@ -363,7 +375,7 @@ class QueryBuilder {
      * .toArray(). JavaScript's `await` calls .then() on any thenable object,
      * and this method delegates to .toArray().
      */
-    then(resolve, reject) {
+    then(resolve: any, reject: any) {
         return this.toArray().then(resolve, reject);
     }
 
@@ -375,11 +387,11 @@ class QueryBuilder {
      *
      * @returns {Promise<Array>} Array of row objects
      */
-    async _execute() {
+    async _execute(): Promise<Array<any>> {
         await this._resolveFilterPromises();
         const { sql, binds } = this._buildSQL();
 
-        const fn = async (conn) => {
+        const fn = async (conn: any) => {
             try {
                 const result = await conn.execute(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
@@ -390,7 +402,7 @@ class QueryBuilder {
                 // Handle exclusion projection post-processing
                 const proj = buildProjection(this._projection);
                 if (proj.isExclusion && proj.excludedCols.length > 0) {
-                    rows = rows.map((row) => {
+                    rows = rows.map((row: any) => {
                         const doc = { ...row };
                         for (const col of proj.excludedCols) {
                             delete doc[col];
@@ -426,7 +438,7 @@ class QueryBuilder {
      * @example
      *   const users = await coll.find({ active: true }).sort({ name: 1 }).toArray();
      */
-    async toArray() {
+    async toArray(): Promise<Array<Record<string, any>>> {
         this._terminated = true;
         return this._execute();
     }
@@ -446,24 +458,24 @@ class QueryBuilder {
      *     console.log(`Order ${row.id}: $${row.amount}`);
      *   });
      */
-    async forEach(fn) {
+    async forEach(fn: ((...args: any[]) => any)): Promise<void> {
         this._terminated = true;
         await this._resolveFilterPromises();
         const { sql, binds } = this._buildSQL();
         const proj = buildProjection(this._projection);
 
-        const run = (conn) =>
+        const run = (conn: any) =>
             new Promise((resolve, reject) => {
                 const stream = conn.queryStream(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 });
-                stream.on("data", (row) => {
+                stream.on("data", (row: any) => {
                     if (proj.isExclusion && proj.excludedCols.length > 0) {
                         for (const col of proj.excludedCols) delete row[col];
                     }
                     fn(row);
                 });
-                stream.on("error", (err) => {
+                stream.on("error", (err: any) => {
                     reject(
                         new Error(
                             MSG.wrapError(
@@ -494,7 +506,7 @@ class QueryBuilder {
      * @example
      *   const user = await coll.find({ email: "ana@test.com" }).next();
      */
-    async next() {
+    async next(): Promise<Record<string, any> | null> {
         this._terminated = true;
         const original = this._limit;
         this._limit = 1;
@@ -514,7 +526,7 @@ class QueryBuilder {
      *   const exists = await coll.find({ email: "ana@test.com" }).hasNext();
      *   if (!exists) console.log("USER not found");
      */
-    async hasNext() {
+    async hasNext(): Promise<boolean> {
         this._terminated = true;
         const original = this._limit;
         this._limit = 1;
@@ -533,12 +545,12 @@ class QueryBuilder {
      * @example
      *   const total = await coll.find({ status: "active" }).count();
      */
-    async count() {
+    async count(): Promise<number> {
         this._terminated = true;
         const { whereClause, binds } = parseFilter(this.filter, "t0");
         const sql = `SELECT COUNT(*) AS CNT FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause}`;
 
-        const fn = async (conn) => {
+        const fn = async (conn: any) => {
             try {
                 const result = await conn.execute(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
@@ -568,7 +580,7 @@ class QueryBuilder {
      *   console.log(sql);
      *   // → SELECT * FROM "users" t0 WHERE "status" = :where_status_0 ORDER BY "name" ASC
      */
-    async explain() {
+    async explain(): Promise<string> {
         this._terminated = true;
         const { sql } = this._buildSQL();
         return sql;

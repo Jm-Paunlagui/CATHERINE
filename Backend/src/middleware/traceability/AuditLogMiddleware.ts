@@ -1,6 +1,7 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
+import type { NextFunction, Request, Response } from "express";
 import AuditLogService from "../../services/AuditLogService";
 import { resolveRouteLabel } from "../../utils/routeLabel";
 import os from "os";
@@ -122,7 +123,7 @@ const TRUNCATION_SUFFIX = "...";
  * @returns {string} `str` unchanged when it already fits, else a truncated
  *   copy ending in "..." whose UTF-8 length is <= `maxBytes`.
  */
-function truncateUtf8Bytes(str, maxBytes) {
+function truncateUtf8Bytes(str: string, maxBytes: number): string {
     const buf = Buffer.from(str, "utf8");
     if (buf.length <= maxBytes) return str;
 
@@ -144,7 +145,7 @@ function truncateUtf8Bytes(str, maxBytes) {
  * @param {string} key - Raw query-param key.
  * @returns {string} Normalised comparison key.
  */
-function normalizeParamKey(key) {
+function normalizeParamKey(key: string): string {
     return String(key)
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "");
@@ -168,7 +169,7 @@ function normalizeParamKey(key) {
  * @param {string} key - Raw query-param key.
  * @returns {string[]} Lowercased tokens.
  */
-function tokenizeParamKey(key) {
+function tokenizeParamKey(key: string): string[] {
     return String(key)
         .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
         .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
@@ -185,7 +186,7 @@ function tokenizeParamKey(key) {
  * substring fragment, OR the tokenised key exactly matches any Tier 2
  * fragment.
  */
-function isSensitiveParamKey(key) {
+function isSensitiveParamKey(key: string): boolean {
     const norm = normalizeParamKey(key);
     if (SENSITIVE_PARAM_FRAGMENTS_SUBSTRING.some((fragment) => norm.includes(fragment)))
         return true;
@@ -207,6 +208,9 @@ const _serverIp = (() => {
 })();
 
 class AuditLogMiddleware {
+    declare _excludedPaths: any;
+    declare _excludeHealth: any;
+    declare _enabled: any;
     constructor(options = {}) {
         this._enabled =
             options.enabled ?? process.env.AUDIT_LOG_ENABLED !== "false";
@@ -223,10 +227,10 @@ class AuditLogMiddleware {
         this.handle = this.handle.bind(this);
     }
 
-    handle(req, res, next) {
+    handle(req: Request, res: Response, next: NextFunction) {
         if (!this._enabled) return next();
         if (this._excludeHealth && req.path === "/health") return next();
-        if (this._excludedPaths.some((p) => req.path.startsWith(p)))
+        if (this._excludedPaths.some((p: any) => req.path.startsWith(p)))
             return next();
 
         // OPTIONS (CORS preflight) requests are browser plumbing, not business
@@ -250,7 +254,7 @@ class AuditLogMiddleware {
         next();
     }
 
-    static _buildRecord(req, res, duration) {
+    static _buildRecord(req: Request, res: Response, duration: any) {
         const statusCode = res.statusCode || 200;
         const statusCategory = Math.floor(statusCode / 100) + "xx";
 
@@ -317,12 +321,12 @@ class AuditLogMiddleware {
      * @param {object|null} query - req.query.
      * @returns {string|null} JSON string (redacted, ≤2000 BYTES) or null.
      */
-    static _sanitizeParams(query) {
+    static _sanitizeParams(query: Record<string, any> | null): string | null {
         if (!query || typeof query !== "object") return null;
         const keys = Object.keys(query);
         if (keys.length === 0) return null;
 
-        const filtered = {};
+        const filtered: Record<string, any> = {};
         for (const [k, v] of Object.entries(query)) {
             filtered[k] = AuditLogMiddleware._isSensitiveParamKey(k)
                 ? "[REDACTED]"
@@ -336,7 +340,7 @@ class AuditLogMiddleware {
      * @returns {boolean} True if the key should be redacted.
      * @see isSensitiveParamKey
      */
-    static _isSensitiveParamKey(key) {
+    static _isSensitiveParamKey(key: string): boolean {
         return isSensitiveParamKey(key);
     }
 }

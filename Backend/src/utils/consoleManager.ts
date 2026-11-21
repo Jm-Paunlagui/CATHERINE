@@ -2,6 +2,9 @@
 import { logger } from "./logger";
 
 class ConsoleManager {
+    declare clearIntervalId: null;
+    declare isInitialized: boolean;
+    declare lastClearDate: string;
     constructor() {
         this.lastClearDate = new Date().toDateString();
         this.isInitialized = false;

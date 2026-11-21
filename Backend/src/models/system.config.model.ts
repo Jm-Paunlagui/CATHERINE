@@ -75,7 +75,15 @@ class SystemConfigModel {
      *   ROW_HASH: string|null,
      * }|null>}
      */
-    static async findByKey(key) {
+    static async findByKey(key: string): Promise<{
+        CONFIG_KEY: string;
+        CONFIG_VALUE: string | null;
+        VALUE_TYPE: string;
+        DESCRIPTION: string | null;
+        UPDATED_BY: string | null;
+        UPDATED_AT: Date;
+        ROW_HASH: string | null;
+    } | null> {
         if (isDemoMode()) {
             const row = demo.systemConfig().get(String(key));
             return row ? { ...row } : null;
@@ -108,7 +116,7 @@ class SystemConfigModel {
         description,
         updatedBy,
         rowHash,
-    }) {
+    }: { key: string; value: string; valueType?: "STRING" | "BOOLEAN" | "NUMBER"; description?: string; updatedBy: string | number; rowHash: string; }): Promise<string> {
         const setFields = {
             CONFIG_VALUE: value,
             VALUE_TYPE: valueType,

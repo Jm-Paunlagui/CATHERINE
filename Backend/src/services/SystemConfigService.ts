@@ -48,7 +48,7 @@ class SystemConfigService {
      * @param {string} key
      * @returns {Promise<object|null>} the raw row, or null on any unhappy path
      */
-    static async getRaw(key) {
+    static async getRaw(key: string): Promise<Record<string, any> | null> {
         let row;
         try {
             row = await SystemConfigModel.findByKey(key);
@@ -88,7 +88,7 @@ class SystemConfigService {
      * @param {string} key - a key of {@link CONFIG_KEYS}
      * @returns {Promise<string>}
      */
-    static async get(key) {
+    static async get(key: string): Promise<string> {
         const def = SystemConfigService._definition(key);
         const row = await SystemConfigService.getRaw(key);
         const value = String(row?.CONFIG_VALUE ?? "").trim().toUpperCase();
@@ -101,7 +101,7 @@ class SystemConfigService {
      * @param {string} key
      * @returns {Promise<{ value: string, updatedBy: string|null, updatedAt: Date|null }>}
      */
-    static async getStatus(key) {
+    static async getStatus(key: string): Promise<{ value: string; updatedBy: string | null; updatedAt: Date | null; }> {
         const def = SystemConfigService._definition(key);
         const row = await SystemConfigService.getRaw(key);
         if (!row) return { value: def.defaultValue, updatedBy: null, updatedAt: null };
@@ -122,7 +122,7 @@ class SystemConfigService {
      * @returns {Promise<{ value: string, updatedBy: string, updatedAt: Date }>}
      * @throws {AppError} 400 when the key is unknown or the value not allowed
      */
-    static async set(key, value, adminId) {
+    static async set(key: string, value: string, adminId: string | number): Promise<{ value: string; updatedBy: string; updatedAt: Date; }> {
         const def = SystemConfigService._definition(key);
         const normalized = String(value ?? "").trim().toUpperCase();
         if (!def.values.includes(normalized)) {
@@ -159,7 +159,7 @@ class SystemConfigService {
      * @throws {AppError} 400 for an unregistered key
      * @private
      */
-    static _definition(key) {
+    static _definition(key: string): { values: string[]; defaultValue: string; } {
         const def = Object.prototype.hasOwnProperty.call(CONFIG_KEYS, key) ? CONFIG_KEYS[key] : null;
         if (!def) {
             throw new AppError(VALIDATION_ERRORS.INVALID_INPUT, HTTP_STATUS.BAD_REQUEST, {

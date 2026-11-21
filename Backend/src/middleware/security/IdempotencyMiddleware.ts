@@ -65,6 +65,11 @@ const DEFAULT_TTL_SECONDS = 24 * 60 * 60;
 const HEADER = "idempotency-key";
 
 class IdempotencyMiddleware {
+    declare _store: import("../cache").CacheStore;
+    declare _callerOf: (req: import("express").Request) => string;
+    declare _required: boolean;
+    declare _ttl: number;
+    declare _storeName: string;
     /**
      * @param {Object} [options]
      * @param {string} [options.storeName="idempotency"] - CacheRegistry store name.
@@ -76,7 +81,7 @@ class IdempotencyMiddleware {
      *   Extracts a stable caller identity. Defaults to the authenticated user id
      *   when present, else the client IP.
      */
-    constructor(options = {}) {
+    constructor(options: { storeName?: string; ttl?: number; required?: boolean; callerOf?: (req: import('express').Request) => string; } = {}) {
         this._storeName = options.storeName ?? "idempotency";
         this._ttl = options.ttl ?? DEFAULT_TTL_SECONDS;
         this._required = options.required ?? true;
@@ -97,7 +102,7 @@ class IdempotencyMiddleware {
      * @returns {string}
      * @private
      */
-    static _defaultCaller(req) {
+    static _defaultCaller(req: import('express').Request): string {
         return String(req.user?.id ?? req.user?.userId ?? req.ip ?? "anonymous");
     }
 
@@ -109,7 +114,7 @@ class IdempotencyMiddleware {
      * @returns {string}
      * @private
      */
-    static _bodyHash(body) {
+    static _bodyHash(body: any): string {
         const canonical = IdempotencyMiddleware._canonicalise(body);
         return crypto.createHash("sha256").update(canonical).digest("hex");
     }
@@ -120,7 +125,7 @@ class IdempotencyMiddleware {
      * @returns {string}
      * @private
      */
-    static _canonicalise(value) {
+    static _canonicalise(value: any): string {
         if (value === null || typeof value !== "object") {
             return JSON.stringify(value ?? null);
         }
@@ -141,7 +146,7 @@ class IdempotencyMiddleware {
      * @returns {string}
      * @private
      */
-    _storageKey(req, idemKey) {
+    _storageKey(req: import('express').Request, idemKey: string): string {
         const caller = this._callerOf(req);
         const route = req.baseUrl + (req.route?.path ?? req.path);
         return `${idemKey}\u0000${req.method}\u0000${route}\u0000${caller}`;
@@ -153,7 +158,7 @@ class IdempotencyMiddleware {
      * @param {import('express').Response} res
      * @param {import('express').NextFunction} next
      */
-    handle(req, res, next) {
+    handle(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) {
         if (!GUARDED_METHODS.has(req.method)) return next();
 
         const idemKey = req.get(HEADER);

@@ -131,9 +131,11 @@ const ARCHIVE_ID_PATTERN = /^[A-Za-z0-9_:-]+$/;
 
 class BackupStoreService {
     /** @type {Array<object>|null} */
-    static _indexCache = null;
+    static _indexCache: Array<Record<string, any>> | null = null;
     /** @type {number} */
-    static _indexCacheAt = 0;
+    static _indexCacheAt: number = 0;
+    declare static INDEX_CACHE_TTL_MS: number;
+    declare static DEFAULT_BACKUP_DIR: string;
 
     // ─── Backup directory resolution (compiled-exe-safe, never __dirname) ──
 
@@ -148,7 +150,7 @@ class BackupStoreService {
      *
      * @returns {string}
      */
-    static _resolveBackupDir() {
+    static _resolveBackupDir(): string {
         const dir = process.env.DB_BACKUP_DIR || DEFAULT_BACKUP_DIR;
         if (path.isAbsolute(dir)) return dir;
         return path.resolve(
@@ -162,7 +164,7 @@ class BackupStoreService {
      *
      * @returns {Promise<string>}
      */
-    static async _ensureDir() {
+    static async _ensureDir(): Promise<string> {
         const dir = BackupStoreService._resolveBackupDir();
         await fsPromises.mkdir(dir, { recursive: true });
         return dir;
@@ -178,7 +180,7 @@ class BackupStoreService {
      * @returns {string}
      * @private
      */
-    static _filenameTimestamp(at = new Date()) {
+    static _filenameTimestamp(at: Date = new Date()): string {
         return at
             .toISOString()
             .replace(/\.\d{3}Z$/, "Z")
@@ -206,7 +208,7 @@ class BackupStoreService {
         event = null,
         eventId = null,
         at = new Date(),
-    }) {
+    }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; event?: string | null; eventId?: number | string | null; at?: Date; }): string {
         const ts = BackupStoreService._filenameTimestamp(at);
         if (trigger === "SCHEDULED" && eventId != null && event) {
             return `app-backup_${eventId}_${event}_${ts}.zip`;
@@ -233,7 +235,7 @@ class BackupStoreService {
      * @param {AbortSignal} [opts.signal] - If aborted right before the rename, the `.part` is removed and the abort reason thrown, so an abandoned (watchdog-cancelled) build that resumes later can never publish.
      * @returns {Promise<void>}
      */
-    static async _atomicWrite(filePath, buffer, { signal } = {}) {
+    static async _atomicWrite(filePath: string, buffer: Buffer, { signal }: { signal?: AbortSignal; } = {}): Promise<void> {
         await BackupStoreService._ensureDir();
         const partPath = `${filePath}.part`;
         try {
@@ -264,7 +266,7 @@ class BackupStoreService {
      * @returns {Promise<number>} Files removed.
      * @private
      */
-    static async _sweepStaleParts() {
+    static async _sweepStaleParts(): Promise<number> {
         const dir = await BackupStoreService._ensureDir();
         let names;
         try {
@@ -306,7 +308,7 @@ class BackupStoreService {
      * @returns {number}
      * @private
      */
-    static _idleLimitMs() {
+    static _idleLimitMs(): number {
         const name = "DB_BACKUP_IDLE_TIMEOUT_MS";
         const rawEnv = process.env[name];
         const { IDLE_LIMIT_MIN_MS: min, IDLE_LIMIT_MAX_MS: max, IDLE_LIMIT_DEFAULT_MS: dflt } = BackupStoreService;
@@ -331,7 +333,7 @@ class BackupStoreService {
      * @returns {string} The same value, now trusted to look up in the index.
      * @throws {AppError} 400 `BACKUP_ARCHIVE_ID_INVALID` — never leaks the rejected value into the error itself (only into the log line, truncated).
      */
-    static _validateArchiveId(rawId) {
+    static _validateArchiveId(rawId: unknown): string {
         const invalid =
             typeof rawId !== "string" ||
             rawId.length === 0 ||
@@ -376,7 +378,7 @@ class BackupStoreService {
      * @param {boolean} [opts.force=false] - Bypass the TTL cache and re-read the directory now.
      * @returns {Promise<Array<object>>} Every field of each archive's manifest, plus `filename`/`path`/`sizeBytes`.
      */
-    static async _loadIndex({ force = false } = {}) {
+    static async _loadIndex({ force = false }: { force?: boolean; } = {}): Promise<Array<Record<string, any>>> {
         const now = Date.now();
         if (
             !force &&
@@ -389,7 +391,7 @@ class BackupStoreService {
         const startedAt = Date.now();
         const dir = await BackupStoreService._ensureDir();
 
-        let filenames;
+        let filenames: any[];
         try {
             filenames = await fsPromises.readdir(dir);
         } catch (err) {
@@ -398,7 +400,7 @@ class BackupStoreService {
         }
         // `.zip.part` files never match `.endsWith(".zip")` — a crash
         // mid-write is structurally invisible here, no extra filtering needed.
-        const zipFilenames = filenames.filter((f) => f.endsWith(".zip"));
+        const zipFilenames: any[] = filenames.filter((f) => f.endsWith(".zip"));
 
         const entries = [];
         for (const filename of zipFilenames) {
@@ -446,7 +448,7 @@ class BackupStoreService {
      *
      * @returns {void}
      */
-    static invalidateIndex() {
+    static invalidateIndex(): void {
         BackupStoreService._indexCache = null;
         BackupStoreService._indexCacheAt = 0;
     }
@@ -457,7 +459,7 @@ class BackupStoreService {
      *
      * @returns {Promise<number>}
      */
-    static async countActiveSuperAdmins() {
+    static async countActiveSuperAdmins(): Promise<number> {
         const AdminModel = require("../models/admin.model").default;
         return AdminModel.countActiveByRole("SUPER_ADMIN", null);
     }
@@ -469,7 +471,7 @@ class BackupStoreService {
      *
      * @returns {Promise<Array<object>>}
      */
-    static async listArchives() {
+    static async listArchives(): Promise<Array<Record<string, any>>> {
         const BackupVoteModel = require("../models/backup-vote.model").default;
 
         const index = await BackupStoreService._loadIndex();
@@ -482,7 +484,7 @@ class BackupStoreService {
         const activeSuperAdmins = await BackupStoreService.countActiveSuperAdmins();
         const votesNeeded = Math.floor(activeSuperAdmins / 2) + 1;
 
-        const voteMap = new Map(pendingVotes.map((v) => [v.archiveId, v]));
+        const voteMap = new Map(pendingVotes.map((v: any) => [v.archiveId, v]));
 
         return sorted.map((entry) => {
             const pending = voteMap.get(entry.archiveId);
@@ -505,7 +507,7 @@ class BackupStoreService {
      * @returns {Promise<object>}
      * @throws {AppError} 400 invalid id, 404 not found.
      */
-    static async getArchive(archiveIdRaw) {
+    static async getArchive(archiveIdRaw: string): Promise<Record<string, any>> {
         const archiveId = BackupStoreService._validateArchiveId(archiveIdRaw);
         const index = await BackupStoreService._loadIndex();
         const entry = index.find((e) => e.archiveId === archiveId);
@@ -532,7 +534,7 @@ class BackupStoreService {
      * @returns {Promise<boolean>}
      * @private
      */
-    static async _verifyZipBuffer(buffer) {
+    static async _verifyZipBuffer(buffer: Buffer): Promise<boolean> {
         try {
             const zip = await JSZip.loadAsync(buffer);
             const manifestEntry = zip.file("manifest.json");
@@ -553,7 +555,7 @@ class BackupStoreService {
                     name.endsWith(".jsonl") &&
                     !zip.files[name].dir,
             );
-            const dataBuffers = {};
+            const dataBuffers: Record<string, any> = {};
             for (const name of dataFileNames) {
                 // Sequential zip entry extraction, archives are small in entry count.
                 dataBuffers[name] = Buffer.from(
@@ -565,7 +567,7 @@ class BackupStoreService {
                 "manifest.json": manifestBuffer,
                 ...dataBuffers,
             };
-            const recomputed = {};
+            const recomputed: Record<string, any> = {};
             for (const [name, buf] of Object.entries(filesToHash)) {
                 recomputed[name] = crypto
                     .createHash("sha256")
@@ -605,7 +607,7 @@ class BackupStoreService {
      * @returns {Promise<boolean>}
      * @private
      */
-    static async _verifyArchiveFile(entry) {
+    static async _verifyArchiveFile(entry: Record<string, any>): Promise<boolean> {
         try {
             const buffer = await fsPromises.readFile(entry.path);
             return await BackupStoreService._verifyZipBuffer(buffer);
@@ -629,7 +631,7 @@ class BackupStoreService {
      * @returns {object|null}
      * @private
      */
-    static _chainHead(index) {
+    static _chainHead(index: Array<Record<string, any>>): Record<string, any> | null {
         const candidates = index.filter(
             (e) => e.trigger !== "PURGE" && e.chain,
         );
@@ -663,7 +665,12 @@ class BackupStoreService {
      *   forcedFullReason: string|null,
      * }>}
      */
-    static async _decideChain({ trigger, index }) {
+    static async _decideChain({ trigger, index }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; index: Array<Record<string, any>>; }): Promise<{
+        mode: "FULL" | "INCREMENTAL";
+        chain: { baseArchiveId: string; generation: number; } | null;
+        previousTableState: Record<string, { sha256: string; sourceArchiveId: string; }>;
+        forcedFullReason: string | null;
+    }> {
         if (trigger === "PURGE") {
             return {
                 mode: "FULL",
@@ -727,7 +734,7 @@ class BackupStoreService {
             }
         }
 
-        const previousTableState = {};
+        const previousTableState: Record<string, any> = {};
         for (const [table, state] of Object.entries(head.tables ?? {})) {
             previousTableState[table] = {
                 sha256: state.sha256,
@@ -782,7 +789,7 @@ class BackupStoreService {
      * @type {Promise<void>}
      * @private
      */
-    static _runBackupLockTail = Promise.resolve();
+    static _runBackupLockTail: Promise<void> = Promise.resolve();
 
     /**
      * Runs `fn` exclusively, queueing FIFO behind every previously-queued
@@ -803,7 +810,7 @@ class BackupStoreService {
      * @returns {Promise<any>}
      * @private
      */
-    static _withRunBackupLock(fn) {
+    static _withRunBackupLock(fn: () => Promise<any>): Promise<any> {
         const waiterScope = currentScope();
         const queued = BackupStoreService._runLockDepth > 0;
         BackupStoreService._runLockDepth += 1;
@@ -837,13 +844,13 @@ class BackupStoreService {
     }
 
     /** Callers currently holding or queued on the in-process run lock. @type {number} @private */
-    static _runLockDepth = 0;
+    static _runLockDepth: number = 0;
 
     /**
      * Scope whose progress a queued caller follows: the holder's caller scope
      * while it takes the lease, then the guarded backup scope. @type {object|null} @private
      */
-    static _runHolderScope = null;
+    static _runHolderScope: Record<string, any> | null = null;
 
     // ─── Orchestration — build ONE archive right now and store it ─────────────
 
@@ -894,7 +901,12 @@ class BackupStoreService {
         requestId = null,
         createdBy = null,
         at = new Date(),
-    }) {
+    }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; event?: string | null; eventId?: number | string | null; tables: string[]; requestId?: string | null; createdBy?: number | string | null; at?: Date; }): Promise<{
+        archiveId: string; filename: string; path: string; sizeBytes: number;
+        mode: "FULL" | "INCREMENTAL"; chain: { baseArchiveId: string; generation: number; } | null;
+        totalRows: number; tableCount: number; includedCount: number; unchangedCount: number;
+        forcedFullReason: string | null;
+    }> {
         if (!BackupArchiveService.BACKUP_TRIGGERS.includes(trigger)) {
             throw new Error(
                 `BackupStoreService.runBackup: trigger must be one of [${BackupArchiveService.BACKUP_TRIGGERS.join(", ")}].`,
@@ -958,7 +970,7 @@ class BackupStoreService {
         // `_resolveCut` once it is known whether a publish raced the cut (a
         // complete .zip can land after the watchdog fired).
         const stall = { error: null, idleMs: 0, lastSource: "unknown" };
-        const onStall = (scope, idleMs) => {
+        const onStall = (scope: any, idleMs: any) => {
             stall.idleMs = idleMs;
             stall.lastSource = scope.lastSource;
             stall.error = new AppError(PURGE_ERRORS.BACKUP_STALLED, HTTP_STATUS.SERVICE_UNAVAILABLE, {
@@ -1045,7 +1057,7 @@ class BackupStoreService {
      * @throws {Error} `err` when nothing (usable) was published.
      * @private
      */
-    static async _resolveCut({ err, stall, state, archiveId, trigger, filePath }) {
+    static async _resolveCut({ err, stall, state, archiveId, trigger, filePath }: { err: Error; stall: { idleMs: number; lastSource: string; }; state: { publishing: Promise<Record<string, any>> | null; }; archiveId: string; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; filePath: string; }): Promise<Record<string, any>> {
         let result = null;
         if (state.publishing) {
             let timer;
@@ -1104,7 +1116,7 @@ class BackupStoreService {
         archiveId,
         signal,
         state = { publishing: null },
-    }) {
+    }: Record<string, any>): Promise<Record<string, any>> {
         await BackupStoreService._sweepStaleParts();
         const index = await BackupStoreService._loadIndex({ force: true });
         const decision = await BackupStoreService._decideChain({
@@ -1219,7 +1231,7 @@ class BackupStoreService {
      * @example
      * const { zipBuffer, filename } = await BackupStoreService.materialise("bk_2026-07-28T05:59:59Z_e142_NIGHTLY");
      */
-    static async materialise(archiveIdRaw) {
+    static async materialise(archiveIdRaw: string): Promise<{ zipBuffer: Buffer; filename: string; manifest: Record<string, any>; }> {
         const archiveId = BackupStoreService._validateArchiveId(archiveIdRaw);
         const startedAt = Date.now();
         logger.info(dataBackupMessages.MATERIALISE_STARTED(archiveId));
@@ -1258,8 +1270,8 @@ class BackupStoreService {
             parseInt(process.env.BACKUP_XLSX_ROW_CAP, 10) ||
             DEFAULT_XLSX_ROW_CAP;
         const tableNames = Object.keys(entry.tables ?? {});
-        const dataBuffers = {};
-        const rowsByTableForXlsx = {};
+        const dataBuffers: Record<string, any> = {};
+        const rowsByTableForXlsx: Record<string, any> = {};
 
         for (const table of tableNames) {
             const state = entry.tables[table];
@@ -1408,7 +1420,7 @@ class BackupStoreService {
         );
 
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const fileHashes = {};
+        const fileHashes: Record<string, any> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             fileHashes[name] = crypto
                 .createHash("sha256")
@@ -1469,7 +1481,7 @@ class BackupStoreService {
      * @returns {Promise<Buffer>}
      * @private
      */
-    static async _buildSummaryWorkbook(tables, rowsByTable, rowCounts) {
+    static async _buildSummaryWorkbook(tables: string[], rowsByTable: Record<string, Record<string, any>[]>, rowCounts: Record<string, number>): Promise<Buffer> {
         const rowCap =
             parseInt(process.env.BACKUP_XLSX_ROW_CAP, 10) ||
             DEFAULT_XLSX_ROW_CAP;
@@ -1533,9 +1545,9 @@ class BackupStoreService {
      * @returns {Promise<Buffer>}
      * @private
      */
-    static async _zipFiles(files) {
+    static async _zipFiles(files: Record<string, Buffer>): Promise<Buffer> {
         return new Promise((resolve, reject) => {
-            const chunks = [];
+            const chunks: any[] = [];
             const pass = new PassThrough();
             pass.on("data", (chunk) => chunks.push(chunk));
             pass.on("end", () => resolve(Buffer.concat(chunks)));
@@ -1571,7 +1583,7 @@ class BackupStoreService {
      * @example
      * await BackupStoreService.deleteArchive("bk_2026-07-02T06:14:59Z_e140_NIGHTLY");
      */
-    static async deleteArchive(archiveIdRaw) {
+    static async deleteArchive(archiveIdRaw: string): Promise<{ archiveId: string; filename: string; }> {
         const archiveId = BackupStoreService._validateArchiveId(archiveIdRaw);
         const index = await BackupStoreService._loadIndex();
         const entry = index.find((e) => e.archiveId === archiveId);
@@ -1648,7 +1660,7 @@ class BackupStoreService {
      * @returns {Promise<{ archiveId: string, signatureValid: boolean, chainHealth: { valid: boolean, missing: string[], invalid: string[] } }>}
      * @throws {AppError} 400 invalid id, 404 not found, 422 verification failed.
      */
-    static async verifyArchive(archiveIdRaw) {
+    static async verifyArchive(archiveIdRaw: string): Promise<{ archiveId: string; signatureValid: boolean; chainHealth: { valid: boolean; missing: string[]; invalid: string[]; }; }> {
         const entry = await BackupStoreService.getArchive(archiveIdRaw);
 
         const signatureValid =

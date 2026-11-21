@@ -72,7 +72,7 @@ const NOTIFY_FLAG_CHANNELS = Object.freeze({
 const ALLOWED_FLAG_KEYS = Object.freeze([...Object.keys(NOTIFY_FLAG_CHANNELS), "isActive"]);
 
 /** The audited entity a revoke-backup is scoped to (fed into the token's scope hash). */
-const _revokeEntity = (username) => ({
+const _revokeEntity = (username: any) => ({
     table: "T_ADMINS_DEV",
     keyColumn: "USERNAME",
     keyValue: String(username),
@@ -95,7 +95,7 @@ class AdminManagementService {
      * @returns {Promise<Array<object>>} at most {@link SEARCH_LIMIT} rows
      * @throws {AppError} 400 when query is empty
      */
-    static async searchAccounts(query) {
+    static async searchAccounts(query: string): Promise<Array<Record<string, any>>> {
         if (!query || typeof query !== "string" || !query.trim()) {
             throw new AppError(
                 VALIDATION_ERRORS.INVALID_INPUT,
@@ -162,7 +162,7 @@ class AdminManagementService {
      * @returns {{ emailOnFile: boolean, emailHint: string|null }}
      * @private
      */
-    static _emailFields(address) {
+    static _emailFields(address: string | null): { emailOnFile: boolean; emailHint: string | null; } {
         return {
             emailOnFile: address != null,
             emailHint: maskAddress(address),
@@ -192,7 +192,7 @@ class AdminManagementService {
      * @throws {AppError} 403 AuthorizationError
      * @private
      */
-    static _assertCanManage(caller, action, { target = null, targetRole = null, newRole = null } = {}) {
+    static _assertCanManage(caller: { username: string; role: string; } | null | undefined, action: 'create' | 'changeRole' | 'resetPassword' | 'resetSignature', { target = null, targetRole = null, newRole = null }: { target?: string | null; targetRole?: string | null; newRole?: string | null; } = {}) {
         const callerRole = caller?.role ?? null;
         if (callerRole === "SUPER_ADMIN") return;
 
@@ -230,7 +230,7 @@ class AdminManagementService {
      *
      * @returns {Promise<Array<object>>}
      */
-    static async listAdmins() {
+    static async listAdmins(): Promise<Array<Record<string, any>>> {
         const [admins, users] = await Promise.all([AdminModel.findAll(), UserModel.findAll()]);
         const usersByName = new Map(users.map((u) => [u.USERNAME, u]));
 
@@ -275,8 +275,8 @@ class AdminManagementService {
      * @returns {Record<string, 'Y'|'N'>}
      * @private
      */
-    static _flagsOf(admin) {
-        const flags = {};
+    static _flagsOf(admin: Record<string, any>): Record<string, 'Y' | 'N'> {
+        const flags: Record<string, any> = {};
         for (const [key, channel] of Object.entries(NOTIFY_FLAG_CHANNELS)) {
             const column = AdminModel.SERVER_NOTIFY_FLAG_COLUMNS[channel];
             flags[key] = String(admin[column] ?? "N");
@@ -292,7 +292,7 @@ class AdminManagementService {
      * @throws {AppError} 400 on unknown keys or invalid values
      * @private
      */
-    static _validateFlags(flags) {
+    static _validateFlags(flags: Record<string, any>) {
         if (flags == null || typeof flags !== "object" || Array.isArray(flags)) {
             throw new AppError(VALIDATION_ERRORS.INVALID_INPUT, HTTP_STATUS.BAD_REQUEST, {
                 type: "ValidationError",
@@ -328,8 +328,8 @@ class AdminManagementService {
      * @returns {Record<string, 'Y'|'N'>}
      * @private
      */
-    static _notifyChannelFlags(flags) {
-        const channelFlags = {};
+    static _notifyChannelFlags(flags: Record<string, any>): Record<string, 'Y' | 'N'> {
+        const channelFlags: Record<string, any> = {};
         for (const [key, channel] of Object.entries(NOTIFY_FLAG_CHANNELS)) {
             if (flags[key] !== undefined) channelFlags[channel] = flags[key];
         }
@@ -362,7 +362,7 @@ class AdminManagementService {
      * @returns {Promise<object>} `{ username, role, emailDelivered, recipientSource, recipientHint, tempPasswordExpiresAt }`
      * @throws {AppError} 400 | 403 | 409 | 422 | 503
      */
-    static async addAdmin({ username, role, caller, overrideEmail, retainPassword, newPassword, flags }) {
+    static async addAdmin({ username, role, caller, overrideEmail, retainPassword, newPassword, flags }: { username: string; role: string; caller: { username: string; role: string; }; overrideEmail?: string; retainPassword?: any; newPassword?: any; flags?: Record<string, any>; }): Promise<Record<string, any>> {
         AdminManagementService._validateRole(role);
 
         if (retainPassword !== undefined || newPassword !== undefined) {
@@ -452,7 +452,7 @@ class AdminManagementService {
      * @throws {AppError} 500 when the wrapped hash cannot be stored
      * @private
      */
-    static async _issueTemporaryPassword() {
+    static async _issueTemporaryPassword(): Promise<{ tempPassword: string; storedValue: string; expiresAt: number; }> {
         const tempPassword = generateTemporaryPassword();
         // Whole seconds — the marker's resolution — so the email, the response
         // and the stored value all name the SAME instant.
@@ -479,7 +479,7 @@ class AdminManagementService {
      *
      * @private
      */
-    static async _deliverTemporaryPassword({ username, role, recipient, issued, kind }) {
+    static async _deliverTemporaryPassword({ username, role, recipient, issued, kind }: any) {
         const { delivered } = await AdminAccessEmailService.sendTemporaryPassword({
             to: recipient.address,
             source: recipient.source,
@@ -514,7 +514,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string, role: string }>}
      * @throws {AppError} 400 | 403 | 404 | 409 | 422
      */
-    static async updateAdmin({ username, role, caller, changePassword, newPassword }) {
+    static async updateAdmin({ username, role, caller, changePassword, newPassword }: { username: string; role: string; caller: { username: string; role: string; }; changePassword?: boolean; newPassword?: any; }): Promise<{ username: string; role: string; }> {
         AdminManagementService._validateRole(role);
 
         if (changePassword === true || newPassword !== undefined) {
@@ -540,7 +540,7 @@ class AdminManagementService {
             AdminModel.buildSignedFields({ ...existing, ROLE: role }),
         );
 
-        const apply = async (session) => {
+        const apply = async (session: any) => {
             if (existing.ROLE !== role) {
                 await AdminManagementService._endSessions(username, SESSION_END_CAUSES.ROLE_CHANGED);
             }
@@ -573,7 +573,7 @@ class AdminManagementService {
      * @returns {Promise<object>}
      * @throws {AppError} 400 | 403 | 404 | 422 | 503
      */
-    static async resetPassword(username, { overrideEmail, caller } = {}) {
+    static async resetPassword(username: string, { overrideEmail, caller }: { overrideEmail?: string; caller?: { username: string; role: string; }; } = {}): Promise<Record<string, any>> {
         const existing = await AdminManagementService._fetchAndVerify(username);
 
         AdminManagementService._assertCanManage(caller, "resetPassword", {
@@ -625,7 +625,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string }>}
      * @throws {AppError} 403 | 404
      */
-    static async resetSignature(username, { caller } = {}) {
+    static async resetSignature(username: string, { caller }: { caller?: { username: string; role: string; }; } = {}): Promise<{ username: string; }> {
         AdminManagementService._assertCanManage(caller, "resetSignature", { target: username });
 
         const existing = await AdminModel.findByUsername(username);
@@ -662,7 +662,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string }>}
      * @throws {AppError} 403 | 404 | 409 | 422 | 428
      */
-    static async deleteAdmin({ username, backupToken, callerUsername, callerId }) {
+    static async deleteAdmin({ username, backupToken, callerUsername, callerId }: { username: string; backupToken: string; callerUsername: string; callerId: number | string; }): Promise<{ username: string; }> {
         if (String(username) === String(callerUsername)) {
             logger.warning(adminMessages.ADMIN_DELETE_SELF_BLOCKED(username));
             throw new AppError(ADMIN_ERRORS.CANNOT_DELETE_SELF, HTTP_STATUS.FORBIDDEN, {
@@ -702,7 +702,7 @@ class AdminManagementService {
      * @returns {Promise<{ zipBuffer: Buffer, filename: string, token: string, expiresAt: number, totalRows: number, tableCount: number, rowCounts: Record<string, number> }>}
      * @throws {AppError} 404 | 422
      */
-    static async buildRevokeBackup({ username, actorId, requestId = null }) {
+    static async buildRevokeBackup({ username, actorId, requestId = null }: { username: string; actorId: number | string; requestId?: string | null; }): Promise<{ zipBuffer: Buffer; filename: string; token: string; expiresAt: number; totalRows: number; tableCount: number; rowCounts: Record<string, number>; }> {
         const admin = await AdminManagementService._fetchAndVerify(username);
 
         const filterFor = {
@@ -713,7 +713,7 @@ class AdminManagementService {
         // Derived from BackupArchiveService.ADMIN_REVOKE_BACKUP_TABLES so the
         // archive's table set — and its scope hash — can never drift from what
         // _verifyRevokeBackupToken recomputes.
-        const tableFilters = BackupArchiveService.ADMIN_REVOKE_BACKUP_TABLES.map((table) => ({
+        const tableFilters = BackupArchiveService.ADMIN_REVOKE_BACKUP_TABLES.map((table: any) => ({
             table,
             whereColumns: filterFor[table].columns,
             whereValue: filterFor[table].value,
@@ -745,7 +745,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string, isActive: string }>}
      * @throws {AppError} 403 | 404 | 409 | 422 | 428
      */
-    static async revokeAccess({ username, callerUsername, callerId, backupToken }) {
+    static async revokeAccess({ username, callerUsername, callerId, backupToken }: { username: string; callerUsername: string; callerId: number | string; backupToken: string; }): Promise<{ username: string; isActive: string; }> {
         if (String(username) === String(callerUsername)) {
             logger.warning(adminMessages.ADMIN_REVOKE_SELF_BLOCKED(username));
             throw new AppError(ADMIN_ERRORS.CANNOT_REVOKE_SELF, HTTP_STATUS.FORBIDDEN, {
@@ -796,7 +796,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string, flags: object }>}
      * @throws {AppError} 400 | 404 | 409 | 422
      */
-    static async updatePermissions({ username, flags }) {
+    static async updatePermissions({ username, flags }: { username: string; flags: Record<string, any>; }): Promise<{ username: string; flags: Record<string, any>; }> {
         AdminManagementService._validateFlags(flags);
 
         const existing = await AdminManagementService._fetchAndVerify(username);
@@ -811,7 +811,7 @@ class AdminManagementService {
             )
             : null;
 
-        const applyActive = async (session) => {
+        const applyActive = async (session: any) => {
             if (deactivating) {
                 await AdminManagementService._endSessions(username, SESSION_END_CAUSES.DEACTIVATED);
             }
@@ -853,7 +853,7 @@ class AdminManagementService {
      * @returns {Promise<void>}
      * @private
      */
-    static async _endSessions(username, cause) {
+    static async _endSessions(username: string, cause: string): Promise<void> {
         await RefreshTokenService.revokeAllForUser(username, REFRESH_REVOKE_REASONS.LOGOUT, { cause });
     }
 
@@ -874,7 +874,7 @@ class AdminManagementService {
      * @throws {AppError} 428
      * @private
      */
-    static async _verifyRevokeBackupToken(backupToken, targetUsername, callerId) {
+    static async _verifyRevokeBackupToken(backupToken: string | undefined, targetUsername: string, callerId: number | string): Promise<void> {
         if (!backupToken) {
             throw new AppError(ADMIN_ERRORS.BACKUP_TOKEN_REQUIRED, HTTP_STATUS.PRECONDITION_REQUIRED, {
                 type: "AuthenticationError",
@@ -922,7 +922,7 @@ class AdminManagementService {
      * @throws {AppError} 409 LAST_ACTIVE_SUPER_ADMIN
      * @private
      */
-    static async _withSuperAdminGuard(existing, fn) {
+    static async _withSuperAdminGuard<T>(existing: Record<string, any>, fn: (session: Record<string, any> | null) => Promise<T>): Promise<T> {
         if (existing.ROLE !== "SUPER_ADMIN" || String(existing.IS_ACTIVE ?? "Y") !== "Y") {
             return fn(null);
         }
@@ -936,7 +936,7 @@ class AdminManagementService {
      * @param {string} username
      * @private
      */
-    static _invalidateProfileFlags(username) {
+    static _invalidateProfileFlags(username: string) {
         try {
             registry
                 .resolve("authProfile")
@@ -967,7 +967,7 @@ class AdminManagementService {
      * @throws {AppError} 404 | 422
      * @private
      */
-    static async _fetchAndVerify(username) {
+    static async _fetchAndVerify(username: string): Promise<Record<string, any>> {
         const existing = await AdminModel.findByUsername(username);
         if (!existing) {
             logger.warning(adminMessages.ADMIN_NOT_FOUND(username));
@@ -998,7 +998,7 @@ class AdminManagementService {
      * @throws {AppError} 400 when role is not in VALID_ROLES
      * @private
      */
-    static _validateRole(role) {
+    static _validateRole(role: string) {
         if (!VALID_ROLES.includes(role)) {
             throw new AppError(
                 VALIDATION_ERRORS.INVALID_INPUT,

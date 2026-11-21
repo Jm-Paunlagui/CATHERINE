@@ -9,6 +9,7 @@
  * Levels follow RFC 5424 (eight levels: emergency/alert/critical/error/warning/notice/info/debug).
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { promises as fs } from "fs";
 import path from "path";
 import { IS_COMPILED, APP_ROOT } from "./runtimePaths";
@@ -33,7 +34,7 @@ import { scrubValue, scrubMeta } from "./logRedaction";
  * @param {number} cap - The queue cap that triggered the drop.
  * @returns {string}
  */
-const WRITE_QUEUE_OVERFLOW = (dropped, cap) =>
+const WRITE_QUEUE_OVERFLOW = (dropped: number, cap: number): string =>
     `Log write queue overflowed — ${dropped} oldest entr${dropped === 1 ? "y" : "ies"} DROPPED (cap ${cap}). ` +
     `The log file has a gap. The disk could not keep up with log volume; check disk health, free space, ` +
     `and any antivirus real-time scanning of the log directory.`;
@@ -133,6 +134,14 @@ class Logger {
             hourCycle: "h23",
         },
     };
+    declare _levelSubscribers: never[];
+    declare machineIdentifier: string;
+    declare _droppedCount: number;
+    declare _maxQueueLength: number;
+    declare isWriting: boolean;
+    declare writeQueue: never[];
+    declare _maxSafeStrLength: number;
+    declare currentLevel: any;
 
     // ========================================
     // CONSTRUCTOR
@@ -217,7 +226,7 @@ class Logger {
      * });
      * // later: unsubscribe();
      */
-    onLevel(maxPriority, fn) {
+    onLevel(maxPriority: number, fn: (record: { level: string; message: string; meta: Record<string, any>; requestId: string | null; timestamp: string; }) => void): () => void {
         if (typeof fn !== "function") return () => {};
         const entry = { maxPriority, fn };
         this._levelSubscribers.push(entry);
@@ -238,7 +247,7 @@ class Logger {
      * @param {object} meta      - Log metadata; `_noNotify: true` skips the tap
      * @param {string|null} requestId
      */
-    #notifySubscribers(level, message, meta, requestId) {
+    #notifySubscribers(level: string, message: any, meta: Record<string, any>, requestId: string | null) {
         if (!this._levelSubscribers.length) return;
         if (meta && meta._noNotify) return;
         const priority = Logger.CONFIG.LEVELS[level];
@@ -331,7 +340,7 @@ class Logger {
     /**
      * Shorten absolute paths to start at src/ when possible
      */
-    #shortenPath(fullPath) {
+    #shortenPath(fullPath: any) {
         try {
             const cwd = process.cwd().replace(/\\/g, "/");
             const norm = String(fullPath || "").replace(/\\/g, "/");
@@ -355,7 +364,7 @@ class Logger {
     /**
      * Safely serialize any value to string, handling objects, arrays, and primitives
      */
-    #safeStringify(value, maxLength = this._maxSafeStrLength) {
+    #safeStringify(value: any, maxLength = this._maxSafeStrLength) {
         try {
             if (value === null) return "null";
             if (value === undefined) return "undefined";
@@ -396,7 +405,7 @@ class Logger {
     /**
      * Ensure a directory exists, creating it if necessary
      */
-    async #ensureDirectoryExists(dirPath) {
+    async #ensureDirectoryExists(dirPath: any) {
         try {
             await fs.mkdir(dirPath, { recursive: true });
         } catch (error) {
@@ -414,7 +423,7 @@ class Logger {
     /**
      * Get a file's size in bytes, returning 0 if it doesn't exist
      */
-    async #getFileSize(filePath) {
+    async #getFileSize(filePath: any) {
         try {
             return (await fs.stat(filePath)).size;
         } catch (error) {
@@ -475,7 +484,7 @@ class Logger {
     /**
      * Get next available log filename, rolling over when the size limit is exceeded
      */
-    async #getAvailableFilename(baseDir, baseName) {
+    async #getAvailableFilename(baseDir: any, baseName: any) {
         let filename = `${baseName}.log`;
         let fullPath = path.join(baseDir, filename);
 
@@ -521,7 +530,7 @@ class Logger {
     /**
      * Build the plain-text log entry string
      */
-    #formatMessage(level, message, meta = {}, requestId = null) {
+    #formatMessage(level: any, message: any, meta = {}, requestId = null) {
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
         const { displayFn, displayFile, displayLine } =
@@ -549,7 +558,7 @@ class Logger {
     /**
      * Build the colorized console log entry string
      */
-    #formatColorizedMessage(level, message, meta = {}, requestId = null) {
+    #formatColorizedMessage(level: any, message: any, meta = {}, requestId = null) {
         const colors = Logger.CONFIG.COLORS;
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
@@ -592,7 +601,7 @@ class Logger {
     /**
      * Resolve a raw message value to a clean string
      */
-    #resolveMessage(message) {
+    #resolveMessage(message: any) {
         if (message === null || message === undefined) return "[Empty Message]";
         return this.#safeStringify(message).trim() || "[Empty Message]";
     }
@@ -600,7 +609,7 @@ class Logger {
     /**
      * Serialize non-internal meta keys to a string
      */
-    #buildMetaString(meta) {
+    #buildMetaString(meta: any) {
         const INTERNAL_KEYS = new Set([
             "method",
             "url",
@@ -620,7 +629,7 @@ class Logger {
     /**
      * Inject call site info into a meta object from the current stack
      */
-    #injectCallSite(meta) {
+    #injectCallSite(meta: any) {
         try {
             const enabled =
                 String(process.env.LOG_CALLSITE || "true").toLowerCase() ===
@@ -664,7 +673,7 @@ class Logger {
     /**
      * Write a formatted log entry to the appropriate file
      */
-    async #writeToFile(level, message, meta = {}, requestId = null) {
+    async #writeToFile(level: any, message: any, meta = {}, requestId = null) {
         const logDir = this.#getLogDirectory();
         try {
             await this.#ensureDirectoryExists(logDir);
@@ -738,7 +747,7 @@ class Logger {
     // ARGUMENT NORMALIZATION
     // ========================================
 
-    #normalizeLogArguments(args) {
+    #normalizeLogArguments(args: any) {
         if (args.length === 0) return { message: "[Empty Log]", meta: {} };
         if (args.length === 1) return { message: args[0], meta: {} };
 
@@ -748,14 +757,14 @@ class Logger {
             return { message, meta: rest[0] };
         }
 
-        const formattedArgs = rest.map((a) => this.#formatMetaValue(a, true));
+        const formattedArgs = rest.map((a: any) => this.#formatMetaValue(a, true));
         return {
             message: `${message} ${formattedArgs.join(" ")}`,
-            meta: { additionalData: rest.map((a) => this.#formatMetaValue(a)) },
+            meta: { additionalData: rest.map((a: any) => this.#formatMetaValue(a)) },
         };
     }
 
-    #isPlainMetaObject(value) {
+    #isPlainMetaObject(value: any) {
         if (
             value === null ||
             value === undefined ||
@@ -767,7 +776,7 @@ class Logger {
         return keys.length === 0 || !keys.every((key, i) => key === String(i));
     }
 
-    #formatMetaValue(value, forMessage = false) {
+    #formatMetaValue(value: any, forMessage = false) {
         if (value === null) return "null";
         if (value === undefined) return "undefined";
         if (typeof value === "string") return value;
@@ -791,7 +800,7 @@ class Logger {
      * @param {string|*} message - Log message or value
      * @param {object} [meta={}] - Optional metadata object
      */
-    async log(level, message, meta = {}) {
+    async log(level: string, message: string | any, meta: Record<string, any> = {}) {
         if (Logger.CONFIG.LEVELS[level] > this.currentLevel) return;
         if (!message || (typeof message === "string" && !message.trim()))
             return;
@@ -851,7 +860,7 @@ class Logger {
      * @param {number} [timeoutMs=3000] Give up waiting after this long.
      * @returns {Promise<boolean>} true if the queue drained, false on timeout.
      */
-    async flush(timeoutMs = 3000) {
+    async flush(timeoutMs: number = 3000): Promise<boolean> {
         const deadline = Date.now() + Math.max(0, timeoutMs);
         while (
             (this.writeQueue.length > 0 || this.isWriting) &&
@@ -872,7 +881,7 @@ class Logger {
      * Use for unrecoverable panics only.
      * @param {...*} args
      */
-    emergency(...args) {
+    emergency(...args: any[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("EMERGENCY", message, meta);
     }
@@ -882,7 +891,7 @@ class Logger {
      * @deprecated Use logger.emergency() instead.
      * @param {...*} args
      */
-    emerg(...args) {
+    emerg(...args: any[]) {
         return this.emergency(...args);
     }
 
@@ -891,7 +900,7 @@ class Logger {
      * Examples: DB pool completely down, critical dependency unreachable.
      * @param {...*} args
      */
-    alert(...args) {
+    alert(...args: any[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("ALERT", message, meta);
     }
@@ -901,7 +910,7 @@ class Logger {
      * Examples: health check hard failure, certificate expiry.
      * @param {...*} args
      */
-    critical(...args) {
+    critical(...args: any[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         // Level key MUST be uppercase: lowercase "critical" missed both
         // LEVELS (level filter bypassed) and COLORS (rendered white) lookups
@@ -914,7 +923,7 @@ class Logger {
      * @deprecated Use logger.critical() instead.
      * @param {...*} args
      */
-    crit(...args) {
+    crit(...args: any[]) {
         return this.critical(...args);
     }
 
@@ -923,7 +932,7 @@ class Logger {
      * Backward-compatible replacement for old error() at level 0.
      * @param {...*} args
      */
-    error(...args) {
+    error(...args: any[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("ERROR", message, meta);
     }
@@ -934,7 +943,7 @@ class Logger {
      * Backward-compatible replacement for old warn() at level 1.
      * @param {...*} args
      */
-    warning(...args) {
+    warning(...args: any[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("WARNING", message, meta);
     }
@@ -945,7 +954,7 @@ class Logger {
      * @deprecated Use logger.warning() instead.
      * @param {...*} args
      */
-    warn(...args) {
+    warn(...args: any[]) {
         return this.warning(...args);
     }
 
@@ -954,7 +963,7 @@ class Logger {
      * Examples: startup complete, config change, expected administrative events.
      * @param {...*} args
      */
-    notice(...args) {
+    notice(...args: any[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("NOTICE", message, meta);
     }
@@ -964,7 +973,7 @@ class Logger {
      * Backward-compatible replacement for old info() at level 2.
      * @param {...*} args
      */
-    info(...args) {
+    info(...args: any[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("INFO", message, meta);
     }
@@ -974,7 +983,7 @@ class Logger {
      * Backward-compatible replacement for old debug() at level 3.
      * @param {...*} args
      */
-    debug(...args) {
+    debug(...args: any[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("DEBUG", message, meta);
     }
@@ -983,7 +992,7 @@ class Logger {
     // HTTP REQUEST LIFECYCLE LOGGING
     // ========================================
 
-    logIncomingRequest(req, customMessage = null) {
+    logIncomingRequest(req: any, customMessage = null) {
         return this.log("INFO", customMessage || "Incoming Request", {
             method: req.method,
             url: req.originalUrl || req.url,
@@ -993,7 +1002,7 @@ class Logger {
         });
     }
 
-    logHandlingRequest(req, additionalMeta = {}) {
+    logHandlingRequest(req: any, additionalMeta = {}) {
         return this.log("INFO", "Handling Request", {
             method: req.method,
             url: req.originalUrl || req.url,
@@ -1004,7 +1013,7 @@ class Logger {
         });
     }
 
-    logCompletedRequest(req, res, duration, customMessage = null) {
+    logCompletedRequest(req: Request, res: Response, duration: any, customMessage = null) {
         const level = res.statusCode >= 400 ? "ERROR" : "INFO";
         return this.log(level, customMessage || "Request Complete", {
             method: req.method,
@@ -1020,7 +1029,7 @@ class Logger {
         });
     }
 
-    #createClientMachineIdentifier(req) {
+    #createClientMachineIdentifier(req: any) {
         const username =
             req.get?.("X-Client-Username") ||
             (req.query?.username && req.query?.userId
@@ -1056,7 +1065,7 @@ class Logger {
      * @param {import('express').Request} req
      * @returns {string}
      */
-    #getClientIp(req) {
+    #getClientIp(req: import('express').Request): string {
         return (
             req.ip ||
             req.socket?.remoteAddress ||
@@ -1069,7 +1078,7 @@ class Logger {
     // SPECIALIZED LOGGING
     // ========================================
 
-    cache(operation, key, result, duration = null) {
+    cache(operation: any, key: any, result: any, duration = null) {
         return this.log("DEBUG", "Cache Operation", {
             operation,
             key,
@@ -1078,7 +1087,7 @@ class Logger {
         });
     }
 
-    database(operation, table, duration = null, rowCount = null) {
+    database(operation: any, table: any, duration = null, rowCount = null) {
         return this.log("DEBUG", "Database Operation", {
             operation,
             table,
@@ -1087,7 +1096,7 @@ class Logger {
         });
     }
 
-    performance(operation, duration, details = {}) {
+    performance(operation: any, duration: any, details = {}) {
         const level = duration > 5000 ? "WARNING" : "INFO";
         return this.log(level, "Performance", {
             operation,
@@ -1096,7 +1105,7 @@ class Logger {
         });
     }
 
-    security(event, details = {}) {
+    security(event: any, details = {}) {
         return this.log("WARNING", "Security Event", {
             event,
             timestamp: new Date().toISOString(),
@@ -1149,7 +1158,7 @@ class Logger {
     // `constants/messages` or `fs`-heavy retention logic here would invert
     // that dependency.
 
-    #formatBytes(bytes, decimals = 2) {
+    #formatBytes(bytes: any, decimals = 2) {
         if (bytes === 0) return "0 Bytes";
         const k = 1024;
         const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
@@ -1165,7 +1174,7 @@ class Logger {
      * Returns an Express middleware that logs the full HTTP request lifecycle
      */
     createHttpLoggerMiddleware() {
-        return (req, res, next) => {
+        return (req: Request, res: Response, next: NextFunction) => {
             const startTime = Date.now();
             this.logIncomingRequest(req);
 

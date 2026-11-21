@@ -73,8 +73,8 @@ function _todayManilaDateStr() {
 }
 
 // Lazy-loaded to avoid hard dependency at startup
-let _ExcelJS = null;
-let _archiverMod = null;
+let _ExcelJS: any = null;
+let _archiverMod: any = null;
 
 const _getExcelJS = () => {
     if (!_ExcelJS) _ExcelJS = require("exceljs");
@@ -110,7 +110,7 @@ class AuditLogService {
      * of these is treated as part of the path and left alone.
      * @type {Set<string>}
      */
-    static HTTP_VERBS = new Set([
+    static HTTP_VERBS: Set<string> = new Set([
         "GET",
         "POST",
         "PUT",
@@ -152,13 +152,13 @@ class AuditLogService {
     static FINAL_FLUSH_TIMEOUT_MS = 2000;
 
     /** @type {object[]} */
-    static _pending = [];
+    static _pending: Record<string, any>[] = [];
 
     /** @type {NodeJS.Timeout|null} */
-    static _flushTimer = null;
+    static _flushTimer: NodeJS.Timeout | null = null;
 
     /** In-progress flush, so two triggers never insert the same batch twice. @type {Promise<void>|null} */
-    static _flushing = null;
+    static _flushing: Promise<void> | null = null;
 
     /** After a failure, size-triggered flushes wait until this time (ms epoch). */
     static _retryNotBefore = 0;
@@ -171,7 +171,7 @@ class AuditLogService {
      * @param {object} record - The audit log record to persist.
      * @returns {Promise<void>}
      */
-    static async insertAsync(record) {
+    static async insertAsync(record: Record<string, any>): Promise<void> {
         AuditLogService._pending.push(record);
 
         if (
@@ -188,7 +188,7 @@ class AuditLogService {
     }
 
     /** Arms the interval flush if none is pending. @returns {void} */
-    static _armFlushTimer() {
+    static _armFlushTimer(): void {
         if (AuditLogService._flushTimer) return;
         // Armed from inside a request's async context (setImmediate of the audit
         // middleware): the timer would inherit that request's ALS and its
@@ -214,7 +214,7 @@ class AuditLogService {
      * @param {{ final?: boolean }} [opts]
      * @returns {Promise<void>}
      */
-    static async flushPending({ final = false } = {}) {
+    static async flushPending({ final = false }: { final?: boolean; } = {}): Promise<void> {
         if (AuditLogService._flushing) {
             if (!final) return AuditLogService._flushing;
             // Shutdown: wait for the running flush, but never longer than the
@@ -242,7 +242,7 @@ class AuditLogService {
      * @param {boolean} final
      * @returns {Promise<void>}
      */
-    static async _flushOnce(final) {
+    static async _flushOnce(final: boolean): Promise<void> {
         if (AuditLogService._flushTimer) {
             clearTimeout(AuditLogService._flushTimer);
             AuditLogService._flushTimer = null;
@@ -321,7 +321,7 @@ class AuditLogService {
      * _normalizeEndpointFilter("GET /api/v1/auth/login"); // → "/api/v1/auth/login"
      * _normalizeEndpointFilter("/api/v1/auth/login");     // → "/api/v1/auth/login"
      */
-    static _normalizeEndpointFilter(value) {
+    static _normalizeEndpointFilter(value: string): string | null {
         if (typeof value !== "string") return null;
 
         let path = value.trim();
@@ -373,7 +373,7 @@ class AuditLogService {
         statusCategory,
         endpoint,
         search,
-    }) {
+    }: { page: number; pageSize: number; fromDate?: string; toDate?: string; method?: string; statusCategory?: string; endpoint?: string; search?: string; }): Promise<{ rows: Record<string, any>[]; total: number; page: number; pageSize: number; totalPages: number; }> {
         const cappedPageSize = Math.min(pageSize, 100);
 
         if (fromDate && toDate) {
@@ -384,7 +384,7 @@ class AuditLogService {
             }
         }
 
-        const filter = {};
+        const filter: Record<string, any> = {};
 
         if (fromDate && toDate) {
             filter.CREATED_AT = {
@@ -455,7 +455,7 @@ class AuditLogService {
      * @param {string} [params.toDate]   - ISO date string. Defaults to today 23:59:59.
      * @returns {Promise<object>} Aggregate statistics including successRate.
      */
-    static async getStats({ fromDate, toDate }) {
+    static async getStats({ fromDate, toDate }: { fromDate?: string; toDate?: string; }): Promise<Record<string, any>> {
         const resolvedToDate = toDate
             ? new Date(new Date(toDate).setHours(23, 59, 59, 999))
             : new Date(new Date().setHours(23, 59, 59, 999));
@@ -543,7 +543,7 @@ class AuditLogService {
      * @param {string} dateStr    - ISO date string YYYY-MM-DD (the day to search).
      * @returns {Promise<{ requestId: string, lines: string[] }>}
      */
-    static async getRequestLogs(requestId, dateStr) {
+    static async getRequestLogs(requestId: string, dateStr: string): Promise<{ requestId: string; lines: string[]; }> {
         // Accepts both Snowflake format (0078812966528-0448-0000) and legacy (req_UvNZUayhzL)
         if (
             !requestId ||
@@ -608,7 +608,7 @@ class AuditLogService {
         // timestamp ties so legacy second-precision lines never render as
         // Incoming → Complete → FUNC.
         const TS_RE = /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)\]/;
-        const _phaseRank = (line) => {
+        const _phaseRank = (line: any) => {
             if (line.includes("[Incoming Request]")) return 0;
             if (line.includes("[Request Complete]")) return 2;
             return 1; // [Handling Request] and [FUNC] lines
@@ -650,7 +650,12 @@ class AuditLogService {
      *   method: string|null, requestId: string|null, message: string,
      *   meta: string|null }|null} `null` only for an empty/non-string line.
      */
-    static _parseSystemLine(line, level) {
+    static _parseSystemLine(line: string, level: string): {
+        ts: string | null; level: string | null; machine: string | null;
+        pid: number | null; location: string | null; phase: string | null;
+        method: string | null; requestId: string | null; message: string;
+        meta: string | null;
+    } | null {
         if (typeof line !== "string") return null;
         const trimmed = line.trim();
         if (!trimmed) return null;
@@ -767,9 +772,12 @@ class AuditLogService {
      * @throws {AppError} 400 on an invalid date, level, or priority.
      */
     static async getSystemLogs(
-        { date, maxPriority = 5, level, page = 1, pageSize = 50, search } = {},
-        { logBaseDir = LOG_BASE_DIR } = {},
-    ) {
+        { date, maxPriority = 5, level, page = 1, pageSize = 50, search }: { date?: string; maxPriority?: number; level?: string; page?: number; pageSize?: number; search?: string; } = {},
+        { logBaseDir = LOG_BASE_DIR }: { logBaseDir?: string; } = {},
+    ): Promise<{
+        rows: Record<string, any>[]; total: number; page: number;
+        pageSize: number; totalPages: number; truncatedFiles: string[];
+    }> {
         const dateStr = date || _todayManilaDateStr();
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
             throw new AppError(AUDIT_LOG_ERRORS.AUDIT_LOG_INVALID_DATE_FORMAT, 400);
@@ -933,7 +941,7 @@ class AuditLogService {
      * @returns {Promise<Buffer>} Excel file as a Buffer.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async exportToExcel({ fromDate, toDate }) {
+    static async exportToExcel({ fromDate, toDate }: string): Promise<Buffer> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }
@@ -991,7 +999,7 @@ class AuditLogService {
         };
         sheet1.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
 
-        rows.forEach((row) => {
+        rows.forEach((row: any) => {
             // Real date cell in LOCAL time, not a UTC ISO string: the audit
             // trail is read against the operator's own clock, and a raw
             // `toISOString()` reported every event 8 hours early under
@@ -1049,7 +1057,7 @@ class AuditLogService {
      * @throws {AppError} 400 when requestId or dateStr format is invalid.
      * @throws {AppError} 404 when no audit record is found for the requestId.
      */
-    static async exportTraceExcel(requestId, dateStr) {
+    static async exportTraceExcel(requestId: string, dateStr: string): Promise<Buffer> {
         // Accepts both Snowflake format (0078812966528-0448-0000) and legacy (req_UvNZUayhzL)
         if (
             !requestId ||
@@ -1086,23 +1094,23 @@ class AuditLogService {
         }
 
         // ── Phase detection helpers (mirrors frontend detectPhase) ──
-        const _detectPhase = (line) => {
+        const _detectPhase = (line: any) => {
             if (line.includes("[Incoming Request]")) return "Incoming";
             if (line.includes("[Request Complete]")) return "Complete";
             if (line.includes("[Handling Request]")) return "Handling";
             return "Function";
         };
-        const _extractTimestamp = (line) => {
+        const _extractTimestamp = (line: any) => {
             const m = line.match(
                 /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)\]/,
             );
             return m ? m[1] : "";
         };
-        const _extractMessage = (line) => {
+        const _extractMessage = (line: any) => {
             const idx = line.lastIndexOf("] - ");
             return idx !== -1 ? line.slice(idx + 4) : line;
         };
-        const _extractLocation = (line) => {
+        const _extractLocation = (line: any) => {
             const m = line.match(/\[([^\]]+\s@\s[^\]]+:\d+)\]/);
             return m ? m[1] : "";
         };
@@ -1173,7 +1181,7 @@ class AuditLogService {
      * @returns {Promise<Buffer>} ZIP buffer.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async exportToZip({ fromDate, toDate }) {
+    static async exportToZip({ fromDate, toDate }: string): Promise<Buffer> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }
@@ -1195,9 +1203,9 @@ class AuditLogService {
         const archiver = _getArchiver();
 
         return new Promise((resolve, reject) => {
-            const chunks = [];
+            const chunks: any[] = [];
             const pass = new PassThrough();
-            pass.on("data", (chunk) => chunks.push(chunk));
+            pass.on("data", (chunk: any) => chunks.push(chunk));
             pass.on("end", () => resolve(Buffer.concat(chunks)));
             pass.on("error", reject);
 
@@ -1280,7 +1288,7 @@ class AuditLogService {
      *          could not be removed.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async deleteRange({ fromDate, toDate }) {
+    static async deleteRange({ fromDate, toDate }: string): Promise<{ deletedRows: number; deletedDays: number; failedDays: string[]; }> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }
@@ -1391,7 +1399,7 @@ class AuditLogService {
      *
      * @returns {Promise<number>} Epoch ms of latest CREATED_AT, or 0 if empty.
      */
-    static async getLatestCreatedAt() {
+    static async getLatestCreatedAt(): Promise<number> {
         return AuditLogModel.getLatestCreatedAt();
     }
 }

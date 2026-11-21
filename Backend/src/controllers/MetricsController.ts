@@ -7,6 +7,7 @@
  * Every async method is wrapped in catchAsync — unhandled rejections route to ErrorHandlerMiddleware.
  */
 
+import type { Request, Response } from "express";
 import { catchAsync } from "../utils/catchAsync";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { AppError, NOTIFICATION_ERRORS, HTTP_STATUS } from "../constants";
@@ -27,7 +28,7 @@ const VALID_HISTORY_SEVERITIES = ["WARNING", "CRITICAL", "RESOLVED"];
  * @param {string} field - Query param name, echoed in the validation detail
  * @returns {Date|null}
  */
-function parseHistoryDate(raw, field) {
+function parseHistoryDate(raw: string | undefined, field: string): Date | null {
   if (raw == null || raw === "") return null;
   const d = new Date(raw);
   if (isNaN(d.getTime())) {
@@ -51,7 +52,7 @@ function parseHistoryDate(raw, field) {
  * @param {import('express').Request} req
  * @returns {number|string|undefined}
  */
-function actorId(req) {
+function actorId(req: import('express').Request): number | string | undefined {
   return req.user?.id ?? req.user?.userId;
 }
 
@@ -61,7 +62,7 @@ class MetricsController {
    * Returns the full in-process metrics snapshot.
    * Requires userLevel >= 2.
    */
-  static getSnapshot = catchAsync(async (_req, res) => {
+  static getSnapshot = catchAsync(async (_req: any, res: any) => {
     const snapshot = await MetricsService.getClusterSnapshot();
     logger.info(metricsMessages.SNAPSHOT_FETCHED());
     res.json(sendSuccess(RESPONSE_MESSAGES.METRICS_FETCHED, snapshot));
@@ -72,7 +73,7 @@ class MetricsController {
    * Returns an abbreviated summary: totals, top-5 slow routes, alert count.
    * Requires userLevel >= 1.
    */
-  static getSummary = catchAsync(async (_req, res) => {
+  static getSummary = catchAsync(async (_req: any, res: any) => {
     const summary = MetricsService.getSummary(await MetricsService.getClusterSnapshot());
     logger.info(metricsMessages.SUMMARY_FETCHED());
     res.json(sendSuccess(RESPONSE_MESSAGES.METRICS_SUMMARY_FETCHED, summary));
@@ -86,7 +87,7 @@ class MetricsController {
    * round-trip.
    * Requires userLevel >= 2.
    */
-  static getAlerts = catchAsync(async (_req, res) => {
+  static getAlerts = catchAsync(async (_req: any, res: any) => {
     const alerts = MetricsService.evaluateAlerts(await MetricsService.getClusterSnapshot());
     const decorated = await AlertNotifierService.decorateAlertsWithAckState(alerts);
     logger.info(metricsMessages.ALERTS_FETCHED());
@@ -103,7 +104,7 @@ class MetricsController {
    * Ingests an array of frontend metric events (web vitals + JS errors).
    * No auth required — pre-auth telemetry.
    */
-  static ingestFrontend = catchAsync(async (req, res) => {
+  static ingestFrontend = catchAsync(async (req: Request, res: Response) => {
     await MetricsService.ingestFrontendMetrics(req.body);
     res.json(sendSuccess(RESPONSE_MESSAGES.METRICS_FRONTEND_INGESTED, null));
   });
@@ -115,7 +116,7 @@ class MetricsController {
    * addresses), active alert states, and the recent-sends ring buffer.
    * Requires userLevel >= 2.
    */
-  static getNotificationStatus = catchAsync(async (_req, res) => {
+  static getNotificationStatus = catchAsync(async (_req: any, res: any) => {
     const status = await AlertNotifierService.getStatus();
     logger.info(notificationMessages.STATUS_FETCHED());
     res.json(sendSuccess(RESPONSE_MESSAGES.NOTIFICATION_STATUS_FETCHED, status));
@@ -127,7 +128,7 @@ class MetricsController {
    * behind a strict rate limit — every call is a real SMTP send.
    * Body: { channel: string }.
    */
-  static testSendNotification = catchAsync(async (req, res) => {
+  static testSendNotification = catchAsync(async (req: Request, res: Response) => {
     const { channel } = req.body || {};
     const testedBy = actorId(req) ?? req.user?.username ?? "unknown";
     logger.info(notificationMessages.TEST_SEND_REQUESTED(channel, testedBy));
@@ -141,7 +142,7 @@ class MetricsController {
    * Query: rule, severity (WARNING|CRITICAL|RESOLVED), from, to (ISO dates),
    * page, limit (capped at 200 by the model). Requires userLevel >= 2.
    */
-  static getAlertHistory = catchAsync(async (req, res) => {
+  static getAlertHistory = catchAsync(async (req: Request, res: Response) => {
     const { rule, severity, from, to, page, limit } = req.query;
 
     if (
@@ -197,7 +198,7 @@ class MetricsController {
    * Same access tier as GET /alerts (userLevel >= 2) — whoever can already see
    * an alert can quiet it; no new permission tier is invented for this.
    */
-  static acknowledgeAlert = catchAsync(async (req, res) => {
+  static acknowledgeAlert = catchAsync(async (req: Request, res: Response) => {
     const { alertKey, note } = req.body || {};
     const ackedBy = actorId(req);
     logger.info(notificationMessages.ALERT_ACK_REQUESTED(alertKey, ackedBy));
@@ -210,7 +211,7 @@ class MetricsController {
    * Clears an alert's acknowledgement (explicit admin "never mind").
    * Body: { alertKey: string }. Same access tier as GET /alerts.
    */
-  static unacknowledgeAlert = catchAsync(async (req, res) => {
+  static unacknowledgeAlert = catchAsync(async (req: Request, res: Response) => {
     const { alertKey } = req.body || {};
     logger.info(notificationMessages.ALERT_UNACK_REQUESTED(alertKey));
     const result = await AlertNotifierService.unacknowledge(alertKey);

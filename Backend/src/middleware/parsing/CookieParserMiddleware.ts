@@ -6,9 +6,12 @@
  * Uses COOKIE_SECRET env var for signed cookies when available.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import cookieParser from "cookie-parser";
 
 class CookieParserMiddleware {
+  declare _parser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
+  declare _secret: any;
   constructor(options = {}) {
     this._secret = options.secret ?? process.env.COOKIE_SECRET ?? undefined;
     this._parser = cookieParser(this._secret); // lgtm[js/missing-csrf-middleware] CSRF is enforced by CsrfMiddleware (csrf-csrf) in the app middleware stack
@@ -16,7 +19,7 @@ class CookieParserMiddleware {
     this.handle = this.handle.bind(this);
   }
 
-  handle(req, res, next) {
+  handle(req: Request, res: Response, next: NextFunction) {
     return this._parser(req, res, next);
   }
 }

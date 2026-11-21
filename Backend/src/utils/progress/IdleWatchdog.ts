@@ -37,6 +37,13 @@ const SWEEP_MS = 5000;
 const STALL_FACTOR = 3;
 
 class IdleWatchdog {
+    declare _lastSweepAt: null;
+    declare _timer: null;
+    declare _entries: Map<any, any>;
+    declare _now: () => number;
+    declare _stallFactor: number;
+    declare _sweepMs: number;
+    declare _dbCallCapMs: number | undefined;
     /**
      * @param {object} [options]
      * @param {number} [options.sweepMs=SWEEP_MS]
@@ -49,7 +56,7 @@ class IdleWatchdog {
         stallFactor = STALL_FACTOR,
         now = Date.now,
         dbCallCapMs,
-    } = {}) {
+    }: { sweepMs?: number; stallFactor?: number; now?: () => number; dbCallCapMs?: number; } = {}) {
         this._dbCallCapMs = dbCallCapMs;
         this._sweepMs = sweepMs;
         this._stallFactor = stallFactor;
@@ -61,7 +68,7 @@ class IdleWatchdog {
     }
 
     /** @returns {number} Active registrations. */
-    get size() {
+    get size(): number {
         return this._entries.size;
     }
 
@@ -73,8 +80,8 @@ class IdleWatchdog {
      * @param {(scope: import("./ProgressScope").ProgressScope) => void} [options.probe] - Called before each enforcement check (RequestWatchdog uses it for socket-I/O progress).
      * @returns {() => void} dispose (idempotent)
      */
-    register(scope, onIdle, { probe = null } = {}) {
-        const key = {};
+    register(scope: import("./ProgressScope").ProgressScope, onIdle: (scope: import("./ProgressScope").ProgressScope, idleMs: number) => void, { probe = null }: { probe?: (scope: import("./ProgressScope").ProgressScope) => void; } = {}): () => void {
+        const key: Record<string, any> = {};
         this._entries.set(key, { scope, onIdle, probe, fired: false });
         return () => {
             this._entries.delete(key);
@@ -85,7 +92,7 @@ class IdleWatchdog {
      * Resolve (once) the in-flight DB call cap.
      * @returns {number}
      */
-    _callCap() {
+    _callCap(): number {
         if (this._dbCallCapMs === undefined) {
             const r = resolveDbCallProgressCap(process.env);
             for (const w of r.warnings) {
@@ -117,7 +124,7 @@ class IdleWatchdog {
      * Run one sweep.
      * @param {number} [now] - epoch ms; defaults to the watchdog clock.
      */
-    sweep(now = this._now()) {
+    sweep(now: number = this._now()) {
         const prev = this._lastSweepAt;
         this._lastSweepAt = now;
 

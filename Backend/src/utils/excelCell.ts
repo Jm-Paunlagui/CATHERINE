@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -27,7 +26,7 @@ const MAX_DEPTH = 8; // guards pathological nested `result` chains
  * @returns {string|number|boolean|Date|null} plain primitive; never an object
  *          other than a valid Date. Unknown object shapes collapse to null.
  */
-function normalizeCellValue(v, depth = 0) {
+function normalizeCellValue(v: any, depth: number = 0): string | number | boolean | Date | null {
     if (v === undefined || v === null) return null;
     if (v instanceof Date) return v;
     const t = typeof v;
@@ -36,7 +35,7 @@ function normalizeCellValue(v, depth = 0) {
 
     if (Array.isArray(v.richText)) {
         return v.richText
-            .map((seg) => (seg && seg.text != null ? String(seg.text) : ""))
+            .map((seg: any) => (seg && seg.text != null ? String(seg.text) : ""))
             .join("");
     }
     if ("error" in v) return null;

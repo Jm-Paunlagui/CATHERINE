@@ -49,7 +49,7 @@ const SEARCH_SQL = `SELECT ID, USERNAME, EMAIL, ROLE, IS_ACTIVE
  * @param {string} s
  * @returns {string}
  */
-function escapeLike(s) {
+function escapeLike(s: string): string {
     return s.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
@@ -59,7 +59,7 @@ function escapeLike(s) {
  * @param {*} limit
  * @returns {number}
  */
-function clampLimit(limit) {
+function clampLimit(limit: any): number {
     const n = Math.trunc(Number(limit));
     if (!Number.isFinite(n) || n < 1) return SEARCH_DEFAULT_LIMIT;
     return Math.min(n, SEARCH_MAX_LIMIT);
@@ -75,7 +75,7 @@ const SIGN_CONTEXT = "T_ADMINS_DEV";
  * @param {object} row
  * @returns {object}
  */
-function buildSignedFields(row) {
+function buildSignedFields(row: Record<string, any>): Record<string, any> {
     return {
         USERNAME: row.USERNAME,
         PASSWORD: row.PASSWORD,
@@ -115,8 +115,8 @@ const SERVER_NOTIFY_FLAG_COLUMNS = Object.freeze({
     "server-system-notification": "CAN_RECEIVE_SRV_SYS",
 });
 
-let _db = null;
-let _col = null;
+let _db: any = null;
+let _col: any = null;
 /** Lazily resolves the appDb interface (never called in DEMO_MODE). */
 function db() {
     if (!_db) _db = createDb("appDb");
@@ -135,11 +135,15 @@ function col() {
  * @param {object|null|undefined} session - Transaction session or null
  * @returns {OracleCollection}
  */
-function writeCol(session) {
+function writeCol(session: Record<string, any> | null | undefined): OracleCollection {
     return session ? session.collection(TABLE) : col();
 }
 
 class AdminModel {
+    declare static SEARCH_MAX_LIMIT: number;
+    declare static SERVER_NOTIFY_FLAG_COLUMNS: Readonly<{ "server-critical-notification": "CAN_RECEIVE_SRV_CRIT"; "server-dependencies-notification": "CAN_RECEIVE_SRV_DEPS"; "server-red-metrics-notification": "CAN_RECEIVE_SRV_RED"; "server-system-notification": "CAN_RECEIVE_SRV_SYS"; }>;
+    declare static buildSignedFields: (row: Record<string, any>) => Record<string, any>;
+    declare static SIGN_CONTEXT: string;
     // ─── Reads ────────────────────────────────────────────────────────────────
 
     /**
@@ -147,7 +151,7 @@ class AdminModel {
      * @param {string} username
      * @returns {Promise<object|null>}
      */
-    static async findByUsername(username) {
+    static async findByUsername(username: string): Promise<Record<string, any> | null> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return admins.find((a) => a.USERNAME === username) ?? null;
@@ -161,7 +165,7 @@ class AdminModel {
      * @param {number|string} id
      * @returns {Promise<object|null>}
      */
-    static async findById(id) {
+    static async findById(id: number | string): Promise<Record<string, any> | null> {
         const numericId = Number(id);
         if (id === null || id === undefined || id === "" || !Number.isFinite(numericId)) {
             return null;
@@ -180,7 +184,7 @@ class AdminModel {
      * @param {string[]} usernames
      * @returns {Promise<Array<{ID:number, USERNAME:string, EMAIL:string|null, ROLE:string, IS_ACTIVE:string}>>}
      */
-    static async findByUsernames(usernames) {
+    static async findByUsernames(usernames: string[]): Promise<Array<{ ID: number; USERNAME: string; EMAIL: string | null; ROLE: string; IS_ACTIVE: string; }>> {
         const names = [
             ...new Set((usernames ?? []).filter((u) => typeof u === "string" && u)),
         ].slice(0, SEARCH_MAX_LIMIT);
@@ -213,7 +217,7 @@ class AdminModel {
      * @param {number} [limit=20]
      * @returns {Promise<Array<{ID:number, USERNAME:string, EMAIL:string|null, ROLE:string, IS_ACTIVE:string}>>}
      */
-    static async search(q, limit = SEARCH_DEFAULT_LIMIT) {
+    static async search(q: string, limit: number = SEARCH_DEFAULT_LIMIT): Promise<Array<{ ID: number; USERNAME: string; EMAIL: string | null; ROLE: string; IS_ACTIVE: string; }>> {
         const needle = String(q ?? "").trim().slice(0, SEARCH_MAX_QUERY_LENGTH);
         if (!needle) return [];
         const lim = clampLimit(limit);
@@ -239,7 +243,7 @@ class AdminModel {
         }
 
         const d = db();
-        const res = await d.withConnection((conn) =>
+        const res = await d.withConnection((conn: any) =>
             conn.execute(
                 SEARCH_SQL,
                 { q: `%${escapeLike(needle.toUpperCase())}%`, lim },
@@ -254,7 +258,7 @@ class AdminModel {
      * Includes PASSWORD + SYSSIGNATURE so callers can verify integrity.
      * @returns {Promise<Array<object>>}
      */
-    static async findAll() {
+    static async findAll(): Promise<Array<Record<string, any>>> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return [...admins].sort((a, b) =>
@@ -273,7 +277,7 @@ class AdminModel {
      * @param {string} username
      * @returns {Promise<boolean>}
      */
-    static async existsByUsername(username) {
+    static async existsByUsername(username: string): Promise<boolean> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return admins.some((a) => a.USERNAME === username);
@@ -289,7 +293,7 @@ class AdminModel {
      * @param {string|null} [excludeUsername]
      * @returns {Promise<number>}
      */
-    static async countActiveByRole(role, excludeUsername = null) {
+    static async countActiveByRole(role: string, excludeUsername: string | null = null): Promise<number> {
         const hasExclusion = excludeUsername !== null && excludeUsername !== undefined;
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
@@ -329,12 +333,12 @@ class AdminModel {
      * @returns {Promise<T>}
      * @throws {AppError} 409 LAST_ACTIVE_SUPER_ADMIN
      */
-    static async withLastSuperAdminGuard(excludeId, fn) {
+    static async withLastSuperAdminGuard<T>(excludeId: number | string, fn: (session: Record<string, any> | null) => Promise<T>): Promise<T> {
         const targetId = Number(excludeId);
 
-        const assertNotLast = (rows) => {
-            const ids = rows.map((r) => Number(r.ID));
-            if (ids.includes(targetId) && ids.every((id) => id === targetId)) {
+        const assertNotLast = (rows: any) => {
+            const ids = rows.map((r: any) => Number(r.ID));
+            if (ids.includes(targetId) && ids.every((id: any) => id === targetId)) {
                 logger.warning(adminMessages.ADMIN_LAST_SUPER_ADMIN_BLOCKED(excludeId));
                 throw new AppError(ADMIN_ERRORS.LAST_ACTIVE_SUPER_ADMIN, HTTP_STATUS.CONFLICT, {
                     type: "BusinessRuleError",
@@ -350,7 +354,7 @@ class AdminModel {
             return fn(null);
         }
 
-        return new Transaction(db()).withTransaction(async (session) => {
+        return new Transaction(db()).withTransaction(async (session: any) => {
             // No .limit(): FETCH FIRST cannot be combined with FOR UPDATE.
             const rows = await session
                 .collection(TABLE)
@@ -380,7 +384,7 @@ class AdminModel {
      * @param {string} channel - A key of {@link SERVER_NOTIFY_FLAG_COLUMNS}
      * @returns {Promise<string[]>} De-duplicated emails ([] for an unknown channel)
      */
-    static async findServerNotifyRecipients(channel) {
+    static async findServerNotifyRecipients(channel: string): Promise<string[]> {
         const flagColumn = SERVER_NOTIFY_FLAG_COLUMNS[channel];
         if (!flagColumn) return [];
 
@@ -400,8 +404,8 @@ class AdminModel {
         return [
             ...new Set(
                 rows
-                    .map((r) => String(r.EMAIL ?? "").trim())
-                    .filter((email) => email.length > 0),
+                    .map((r: any) => String(r.EMAIL ?? "").trim())
+                    .filter((email: any) => email.length > 0),
             ),
         ];
     }
@@ -417,7 +421,7 @@ class AdminModel {
      * @param {Array<string|number>} ids
      * @returns {Promise<Map<number, string>>} ID → USERNAME
      */
-    static async getNamesByIds(ids) {
+    static async getNamesByIds(ids: Array<string | number>): Promise<Map<number, string>> {
         const numericIds = [...new Set((ids ?? []).map(Number))].filter(
             Number.isFinite,
         );
@@ -435,7 +439,7 @@ class AdminModel {
                     .toArray();
             }
             return new Map(
-                (rows ?? []).map((r) => [Number(r.ID), r.USERNAME ?? null]),
+                (rows ?? []).map((r: any) => [Number(r.ID), r.USERNAME ?? null]),
             );
         } catch {
             return new Map();
@@ -453,7 +457,7 @@ class AdminModel {
      * @param {{username:string, password:string, role:string, sysSignature:string, isActive?:string, email?:string}} data
      * @returns {Promise<void>}
      */
-    static async insertAdmin(data) {
+    static async insertAdmin(data: { username: string; password: string; role: string; sysSignature: string; isActive?: string; email?: string; }): Promise<void> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             admins.push({
@@ -504,8 +508,8 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async setNotifyFlags(username, channelFlags, session = null) {
-        const fields = {};
+    static async setNotifyFlags(username: string, channelFlags: Record<string, 'Y' | 'N'>, session: Record<string, any> | null = null): Promise<void> {
+        const fields: Record<string, any> = {};
         for (const [channel, value] of Object.entries(channelFlags ?? {})) {
             const column = SERVER_NOTIFY_FLAG_COLUMNS[channel];
             if (column) fields[column] = value === "Y" ? "Y" : "N";
@@ -522,7 +526,7 @@ class AdminModel {
      * @param {string|null} email
      * @returns {Promise<void>}
      */
-    static async setEmail(username, email) {
+    static async setEmail(username: string, email: string | null): Promise<void> {
         const value = typeof email === "string" && email.trim() ? email.trim() : null;
         return AdminModel._set(username, { EMAIL: value });
     }
@@ -534,7 +538,7 @@ class AdminModel {
      * @param {string} sysSignature
      * @returns {Promise<void>}
      */
-    static async updateCredentials(username, passwordHash, sysSignature) {
+    static async updateCredentials(username: string, passwordHash: string, sysSignature: string): Promise<void> {
         return AdminModel._set(username, {
             PASSWORD: passwordHash,
             SYSSIGNATURE: sysSignature,
@@ -549,7 +553,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async updateRole(username, role, sysSignature, session = null) {
+    static async updateRole(username: string, role: string, sysSignature: string, session: Record<string, any> | null = null): Promise<void> {
         return AdminModel._set(
             username,
             { ROLE: role, SYSSIGNATURE: sysSignature },
@@ -565,7 +569,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async setActive(username, isActive, sysSignature, session = null) {
+    static async setActive(username: string, isActive: string, sysSignature: string, session: Record<string, any> | null = null): Promise<void> {
         return AdminModel._set(
             username,
             { IS_ACTIVE: isActive, SYSSIGNATURE: sysSignature },
@@ -579,7 +583,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async deleteAdmin(username, session = null) {
+    static async deleteAdmin(username: string, session: Record<string, any> | null = null): Promise<void> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             const idx = admins.findIndex((a) => a.USERNAME === username);
@@ -596,7 +600,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session; null uses the pool
      * @private
      */
-    static async _set(username, fields, session = null) {
+    static async _set(username: string, fields: Record<string, any>, session: Record<string, any> | null = null) {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             const row = admins.find((a) => a.USERNAME === username);

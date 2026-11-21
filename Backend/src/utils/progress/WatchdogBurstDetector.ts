@@ -43,6 +43,13 @@ const MAX_ENTRIES = 1000;
 const TOP_N = 5;
 
 class WatchdogBurstDetector {
+    declare _sinceAlert: number;
+    declare _lastAlertAt: null;
+    declare _entries: never[];
+    declare _emit: (message: string, meta: Record<string, any>) => void;
+    declare _now: () => number;
+    declare _windowMs: number;
+    declare _burst: number;
     /**
      * @param {object} [options]
      * @param {number} [options.burst] - Cuts that trigger an alert; 0 disables. Default: env `WATCHDOG_ALERT_BURST` (3).
@@ -50,7 +57,7 @@ class WatchdogBurstDetector {
      * @param {() => number} [options.now=Date.now]
      * @param {(message: string, meta: object) => void} [options.emit] - Default: `logger.critical`.
      */
-    constructor({ burst, windowMs, now = Date.now, emit } = {}) {
+    constructor({ burst, windowMs, now = Date.now, emit }: { burst?: number; windowMs?: number; now?: () => number; emit?: (message: string, meta: Record<string, any>) => void; } = {}) {
         const cfg = WatchdogBurstDetector.resolveConfig(process.env);
         this._burst = burst ?? cfg.burst;
         this._windowMs = windowMs ?? cfg.windowMs;
@@ -67,7 +74,7 @@ class WatchdogBurstDetector {
      * @param {NodeJS.ProcessEnv} env
      * @returns {{ burst: number, windowMs: number }}
      */
-    static resolveConfig(env) {
+    static resolveConfig(env: NodeJS.ProcessEnv): { burst: number; windowMs: number; } {
         const b = Number.parseInt(env?.WATCHDOG_ALERT_BURST, 10);
         const w = Number.parseInt(env?.WATCHDOG_ALERT_WINDOW_MS, 10);
         return {
@@ -82,7 +89,7 @@ class WatchdogBurstDetector {
      * @param {{ method: string, path: string, lastSource: string }} cut - `path` is a route template / masked label.
      * @returns {boolean} true when this cut raised the burst alert
      */
-    record({ method, path, lastSource }) {
+    record({ method, path, lastSource }: { method: string; path: string; lastSource: string; }): boolean {
         try {
             if (!(this._burst > 0)) return false;
             const now = this._now();
@@ -101,7 +108,7 @@ class WatchdogBurstDetector {
             }
             if (this._entries.length < this._burst) return false;
 
-            const top = (key) => {
+            const top = (key: any) => {
                 const counts = new Map();
                 for (const e of this._entries) counts.set(e[key], (counts.get(e[key]) ?? 0) + 1);
                 return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, TOP_N);

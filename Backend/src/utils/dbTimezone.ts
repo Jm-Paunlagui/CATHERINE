@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -26,12 +25,12 @@ const DEFAULT_DB_TZ_OFFSET_MINUTES = 480;
 const MIN_OFFSET_MINUTES = -12 * 60;
 const MAX_OFFSET_MINUTES = 14 * 60;
 
-let _lastWarnedValue = null;
+let _lastWarnedValue: any = null;
 
 /**
  * @returns {number} DB server UTC offset in minutes (e.g. 480 for UTC+8)
  */
-function dbTimezoneOffsetMinutes() {
+function dbTimezoneOffsetMinutes(): number {
     const raw = process.env.DB_TIMEZONE_OFFSET_MINUTES;
     if (raw === undefined || raw.trim() === "") return DEFAULT_DB_TZ_OFFSET_MINUTES;
 
@@ -68,9 +67,9 @@ const CLOCK_OFFSET_SQL =
  * @returns {Promise<{ dbOffsetMinutes: number, configuredMinutes: number, appOffsetMinutes: number, match: boolean } | null>}
  *          null when the clock could not be read
  */
-async function verifyDbClockOffset(db, { appOffsetMinutes = -new Date().getTimezoneOffset() } = {}) {
+async function verifyDbClockOffset(db: { withConnection: ((...args: any[]) => any); oracledb?: Record<string, any>; }, { appOffsetMinutes = -new Date().getTimezoneOffset() }: { appOffsetMinutes?: number; } = {}): Promise<{ dbOffsetMinutes: number; configuredMinutes: number; appOffsetMinutes: number; match: boolean; } | null> {
     try {
-        const raw = await db.withConnection("appDb", async (conn) => {
+        const raw = await db.withConnection("appDb", async (conn: any) => {
             const r = await conn.execute(CLOCK_OFFSET_SQL, [], { outFormat: db.oracledb?.OUT_FORMAT_OBJECT });
             const row = r.rows?.[0];
             return Array.isArray(row) ? row[0] : row?.OFF_MIN;

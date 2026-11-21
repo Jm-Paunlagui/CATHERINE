@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -36,7 +35,7 @@ const MAX_ADDRESS_LENGTH = 254;
  * @param {*} raw
  * @returns {string|null}
  */
-function singleAddress(raw) {
+function singleAddress(raw: any): string | null {
     if (raw != null && typeof raw !== "string") return null;
     const v = raw == null ? "" : raw.trim();
     if (!v || v.length > MAX_ADDRESS_LENGTH) return null;
@@ -52,7 +51,7 @@ function singleAddress(raw) {
  * @param {*} raw
  * @returns {string|null}
  */
-function maskAddress(raw) {
+function maskAddress(raw: any): string | null {
     const address = singleAddress(raw);
     if (!address) return null;
     const at = address.lastIndexOf("@");
@@ -71,7 +70,7 @@ function maskAddress(raw) {
  * @param {object|null|undefined} row - an account row
  * @returns {string|null}
  */
-function credentialAddressOf(row) {
+function credentialAddressOf(row: Record<string, any> | null | undefined): string | null {
     if (!row) return null;
     if (Object.prototype.hasOwnProperty.call(row, "_CREDENTIAL_EMAIL")) {
         return row._CREDENTIAL_EMAIL;

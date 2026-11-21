@@ -92,7 +92,7 @@ const RECOUNT_TOLERANCE = 0;
  * @returns {string[]}
  * @private
  */
-function _normalizeStringArray(value) {
+function _normalizeStringArray(value: any): string[] {
     if (!Array.isArray(value)) return [];
     const cleaned = value
         .filter((v) => typeof v === "string" && v.trim() !== "")
@@ -111,14 +111,14 @@ function _normalizeStringArray(value) {
  * @returns {Set<string>}
  * @private
  */
-function _computeChildClosure(baseTables) {
+function _computeChildClosure(baseTables: Iterable<string>): Set<string> {
     const result = new Set(baseTables);
     let changed = true;
     while (changed) {
         changed = false;
         for (const entry of PURGE_TABLES) {
             if (result.has(entry.table)) continue;
-            if (entry.fkEdges.some((edge) => result.has(edge.refTable))) {
+            if (entry.fkEdges.some((edge: any) => result.has(edge.refTable))) {
                 result.add(entry.table);
                 changed = true;
             }
@@ -137,7 +137,7 @@ function _computeChildClosure(baseTables) {
  * @returns {string} 64-char hex SHA-256 digest.
  * @private
  */
-function _computeScopeHash(sortedTables) {
+function _computeScopeHash(sortedTables: string[]): string {
     return crypto
         .createHash("sha256")
         .update(sortedTables.join(","))
@@ -157,7 +157,7 @@ function _computeScopeHash(sortedTables) {
  * @throws {Error} When a name is not a registered `PURGE_POOL` table (a registry/programming bug, not a user error — intentionally NOT an AppError).
  * @private
  */
-function _assertSafeScope(tables) {
+function _assertSafeScope(tables: string[]) {
     const forbidden = tables.filter((t) => NEVER_PURGE.includes(t));
     if (forbidden.length > 0) {
         throw new AppError(
@@ -210,7 +210,13 @@ class DataPurgeService {
      * const scope = DataPurgeService.resolveScope({ groups: ["T_"] });
      * // scope.autoIncludedGroups → groups pulled in by closure hints
      */
-    static resolveScope(selection = {}) {
+    static resolveScope(selection: { groups?: string[]; tables?: string[]; } = {}): {
+        requestedGroups: string[];
+        requestedTables: string[];
+        autoIncludedGroups: string[];
+        tables: string[];
+        scopeHash: string;
+    } {
         const requestedGroups = _normalizeStringArray(selection?.groups);
         const requestedTables = _normalizeStringArray(selection?.tables);
 
@@ -354,7 +360,7 @@ class DataPurgeService {
      * DataPurgeService.buildConfirmPhrase(["SERVER_"], 4213); // "DELETE SERVER_ 4213 ROWS"
      * DataPurgeService.buildConfirmPhrase(["SERVER_", "T_"], 128031); // "DELETE SERVER_, T_ 128031 ROWS"
      */
-    static buildConfirmPhrase(groups, totalRows) {
+    static buildConfirmPhrase(groups: string[], totalRows: number): string {
         const groupList = [...new Set(groups)].sort().join(", ");
         return `DELETE ${groupList} ${totalRows} ROWS`;
     }
@@ -377,7 +383,7 @@ class DataPurgeService {
      * //     "T_EXAMPLE: CREATED_DATE, CREATED_BY will be permanently lost — these columns cannot be recovered once this data is purged.",
      * //   ]
      */
-    static buildFidelityNotes(tables) {
+    static buildFidelityNotes(tables: string[]): string[] {
         const notes = [];
         for (const table of tables) {
             const entry = getEntry(table);
@@ -410,7 +416,10 @@ class DataPurgeService {
      *   generatedAt: string,
      * }>}
      */
-    static async getScopeCatalogue() {
+    static async getScopeCatalogue(): Promise<{
+        groups: Array<{ group: string; tables: Array<{ table: string; rowCount: number; }>; totalRows: number; autoIncludes: string[]; }>;
+        generatedAt: string;
+    }> {
         const allTables = getAllTableNames();
         const counts = await DataPurgeModel.countRows(allTables);
 
@@ -449,7 +458,16 @@ class DataPurgeService {
      * }>}
      * @throws {AppError} Propagated from `resolveScope`.
      */
-    static async getPreview(selection) {
+    static async getPreview(selection: Record<string, any>): Promise<{
+        requestedGroups: string[];
+        requestedTables: string[];
+        autoIncludedGroups: string[];
+        scopeHash: string;
+        totalRows: number;
+        tables: Array<{ table: string; group: string; rowCount: number; autoIncluded: boolean; }>;
+        fidelityNotes: string[];
+        confirmPhrase: string;
+    }> {
         const scope = DataPurgeService.resolveScope(selection);
         _assertSafeScope(scope.tables);
 
@@ -506,7 +524,7 @@ class DataPurgeService {
      * @param {number|string} adminId
      * @returns {Promise<object|null>}
      */
-    static async findAdminById(adminId) {
+    static async findAdminById(adminId: number | string): Promise<Record<string, any> | null> {
         return AdminModel.findById(adminId);
     }
 
@@ -531,10 +549,10 @@ class DataPurgeService {
      * @private
      */
     static async _assertAdminPassword(
-        adminId,
-        adminPassword,
-        adminRecord = null,
-    ) {
+        adminId: number | string,
+        adminPassword: string,
+        adminRecord: Record<string, any> | null = null,
+    ): Promise<{ adminId: number | string; }> {
         const record =
             adminRecord ?? (await DataPurgeService.findAdminById(adminId));
         if (!record) {
@@ -597,7 +615,7 @@ class DataPurgeService {
      * @returns {Promise<{ verified: true }>}
      * @throws {AppError} 400/401 — see `_assertAdminPassword`.
      */
-    static async authorise({ adminId, adminPassword }) {
+    static async authorise({ adminId, adminPassword }: { adminId: number | string; adminPassword: string; }): Promise<{ verified: true; }> {
         await DataPurgeService._assertAdminPassword(adminId, adminPassword);
         return { verified: true };
     }
@@ -657,7 +675,16 @@ class DataPurgeService {
      *     requestId: req.id,
      * });
      */
-    static async backup({ selection, adminId, requestId = null }) {
+    static async backup({ selection, adminId, requestId = null }: { selection: Record<string, any>; adminId: number | string; requestId?: string | null; }): Promise<{
+        zipBuffer: Buffer;
+        filename: string;
+        token: string;
+        expiresAt: number;
+        confirmPhrase: string;
+        totalRows: number;
+        tableCount: number;
+        rowCounts: Record<string, number>;
+    }> {
         const BackupArchiveService = require("./BackupArchiveService").default;
         const BackupEmailService = require("./BackupEmailService").default;
 
@@ -684,7 +711,7 @@ class DataPurgeService {
                 tables: getAllTableNames(),
                 createdBy: adminId,
                 requestId,
-            }).catch((err) => {
+            }).catch((err: any) => {
                 logger.warning(
                     dataBackupMessages.ARCHIVE_WRITE_FAILED("purge", err),
                 );
@@ -705,7 +732,7 @@ class DataPurgeService {
                 tableCount: result.tableCount,
                 adminId,
                 requestId,
-            }).catch((err) => {
+            }).catch((err: any) => {
                 logger.warning(
                     backupEmailMessages.DISPATCH_REJECTED(adminId, err),
                 );
@@ -758,7 +785,13 @@ class DataPurgeService {
      *     requestId: req.id,
      * });
      */
-    static async executePurge(params) {
+    static async executePurge(params: { selection: Record<string, any>; backupToken: string; adminId: number | string; adminPassword: string; confirmPhrase: string; acknowledgeLockout?: boolean; clientIp?: string | null; requestId?: string | null; }): Promise<{
+        scopeHash: string;
+        tables: string[];
+        totalDeleted: number;
+        perTable: Array<{ table: string; deletedCount: number; }>;
+        durationMs: number;
+    }> {
         const {
             selection,
             backupToken,
@@ -1120,8 +1153,8 @@ class DataPurgeService {
      * @returns {Record<string, string>}
      * @private
      */
-    static _scopedHighWater(tables, tokenHighWater) {
-        const out = {};
+    static _scopedHighWater(tables: string[], tokenHighWater: Record<string, string> | undefined): Record<string, string> {
+        const out: Record<string, any> = {};
         if (!tokenHighWater || typeof tokenHighWater !== "object") return out;
         for (const table of tables) {
             const hw = tokenHighWater[table];
@@ -1151,7 +1184,7 @@ class DataPurgeService {
         durationMs,
         clientIp,
         requestId,
-    }) {
+    }: Record<string, any>): Promise<void> {
         await AuditLogModel.insert({
             REQUEST_ID: requestId ?? `purge-${Date.now()}`,
             USER_ID: Number.isFinite(Number(adminId))
@@ -1185,7 +1218,7 @@ class DataPurgeService {
      * @returns {Promise<void>}
      * @private
      */
-    static async _sendPostCommitAlert({ adminId, scope, totalDeleted }) {
+    static async _sendPostCommitAlert({ adminId, scope, totalDeleted }: Record<string, any>): Promise<void> {
         // Required lazily to avoid a hard dependency at module load for a
         // service most of this feature's paths never touch, and to sidestep
         // any startup-order coupling with AlertNotifierService.start().

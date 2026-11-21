@@ -6,9 +6,11 @@
  * Wraps helmet in a class for consistent architecture.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 
 class HelmetMiddleware {
+  declare _helmet: (req: import("http").IncomingMessage, res: import("http").ServerResponse, next: (err?: unknown) => void) => void;
   constructor(options = {}) {
     this._helmet = helmet({
       contentSecurityPolicy: options.contentSecurityPolicy ?? {
@@ -47,7 +49,7 @@ class HelmetMiddleware {
     this.handle = this.handle.bind(this);
   }
 
-  handle(req, res, next) {
+  handle(req: Request, res: Response, next: NextFunction) {
     return this._helmet(req, res, next);
   }
 }

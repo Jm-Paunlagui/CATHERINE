@@ -58,6 +58,12 @@ module.exports = defineConfig([
       // MIGRATION: unconverted files carry `// @ts-nocheck` (see tsconfig.json).
       // Turn this back on (default options) once no file has it.
       "@typescript-eslint/ban-ts-comment": ["error", { "ts-nocheck": false }],
+      // MIGRATION: explicit `any` marks code the JS left untyped (the typing
+      // codemod writes `any` where tsc reported an implicit one, and JSDoc
+      // `{*}` / `{object}` became any-based types). Count the debt with
+      // `grep -rE ": any\b|<any>|any\[\]" src server.ts | wc -l`; turn this on
+      // once a module is tightened.
+      "@typescript-eslint/no-explicit-any": "off",
       // MIGRATION: src is still CommonJS. Turn on when require() is replaced
       // by import across src.
       "@typescript-eslint/no-require-imports": "off",

@@ -84,6 +84,14 @@ const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_MAX_POLL_ERRORS = 5;
 
 class ScopedSsePoller {
+    declare _pollInterval: null;
+    declare _scopes: Map<any, any>;
+    declare logger: Record<string, any> | null;
+    declare onChange: (scope: Record<string, any>) => void;
+    declare readCursor: (scope: Record<string, any>) => Promise<string | null>;
+    declare maxPollErrors: number;
+    declare pollIntervalMs: number;
+    declare name: string;
     /**
      * @param {{
      *   name: string,
@@ -94,7 +102,14 @@ class ScopedSsePoller {
      *   logger?: object,
      * }} opts
      */
-    constructor(opts) {
+    constructor(opts: {
+            name: string;
+            pollIntervalMs?: number;
+            maxPollErrors?: number;
+            readCursor: (scope: Record<string, any>) => Promise<string | null>;
+            onChange?: (scope: Record<string, any>) => void;
+            logger?: Record<string, any>;
+        }) {
         if (!opts || typeof opts.readCursor !== "function") {
             throw new TypeError(
                 "ScopedSsePoller requires opts.readCursor(scope) => Promise<string|null>.",
@@ -133,7 +148,7 @@ class ScopedSsePoller {
      * @param {{ key: string, meta?: object }} params
      * @returns {() => void} Call on disconnect (wire to `req.on("close")`).
      */
-    open(res, { key, meta = {} }) {
+    open(res: import('express').Response, { key, meta = {} }: { key: string; meta?: Record<string, any>; }): () => void {
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
@@ -215,7 +230,7 @@ class ScopedSsePoller {
      * `close()` returned from {@link open}, wired to `req.on("close")`.
      * @private
      */
-    _safeSend(res, eventName, payload) {
+    _safeSend(res: any, eventName: any, payload: any) {
         try {
             res.write(`event: ${eventName}\n`);
             res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -226,12 +241,12 @@ class ScopedSsePoller {
     }
 
     /** @private */
-    _broadcast(scope, eventName, payload) {
+    _broadcast(scope: any, eventName: any, payload: any) {
         for (const res of scope.connections) this._safeSend(res, eventName, payload);
     }
 
     /** @private */
-    _log(level, message) {
+    _log(level: any, message: any) {
         if (this.logger && typeof this.logger[level] === "function") {
             this.logger[level](message);
         }
@@ -246,7 +261,7 @@ class ScopedSsePoller {
      * @param {object} scope
      * @returns {Promise<void>}
      */
-    async _pollScope(key, scope) {
+    async _pollScope(key: string, scope: Record<string, any>): Promise<void> {
         const ts = new Date().toISOString();
         try {
             const newCursor = await this.readCursor(scope);
@@ -329,7 +344,7 @@ class ScopedSsePoller {
      * @private
      * @returns {Promise<void>}
      */
-    async _tick() {
+    async _tick(): Promise<void> {
         if (this._scopes.size === 0) return;
         await Promise.all(
             [...this._scopes.entries()].map(([key, scope]) => this._pollScope(key, scope)),

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -28,10 +27,11 @@ const { SHUTDOWN_RETRY_AFTER_SEC } = __shutdownGate;
 const HEALTH_PATH_RE = /^\/api\/v\d+\/health(\/|$)/;
 
 class ShutdownGateMiddleware {
+    declare _isShuttingDown: () => boolean;
     /**
      * @param {{ isShuttingDown?: () => boolean }} [deps] - injectable for tests
      */
-    constructor({ isShuttingDown = () => InFlightTaskRegistry.isShuttingDown() } = {}) {
+    constructor({ isShuttingDown = () => InFlightTaskRegistry.isShuttingDown() }: { isShuttingDown?: () => boolean; } = {}) {
         this._isShuttingDown = isShuttingDown;
         this.handle = this.handle.bind(this);
     }
@@ -42,7 +42,7 @@ class ShutdownGateMiddleware {
      * @param {import("express").Response} res
      * @param {import("express").NextFunction} next
      */
-    handle(req, res, next) {
+    handle(req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) {
         if (!this._isShuttingDown()) return next();
         if (req.method === "OPTIONS") return next();
         const path = req.originalUrl ?? req.url ?? "";

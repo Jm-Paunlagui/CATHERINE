@@ -25,25 +25,26 @@
  * @param {string} p
  * @returns {string}
  */
-const maskIds = (p) => p.replace(/\/\d{2,}(?=\/|$)/g, "/:n");
+import type { Request, Response } from "express";
+const maskIds = (p: string): string => p.replace(/\/\d{2,}(?=\/|$)/g, "/:n");
 
 class HttpInFlightTracker {
     /** @type {Set<import('http').ServerResponse>} */
-    #active = new Set();
+    #active: Set<import('http').ServerResponse> = new Set();
     /** @type {WeakMap<import('http').ServerResponse, {req: import('http').IncomingMessage, method: string, path: string, startedAt: number}>} */
-    #meta = new WeakMap();
+    #meta: WeakMap<import('http').ServerResponse, { req: import('http').IncomingMessage; method: string; path: string; startedAt: number; }> = new WeakMap();
     #shuttingDown = false;
     /** @type {null | (() => void)} */
-    #onSettle = null;
+    #onSettle: null | (() => void) = null;
     /** @type {(req: import('http').IncomingMessage) => ({idleMs: (now?: number) => number}|undefined)} */
-    #scopeOf;
+    #scopeOf: (req: import('http').IncomingMessage) => ({ idleMs: (now?: number) => number; } | undefined);
 
     /**
      * @param {object} [options]
      * @param {(req: import('http').IncomingMessage) => ({idleMs: (now?: number) => number}|undefined)} [options.scopeOf]
      *   Resolves a request's progress scope; default `RequestWatchdog.scopeOf` (lazy-required).
      */
-    constructor({ scopeOf } = {}) {
+    constructor({ scopeOf }: { scopeOf?: (req: import('http').IncomingMessage) => ({ idleMs: (now?: number) => number; } | undefined); } = {}) {
         this.#scopeOf =
             scopeOf ??
             ((req) => {
@@ -61,8 +62,8 @@ class HttpInFlightTracker {
      * @param {import('http').Server} server
      * @returns {HttpInFlightTracker} this, for `new HttpInFlightTracker().attach(server)`
      */
-    attach(server) {
-        server.on("request", (req, res) => this._track(req, res));
+    attach(server: import('http').Server): HttpInFlightTracker {
+        server.on("request", (req: Request, res: Response) => this._track(req, res));
         return this;
     }
 
@@ -71,7 +72,7 @@ class HttpInFlightTracker {
      * @param {import('http').ServerResponse} res
      * @returns {void}
      */
-    _track(req, res) {
+    _track(req: import('http').IncomingMessage, res: import('http').ServerResponse): void {
         this.#active.add(res);
         this.#meta.set(res, {
             req,
@@ -107,7 +108,7 @@ class HttpInFlightTracker {
      * @param {() => void} [onSettle]
      * @returns {void}
      */
-    beginShutdown(onSettle) {
+    beginShutdown(onSettle: () => void): void {
         this.#shuttingDown = true;
         if (onSettle) this.#onSettle = onSettle;
         for (const res of this.#active) this.#markClose(res);
@@ -119,7 +120,7 @@ class HttpInFlightTracker {
      *
      * @returns {number}
      */
-    activeCount() {
+    activeCount(): number {
         let n = 0;
         for (const res of this.#active) if (!HttpInFlightTracker.#isSse(res)) n += 1;
         return n;
@@ -135,7 +136,7 @@ class HttpInFlightTracker {
      * @returns {Array<{method: string, path: string, ageMs: number, idleMs: number|null}>}
      *   `idleMs` = time since the request last made progress (null when no watchdog scope).
      */
-    activeSummary(limit = 20) {
+    activeSummary(limit: number = 20): Array<{ method: string; path: string; ageMs: number; idleMs: number | null; }> {
         const now = Date.now();
         const list = [];
         for (const res of this.#active) {
@@ -158,7 +159,7 @@ class HttpInFlightTracker {
     }
 
     /** @param {import('http').ServerResponse} res */
-    #markClose(res) {
+    #markClose(res: import('http').ServerResponse) {
         if (res.headersSent) return;
         try {
             res.setHeader("Connection", "close");
@@ -168,7 +169,7 @@ class HttpInFlightTracker {
     }
 
     /** @param {import('http').ServerResponse} res */
-    static #isSse(res) {
+    static #isSse(res: import('http').ServerResponse) {
         const type = res.getHeader?.("content-type");
         return typeof type === "string" && type.startsWith("text/event-stream");
     }

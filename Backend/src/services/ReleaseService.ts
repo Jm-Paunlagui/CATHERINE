@@ -48,7 +48,7 @@ const STAGE_LABEL = {
  * @param {string} v
  * @returns {{ major: number, minor: number, patch: number, stage: string, iter: number }}
  */
-function parseVersion(v) {
+function parseVersion(v: string): { major: number; minor: number; patch: number; stage: string; iter: number; } {
     const [core, pre] = String(v ?? "0.0.0").split("-");
     const [major = 0, minor = 0, patch = 0] = core.split(".").map(Number);
     let stage = "stable";
@@ -72,7 +72,7 @@ function parseVersion(v) {
  * @param {object} b parsed version
  * @returns {number} <0 if a<b, 0 if equal, >0 if a>b
  */
-function compareVersion(a, b) {
+function compareVersion(a: Record<string, any>, b: Record<string, any>): number {
     if (a.major !== b.major) return a.major - b.major;
     if (a.minor !== b.minor) return a.minor - b.minor;
     if (a.patch !== b.patch) return a.patch - b.patch;
@@ -83,7 +83,7 @@ function compareVersion(a, b) {
 }
 
 /** @param {object} p parsed version @returns {string} "MAJOR.MINOR.PATCH" */
-function coreStr(p) {
+function coreStr(p: Record<string, any>): string {
     return `${p.major}.${p.minor}.${p.patch}`;
 }
 
@@ -93,14 +93,14 @@ function coreStr(p) {
  * @param {"patch"|"minor"|"major"} bump
  * @returns {{ major: number, minor: number, patch: number }}
  */
-function bumpCore(p, bump) {
+function bumpCore(p: Record<string, any>, bump: "patch" | "minor" | "major"): { major: number; minor: number; patch: number; } {
     if (bump === "major") return { major: p.major + 1, minor: 0, patch: 0 };
     if (bump === "minor") return { major: p.major, minor: p.minor + 1, patch: 0 };
     return { major: p.major, minor: p.minor, patch: p.patch + 1 };
 }
 
 /** @param {object} p parsed version @returns {string} composed version string */
-function composeVersion(p) {
+function composeVersion(p: Record<string, any>): string {
     return p.stage === "stable" ? coreStr(p) : `${coreStr(p)}-${p.stage}.${p.iter}`;
 }
 
@@ -113,7 +113,7 @@ function composeVersion(p) {
  * @param {string} message
  * @returns {{ version: string, stage: string, type: string, title: string, message: string, whatChanged: [] }}
  */
-function draft(version, stage, type, title, message) {
+function draft(version: string, stage: string, type: string, title: string, message: string): { version: string; stage: string; type: string; title: string; message: string; whatChanged: []; } {
     return { version, stage, type, title, message, whatChanged: [] };
 }
 
@@ -126,7 +126,7 @@ class ReleaseService {
      * @returns {object|null} parsed version
      * @private
      */
-    static _top() {
+    static _top(): Record<string, any> | null {
         const entries = ChangelogModel.listAll();
         if (!entries.length) return null;
         let top = parseVersion(entries[0].version);
@@ -144,8 +144,8 @@ class ReleaseService {
      * @returns {{ patch: object, minor: object, major: object }}
      * @private
      */
-    static _openDrafts(base) {
-        const mk = (bump) => {
+    static _openDrafts(base: Record<string, any>): { patch: Record<string, any>; minor: Record<string, any>; major: Record<string, any>; } {
+        const mk = (bump: any) => {
             const c = bumpCore(base, bump);
             return draft(
                 `${coreStr(c)}-dev.1`,
@@ -167,7 +167,11 @@ class ReleaseService {
      *             stage: string|null, iter: number, label: string|null,
      *             nextActions: string[], drafts: object }}
      */
-    static getState() {
+    static getState(): {
+        hasTarget: boolean; version: string | null; core: string | null;
+        stage: string | null; iter: number; label: string | null;
+        nextActions: string[]; drafts: Record<string, any>;
+    } {
         const top = ReleaseService._top();
 
         // Empty store — the only move is to open a first cycle.

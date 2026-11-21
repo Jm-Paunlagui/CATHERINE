@@ -31,7 +31,7 @@ class SseConnectionRegistry {
      *
      * @type {Map<import('express').Response, (() => void)|null>}
      */
-    #connections = new Map();
+    #connections: Map<import('express').Response, (() => void) | null> = new Map();
 
     /**
      * Register a live SSE response.
@@ -49,7 +49,7 @@ class SseConnectionRegistry {
      *   invoke on disconnect (wire it into `req.on("close")` / the poller's
      *   disconnect closure).
      */
-    register(res, onShutdown = null) {
+    register(res: import('express').Response, onShutdown: (() => void) | null = null): () => void {
         this.#connections.set(res, onShutdown);
         return () => this.unregister(res);
     }
@@ -60,14 +60,14 @@ class SseConnectionRegistry {
      * @param {import('express').Response} res - The response to drop.
      * @returns {void}
      */
-    unregister(res) {
+    unregister(res: import('express').Response): void {
         this.#connections.delete(res);
     }
 
     /**
      * @returns {number} The number of currently registered live streams.
      */
-    size() {
+    size(): number {
         return this.#connections.size;
     }
 
@@ -82,7 +82,7 @@ class SseConnectionRegistry {
      * @param {Iterable<string>} familyIds
      * @returns {number} streams ended
      */
-    endFamilies(familyIds) {
+    endFamilies(familyIds: Iterable<string>): number {
         const fids = new Set(familyIds);
         if (fids.size === 0 || this.#connections.size === 0) return 0;
         const hits = [...this.#connections.entries()].filter(([res]) => fids.has(res?.req?.user?.fid));
@@ -95,7 +95,7 @@ class SseConnectionRegistry {
     }
 
     /** Writes one terminal event, ends the socket, then runs the surface's teardown. Never throws. */
-    static #endOne(res, onShutdown, event, reason) {
+    static #endOne(res: any, onShutdown: any, event: any, reason: any) {
         try {
             res.write(`event: ${event}\n`);
             res.write(`data: ${JSON.stringify({ reason })}\n\n`);
@@ -123,7 +123,7 @@ class SseConnectionRegistry {
      *   restart from an unexpected drop.
      * @returns {void}
      */
-    endAll(reason = "server_shutdown") {
+    endAll(reason: string = "server_shutdown"): void {
         const count = this.#connections.size;
 
         // Snapshot and clear BEFORE running any teardown: a surface's own

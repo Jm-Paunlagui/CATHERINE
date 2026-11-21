@@ -37,11 +37,11 @@ const WATCHDOG_ROUTES_MERGE_MAX = 200;
 /** Bisection steps when inverting the mixed CDF. */
 const BISECT_STEPS = 60;
 
-const isObj = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
-const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
-const maxOf = (values) => values.reduce((m, v) => (v > m ? v : m), 0);
-const sumOf = (values) => values.reduce((s, v) => s + v, 0);
-const round2 = (v) => Number(v.toFixed(2));
+const isObj = (v: any) => v !== null && typeof v === "object" && !Array.isArray(v);
+const num = (v: any) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+const maxOf = (values: any) => values.reduce((m: any, v: any) => (v > m ? v : m), 0);
+const sumOf = (values: any) => values.reduce((s: any, v: any) => s + v, 0);
+const round2 = (v: any) => Number(v.toFixed(2));
 
 /**
  * Samples a sorted duration array at `QUANTILE_GRID`.
@@ -49,7 +49,7 @@ const round2 = (v) => Number(v.toFixed(2));
  * @param {number[]} sortedDurations - ascending
  * @returns {{n: number, q: number[]}} `q` is empty when there are no samples
  */
-function buildQuantileSketch(sortedDurations) {
+function buildQuantileSketch(sortedDurations: number[]): { n: number; q: number[]; } {
     const n = sortedDurations.length;
     if (n === 0) return { n: 0, q: [] };
     const q = QUANTILE_GRID.map((p) => (p >= 1 ? sortedDurations[n - 1] : sortedDurations[Math.min(Math.floor(n * p), n - 1)]));
@@ -57,7 +57,7 @@ function buildQuantileSketch(sortedDurations) {
 }
 
 /** @returns {boolean} a sketch with finite, ascending values on the full grid */
-function isValidSketch(s) {
+function isValidSketch(s: any): boolean {
     if (!isObj(s) || !Number.isFinite(s.n) || s.n < 0 || !Array.isArray(s.q)) return false;
     if (s.n === 0) return s.q.length === 0;
     if (s.q.length !== QUANTILE_GRID.length) return false;
@@ -68,7 +68,7 @@ function isValidSketch(s) {
 }
 
 /** CDF of one sketch at x: piecewise linear over (q[k], grid[k]). */
-function sketchCdf(q, x) {
+function sketchCdf(q: any, x: any) {
     const last = q.length - 1;
     if (x < q[0]) return 0;
     if (x >= q[last]) return 1;
@@ -91,7 +91,7 @@ function sketchCdf(q, x) {
  * @param {number} p - 0..1
  * @returns {number} 0 when no sketch has samples
  */
-function percentileFromSketches(sketches, p) {
+function percentileFromSketches(sketches: Array<{ n: number; q: number[]; }>, p: number): number {
     const live = sketches.filter((s) => isValidSketch(s) && s.n > 0);
     if (live.length === 0) return 0;
     const total = sumOf(live.map((s) => s.n));
@@ -99,7 +99,7 @@ function percentileFromSketches(sketches, p) {
     const hi0 = Math.max(...live.map((s) => s.q[s.q.length - 1]));
     if (p <= 0) return lo0;
     if (p >= 1) return hi0;
-    const mixed = (x) => sumOf(live.map((s) => s.n * sketchCdf(s.q, x))) / total;
+    const mixed = (x: any) => sumOf(live.map((s) => s.n * sketchCdf(s.q, x))) / total;
     let lo = lo0;
     let hi = hi0;
     for (let i = 0; i < BISECT_STEPS; i++) {
@@ -111,7 +111,7 @@ function percentileFromSketches(sketches, p) {
 }
 
 /** @returns {boolean} the part looks like `{snapshot, extras}` from getMergeableSnapshot */
-function isUsablePart(part) {
+function isUsablePart(part: any): boolean {
     const snap = part?.value?.snapshot;
     return (
         isObj(snap) &&
@@ -123,12 +123,12 @@ function isUsablePart(part) {
     );
 }
 
-const latestIso = (a, b) => (a && (!b || a > b) ? a : b ?? null);
+const latestIso = (a: any, b: any) => (a && (!b || a > b) ? a : b ?? null);
 
 /** Merges the red[] maps. */
-function mergeRed(snaps, extrasList) {
+function mergeRed(snaps: any, extrasList: any) {
     const routes = new Map();
-    snaps.forEach((snap, i) => {
+    snaps.forEach((snap: any, i: any) => {
         const sketches = isObj(extrasList[i]?.routeSketches) ? extrasList[i].routeSketches : {};
         const wSketches = isObj(extrasList[i]?.routeWindowSketches) ? extrasList[i].routeWindowSketches : {};
         for (const [route, r] of Object.entries(snap.red)) {
@@ -147,17 +147,17 @@ function mergeRed(snaps, extrasList) {
     });
     const out = new Map();
     for (const [route, entries] of routes) {
-        const rows = entries.map((e) => e.r);
-        const sketches = entries.map((e) => e.sketch).filter(Boolean);
-        const count = sumOf(rows.map((r) => num(r.count)));
-        const clientErrorCount = sumOf(rows.map((r) => num(r.clientErrorCount)));
-        const serverErrorCount = sumOf(rows.map((r) => num(r.serverErrorCount)));
+        const rows = entries.map((e: any) => e.r);
+        const sketches = entries.map((e: any) => e.sketch).filter(Boolean);
+        const count = sumOf(rows.map((r: any) => num(r.count)));
+        const clientErrorCount = sumOf(rows.map((r: any) => num(r.clientErrorCount)));
+        const serverErrorCount = sumOf(rows.map((r: any) => num(r.serverErrorCount)));
         const rates = computeRates(count, clientErrorCount, serverErrorCount);
-        const wSketches = entries.map((e) => e.wSketch).filter(Boolean);
-        const wRows = rows.map((r) => (isObj(r.window) ? r.window : {}));
-        const wSketchN = sumOf(wSketches.map((s) => s.n));
-        const haveSketches = sumOf(sketches.map((s) => s.n)) > 0;
-        const pct = (key, p) => (haveSketches ? percentileFromSketches(sketches, p) : maxOf(rows.map((r) => num(r[key]))));
+        const wSketches = entries.map((e: any) => e.wSketch).filter(Boolean);
+        const wRows = rows.map((r: any) => (isObj(r.window) ? r.window : {}));
+        const wSketchN = sumOf(wSketches.map((s: any) => s.n));
+        const haveSketches = sumOf(sketches.map((s: any) => s.n)) > 0;
+        const pct = (key: any, p: any) => (haveSketches ? percentileFromSketches(sketches, p) : maxOf(rows.map((r: any) => num(r[key]))));
         // avgMs weighted by the samples each average was computed over; a worker
         // that sent no sketch is weighted by its (ring-buffer capped) count.
         let weight = 0;
@@ -169,8 +169,8 @@ function mergeRed(snaps, extrasList) {
         }
         out.set(route, {
             count,
-            redirectCount: sumOf(rows.map((r) => num(r.redirectCount))),
-            notModifiedCount: sumOf(rows.map((r) => num(r.notModifiedCount))),
+            redirectCount: sumOf(rows.map((r: any) => num(r.redirectCount))),
+            notModifiedCount: sumOf(rows.map((r: any) => num(r.notModifiedCount))),
             clientErrorCount,
             serverErrorCount,
             errorRate: rates.errorRate,
@@ -181,9 +181,9 @@ function mergeRed(snaps, extrasList) {
             p99: pct("p99", 0.99),
             avgMs: weight > 0 ? Math.round(weighted / weight) : 0,
             window: {
-                windowMs: maxOf(wRows.map((w) => num(w.windowMs))),
-                count: sumOf(wRows.map((w) => num(w.count))),
-                p99: wSketchN > 0 ? percentileFromSketches(wSketches, 0.99) : maxOf(wRows.map((w) => num(w.p99))),
+                windowMs: maxOf(wRows.map((w: any) => num(w.windowMs))),
+                count: sumOf(wRows.map((w: any) => num(w.count))),
+                p99: wSketchN > 0 ? percentileFromSketches(wSketches, 0.99) : maxOf(wRows.map((w: any) => num(w.p99))),
             },
         });
     }
@@ -191,13 +191,13 @@ function mergeRed(snaps, extrasList) {
 }
 
 /** Merges totals; successTotal, rates and apdex are recomputed from the sums. */
-function mergeTotals(snaps, extrasList) {
-    const t = snaps.map((s) => s.totals);
-    const requestsTotal = sumOf(t.map((x) => num(x.requestsTotal)));
-    const redirectsTotal = sumOf(t.map((x) => num(x.redirectsTotal)));
-    const notModifiedTotal = sumOf(t.map((x) => num(x.notModifiedTotal)));
-    const clientErrorsTotal = sumOf(t.map((x) => num(x.clientErrorsTotal)));
-    const serverErrorsTotal = sumOf(t.map((x) => num(x.serverErrorsTotal)));
+function mergeTotals(snaps: any, extrasList: any) {
+    const t = snaps.map((s: any) => s.totals);
+    const requestsTotal = sumOf(t.map((x: any) => num(x.requestsTotal)));
+    const redirectsTotal = sumOf(t.map((x: any) => num(x.redirectsTotal)));
+    const notModifiedTotal = sumOf(t.map((x: any) => num(x.notModifiedTotal)));
+    const clientErrorsTotal = sumOf(t.map((x: any) => num(x.clientErrorsTotal)));
+    const serverErrorsTotal = sumOf(t.map((x: any) => num(x.serverErrorsTotal)));
     const rates = computeRates(requestsTotal, clientErrorsTotal, serverErrorsTotal);
 
     let satisfied = 0;
@@ -215,12 +215,12 @@ function mergeTotals(snaps, extrasList) {
     }
     let apdex;
     if (haveCounts) apdex = samples > 0 ? Number(((satisfied + tolerating / 2) / samples).toFixed(3)) : 1;
-    else apdex = t.length ? Number((sumOf(t.map((x) => (Number.isFinite(x.apdex) ? x.apdex : 1))) / t.length).toFixed(3)) : 1;
+    else apdex = t.length ? Number((sumOf(t.map((x: any) => (Number.isFinite(x.apdex) ? x.apdex : 1))) / t.length).toFixed(3)) : 1;
 
-    const wins = t.map((x) => x.window).filter(isObj);
-    const wRequests = sumOf(wins.map((w) => num(w.requests)));
-    const wClient = sumOf(wins.map((w) => num(w.clientErrors)));
-    const wServer = sumOf(wins.map((w) => num(w.serverErrors)));
+    const wins = t.map((x: any) => x.window).filter(isObj);
+    const wRequests = sumOf(wins.map((w: any) => num(w.requests)));
+    const wClient = sumOf(wins.map((w: any) => num(w.clientErrors)));
+    const wServer = sumOf(wins.map((w: any) => num(w.serverErrors)));
     const wRates = computeRates(wRequests, wClient, wServer);
 
     return {
@@ -236,7 +236,7 @@ function mergeTotals(snaps, extrasList) {
         availability: rates.availability,
         apdex,
         window: {
-            windowMs: maxOf(wins.map((w) => num(w.windowMs))),
+            windowMs: maxOf(wins.map((w: any) => num(w.windowMs))),
             requests: wRequests,
             clientErrors: wClient,
             serverErrors: wServer,
@@ -248,56 +248,56 @@ function mergeTotals(snaps, extrasList) {
 }
 
 /** Merges the system block and builds the per-worker list. */
-function mergeSystem(parts) {
-    const sys = parts.map((p) => p.value.snapshot.system);
-    const heapRatio = (s) => num(s.memory.heapUsed) / (num(s.memory.heapSizeLimit) || 1);
+function mergeSystem(parts: any) {
+    const sys = parts.map((p: any) => p.value.snapshot.system);
+    const heapRatio = (s: any) => num(s.memory.heapUsed) / (num(s.memory.heapSizeLimit) || 1);
     let hottest = 0;
-    sys.forEach((s, i) => {
+    sys.forEach((s: any, i: any) => {
         if (heapRatio(s) > heapRatio(sys[hottest])) hottest = i;
     });
     let trendIdx = hottest;
     let trendGrowth = -Infinity;
-    sys.forEach((s, i) => {
+    sys.forEach((s: any, i: any) => {
         const tr = s.memoryTrend;
         if (isObj(tr) && tr.suspected === true && num(tr.growthBytesPerMin) > trendGrowth) {
             trendGrowth = num(tr.growthBytesPerMin);
             trendIdx = i;
         }
     });
-    const gcSum = (key) => ({
-        count: sumOf(sys.map((s) => num(s.gc?.[key]?.count))),
-        pauseMs: sumOf(sys.map((s) => num(s.gc?.[key]?.pauseMs))),
+    const gcSum = (key: any) => ({
+        count: sumOf(sys.map((s: any) => num(s.gc?.[key]?.count))),
+        pauseMs: sumOf(sys.map((s: any) => num(s.gc?.[key]?.pauseMs))),
     });
-    const recents = sys.map((s) => s.gc?.recent).filter(isObj);
-    const recentCount = sumOf(recents.map((r) => num(r.sampleCount)));
+    const recents = sys.map((s: any) => s.gc?.recent).filter(isObj);
+    const recentCount = sumOf(recents.map((r: any) => num(r.sampleCount)));
 
     return {
         cpu: {
-            user: sumOf(sys.map((s) => num(s.cpu?.user))),
-            system: sumOf(sys.map((s) => num(s.cpu?.system))),
-            percent: round2(sumOf(sys.map((s) => num(s.cpu?.percent)))),
+            user: sumOf(sys.map((s: any) => num(s.cpu?.user))),
+            system: sumOf(sys.map((s: any) => num(s.cpu?.system))),
+            percent: round2(sumOf(sys.map((s: any) => num(s.cpu?.percent)))),
         },
         memory: { ...sys[hottest].memory },
-        eventLoopLag: maxOf(sys.map((s) => num(s.eventLoopLag))),
+        eventLoopLag: maxOf(sys.map((s: any) => num(s.eventLoopLag))),
         gc: {
-            collections: sumOf(sys.map((s) => num(s.gc?.collections))),
-            pauseMs: sumOf(sys.map((s) => num(s.gc?.pauseMs))),
-            overheadPct: maxOf(sys.map((s) => num(s.gc?.overheadPct))),
+            collections: sumOf(sys.map((s: any) => num(s.gc?.collections))),
+            pauseMs: sumOf(sys.map((s: any) => num(s.gc?.pauseMs))),
+            overheadPct: maxOf(sys.map((s: any) => num(s.gc?.overheadPct))),
             major: gcSum("major"),
             minor: gcSum("minor"),
             incremental: gcSum("incremental"),
             weakcb: gcSum("weakcb"),
             recent: {
                 sampleCount: recentCount,
-                avgPauseMs: recentCount > 0 ? round2(sumOf(recents.map((r) => num(r.avgPauseMs) * num(r.sampleCount))) / recentCount) : 0,
-                maxPauseMs: maxOf(recents.map((r) => num(r.maxPauseMs))),
-                p95PauseMs: maxOf(recents.map((r) => num(r.p95PauseMs))),
+                avgPauseMs: recentCount > 0 ? round2(sumOf(recents.map((r: any) => num(r.avgPauseMs) * num(r.sampleCount))) / recentCount) : 0,
+                maxPauseMs: maxOf(recents.map((r: any) => num(r.maxPauseMs))),
+                p95PauseMs: maxOf(recents.map((r: any) => num(r.p95PauseMs))),
             },
         },
         memoryTrend: isObj(sys[trendIdx].memoryTrend) ? { ...sys[trendIdx].memoryTrend } : sys[trendIdx].memoryTrend,
-        handles: sumOf(sys.map((s) => num(s.handles))),
-        requests: sumOf(sys.map((s) => num(s.requests))),
-        workers: parts.map((p, i) => ({
+        handles: sumOf(sys.map((s: any) => num(s.handles))),
+        requests: sumOf(sys.map((s: any) => num(s.requests))),
+        workers: parts.map((p: any, i: any) => ({
             workerId: p.workerId,
             pid: p.pid ?? null,
             isLeader: p.isLeader === true,
@@ -312,9 +312,9 @@ function mergeSystem(parts) {
 }
 
 /** Merges dependencies.oracle (pools are per worker: worst-of for saturation, sum for volume). */
-function mergeOracle(parts) {
+function mergeOracle(parts: any) {
     const pools = new Map();
-    parts.forEach((p) => {
+    parts.forEach((p: any) => {
         const oracle = p.value.snapshot.dependencies.oracle;
         if (!isObj(oracle)) return;
         const ex = p.value.extras ?? {};
@@ -335,22 +335,22 @@ function mergeOracle(parts) {
     });
     const out = new Map();
     for (const [name, { rows, sketches, totalMs, haveTotalMs }] of pools) {
-        const nonNull = (key) => rows.map((r) => r[key]).filter((v) => typeof v === "number" && Number.isFinite(v));
-        const sumOrNull = (key) => {
+        const nonNull = (key: any) => rows.map((r: any) => r[key]).filter((v: any) => typeof v === "number" && Number.isFinite(v));
+        const sumOrNull = (key: any) => {
             const v = nonNull(key);
             return v.length ? sumOf(v) : null;
         };
-        const maxOrNull = (key) => {
+        const maxOrNull = (key: any) => {
             const v = nonNull(key);
             return v.length ? Math.max(...v) : null;
         };
-        const queryCount = sumOf(rows.map((r) => num(r.queryCount)));
-        const health = rows.map((r) => r.healthy).filter((h) => typeof h === "boolean");
+        const queryCount = sumOf(rows.map((r: any) => num(r.queryCount)));
+        const health = rows.map((r: any) => r.healthy).filter((h: any) => typeof h === "boolean");
         out.set(name, {
             queryCount,
-            errorCount: sumOf(rows.map((r) => num(r.errorCount))),
-            avgMs: queryCount > 0 ? Math.round(haveTotalMs ? totalMs / queryCount : sumOf(rows.map((r) => num(r.avgMs) * num(r.queryCount))) / queryCount) : 0,
-            p95Ms: sketches.length && sumOf(sketches.map((s) => s.n)) > 0 ? percentileFromSketches(sketches, 0.95) : maxOf(rows.map((r) => num(r.p95Ms))),
+            errorCount: sumOf(rows.map((r: any) => num(r.errorCount))),
+            avgMs: queryCount > 0 ? Math.round(haveTotalMs ? totalMs / queryCount : sumOf(rows.map((r: any) => num(r.avgMs) * num(r.queryCount))) / queryCount) : 0,
+            p95Ms: sketches.length && sumOf(sketches.map((s: any) => s.n)) > 0 ? percentileFromSketches(sketches, 0.95) : maxOf(rows.map((r: any) => num(r.p95Ms))),
             poolUtilization: maxOrNull("poolUtilization"),
             connectionsInUse: sumOrNull("connectionsInUse"),
             connectionsOpen: sumOrNull("connectionsOpen"),
@@ -359,14 +359,14 @@ function mergeOracle(parts) {
             capacity: maxOrNull("capacity"),
             healthy: health.length === 0 ? null : health.every(Boolean),
             consecutiveFailures: maxOrNull("consecutiveFailures"),
-            unhealthyWorkers: rows.filter((r) => r.healthy === false).length,
+            unhealthyWorkers: rows.filter((r: any) => r.healthy === false).length,
         });
     }
     return Object.fromEntries(out);
 }
 
 /** Merges per-channel notification stats and rebuilds the smtp block from them. */
-function mergeNotifications(snaps) {
+function mergeNotifications(snaps: any) {
     const channels = new Map();
     for (const snap of snaps) {
         if (!isObj(snap.notifications)) continue;
@@ -412,7 +412,7 @@ function mergeNotifications(snaps) {
 }
 
 /** Combines the frontend FIFOs: sorted by ts, newest 500 kept. */
-function mergeFifo(snaps, key) {
+function mergeFifo(snaps: any, key: any) {
     const all = [];
     for (const snap of snaps) {
         if (Array.isArray(snap[key])) all.push(...snap[key].filter(isObj));
@@ -422,7 +422,7 @@ function mergeFifo(snaps, key) {
 }
 
 /** Sums watchdog terminations per route (top 200 routes kept). */
-function mergeWatchdog(snaps) {
+function mergeWatchdog(snaps: any) {
     const byRoute = new Map();
     let terminated = 0;
     for (const snap of snaps) {
@@ -456,7 +456,7 @@ function mergeWatchdog(snaps) {
  * @param {{missing?: number[], expected?: number}} [opts]
  * @returns {object|null} merged snapshot; null when no part is usable
  */
-function mergeMetricsSnapshots(parts, { missing = [], expected } = {}) {
+function mergeMetricsSnapshots(parts: Array<{ workerId: number; pid?: number | null; isLeader?: boolean; value: { snapshot: Record<string, any>; extras?: Record<string, any>; }; }>, { missing = [], expected }: { missing?: number[]; expected?: number; } = {}): Record<string, any> | null {
     const usable = (Array.isArray(parts) ? parts : []).filter(isUsablePart);
     if (usable.length === 0) return null;
     const skipped = (Array.isArray(parts) ? parts.length : 0) - usable.length;

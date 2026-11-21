@@ -33,7 +33,7 @@ import { HTTP_STATUS } from "../constants";
  *
  * @type {Buffer}
  */
-const XLSX_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+const XLSX_MAGIC: Buffer = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
 
 /**
  * Express middleware: rejects uploads whose first 4 bytes do not match the
@@ -43,7 +43,7 @@ const XLSX_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
-function validateXlsxMagicBytes(req, res, next) {
+function validateXlsxMagicBytes(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) {
     if (!req.file || !req.file.buffer) {
         // No file uploaded — let the controller handle the missing-file error.
         return next();

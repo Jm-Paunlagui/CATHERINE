@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -17,10 +16,10 @@
 const MAP_VERIFIED_AT = "2026-11-03";
 
 const API = "Backend/";
-const S = (f) => `${API}src/services/${f}`;
-const M = (f) => `${API}src/models/${f}`;
-const U = (f) => `${API}src/utils/${f}`;
-const MW = (f) => `${API}src/middleware/${f}`;
+const S = (f: any) => `${API}src/services/${f}`;
+const M = (f: any) => `${API}src/models/${f}`;
+const U = (f: any) => `${API}src/utils/${f}`;
+const MW = (f: any) => `${API}src/middleware/${f}`;
 const SERVER = `${API}server.ts`;
 
 const layers = [

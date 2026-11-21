@@ -23,6 +23,7 @@
  * re-checks a role — one gate, in one place, that a reader can find.
  */
 
+import type { Request, Response } from "express";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { catchAsync } from "../utils/catchAsync";
 import DevDocsService from "../services/DevDocsService";
@@ -35,7 +36,7 @@ import { logger } from "../utils/logger";
  *
  * @param {import("express").Response} res
  */
-function _noStore(res) {
+function _noStore(res: import("express").Response) {
     res.set("Cache-Control", "private, no-store, max-age=0");
     res.set("Pragma", "no-cache");
 }
@@ -47,14 +48,14 @@ class DevDocsController {
      *
      * @type {import("express").RequestHandler}
      */
-    static getTree = catchAsync(async (req, res) => {
+    static getTree: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         const { sections, generatedAt } = await DevDocsService.getTree();
 
         // Projected explicitly — see rule 1 in the class header.
         const payload = {
             sections: sections.map((section) => ({
                 name: section.name,
-                docs: section.docs.map((doc) => ({
+                docs: section.docs.map((doc: any) => ({
                     id: doc.id,
                     title: doc.title,
                     sizeBytes: doc.sizeBytes,
@@ -86,7 +87,7 @@ class DevDocsController {
      *
      * @type {import("express").RequestHandler}
      */
-    static getDoc = catchAsync(async (req, res) => {
+    static getDoc: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         // Rejoined from the two route segments. Both arrive URL-decoded, and
         // neither is ever used as a path — the result is looked up in the
         // manifest Map, so a decoded "../" is simply a key that does not exist.
@@ -118,7 +119,7 @@ class DevDocsController {
      *
      * @type {import("express").RequestHandler}
      */
-    static search = catchAsync(async (req, res) => {
+    static search: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         const { results, total, truncated } = await DevDocsService.search(req.query.q);
 
         // Counts, not the query: `q` is caller-supplied text and would land

@@ -1,6 +1,7 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
+import type { Request, Response } from "express";
 import { catchAsync } from "../utils/catchAsync";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { AUDIT_LOG_ERRORS } from "../constants/errors";
@@ -38,7 +39,7 @@ import SseConnectionRegistry from "../utils/sse/SseConnectionRegistry";
  * @param {object} user - Decoded JWT claims (req.user)
  * @returns {string}
  */
-function _streamKeyFor(user) {
+function _streamKeyFor(user: Record<string, any>): string {
     return String(user?.id ?? user?.userId ?? user?.username ?? 'anonymous');
 }
 
@@ -57,10 +58,10 @@ const SSE_MAX_POLL_ERRORS = 5;
  *   undefined  — baseline not yet set (first poll tick pending)
  *   number     — baseline established; compared against the latest CREATED_AT
  */
-const _auditConnections = new Map();
+const _auditConnections: Map<string, { res: import('express').Response; lastCreatedAtMs: number | undefined; pollCount: number; connectedAt: string; }> = new Map();
 
 /** setInterval reference for the shared poller. null when idle. */
-let _auditPollInterval = null;
+let _auditPollInterval: any = null;
 
 /** Consecutive Oracle failures on the shared poller since it last started. */
 let _consecutivePollErrors = 0;
@@ -73,7 +74,7 @@ let _consecutivePollErrors = 0;
  *
  * @type {{ requestsTotal: number, errorsTotal: number, atMs: number } | null}
  */
-let _lastRateSample = null;
+let _lastRateSample: { requestsTotal: number; errorsTotal: number; atMs: number; } | null = null;
 
 /** Bytes per mebibyte — for heap/RSS MB conversions in the SSE payload. */
 const BYTES_PER_MB = 1024 * 1024;
@@ -86,7 +87,7 @@ const BYTES_PER_MB = 1024 * 1024;
  * @param {string} eventName
  * @param {object} payload
  */
-const _safeSend = (res, eventName, payload) => {
+const _safeSend = (res: import('express').Response, eventName: string, payload: Record<string, any>) => {
     try {
         res.write(`event: ${eventName}\n`);
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -113,7 +114,7 @@ const _safeSend = (res, eventName, payload) => {
  *
  * @returns {{ red: object, totals: object, system: object, rates: object }|null}
  */
-const _buildMetricsPayload = async () => {
+const _buildMetricsPayload = async (): { red: Record<string, any>; totals: Record<string, any>; system: Record<string, any>; rates: Record<string, any>; } | null => {
     try {
         const snap = await MetricsService.getClusterSnapshot();
         const t = snap.totals;
@@ -163,7 +164,7 @@ const _buildMetricsPayload = async () => {
  *
  * @returns {Promise<void>}
  */
-const _auditSharedPoll = async () => {
+const _auditSharedPoll = async (): Promise<void> => {
     // Re-entrancy guard: a slow tick must not overlap the next interval fire.
     if (_auditPollBusy) return;
     _auditPollBusy = true;
@@ -181,7 +182,7 @@ let _auditPollBusy = false;
  * Body of one audit poll tick — wrapped by `_auditSharedPoll`'s guard.
  * @returns {Promise<void>}
  */
-const _auditSharedPollTick = async () => {
+const _auditSharedPollTick = async (): Promise<void> => {
     if (_auditConnections.size === 0) return;
     const ts = new Date().toISOString();
 
@@ -248,7 +249,7 @@ const _stopAuditPoller = () => {
 };
 
 class AuditLogController {
-  static getList = catchAsync(async (req, res) => {
+  static getList = catchAsync(async (req: Request, res: Response) => {
     const { page = 1, pageSize = 20, fromDate, toDate, method, statusCategory, endpoint, search } = req.query;
     const data = await AuditLogService.getList({
       page:     parseInt(page, 10)     || 1,
@@ -263,13 +264,13 @@ class AuditLogController {
     res.json(sendSuccess(RESPONSE_MESSAGES.AUDIT_LOG_LIST_FETCHED, data));
   });
 
-  static getStats = catchAsync(async (req, res) => {
+  static getStats = catchAsync(async (req: Request, res: Response) => {
     const { fromDate, toDate } = req.query;
     const data = await AuditLogService.getStats({ fromDate, toDate });
     res.json(sendSuccess(RESPONSE_MESSAGES.AUDIT_LOG_STATS_FETCHED, data));
   });
 
-  static getRequestLogs = catchAsync(async (req, res) => {
+  static getRequestLogs = catchAsync(async (req: Request, res: Response) => {
     const { requestId } = req.params;
     const { date }      = req.query;
     const data = await AuditLogService.getRequestLogs(requestId, date);
@@ -284,7 +285,7 @@ class AuditLogController {
    * @param {import('express').Request}  req
    * @param {import('express').Response} res
    */
-  static exportTraceExcel = catchAsync(async (req, res) => {
+  static exportTraceExcel = catchAsync(async (req: Request, res: Response) => {
     const { requestId } = req.params;
     const { date }      = req.query;
     const buffer = await AuditLogService.exportTraceExcel(requestId, date);
@@ -301,7 +302,7 @@ class AuditLogController {
    * @param {import('express').Request}  req
    * @param {import('express').Response} res
    */
-  static exportExcel = catchAsync(async (req, res) => {
+  static exportExcel = catchAsync(async (req: Request, res: Response) => {
     const { fromDate, toDate } = req.query;
     const buffer = await AuditLogService.exportToExcel({ fromDate, toDate });
     const safeFrom = String(fromDate).replace(/[^0-9-]/g, '');
@@ -318,7 +319,7 @@ class AuditLogController {
    * @param {import('express').Request}  req
    * @param {import('express').Response} res
    */
-  static exportLogs = catchAsync(async (req, res) => {
+  static exportLogs = catchAsync(async (req: Request, res: Response) => {
     const { fromDate, toDate } = req.query;
     const buffer = await AuditLogService.exportToZip({ fromDate, toDate });
     const safeFrom = String(fromDate).replace(/[^0-9-]/g, '');
@@ -334,7 +335,7 @@ class AuditLogController {
    * @param {import('express').Request}  req
    * @param {import('express').Response} res
    */
-  static deleteRange = catchAsync(async (req, res) => {
+  static deleteRange = catchAsync(async (req: Request, res: Response) => {
     const { fromDate, toDate } = req.query;
     const result = await AuditLogService.deleteRange({ fromDate, toDate });
     res.json(sendSuccess(RESPONSE_MESSAGES.AUDIT_LOG_DELETED, result));
@@ -362,7 +363,7 @@ class AuditLogController {
    * @param {import('express').Request}  req
    * @param {import('express').Response} res
    */
-  static stream = async (req, res) => {
+  static stream = async (req: import('express').Request, res: import('express').Response) => {
     if (!req.user) {
       res.status(401).json({ status: 'error', code: 401, message: 'Authentication required.', error: { type: 'AuthenticationError' } });
       return;
@@ -427,7 +428,7 @@ class AuditLogController {
    * MUST be declared before `/:requestId/...` in audit-log.route.js so the
    * literal "system-logs" segment is never captured as a requestId.
    */
-  static getSystemLogs = catchAsync(async (req, res) => {
+  static getSystemLogs = catchAsync(async (req: Request, res: Response) => {
     const { date, maxPriority, level, page = 1, pageSize = 50, search } = req.query;
     const data = await AuditLogService.getSystemLogs({
       date,
@@ -466,7 +467,7 @@ class AuditLogController {
    * @param {import('express').Request}  req
    * @param {import('express').Response} res
    */
-  static streamSystemLogs = (req, res) => {
+  static streamSystemLogs = (req: import('express').Request, res: import('express').Response) => {
     if (!req.user) {
       res.status(401).json({ status: 'error', code: 401, message: 'Authentication required.', error: { type: 'AuthenticationError' } });
       return;

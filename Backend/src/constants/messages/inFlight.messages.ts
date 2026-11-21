@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -22,7 +21,7 @@ const inFlightMessages = {
      * @param {number} budgetMs - The bounded wait, in ms.
      * @returns {string}
      */
-    TASK_DRAIN_START: (count, budgetMs) =>
+    TASK_DRAIN_START: (count: number, budgetMs: number): string =>
         `TASK_DRAIN_START — ${count} in-flight task(s) tracked; waiting up to ${budgetMs}ms for them to settle before closing DB pools and the SMTP transporter.`,
 
     /**
@@ -31,7 +30,7 @@ const inFlightMessages = {
      * @param {number} elapsedMs - Wall-clock time actually spent waiting.
      * @returns {string}
      */
-    TASK_DRAIN_COMPLETE: (drained, elapsedMs) =>
+    TASK_DRAIN_COMPLETE: (drained: number, elapsedMs: number): string =>
         `TASK_DRAIN_COMPLETE — ${drained} in-flight task(s) settled in ${elapsedMs}ms.`,
 
     /**
@@ -45,7 +44,7 @@ const inFlightMessages = {
      * @param {string[]} labels - Labels of the abandoned tasks.
      * @returns {string}
      */
-    TASK_DRAIN_ABANDONED: (abandoned, budgetMs, labels) =>
+    TASK_DRAIN_ABANDONED: (abandoned: number, budgetMs: number, labels: string[]): string =>
         `TASK_DRAIN_ABANDONED — ${abandoned} in-flight task(s) still running after the ${budgetMs}ms drain budget: ${labels.join(", ")}.`,
 };
 

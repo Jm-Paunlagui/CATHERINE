@@ -20,7 +20,7 @@ const FID_LENGTH = 36;
  * @param {unknown} token - raw refresh JWT (from the signed cookie)
  * @returns {string|null} the 36-char family id, or null for anything unverifiable
  */
-function refreshFamilyOf(token) {
+function refreshFamilyOf(token: unknown): string | null {
     if (typeof token !== "string" || token === "" || token.length > 4096) return null;
     const secret = process.env.JWT_SECRET;
     if (!secret) return null;

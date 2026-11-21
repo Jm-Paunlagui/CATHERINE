@@ -33,11 +33,12 @@ import { metricsStore as defaultStore } from "./MetricsStore";
 import { captureRouteLabel, resolveRouteLabel, shouldRecordRouteMetrics } from "../../utils/routeLabel";
 
 class MetricsMiddleware {
+    declare _store: import("./MetricsStore").MetricsStore;
     /**
      * @param {import('./MetricsStore').MetricsStore} [store] - Metrics store instance.
      *   Defaults to the module-level singleton so all middleware share one store.
      */
-    constructor(store = defaultStore) {
+    constructor(store: import('./MetricsStore').MetricsStore = defaultStore) {
         this._store = store;
         this.handle = this.handle.bind(this);
     }
@@ -49,7 +50,7 @@ class MetricsMiddleware {
      * @param {import('express').Response} res
      * @param {import('express').NextFunction} next
      */
-    handle(req, res, next) {
+    handle(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) {
         // CORS preflights are browser plumbing, not business traffic — skip entirely
         // (they are answered before routing, so they could only ever record raw,
         // unparameterized paths — a cardinality + information-exposure hazard).

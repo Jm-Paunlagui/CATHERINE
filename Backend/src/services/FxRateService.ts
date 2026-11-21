@@ -89,7 +89,7 @@ const RATE_SCALE = 8;
  * mode) the service is inert by design.
  * @returns {string|undefined}
  */
-function fxTableName() {
+function fxTableName(): string | undefined {
     return process.env.MONEY_FX_TABLE;
 }
 
@@ -100,7 +100,7 @@ function fxTableName() {
  * @param {Date} asOf
  * @returns {boolean}
  */
-function _inWindow(row, asOf) {
+function _inWindow(row: Record<string, any>, asOf: Date): boolean {
     const from = row.EFFECTIVE_FROM instanceof Date ? row.EFFECTIVE_FROM : new Date(row.EFFECTIVE_FROM);
     if (asOf < from) return false;
     if (row.EFFECTIVE_TO == null) return true;
@@ -123,7 +123,11 @@ class FxRateService {
      * @throws {AppError} 400 on an unknown currency; 404 when no rate covers `asOf`;
      *   503 when the service is inert (no table configured, not in demo mode).
      */
-    static async rateAsOf(currencyCode, asOf = new Date()) {
+    static async rateAsOf(currencyCode: string, asOf: Date = new Date()): Promise<{
+        currencyCode: string; rate: string; source: string;
+        effectiveFrom: Date; effectiveTo: (Date | null); retrievedAt: (Date | null);
+        setBy: (string | null);
+    }> {
         if (!isValidCurrency(currencyCode)) {
             throw new AppError(`Unknown currency ${currencyCode} for FX lookup.`, 400, {
                 type: "ValidationError",
@@ -174,7 +178,7 @@ class FxRateService {
      * @returns {Promise<{insertedId: number}>}
      * @throws {AppError} 400 on an unknown currency or a non-string rate.
      */
-    static async recordRate(params) {
+    static async recordRate(params: { currencyCode: string; rate: string; effectiveFrom: Date; effectiveTo?: Date; source: string; setBy: string; retrievedAt?: Date; }): Promise<{ insertedId: number; }> {
         const { currencyCode, rate, effectiveFrom, effectiveTo = null, source, setBy, retrievedAt } = params;
         if (!isValidCurrency(currencyCode)) {
             throw new AppError(`Unknown currency ${currencyCode} for FX rate.`, 400, {
@@ -216,7 +220,7 @@ class FxRateService {
     }
 
     /** @returns {number} The rate storage scale (NUMBER(19,8)). */
-    static get rateScale() {
+    static get rateScale(): number {
         return RATE_SCALE;
     }
 
@@ -226,7 +230,7 @@ class FxRateService {
      * @returns {Promise<object[]>}
      * @private
      */
-    static async _loadRates(currencyCode) {
+    static async _loadRates(currencyCode: string): Promise<Record<string, any>[]> {
         if (isDemoMode()) {
             return demo.fxRates().filter((r) => r.CURRENCY_CODE === currencyCode);
         }

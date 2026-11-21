@@ -64,7 +64,7 @@ const RENAME_FALLBACK_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
  *   `ignoredOverride` is the rejected override value (so the caller can log it) and
  *   `ignoredReason` says why.
  */
-function resolveMarkerPath(env = process.env) {
+function resolveMarkerPath(env: NodeJS.ProcessEnv = process.env): { path: string; ignoredOverride: string | null; ignoredReason: "relative" | "production" | null; } {
     const override = env[SERVER_RUN_MARKER.PATH_OVERRIDE_ENV];
     let ignoredOverride = null;
     let ignoredReason = null;
@@ -84,8 +84,8 @@ function resolveMarkerPath(env = process.env) {
     return { path: path.join(root, "data", SERVER_RUN_MARKER.FILE_NAME), ignoredOverride, ignoredReason };
 }
 
-const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
-const isTime = (v) => v === undefined || v === null || Number.isFinite(v);
+const isPlainObject = (v: any) => v !== null && typeof v === "object" && !Array.isArray(v);
+const isTime = (v: any) => v === undefined || v === null || Number.isFinite(v);
 
 /**
  * Shape check for a record read back from disk: an own STATES
@@ -94,7 +94,7 @@ const isTime = (v) => v === undefined || v === null || Number.isFinite(v);
  * @param {object} rec
  * @returns {boolean}
  */
-function isWellFormed(rec) {
+function isWellFormed(rec: Record<string, any>): boolean {
     if (typeof rec.state !== "string" || !Object.hasOwn(STATES, rec.state)) return false;
     if (rec.pid !== undefined && !Number.isInteger(rec.pid)) return false;
     if (rec.version !== undefined && typeof rec.version !== "string") return false;
@@ -102,7 +102,7 @@ function isWellFormed(rec) {
         if (!isTime(rec[k])) return false;
     }
     if (rec.stopEmailUnsent !== undefined && typeof rec.stopEmailUnsent !== "boolean") return false;
-    const okList = (p) => p === undefined || isPlainObject(p) || (Array.isArray(p) && p.every(isPlainObject));
+    const okList = (p: any) => p === undefined || isPlainObject(p) || (Array.isArray(p) && p.every(isPlainObject));
     return okList(rec.pendingUnclean) && okList(rec.pendingLeaderLost);
 }
 
@@ -113,13 +113,13 @@ const PENDING_UNCLEAN_MAX = 5;
  * A record's pendingUnclean as a list (an rc.3 record held one object).
  * Capped on read too (CWE-770): a tampered record must not make one boot send hundreds of emails.
  */
-function pendingList(p) {
+function pendingList(p: any) {
     if (Array.isArray(p)) return p.filter(isPlainObject).slice(-PENDING_UNCLEAN_MAX);
     return isPlainObject(p) ? [p] : [];
 }
 
 /** Stable identity of one pending entry: the run's pid and boot time. */
-function pendingKey(entry) {
+function pendingKey(entry: any) {
     return `${entry?.pid ?? "?"}:${entry?.bootedAt ?? "?"}`;
 }
 
@@ -128,7 +128,7 @@ function pendingKey(entry) {
  * @param {object} rec - the record that read UNCLEAN
  * @returns {object}
  */
-function uncleanSnapshot(rec) {
+function uncleanSnapshot(rec: Record<string, any>): Record<string, any> {
     return {
         pid: rec.pid,
         version: rec.version,
@@ -141,6 +141,38 @@ function uncleanSnapshot(rec) {
 }
 
 class ServerRunMarker {
+    declare static pendingList: (p: any) => any[];
+    declare static pendingKey: (entry: any) => string;
+    declare static resolveMarkerPath: (env?: NodeJS.ProcessEnv) => { path: string; ignoredOverride: string | null; ignoredReason: "relative" | "production" | null; };
+    declare _pendingLeaderLost: undefined;
+    declare _pendingUnclean: undefined;
+    declare _verdict: null;
+    declare _stoppedExitCode: undefined;
+    declare _stoppedAt: undefined;
+    declare _raisedExitCode: number;
+    declare _stopEmailUnsent: undefined;
+    declare _unreported: undefined;
+    declare _reason: null;
+    declare _forcedAfterMs: undefined;
+    declare _stopSignal: undefined;
+    declare _stoppingAt: undefined;
+    declare _lastHeartbeatAt: null;
+    declare _bootedAt: null;
+    declare _state: string;
+    declare _lastStartNoticeAt: null;
+    declare _previous: null;
+    declare _warned: boolean;
+    declare _timer: null;
+    declare _started: boolean;
+    declare _hostname: string;
+    declare _process: NodeJS.EventEmitter & { pid: number; };
+    declare _fs: typeof nodeFs;
+    declare _now: () => number;
+    declare _intervalMs: number;
+    declare _logger: { warning: ((...args: any[]) => any); };
+    declare _version: string;
+    declare _runId: string;
+    declare _filePath: string;
     /**
      * @param {object} deps
      * @param {string} deps.filePath - absolute marker path
@@ -163,7 +195,7 @@ class ServerRunMarker {
         fs = nodeFs,
         processRef = process,
         hostname = os.hostname(),
-    }) {
+    }: { filePath: string; runId: string; version: string; logger: { warning: ((...args: any[]) => any); }; intervalMs?: number; now?: () => number; fs?: typeof import("fs"); processRef?: NodeJS.EventEmitter & { pid: number; }; hostname?: string; }) {
         this._filePath = filePath;
         this._runId = runId;
         this._version = version;
@@ -209,7 +241,7 @@ class ServerRunMarker {
      *
      * @returns {{ verdict: string, previous: object|null, cause?: string }}
      */
-    readPrevious() {
+    readPrevious(): { verdict: string; previous: Record<string, any> | null; cause?: string; } {
         let raw;
         try {
             raw = this._fs.readFileSync(this._filePath, "utf8");
@@ -259,12 +291,12 @@ class ServerRunMarker {
     }
 
     /** @returns {string} the marker file path */
-    get filePath() {
+    get filePath(): string {
         return this._filePath;
     }
 
     /** @returns {number|null} when the last "Server started" notice was sent (from the previous record). */
-    lastStartNoticeAt() {
+    lastStartNoticeAt(): number | null {
         return this._lastStartNoticeAt;
     }
 
@@ -311,7 +343,7 @@ class ServerRunMarker {
      *   (e.g. PRIMARY_DISCONNECT), so the next boot must not say it was already reported.
      *   `reason`: a STOP_REASONS value that replaces the SIGNAL/CRASH default.
      */
-    noteStopping(signal, exitCode, { unreported = false, reason } = {}) {
+    noteStopping(signal: string, exitCode: number, { unreported = false, reason }: { unreported?: boolean; reason?: string; } = {}) {
         try {
             if (!this._started) return;
             const t = this._now();
@@ -338,7 +370,7 @@ class ServerRunMarker {
      *
      * @param {number} ms - the failsafe delay that elapsed
      */
-    noteForcedExit(ms) {
+    noteForcedExit(ms: number) {
         try {
             if (!this._started) return;
             this._reason = STOP_REASONS.FORCED_EXIT;
@@ -378,7 +410,7 @@ class ServerRunMarker {
      *
      * @param {number} exitCode - the exit code the shutdown will end with
      */
-    noteTeardownComplete(exitCode) {
+    noteTeardownComplete(exitCode: number) {
         try {
             if (!this._started) return;
             this.stop();
@@ -405,7 +437,7 @@ class ServerRunMarker {
      * @param {number} exitCode - the raised exit code
      * @param {{unreported?: boolean, reason?: string}} [opts]
      */
-    noteExitCodeRaised(exitCode, { unreported = false, reason } = {}) {
+    noteExitCodeRaised(exitCode: number, { unreported = false, reason }: { unreported?: boolean; reason?: string; } = {}) {
         try {
             if (!this._started) return;
             // Only a still-clean stop takes the reason / unreported: a
@@ -429,11 +461,11 @@ class ServerRunMarker {
      * only those whose `pendingKey` is in `keys`). Never throws.
      * @param {string[]} [keys]
      */
-    clearPendingUnclean(keys) {
+    clearPendingUnclean(keys: string[]) {
         try {
             if (this._pendingUnclean === undefined) return;
             // No keys: everything was reported. Keys: drop only the entries that were sent.
-            const keep = Array.isArray(keys) ? this._pendingUnclean.filter((e) => !keys.includes(pendingKey(e))) : [];
+            const keep = Array.isArray(keys) ? this._pendingUnclean.filter((e: any) => !keys.includes(pendingKey(e))) : [];
             this._pendingUnclean = keep.length ? keep : undefined;
             if (this._started) {
                 this._write(this._state === STATES.STOPPED ? this._stoppedRecord(this._stoppedExitCode) : this._record());
@@ -448,10 +480,10 @@ class ServerRunMarker {
      * is in `keys`). Mirrors clearPendingUnclean. Never throws.
      * @param {string[]} [keys]
      */
-    clearPendingLeaderLost(keys) {
+    clearPendingLeaderLost(keys: string[]) {
         try {
             if (this._pendingLeaderLost === undefined) return;
-            const keep = Array.isArray(keys) ? this._pendingLeaderLost.filter((e) => !keys.includes(pendingKey(e))) : [];
+            const keep = Array.isArray(keys) ? this._pendingLeaderLost.filter((e: any) => !keys.includes(pendingKey(e))) : [];
             this._pendingLeaderLost = keep.length ? keep : undefined;
             if (this._started) {
                 this._write(this._state === STATES.STOPPED ? this._stoppedRecord(this._stoppedExitCode) : this._record());
@@ -462,7 +494,7 @@ class ServerRunMarker {
     }
 
     /** @param {number} atMs - when a "Server started" notice was sent */
-    recordStartNotice(atMs) {
+    recordStartNotice(atMs: number) {
         try {
             this._lastStartNoticeAt = atMs;
             // After the data teardown the record must stay a complete STOPPED record.
@@ -494,7 +526,7 @@ class ServerRunMarker {
      * @param {number|undefined} code
      * @returns {object}
      */
-    _stoppedRecord(code) {
+    _stoppedRecord(code: number | undefined): Record<string, any> {
         const exitCode = Math.max(Number(code) || 0, this._raisedExitCode);
         let reason = this._reason ?? STOP_REASONS.EXIT;
         if (exitCode && reason === STOP_REASONS.SIGNAL) reason = STOP_REASONS.CRASH;
@@ -504,7 +536,7 @@ class ServerRunMarker {
     }
 
     /** @returns {object} the record as it would be written now */
-    _record() {
+    _record(): Record<string, any> {
         return {
             schema: SERVER_RUN_MARKER.SCHEMA,
             state: this._state,
@@ -540,7 +572,7 @@ class ServerRunMarker {
      * @private Synchronous `exit` hook. No logger calls: the logger is async.
      * @param {number} code
      */
-    _onExit(code) {
+    _onExit(code: number) {
         try {
             this.stop();
             this._write(this._stoppedRecord(code), { silent: true });
@@ -554,7 +586,7 @@ class ServerRunMarker {
      * Any failure (missing fs method, EPERM, ...) is ignored. No directory fsync.
      * @param {string} p
      */
-    _fsyncBestEffort(p) {
+    _fsyncBestEffort(p: string) {
         let fd;
         try {
             fd = this._fs.openSync(p, "r+");
@@ -578,7 +610,7 @@ class ServerRunMarker {
      * @param {{silent?: boolean}} [opts] - silent: no logging (exit hook)
      * @returns {boolean}
      */
-    _write(record, { silent = false } = {}) {
+    _write(record: Record<string, any>, { silent = false }: { silent?: boolean; } = {}): boolean {
         const json = JSON.stringify(record);
         const tmp = `${this._filePath}.${this._process.pid}.tmp`;
         try {

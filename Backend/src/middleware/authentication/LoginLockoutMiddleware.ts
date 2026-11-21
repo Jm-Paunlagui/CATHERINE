@@ -62,6 +62,15 @@ import { LoginLockoutPolicy } from "./LoginLockoutPolicy";
 const lockoutKey = canonicalUserKey;
 
 class LoginLockoutMiddleware {
+  declare _lastFallbackLog: number;
+  declare _store: CacheStore;
+  declare _retryDecrement: any;
+  declare _maxLockoutCycles: any;
+  declare _lockoutMultiplier: any;
+  declare _lockoutDurationMs: any;
+  declare _lockoutMode: any;
+  declare _maxAttempts: any;
+  declare _policy: LoginLockoutPolicy;
   /**
    * @param {object} [options]
    * @param {number}  [options.maxAttempts]      - LOGIN_MAX_ATTEMPTS. Default 3.
@@ -72,7 +81,7 @@ class LoginLockoutMiddleware {
    * @param {number}  [options.retryDecrement]    - Attempts removed each cycle. Default 1.
    * @param {CacheStore} [options.store]           - Override the CacheStore instance (for testing).
    */
-  constructor(options = {}) {
+  constructor(options: { maxAttempts?: number; lockoutMode?: string; lockoutDurationMs?: number; lockoutMultiplier?: number; maxLockoutCycles?: number; retryDecrement?: number; store?: CacheStore; } = {}) {
     this._policy = new LoginLockoutPolicy(options);
     this._maxAttempts = this._policy.maxAttempts;
     this._lockoutMode = this._policy.lockoutMode;
@@ -98,7 +107,7 @@ class LoginLockoutMiddleware {
    *   retryAfter — seconds remaining in the lockout (only when locked)
    *   hrReset    — true when all cycles have been consumed (permanent block)
    */
-  check(userId) {
+  check(userId: string): { locked: boolean; retryAfter?: number; hrReset?: boolean; } {
     const r = this._policy.evaluate(this._readState(userId), Date.now());
     if (r.changed) this._writeState(userId, r.state);
 
@@ -118,7 +127,7 @@ class LoginLockoutMiddleware {
    * @param {string} userId
    * @returns {object} The updated state object (for logging / testing).
    */
-  recordFailure(userId) {
+  recordFailure(userId: string): Record<string, any> {
     const r = this._policy.fail(this._readState(userId), Date.now());
     this._logFailure(userId, r);
     if (!r.ignored) this._writeState(userId, r.state);
@@ -131,7 +140,7 @@ class LoginLockoutMiddleware {
    *
    * @param {string} userId
    */
-  recordSuccess(userId) {
+  recordSuccess(userId: string) {
     this._store.del(lockoutKey(userId));
     logger.info(authMessages.LOGIN_LOCKOUT_CLEARED(userId));
   }
@@ -144,7 +153,7 @@ class LoginLockoutMiddleware {
    * @param {string} userId
    * @returns {Promise<{ locked: boolean, retryAfter?: number, hrReset?: boolean }>}
    */
-  async checkAsync(userId) {
+  async checkAsync(userId: string): Promise<{ locked: boolean; retryAfter?: number; hrReset?: boolean; }> {
     if (!clusterRpc.active) return this.check(userId);
 
     const r = await this._rpc(CLUSTER_RPC_METHODS.LOCKOUT_CHECK, userId);
@@ -166,7 +175,7 @@ class LoginLockoutMiddleware {
    * @param {string} userId
    * @returns {Promise<void>}
    */
-  async recordFailureAsync(userId) {
+  async recordFailureAsync(userId: string): Promise<void> {
     if (!clusterRpc.active) {
       this.recordFailure(userId);
       return;
@@ -186,7 +195,7 @@ class LoginLockoutMiddleware {
    * @param {string} userId
    * @returns {Promise<void>}
    */
-  async recordSuccessAsync(userId) {
+  async recordSuccessAsync(userId: string): Promise<void> {
     this.recordSuccess(userId);
     if (!clusterRpc.active) return;
     await this._rpc(CLUSTER_RPC_METHODS.LOCKOUT_CLEAR, userId);
@@ -204,7 +213,7 @@ class LoginLockoutMiddleware {
    * @returns {Promise<object|null>}
    * @private
    */
-  async _rpc(method, userId) {
+  async _rpc(method: string, userId: string): Promise<Record<string, any> | null> {
     const args = { key: lockoutKey(userId) };
     if (!validateArgs(method, args).ok) {
       this._warnFallback("bad-key");
@@ -226,7 +235,7 @@ class LoginLockoutMiddleware {
   }
 
   /** CLUSTER_LOCKOUT_FALLBACK, at most once a minute. */
-  _warnFallback(reason) {
+  _warnFallback(reason: any) {
     const now = Date.now();
     if (now - this._lastFallbackLog < CLUSTER_RPC_LIMITS.REJECT_LOG_GAP_MS) return;
     this._lastFallbackLog = now;
@@ -241,7 +250,7 @@ class LoginLockoutMiddleware {
    * @param {{ignored: boolean, failCount: number, currentMax: number, engaged: boolean, lockDurationMs: number|null, cycles: number}} r
    * @private
    */
-  _logFailure(userId, r) {
+  _logFailure(userId: string, r: { ignored: boolean; failCount: number; currentMax: number; engaged: boolean; lockDurationMs: number | null; cycles: number; }) {
     if (r.ignored) {
       logger.warning(authMessages.LOGIN_FAILURE_IGNORED_LOCKED(userId));
       return;
@@ -262,7 +271,7 @@ class LoginLockoutMiddleware {
    * @returns {{ cycles: number, currentMax: number, failCount: number, lockUntil: number|null }}
    * @private
    */
-  _readState(userId) {
+  _readState(userId: string): { cycles: number; currentMax: number; failCount: number; lockUntil: number | null; } {
     return this._store.get(lockoutKey(userId)) ?? this._policy.initial();
   }
 
@@ -272,7 +281,7 @@ class LoginLockoutMiddleware {
    * @param {object} state
    * @private
    */
-  _writeState(userId, state) {
+  _writeState(userId: string, state: Record<string, any>) {
     this._store.set(lockoutKey(userId), state, 86400);
   }
 }

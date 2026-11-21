@@ -8,6 +8,7 @@
  * No business logic — delegates entirely to ChangelogService.
  */
 
+import type { Request, Response } from "express";
 import { HTTP_STATUS } from "../constants";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { catchAsync } from "../utils/catchAsync";
@@ -20,7 +21,7 @@ class ChangelogController {
      *
      * @type {import("express").RequestHandler}
      */
-    static list = catchAsync(async (req, res) => {
+    static list: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         const entries = ChangelogService.listAll();
         res.json(sendSuccess(RESPONSE_MESSAGES.CHANGELOG_LIST_FETCHED, entries));
     });
@@ -32,7 +33,7 @@ class ChangelogController {
      *
      * @type {import("express").RequestHandler}
      */
-    static listPublic = catchAsync(async (req, res) => {
+    static listPublic: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         const entries = ChangelogService.listPublic();
         res.json(sendSuccess(RESPONSE_MESSAGES.CHANGELOG_LIST_FETCHED, entries));
     });
@@ -44,7 +45,7 @@ class ChangelogController {
      *
      * @type {import("express").RequestHandler}
      */
-    static latestPublic = catchAsync(async (req, res) => {
+    static latestPublic: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         const entry = ChangelogService.latestPublic();
         res.json(sendSuccess(RESPONSE_MESSAGES.CHANGELOG_LATEST_FETCHED, entry));
     });
@@ -55,7 +56,7 @@ class ChangelogController {
      *
      * @type {import("express").RequestHandler}
      */
-    static create = catchAsync(async (req, res) => {
+    static create: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         const entry = ChangelogService.create(req.body);
         res.status(HTTP_STATUS.CREATED).json(sendSuccess(RESPONSE_MESSAGES.CHANGELOG_ENTRY_CREATED, entry, HTTP_STATUS.CREATED));
     });
@@ -66,7 +67,7 @@ class ChangelogController {
      *
      * @type {import("express").RequestHandler}
      */
-    static update = catchAsync(async (req, res) => {
+    static update: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         const entry = ChangelogService.update(req.params.id, req.body);
         res.json(sendSuccess(RESPONSE_MESSAGES.CHANGELOG_ENTRY_UPDATED, entry));
     });
@@ -77,7 +78,7 @@ class ChangelogController {
      *
      * @type {import("express").RequestHandler}
      */
-    static delete = catchAsync(async (req, res) => {
+    static delete: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         ChangelogService.delete(req.params.id);
         res.json(sendSuccess(RESPONSE_MESSAGES.CHANGELOG_ENTRY_DELETED, null));
     });

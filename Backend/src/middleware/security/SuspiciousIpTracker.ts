@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -28,6 +27,10 @@ const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 class SuspiciousIpTracker {
     static DEFAULT_THRESHOLD = DEFAULT_THRESHOLD;
     static DEFAULT_BLOCK_MS = DEFAULT_BLOCK_MS;
+    declare _cleanupTimer: Timer;
+    declare _blockMs: number;
+    declare _threshold: number;
+    declare records: Map<string, { count: number; blockedUntil: number; lastSeen: number; }>;
 
     /**
      * @param {object} [opts]
@@ -35,7 +38,7 @@ class SuspiciousIpTracker {
      * @param {number} [opts.blockMs=3600000]
      * @param {Map<string, {count: number, blockedUntil: number, lastSeen: number}>} [opts.records]
      */
-    constructor({ threshold = DEFAULT_THRESHOLD, blockMs = DEFAULT_BLOCK_MS, records = new Map() } = {}) {
+    constructor({ threshold = DEFAULT_THRESHOLD, blockMs = DEFAULT_BLOCK_MS, records = new Map() }: { threshold?: number; blockMs?: number; records?: Map<string, { count: number; blockedUntil: number; lastSeen: number; }>; } = {}) {
         this.records = records;
         this._threshold = threshold;
         this._blockMs = blockMs;
@@ -53,7 +56,7 @@ class SuspiciousIpTracker {
      * @param {number} [now=Date.now()]
      * @returns {boolean} the IP is inside an active block
      */
-    isBlocked(ip, now = Date.now()) {
+    isBlocked(ip: string, now: number = Date.now()): boolean {
         const record = this.records.get(ip);
         return Boolean(record && record.blockedUntil > now);
     }
@@ -66,7 +69,7 @@ class SuspiciousIpTracker {
      * @param {number} [now=Date.now()]
      * @returns {{blocked: boolean, blockedUntil: number, justBlocked: boolean}}
      */
-    strike(ip, now = Date.now()) {
+    strike(ip: string, now: number = Date.now()): { blocked: boolean; blockedUntil: number; justBlocked: boolean; } {
         const record = this.records.get(ip) || { count: 0, blockedUntil: 0, lastSeen: now };
 
         if (record.blockedUntil > now) {
@@ -111,7 +114,7 @@ class SuspiciousIpTracker {
      * @param {string} ip
      * @returns {boolean} a record existed
      */
-    unblock(ip) {
+    unblock(ip: string): boolean {
         return this.records.delete(ip);
     }
 
@@ -122,7 +125,7 @@ class SuspiciousIpTracker {
      * @param {number} blockedUntil
      * @param {number} [now=Date.now()]
      */
-    applyBlock(ip, blockedUntil, now = Date.now()) {
+    applyBlock(ip: string, blockedUntil: number, now: number = Date.now()) {
         this.records.set(ip, { count: this._threshold, blockedUntil, lastSeen: now });
     }
 
@@ -131,8 +134,8 @@ class SuspiciousIpTracker {
      * @param {number} [limit=Infinity]
      * @returns {{ip: string, blockedUntil: number}[]} active blocks
      */
-    blocksSnapshot(now = Date.now(), limit = Infinity) {
-        const out = [];
+    blocksSnapshot(now: number = Date.now(), limit: number = Infinity): { ip: string; blockedUntil: number; }[] {
+        const out: any[] = [];
         if (limit <= 0) return out;
         for (const [ip, r] of this.records) {
             if (r.blockedUntil > now) {
@@ -149,7 +152,7 @@ class SuspiciousIpTracker {
      * @param {number} [now=Date.now()]
      * @returns {object}
      */
-    stats(now = Date.now()) {
+    stats(now: number = Date.now()): Record<string, any> {
         const blocked = [];
         const suspicious = [];
         for (const [ip, r] of this.records) {

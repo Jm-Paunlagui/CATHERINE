@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -21,7 +20,7 @@ const watchdogMessages = {
      * @param {number} ageMs - Total request age.
      * @returns {string}
      */
-    WATCHDOG_REQUEST_STALLED: (method, routeLabel, idleMs, limitMs, lastSource, ageMs) =>
+    WATCHDOG_REQUEST_STALLED: (method: string, routeLabel: string, idleMs: number, limitMs: number, lastSource: string, ageMs: number): string =>
         `WATCHDOG_REQUEST_STALLED — ${method} ${routeLabel} made no progress for ${idleMs}ms (limit ${limitMs}ms, last progress: ${lastSource}, age ${ageMs}ms); terminated with 504.`,
 
     /**
@@ -31,7 +30,7 @@ const watchdogMessages = {
      * @param {number} applied - The value actually used.
      * @returns {string}
      */
-    WATCHDOG_LIMIT_CLAMPED: (name, raw, applied) =>
+    WATCHDOG_LIMIT_CLAMPED: (name: string, raw: string, applied: number): string =>
         `WATCHDOG_LIMIT_CLAMPED — ${name}="${raw}" is out of range or not a number; using ${applied}ms.`,
 
     /**
@@ -42,7 +41,7 @@ const watchdogMessages = {
      * @param {number} scopes - Scopes credited.
      * @returns {string}
      */
-    WATCHDOG_EVENT_LOOP_STALL: (lateMs, scopes) =>
+    WATCHDOG_EVENT_LOOP_STALL: (lateMs: number, scopes: number): string =>
         `WATCHDOG_EVENT_LOOP_STALL — idle sweep ran ${lateMs}ms late; credited ${scopes} active scope(s) as progressing and skipped enforcement this tick.`,
 
     /**
@@ -50,7 +49,7 @@ const watchdogMessages = {
      * @param {string} cause - `err.message`.
      * @returns {string}
      */
-    WATCHDOG_ONIDLE_FAILED: (cause) =>
+    WATCHDOG_ONIDLE_FAILED: (cause: string): string =>
         `WATCHDOG_ONIDLE_FAILED — idle callback threw: ${cause}`,
 
     /**
@@ -63,8 +62,8 @@ const watchdogMessages = {
      * @param {number} more - Cuts since the previous alert (cooldown-suppressed).
      * @returns {string}
      */
-    WATCHDOG_BURST_ALERT: (count, windowMs, topRoutes, topSources, more) => {
-        const fmt = (list) => list.map(([k, n]) => `${k} x${n}`).join(", ") || "none";
+    WATCHDOG_BURST_ALERT: (count: number, windowMs: number, topRoutes: Array<[string, number]>, topSources: Array<[string, number]>, more: number): string => {
+        const fmt = (list: any) => list.map(([k, n]: any) => `${k} x${n}`).join(", ") || "none";
         return (
             `WATCHDOG_BURST_ALERT — ${count} request(s) cut by the watchdog in the last ${Math.round(windowMs / 1000)}s on pid ${process.pid}. ` +
             `Top routes: ${fmt(topRoutes)}. Last progress sources: ${fmt(topSources)}.` +

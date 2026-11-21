@@ -38,7 +38,7 @@ import AuthRefreshTokenModel from "../models/auth.refresh.token.model";
 import AccessRevocationService from "./AccessRevocationService";
 import { RetryPolicy } from "../utils/resilience";
 
-const fidPrefix = (fid) => String(fid ?? "").slice(0, 8);
+const fidPrefix = (fid: any) => String(fid ?? "").slice(0, 8);
 
 class RefreshTokenService {
     /**
@@ -48,7 +48,7 @@ class RefreshTokenService {
      * @param {object} record - `refreshRecord` returned by AuthService._issueTokens
      * @returns {Promise<void>}
      */
-    static async persistIssued(record) {
+    static async persistIssued(record: Record<string, any>): Promise<void> {
         await AuthRefreshTokenModel.insert(record);
     }
 
@@ -60,7 +60,7 @@ class RefreshTokenService {
      * @returns {Promise<void>} resolves only when rotation succeeded
      * @throws {AppError} 401 REFRESH_TOKEN_REVOKED | REFRESH_TOKEN_REUSED
      */
-    static async rotate({ jti, familyId, userId }, nextRecord) {
+    static async rotate({ jti, familyId, userId }: { jti: string; familyId: string; userId: string; }, nextRecord: Record<string, any>): Promise<void> {
         const jtiHash = hashJti(jti);
         const nowMs = Date.now();
 
@@ -105,10 +105,10 @@ class RefreshTokenService {
      * @returns {Promise<void>}
      */
     static async revokeFamily(
-        familyId,
-        reason,
-        { bestEffort = false, retryTransient = false } = {},
-    ) {
+        familyId: string,
+        reason: string,
+        { bestEffort = false, retryTransient = false }: { bestEffort?: boolean; retryTransient?: boolean; } = {},
+    ): Promise<void> {
         if (!familyId) return;
         AccessRevocationService.revoke([familyId]);
         refreshTokenRegistry.revokeFamily(familyId, Date.now());
@@ -143,7 +143,7 @@ class RefreshTokenService {
      *   line when the stored reason is less specific (Access Control)
      * @returns {Promise<void>}
      */
-    static async revokeAllForUser(userId, reason, { cause } = {}) {
+    static async revokeAllForUser(userId: string | number, reason: string, { cause }: { cause?: string; } = {}): Promise<void> {
         const userKey = canonicalUserKey(userId);
         // Families this process knows end at once; the DB then names every
         // family of the user (other workers, earlier boots) in the same UPDATE
@@ -160,7 +160,7 @@ class RefreshTokenService {
      *
      * @returns {Promise<number>} rows deleted (0 on failure)
      */
-    static async purgeExpired() {
+    static async purgeExpired(): Promise<number> {
         try {
             const cutoff = new Date(Date.now() - REFRESH_PURGE.GRACE_MS);
             return await AuthRefreshTokenModel.purgeExpired(cutoff, REFRESH_PURGE.BATCH_LIMIT);
@@ -173,7 +173,7 @@ class RefreshTokenService {
     // ── Internals ────────────────────────────────────────────────────────────
 
     /** Reuse: end the whole family in both tiers, then refuse. Never returns. */
-    static async #onReuse(userId, familyId) {
+    static async #onReuse(userId: any, familyId: any) {
         await RefreshTokenService.revokeFamily(familyId, REFRESH_REVOKE_REASONS.REUSE, {
             bestEffort: true,
         });
@@ -186,7 +186,7 @@ class RefreshTokenService {
     }
 
     /** Revoked / unknown: refuse. Never returns. */
-    static #reject(userId, outcome) {
+    static #reject(userId: any, outcome: any) {
         logger.warning(authMessages.REFRESH_TOKEN_REJECTED(userId, outcome));
         throw new AppError(AUTH_ERRORS.REFRESH_TOKEN_REVOKED, 401, {
             type: "AuthenticationError",

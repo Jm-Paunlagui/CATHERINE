@@ -31,14 +31,14 @@ import demo from "./demo/demoStore";
 import AuditLogFileModel from "./audit.log.file.model";
 
 /** @returns {string} Resolved audit table name (env override or NODE_ENV default). */
-function resolveTableName() {
+function resolveTableName(): string {
     if (process.env.AUDIT_LOG_TABLE) return process.env.AUDIT_LOG_TABLE;
     return process.env.NODE_ENV === "production"
         ? "T_AUDIT_LOGS"
         : "T_AUDIT_LOGS_DEV";
 }
 
-let _col = null;
+let _col: any = null;
 /** Lazily resolves the audit-table collection (never called in DEMO_MODE / file mode). */
 function col() {
     if (!_col) _col = new OracleCollection(resolveTableName(), createDb("appDb"));
@@ -53,7 +53,7 @@ function col() {
  *   "auto-file"    — auto mode after an Oracle write failure (permanent for
  *                    the process lifetime; the switch is silent by design)
  */
-let _storageMode = null;
+let _storageMode: any = null;
 
 function storageMode() {
     if (_storageMode === null) {
@@ -66,7 +66,7 @@ function storageMode() {
 }
 
 /** @returns {boolean} True when reads/writes should hit the file model. */
-function useFile() {
+function useFile(): boolean {
     const mode = storageMode();
     return mode === "file" || mode === "auto-file";
 }
@@ -80,7 +80,7 @@ function useFile() {
  * @param {() => Promise<T>} fileWrite - Re-routes the same payload to the file model.
  * @returns {Promise<T>}
  */
-async function writeWithFallback(dbWrite, fileWrite) {
+async function writeWithFallback<T>(dbWrite: () => Promise<T>, fileWrite: () => Promise<T>): Promise<T> {
     if (useFile()) return fileWrite();
     try {
         return await dbWrite();
@@ -101,7 +101,8 @@ function _resetStorageForTests() {
 }
 
 class AuditLogModel {
-    static async insert(record) {
+    declare static _resetStorageForTests: () => void;
+    static async insert(record: any) {
         if (isDemoMode()) return demo.auditInsert(record);
         return writeWithFallback(
             () => col().insertOne(record),
@@ -117,7 +118,7 @@ class AuditLogModel {
      * @param {object[]} records
      * @returns {Promise<object>} insertMany result
      */
-    static async insertBatch(records) {
+    static async insertBatch(records: Record<string, any>[]): Promise<Record<string, any>> {
         if (isDemoMode()) {
             for (const r of records) demo.auditInsert(r);
             return { rowsAffected: records.length };
@@ -128,7 +129,7 @@ class AuditLogModel {
         );
     }
 
-    static async findPaginated(filter, page, pageSize) {
+    static async findPaginated(filter: any, page: any, pageSize: any) {
         if (isDemoMode()) {
             const all = demo.auditLogs().filter((r) => demo.match(r, filter));
             all.sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT));
@@ -143,7 +144,7 @@ class AuditLogModel {
             .toArray();
     }
 
-    static async countTotal(filter) {
+    static async countTotal(filter: any) {
         if (isDemoMode()) {
             return demo.auditLogs().filter((r) => demo.match(r, filter)).length;
         }
@@ -158,7 +159,7 @@ class AuditLogModel {
      * @param {object} filter - oracle-mongo-wrapper filter object.
      * @returns {Promise<object>} Raw oracle-mongo-wrapper deleteMany result.
      */
-    static async deleteMany(filter) {
+    static async deleteMany(filter: Record<string, any>): Promise<Record<string, any>> {
         if (isDemoMode()) {
             const logs = demo.auditLogs();
             const before = logs.length;
@@ -181,7 +182,7 @@ class AuditLogModel {
      *
      * @returns {Promise<number>} Epoch ms of latest CREATED_AT, or 0 if table is empty.
      */
-    static async getLatestCreatedAt() {
+    static async getLatestCreatedAt(): Promise<number> {
         if (isDemoMode()) {
             const logs = demo.auditLogs();
             if (logs.length === 0) return 0;
@@ -198,7 +199,7 @@ class AuditLogModel {
         return rows.length > 0 ? new Date(rows[0].CREATED_AT).getTime() : 0;
     }
 
-    static async aggregate(matchFilter) {
+    static async aggregate(matchFilter: any) {
         if (!isDemoMode() && useFile()) {
             return AuditLogFileModel.aggregate(matchFilter);
         }
@@ -213,7 +214,7 @@ class AuditLogModel {
             // ── In-memory aggregation for demo mode ─────────────────────────────
             const logs = demo.auditLogs();
             const matched = logs.filter((r) => demo.match(r, matchFilter));
-            const catMap = {};
+            const catMap: Record<string, any> = {};
             for (const r of matched) {
                 const cat = r.STATUS_CATEGORY ?? "";
                 if (!catMap[cat])
@@ -278,7 +279,7 @@ class AuditLogModel {
      * @param {Array<{ STATUS_CATEGORY?: string, CNT?: number, RESPTIME?: number }>} rows
      * @returns {{ total: number, totalRespTime: number, buckets: { '2xx': number, '3xx': number, '4xx': number, '5xx': number } }}
      */
-    static _reduceCategoryGroups(rows) {
+    static _reduceCategoryGroups(rows: Array<{ STATUS_CATEGORY?: string; CNT?: number; RESPTIME?: number; }>): { total: number; totalRespTime: number; buckets: { '2xx': number; '3xx': number; '4xx': number; '5xx': number; }; } {
         const buckets = { "2xx": 0, "3xx": 0, "4xx": 0, "5xx": 0 };
         let total = 0;
         let totalRespTime = 0;
@@ -304,7 +305,7 @@ class AuditLogModel {
      *
      * @returns {{mode: string, table: string}}
      */
-    static storageInfo() {
+    static storageInfo(): { mode: string; table: string; } {
         return { mode: storageMode(), table: resolveTableName() };
     }
 }

@@ -78,7 +78,7 @@ const ASSETS_DIR = appPath("src", "utils",
  * @returns {string}
  * @private
  */
-function _escapeHtml(value) {
+function _escapeHtml(value: string | number | null | undefined): string {
     if (value == null) return "";
     return String(value)
         .replace(/&/g, "&amp;")
@@ -97,7 +97,7 @@ function _escapeHtml(value) {
  * @returns {string}
  * @private
  */
-function _formatBytes(bytes) {
+function _formatBytes(bytes: number): string {
     const n = Number(bytes) || 0;
     if (n < 1024) return `${n} B`;
     const units = ["KB", "MB", "GB", "TB"];
@@ -117,7 +117,7 @@ class BackupEmailService {
      *
      * @returns {boolean}
      */
-    static isEnabled() {
+    static isEnabled(): boolean {
         return (
             String(process.env.BACKUP_EMAIL_ENABLED).toLowerCase() !== "false"
         );
@@ -152,7 +152,7 @@ class BackupEmailService {
         tableCount,
         adminId,
         requestId = null,
-    }) {
+    }: { scopeLabel?: string; totalRows?: number; tableCount?: number; adminId: number | string; requestId?: string | null; }): Promise<{ sent: boolean; reason?: string; cause?: string; recipientCount?: number; }> {
         try {
             if (!BackupEmailService.isEnabled()) {
                 logger.info(
@@ -238,8 +238,8 @@ class BackupEmailService {
      * @returns {Promise<string[]>} Deduplicated recipient email addresses.
      * @private
      */
-    static async _resolveRecipientEmails(adminId) {
-        let admins = [];
+    static async _resolveRecipientEmails(adminId: number | string): Promise<string[]> {
+        let admins: any[] = [];
         try {
             admins = await AdminModel.findAll();
         } catch (err) {
@@ -269,7 +269,7 @@ class BackupEmailService {
      * @returns {string} e.g. "Jul 28, 2026, 2:02 PM UTC+08:00"
      * @private
      */
-    static _formatLocalTime() {
+    static _formatLocalTime(): string {
         const offsetMin = dbTimezoneOffsetMinutes();
         const localMs = Date.now() + offsetMin * 60_000;
         const shifted = new Date(localMs);
@@ -291,7 +291,7 @@ class BackupEmailService {
      * @returns {Array<{ filename: string, path: string, cid: string }>}
      * @private
      */
-    static _logoAttachments() {
+    static _logoAttachments(): Array<{ filename: string; path: string; cid: string; }> {
         const logoPathDark = path.join(
             ASSETS_DIR,
             "AUMOVIO_Logo_orange_white_RGB.png",
@@ -333,7 +333,7 @@ class BackupEmailService {
         scopeLabel,
         tableCount,
         rowCount,
-    }) {
+    }: Record<string, any>): string {
         const template = fs.readFileSync(TEMPLATE_PATH, "utf8");
         const firedAt = BackupEmailService._formatLocalTime();
 
@@ -369,7 +369,7 @@ class BackupEmailService {
         scopeLabel,
         tableCount,
         rowCount,
-    }) {
+    }: Record<string, any>): string {
         const lines = [
             `[${PRODUCT_NAME}] Data purge completed — ${tableCount} table(s), ${rowCount} row(s) deleted`,
             "",

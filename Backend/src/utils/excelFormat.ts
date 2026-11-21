@@ -49,7 +49,7 @@
  * {@link makeMoneyFmt}.
  * @type {string}
  */
-const MONEY_FMT = "#,##0.00;[Red]-#,##0.00";
+const MONEY_FMT: string = "#,##0.00;[Red]-#,##0.00";
 
 /**
  * Builds a money numFmt that prefixes `symbol` (e.g. `"$"`, `"€"`, `"£"`).
@@ -61,7 +61,7 @@ const MONEY_FMT = "#,##0.00;[Red]-#,##0.00";
  * @example
  * makeMoneyFmt("$"); // '"$"#,##0.00;[Red]-"$"#,##0.00'
  */
-function makeMoneyFmt(symbol = "") {
+function makeMoneyFmt(symbol: string = ""): string {
     const s = symbol ? `"${symbol}"` : "";
     return `${s}#,##0.00;[Red]-${s}#,##0.00`;
 }
@@ -72,7 +72,7 @@ function makeMoneyFmt(symbol = "") {
  * be diffed against the database by eye.
  * @type {string}
  */
-const DATETIME_FMT = "mm/dd/yyyy hh:mm:ss AM/PM";
+const DATETIME_FMT: string = "mm/dd/yyyy hh:mm:ss AM/PM";
 
 /** Calendar-date-only format, for columns the business treats as a pure date. */
 const DATE_FMT = "mm/dd/yyyy";
@@ -98,7 +98,7 @@ const DATETIME_COL_WIDTH = 24;
  * // stored 2026-08-17 06:01:11 (local zone)
  * toExcelDate(row.TRANS_DATETIME); // renders as 08/17/2026 06:01:11 AM
  */
-function toExcelDate(value) {
+function toExcelDate(value: Date | string | number | null | undefined): Date | null {
     if (value === null || value === undefined || value === "") return null;
     const d = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(d.getTime())) return null;
@@ -111,7 +111,7 @@ function toExcelDate(value) {
  * @param {Date|string|number|null|undefined} value
  * @returns {void}
  */
-function setDateTimeCell(cell, value) {
+function setDateTimeCell(cell: import('exceljs').Cell, value: Date | string | number | null | undefined): void {
     const d = toExcelDate(value);
     cell.value = d;
     if (d) cell.numFmt = DATETIME_FMT;
@@ -123,7 +123,7 @@ function setDateTimeCell(cell, value) {
  * @param {Date|string|number|null|undefined} value
  * @returns {void}
  */
-function setDateCell(cell, value) {
+function setDateCell(cell: import('exceljs').Cell, value: Date | string | number | null | undefined): void {
     const d = toExcelDate(value);
     cell.value = d;
     if (d) cell.numFmt = DATE_FMT;
@@ -138,7 +138,7 @@ function setDateCell(cell, value) {
  *   `makeMoneyFmt("$")` for a currency-bearing cell.
  * @returns {void}
  */
-function setMoneyCell(cell, value, numFmt = MONEY_FMT) {
+function setMoneyCell(cell: import('exceljs').Cell, value: number | string | null | undefined, numFmt: string = MONEY_FMT): void {
     const n = Number(value ?? 0);
     cell.value = Number.isFinite(n) ? n : 0;
     cell.numFmt = numFmt;
@@ -151,7 +151,7 @@ function setMoneyCell(cell, value, numFmt = MONEY_FMT) {
  * @param {string} [symbol=""] Optional currency symbol to prefix.
  * @returns {string} e.g. `"1,234.50"` or `"$1,234.50"`
  */
-function formatMoneyText(value, symbol = "") {
+function formatMoneyText(value: number | string | null | undefined, symbol: string = ""): string {
     const n = Number(value ?? 0);
     return `${symbol}${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
         minimumFractionDigits: 2,
@@ -167,11 +167,11 @@ function formatMoneyText(value, symbol = "") {
  * @param {Date|string|number|null|undefined} value
  * @returns {string} e.g. `"08/17/2026 06:01:11 AM"`, or `"-"` when absent
  */
-function formatDateTimeText(value) {
+function formatDateTimeText(value: Date | string | number | null | undefined): string {
     if (value === null || value === undefined || value === "") return "-";
     const d = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(d.getTime())) return "-";
-    const pad = (n) => String(n).padStart(2, "0");
+    const pad = (n: any) => String(n).padStart(2, "0");
     const hr24 = d.getHours();
     return (
         `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()} ` +
@@ -190,8 +190,8 @@ function formatDateTimeText(value) {
  * @param {Record<string, *>} row
  * @returns {{ row: Record<string, *>, dateKeys: string[] }}
  */
-function normalizeRowDates(row) {
-    const out = {};
+function normalizeRowDates(row: Record<string, any>): { row: Record<string, any>; dateKeys: string[]; } {
+    const out: Record<string, any> = {};
     const dateKeys = [];
     for (const [key, value] of Object.entries(row ?? {})) {
         if (value instanceof Date) {
@@ -216,7 +216,7 @@ function normalizeRowDates(row) {
  * @param {Record<string, *>} rowData
  * @returns {import('exceljs').Row}
  */
-function addNormalizedRow(sheet, rowData) {
+function addNormalizedRow(sheet: import('exceljs').Worksheet, rowData: Record<string, any>): import('exceljs').Row {
     const added = sheet.addRow(normalizeRowDates(rowData).row);
     added.eachCell((cell, colNumber) => {
         if (!(cell.value instanceof Date)) return;
@@ -239,7 +239,7 @@ function addNormalizedRow(sheet, rowData) {
  * @returns {string} an ExcelJS numFmt, e.g. `'"$"#,##0.00;[Red]-"$"#,##0.00'`
  *   for USD, `'"¥"#,##0;[Red]-"¥"#,##0'` for JPY (display scale 0).
  */
-function moneyFmtFor(currencyCode) {
+function moneyFmtFor(currencyCode: string): string {
     // Lazy require to avoid a constants<->utils load cycle.
     const { getCurrency } = require("../constants/currencies");
     const { symbol, displayScale } = getCurrency(currencyCode);
@@ -266,7 +266,7 @@ function moneyFmtFor(currencyCode) {
  *   summary). Required when a conversion took place.
  * @returns {string}
  */
-function exportCurrencyBasis({ currencyCode, baseCurrency, asOf } = {}) {
+function exportCurrencyBasis({ currencyCode, baseCurrency, asOf }: { currencyCode: string; baseCurrency?: string; asOf?: Date | string; } = {}): string {
     if (!currencyCode) return "Currency: (unspecified)";
     if (!baseCurrency || baseCurrency === currencyCode) {
         return `Currency: ${currencyCode} (stored, no conversion applied)`;

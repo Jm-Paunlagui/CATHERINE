@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -26,7 +25,7 @@ const DECIMAL_NUMERAL = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
  * @param {unknown} userId
  * @returns {string}
  */
-function canonicalUserKey(userId) {
+function canonicalUserKey(userId: unknown): string {
     const raw = String(userId ?? "").trim();
     if (DECIMAL_NUMERAL.test(raw)) {
         const n = Number(raw);

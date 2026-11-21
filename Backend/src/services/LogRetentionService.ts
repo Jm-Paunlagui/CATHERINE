@@ -154,7 +154,7 @@ const MONTH_DAY_RE = /^\d{2}$/;
  * @param {number} bytes
  * @returns {string}
  */
-function _formatBytes(bytes) {
+function _formatBytes(bytes: number): string {
     const n = Number(bytes) || 0;
     if (n < 1024) return `${n} B`;
     const units = ["KB", "MB", "GB", "TB"];
@@ -168,13 +168,17 @@ function _formatBytes(bytes) {
 }
 
 class LogRetentionService {
+    declare LogRetentionService: typeof LogRetentionService;
+    declare _lastSweepDay: null;
+    declare _timer: null;
+    declare _logBaseDir: string;
     /**
      * @param {object} [opts]
      * @param {string} [opts.logBaseDir] - Override for `LOG_BASE_DIR`, used
      *   only by tests to point the sweep at a fixture directory (mirrors
      *   `SystemLogTailService.js:73-78`).
      */
-    constructor({ logBaseDir } = {}) {
+    constructor({ logBaseDir }: { logBaseDir?: string; } = {}) {
         /** @type {string} */
         this._logBaseDir = logBaseDir || LOG_BASE_DIR;
 
@@ -196,7 +200,7 @@ class LogRetentionService {
      *
      * @returns {{ started: boolean, reason?: string }}
      */
-    start() {
+    start(): { started: boolean; reason?: string; } {
         if (this._timer) return { started: false, reason: "already-started" };
 
         if (process.env.LOG_RETENTION_DAYS === "0") {
@@ -242,7 +246,7 @@ class LogRetentionService {
      *
      * @returns {number} `0` (disabled) or a positive integer number of days.
      */
-    _retentionDays() {
+    _retentionDays(): number {
         const raw = process.env.LOG_RETENTION_DAYS;
         if (raw === undefined || raw === "") return DEFAULT_RETENTION_DAYS;
         if (raw === "0") return 0;
@@ -265,7 +269,7 @@ class LogRetentionService {
      *
      * @returns {Promise<{ removedDays: number, freedBytes: number, failedDays: string[] }>}
      */
-    async _runSweep() {
+    async _runSweep(): Promise<{ removedDays: number; freedBytes: number; failedDays: string[]; }> {
         const result = { removedDays: 0, freedBytes: 0, failedDays: [] };
         const days = this._retentionDays();
         if (days === 0) return result;
@@ -401,7 +405,7 @@ class LogRetentionService {
      * @returns {Promise<{ ok: boolean, freedBytes: number, vanished?: boolean }>}
      *   `vanished` — the directory was already gone; neither removed nor failed.
      */
-    async _removeDayDir(dirPath, dayLabel) {
+    async _removeDayDir(dirPath: string, dayLabel: string): Promise<{ ok: boolean; freedBytes: number; vanished?: boolean; }> {
         // Gone before we started (a concurrent sweep, or an operator) — not
         // ours to count. `fs.rm` runs with `force: true`, so without this check
         // a missing directory came back `ok` and inflated removedDays.
@@ -466,7 +470,7 @@ class LogRetentionService {
      * @param {string} dirPath
      * @returns {Promise<number>}
      */
-    async _sumDirBytes(dirPath) {
+    async _sumDirBytes(dirPath: string): Promise<number> {
         let total = 0;
         const entries = await fs.readdir(dirPath, { withFileTypes: true });
         for (const entry of entries) {

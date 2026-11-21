@@ -19,6 +19,12 @@ import { SingleFlight } from "./SingleFlight";
 import { ClusterCacheSync } from "./ClusterCacheSync";
 
 class CacheStore {
+  declare _generation: number;
+  declare _flight: SingleFlight;
+  declare _store: NodeCache;
+  declare _maxKeys: number;
+  declare _ttl: number;
+  declare _name: string;
   /**
    * @param {string} name          - Human-readable name used in log output.
    * @param {Object} [options={}]
@@ -26,7 +32,7 @@ class CacheStore {
    * @param {number} [options.checkPeriod=0] - Seconds between expired-key sweeps. 0 = disabled.
    * @param {number} [options.maxKeys=-1]    - Max keys before oldest is evicted. -1 = unlimited.
    */
-  constructor(name, options = {}) {
+  constructor(name: string, options: { ttl?: number; checkPeriod?: number; maxKeys?: number; } = {}) {
     if (!name || typeof name !== "string") {
       throw new TypeError("CacheStore: name must be a non-empty string.");
     }
@@ -65,7 +71,7 @@ class CacheStore {
    * @param {string} key
    * @returns {*}
    */
-  get(key) {
+  get(key: string): any {
     const value = this._store.get(key);
     this._log(value !== undefined ? "HIT" : "MISS", key);
     return value;
@@ -78,7 +84,7 @@ class CacheStore {
    * @param {number} [ttl]  - Per-entry override in seconds. Omit to use the store default.
    * @returns {boolean}
    */
-  set(key, value, ttl) {
+  set(key: string, value: any, ttl: number): boolean {
     return ttl !== undefined
       ? this._store.set(key, value, ttl)
       : this._store.set(key, value);
@@ -91,7 +97,7 @@ class CacheStore {
    * @param {string|string[]} keys
    * @returns {number} Count of deleted entries.
    */
-  del(keys) {
+  del(keys: string | string[]): number {
     const list = Array.isArray(keys) ? keys : [keys];
     const count = this._store.del(list);
     this._invalidateInFlight();
@@ -104,7 +110,7 @@ class CacheStore {
    * @param {string} key
    * @returns {boolean}
    */
-  has(key) {
+  has(key: string): boolean {
     return this._store.has(key);
   }
 
@@ -112,7 +118,7 @@ class CacheStore {
    * Return all current cache keys.
    * @returns {string[]}
    */
-  keys() {
+  keys(): string[] {
     return this._store.keys();
   }
 
@@ -124,7 +130,7 @@ class CacheStore {
    * @param {string} pattern - Plain substring (not regex).
    * @returns {number} Count of deleted entries.
    */
-  delByPattern(pattern) {
+  delByPattern(pattern: string): number {
     const matched = this._store.keys().filter((k) => k.includes(pattern));
     const count = matched.length === 0 ? 0 : this._store.del(matched);
     this._invalidateInFlight();
@@ -147,7 +153,7 @@ class CacheStore {
    * @param {(key: string) => boolean} predicate
    * @returns {number} Count of deleted entries.
    */
-  delWhere(predicate) {
+  delWhere(predicate: (key: string) => boolean): number {
     const matched = this._store.keys().filter(predicate);
     const count = matched.length === 0 ? 0 : this._store.del(matched);
     this._invalidateInFlight();
@@ -189,7 +195,7 @@ class CacheStore {
    * @param {number}            [ttl]   - Per-entry TTL override.
    * @returns {Promise<*>}
    */
-  async getOrSet(key, loader, ttl) {
+  async getOrSet(key: string, loader: () => Promise<any>, ttl: number): Promise<any> {
     const cached = this.get(key);
     if (cached !== undefined) return cached;
 
@@ -220,7 +226,7 @@ class CacheStore {
    * Returns a snapshot of store statistics and current key count.
    * @returns {Object}
    */
-  stats() {
+  stats(): Record<string, any> {
     const raw = this._store.getStats();
     const keys = this._store.keys().length;
     const hits = raw.hits ?? 0;
@@ -245,7 +251,7 @@ class CacheStore {
    * Monotonic invalidation counter; bumped by del/delByPattern/delWhere/flush (local or cluster-relayed).
    * @returns {number}
    */
-  get generation() {
+  get generation(): number {
     return this._generation;
   }
 
@@ -263,7 +269,7 @@ class CacheStore {
     this._flight = new SingleFlight();
   }
 
-  _log(event, key) {
+  _log(event: any, key: any) {
     logger.debug(`[Cache:${this._name}] ${event.padEnd(7)} ${key}`);
   }
 }

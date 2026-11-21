@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -20,7 +19,7 @@
  * **message**, not a meta object value.
  * @type {number}
  */
-const MAX_DESCRIBED_BINDS = 40;
+const MAX_DESCRIBED_BINDS: number = 40;
 
 /**
  * Describes a single bind value's *shape* — never its content. Kept
@@ -39,7 +38,7 @@ const MAX_DESCRIBED_BINDS = 40;
  * @param {number} [depth=0] - Recursion depth guard.
  * @returns {string} A value-free shape description, e.g. `<string:11>`.
  */
-function describeBindValue(v, depth = 0) {
+function describeBindValue(v: any, depth: number = 0): string {
   if (v === null) return "<null>";
   if (v === undefined) return "<undefined>";
   if (Buffer.isBuffer(v)) return `<buffer:${v.length}>`;
@@ -68,7 +67,7 @@ function describeBindValue(v, depth = 0) {
  * @returns {string} e.g. `"3 bind(s): where_GID=<string:11>, where_CUTOFF_ID=<number>"`,
  *   `"0 bind(s)"`, or `"<none>"`.
  */
-function describeBinds(binds) {
+function describeBinds(binds: Record<string, any> | Array<any> | null | undefined): string {
   if (binds === null || typeof binds !== "object") return "<none>";
 
   const entries = Array.isArray(binds)
@@ -90,15 +89,15 @@ function describeBinds(binds) {
 
 const oracleMongoWrapperMessages = {
   // ── Error formatter ──────────────────────────────────────────────────────
-  wrapError: (scope, err, sql, binds) =>
+  wrapError: (scope: any, err: any, sql: any, binds: any) =>
     `[${scope}] ${err.message}\nSQL: ${sql}${binds !== undefined ? `\nBinds: ${describeBinds(binds)}` : ""}`,
 
   // ── Privilege / DCL ──────────────────────────────────────────────────────
-  INSUFFICIENT_PRIVILEGES: (scope, requiredPrivilege, err, sql) =>
+  INSUFFICIENT_PRIVILEGES: (scope: any, requiredPrivilege: any, err: any, sql: any) =>
     `[${scope}] Insufficient privileges. ${requiredPrivilege}\nOriginal: ${err.message}\nSQL: ${sql}`,
-  DCL_GRANT_INSUFFICIENT: (err, sql) =>
+  DCL_GRANT_INSUFFICIENT: (err: any, sql: any) =>
     `[OracleDCL.grant] Insufficient privileges to GRANT. Requires GRANT OPTION or DBA role.\nOriginal: ${err.message}\nSQL: ${sql}`,
-  DCL_REVOKE_INSUFFICIENT: (err, sql) =>
+  DCL_REVOKE_INSUFFICIENT: (err: any, sql: any) =>
     `[OracleDCL.revoke] Insufficient privileges to REVOKE. Requires GRANT OPTION or DBA role.\nOriginal: ${err.message}\nSQL: ${sql}`,
 
   // ── Privilege requirement descriptions ───────────────────────────────────
@@ -112,14 +111,14 @@ const oracleMongoWrapperMessages = {
   // ── Validation messages ──────────────────────────────────────────────────
   CREATEDB_INVALID_CONNECTION_NAME:
     "createDb: connectionName must be a non-empty string",
-  MERGE_BINDS_KEY_COLLISION: (key) =>
+  MERGE_BINDS_KEY_COLLISION: (key: any) =>
     `Bind key collision: "${key}" exists in both bind objects.`,
-  FILTER_UNSUPPORTED_OPERATOR: (op) =>
+  FILTER_UNSUPPORTED_OPERATOR: (op: any) =>
     `[filterParser] Unsupported operator: ${op}`,
   UPDATE_EMPTY: "[updateParser] Update object must not be empty.",
   UPDATE_RENAME_NOT_SUPPORTED:
     "[updateParser] $rename is not supported. Use ALTER TABLE to rename columns.",
-  UPDATE_UNSUPPORTED_OPERATOR: (op) =>
+  UPDATE_UNSUPPORTED_OPERATOR: (op: any) =>
     `[updateParser] Unsupported update operator: ${op}`,
   UPDATE_NO_OPERATOR:
     "[updateParser] Update object must contain at least one operator ($set, $inc, etc.).",
@@ -137,7 +136,7 @@ const oracleMongoWrapperMessages = {
     "[OracleCollection.bulkUpdateByKeys] Rows must contain at least one non-key column to update.",
   BULK_WRITE_EMPTY:
     "[OracleCollection.bulkWrite] Operations must be a non-empty array.",
-  BULK_WRITE_UNKNOWN_OP: (keys) =>
+  BULK_WRITE_UNKNOWN_OP: (keys: any) =>
     `[OracleCollection.bulkWrite] Unknown operation type: ${JSON.stringify(keys)}`,
   SCHEMA_ALTER_TABLE_UNKNOWN_OP: "[OracleSchema.alterTable] Unknown operation.",
   SCHEMA_CREATE_VIEW_INVALID_INPUT:

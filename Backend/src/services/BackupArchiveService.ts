@@ -157,9 +157,9 @@ const STREAM_PAGE_SIZE = 1000;
  * @returns {string}
  * @private
  */
-function _timestampSlug() {
+function _timestampSlug(): string {
     const d = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
+    const pad = (n: any) => String(n).padStart(2, "0");
     return (
         `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}` +
         `-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
@@ -175,7 +175,7 @@ function _timestampSlug() {
  * @returns {string}
  * @private
  */
-function _buildScopeSlug(scope) {
+function _buildScopeSlug(scope: { requestedGroups: string[]; }): string {
     if (scope.requestedGroups.length > 0) {
         return scope.requestedGroups.map((g) => g.replace(/_$/, "").toLowerCase()).join("+");
     }
@@ -194,11 +194,14 @@ const BACKUP_TRIGGERS = Object.freeze(["SCHEDULED", "MANUAL", "PURGE"]);
  * @returns {string}
  * @private
  */
-function _isoNoMillis(at = new Date()) {
+function _isoNoMillis(at: Date = new Date()): string {
     return at.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 class BackupArchiveService {
+    declare static ADMIN_REVOKE_BACKUP_TABLES: any;
+    declare static BACKUP_TRIGGERS: readonly string[];
+    declare static SCHEMA_VERSION: string;
     /**
      * Builds the `archiveId` for a manifest (e.g.
      * `"bk_2026-07-28T05:59:59Z_e142_NIGHTLY"`). Pure and
@@ -223,7 +226,7 @@ class BackupArchiveService {
      * BackupArchiveService.buildArchiveId({ trigger: "MANUAL" });
      * // -> "bk_2026-07-28T05:59:59Z_manual"
      */
-    static buildArchiveId({ trigger, event = null, eventId = null, at = new Date() }) {
+    static buildArchiveId({ trigger, event = null, eventId = null, at = new Date() }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; event?: string | null; eventId?: number | string | null; at?: Date; }): string {
         if (!BACKUP_TRIGGERS.includes(trigger)) {
             throw new Error(`BackupArchiveService.buildArchiveId: trigger must be one of [${BACKUP_TRIGGERS.join(", ")}], got "${trigger}".`);
         }
@@ -276,7 +279,13 @@ class BackupArchiveService {
      * @throws {Error} Any non-`isSnapshotTooOld` failure from `DataPurgeModel.streamAllTables`/`streamTable` propagates unchanged.
      * @private
      */
-    static async _streamAndHashTables(tables, opts) {
+    static async _streamAndHashTables(tables: string[], opts: { mode: "FULL" | "INCREMENTAL"; previousTableState?: Record<string, { sha256: string; sourceArchiveId: string; }>; archiveIdForLogging?: string; }): Promise<{
+        readConsistent: boolean;
+        tables: Record<string, { state: "INCLUDED" | "UNCHANGED"; rows: number; sha256: string; sourceArchiveId?: string; }>;
+        dataBuffers: Record<string, Buffer>;
+        totalRows: number;
+        highWater: Record<string, string>;
+    }> {
         const mode = opts.mode;
         const previousTableState = opts.previousTableState ?? {};
         const archiveIdForLogging = opts.archiveIdForLogging ?? "(unlabelled)";
@@ -291,7 +300,7 @@ class BackupArchiveService {
             new Map(tables.map((t) => [t, { hash: crypto.createHash("sha256"), lines: [], rowCount: 0, maxPk: 0n }]));
         let acc = freshAccumulators();
 
-        const onBatchFor = (table) => (rows) => {
+        const onBatchFor = (table: any) => (rows: any) => {
             touch("backup-batch");
             const a = acc.get(table);
             const pkCol = appendOnlyPk.get(table);
@@ -327,9 +336,9 @@ class BackupArchiveService {
             }
         }
 
-        const tablesManifest = {};
-        const dataBuffers = {};
-        const highWater = {};
+        const tablesManifest: Record<string, any> = {};
+        const dataBuffers: Record<string, any> = {};
+        const highWater: Record<string, any> = {};
         let totalRows = 0;
         for (const table of tables) {
             const a = acc.get(table);
@@ -375,7 +384,16 @@ class BackupArchiveService {
      *     requestId: req.id,
      * });
      */
-    static async buildBackup({ selection, adminId, requestId = null }) {
+    static async buildBackup({ selection, adminId, requestId = null }: { selection: Record<string, any>; adminId: number | string; requestId?: string | null; }): Promise<{
+        zipBuffer: Buffer;
+        filename: string;
+        token: string;
+        expiresAt: number;
+        confirmPhrase: string;
+        totalRows: number;
+        tableCount: number;
+        rowCounts: Record<string, number>;
+    }> {
         const scope = DataPurgeService.resolveScope(selection);
         const startedAt = Date.now();
         const archiveId = BackupArchiveService.buildArchiveId({ trigger: "PURGE" });
@@ -435,7 +453,7 @@ class BackupArchiveService {
 
         // ── 4. signature.json — HMAC over the sorted file→SHA-256 map ───────
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const fileHashes = {};
+        const fileHashes: Record<string, any> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             fileHashes[name] = crypto.createHash("sha256").update(buf).digest("hex");
         }
@@ -551,7 +569,15 @@ class BackupArchiveService {
         previousTableState = {},
         createdBy = null,
         requestId = null,
-    }) {
+    }: { tables: string[]; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; event?: string | null; eventId?: number | string | null; mode: "FULL" | "INCREMENTAL"; archiveId: string; chain?: { baseArchiveId: string; generation: number; } | null; previousTableState?: Record<string, { sha256: string; sourceArchiveId: string; }>; createdBy?: number | string | null; requestId?: string | null; }): Promise<{
+        zipBuffer: Buffer;
+        manifest: Record<string, any>;
+        archiveId: string;
+        totalRows: number;
+        tableCount: number;
+        includedCount: number;
+        unchangedCount: number;
+    }> {
         if (!Array.isArray(tables) || tables.length === 0) {
             throw new Error("BackupArchiveService.buildScheduledBackup: `tables` must be a non-empty array.");
         }
@@ -629,7 +655,7 @@ class BackupArchiveService {
         // An UNCHANGED table's omitted file is exactly that: omitted, never
         // hashed as if present.
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const fileHashes = {};
+        const fileHashes: Record<string, any> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             fileHashes[name] = crypto.createHash("sha256").update(buf).digest("hex");
         }
@@ -703,7 +729,7 @@ class BackupArchiveService {
      *     BackupArchiveService.ADMIN_REVOKE_BACKUP_TABLES,
      * );
      */
-    static computeEntityScopeHash(entity, tables) {
+    static computeEntityScopeHash(entity: { table: string; keyColumn: string; keyValue: string | number; }, tables: string[]): string {
         const sortedTables = [...new Set(tables)].sort();
         return crypto
             .createHash("sha256")
@@ -753,21 +779,30 @@ class BackupArchiveService {
      *     requestId: req.id,
      * });
      */
-    static async buildEntityBackup({ entity, tableFilters, adminId, requestId = null }) {
+    static async buildEntityBackup({ entity, tableFilters, adminId, requestId = null }: { entity: { table: string; keyColumn: string; keyValue: string | number; }; tableFilters: Array<{ table: string; whereColumns: string[]; whereValue: string | number; }>; adminId: number | string; requestId?: string | null; }): Promise<{
+        zipBuffer: Buffer;
+        filename: string;
+        token: string;
+        expiresAt: number;
+        totalRows: number;
+        tableCount: number;
+        rowCounts: Record<string, number>;
+        scopeHash: string;
+    }> {
         const startedAt = Date.now();
         const tables = tableFilters.map((f) => f.table);
         const scopeHash = BackupArchiveService.computeEntityScopeHash(entity, tables);
         logger.info(dataPurgeMessages.BACKUP_STARTED(adminId, scopeHash, tables.length));
 
-        const rowCounts = {};
+        const rowCounts: Record<string, any> = {};
         /** @type {Record<string, object[]>} */
-        const rowsByTable = {};
+        const rowsByTable: Record<string, Record<string, any>[]> = {};
         /** @type {Record<string, Buffer>} */
-        const dataBuffers = {};
+        const dataBuffers: Record<string, Buffer> = {};
 
         for (const filter of tableFilters) {
             const entry = getEntry(filter.table);
-            const rows = [];
+            const rows: any[] = [];
             const count = await DataPurgeModel.streamTableFiltered(filter.table, {
                 pageSize: STREAM_PAGE_SIZE,
                 whereColumns: filter.whereColumns,
@@ -778,7 +813,7 @@ class BackupArchiveService {
             });
             rowCounts[filter.table] = count;
             rowsByTable[filter.table] = rows;
-            const jsonl = rows.length > 0 ? rows.map((r) => JSON.stringify(r)).join("\n") + "\n" : "";
+            const jsonl: any[] = rows.length > 0 ? rows.map((r) => JSON.stringify(r)).join("\n") + "\n" : "";
             dataBuffers[`data/${entry.table}.jsonl`] = Buffer.from(jsonl, "utf8");
         }
 
@@ -803,7 +838,7 @@ class BackupArchiveService {
         const xlsxBuffer = await BackupArchiveService._buildReadableWorkbookFromRows(tables, rowsByTable);
 
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const fileHashes = {};
+        const fileHashes: Record<string, any> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             fileHashes[name] = crypto.createHash("sha256").update(buf).digest("hex");
         }
@@ -847,7 +882,7 @@ class BackupArchiveService {
      * @returns {Promise<Buffer>}
      * @private
      */
-    static async _buildReadableWorkbook(tables, rowCounts) {
+    static async _buildReadableWorkbook(tables: string[], rowCounts: Record<string, number>): Promise<Buffer> {
         const rowCap = parseInt(process.env.BACKUP_XLSX_ROW_CAP, 10) || DEFAULT_XLSX_ROW_CAP;
 
         const workbook = new ExcelJS.Workbook();
@@ -911,7 +946,7 @@ class BackupArchiveService {
      * @returns {Promise<Buffer>}
      * @private
      */
-    static async _buildReadableWorkbookFromRows(tables, rowsByTable) {
+    static async _buildReadableWorkbookFromRows(tables: string[], rowsByTable: Record<string, Record<string, any>[]>): Promise<Buffer> {
         const rowCap = parseInt(process.env.BACKUP_XLSX_ROW_CAP, 10) || DEFAULT_XLSX_ROW_CAP;
 
         const workbook = new ExcelJS.Workbook();
@@ -955,9 +990,9 @@ class BackupArchiveService {
      * @returns {Promise<Buffer>}
      * @private
      */
-    static async _buildZip(files) {
+    static async _buildZip(files: Record<string, Buffer>): Promise<Buffer> {
         return new Promise((resolve, reject) => {
-            const chunks = [];
+            const chunks: any[] = [];
             const pass = new PassThrough();
             pass.on("data", (chunk) => {
                 touch("backup-zip");

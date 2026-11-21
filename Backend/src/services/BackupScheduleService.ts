@@ -105,10 +105,10 @@ class BackupScheduleService {
      *
      * @type {boolean}
      */
-    static _backupRunning = false;
+    static _backupRunning: boolean = false;
 
     /** @type {BackupEventSource} */
-    static _eventSource = EMPTY_EVENT_SOURCE;
+    static _eventSource: BackupEventSource = EMPTY_EVENT_SOURCE;
 
     /**
      * Registers the schedule a project backs up on. Call once at boot, before
@@ -118,7 +118,7 @@ class BackupScheduleService {
      * @returns {void}
      * @throws {TypeError} When either method is missing.
      */
-    static registerEventSource(source) {
+    static registerEventSource(source: BackupEventSource): void {
         if (typeof source?.getDueEvents !== "function" || typeof source?.getUpcomingEvents !== "function") {
             throw new TypeError("BackupScheduleService.registerEventSource: source must implement getDueEvents and getUpcomingEvents.");
         }
@@ -132,7 +132,7 @@ class BackupScheduleService {
      * @param {number} [horizonMs]
      * @returns {Promise<BackupScheduleEvent[]>}
      */
-    static async getUpcomingEvents(horizonMs) {
+    static async getUpcomingEvents(horizonMs: number): Promise<BackupScheduleEvent[]> {
         return BackupScheduleService._eventSource.getUpcomingEvents(horizonMs);
     }
 
@@ -140,7 +140,7 @@ class BackupScheduleService {
      * @returns {boolean} `false` only when `DB_BACKUP_ENABLED` is the exact
      *   string `"false"`.
      */
-    static isEnabled() {
+    static isEnabled(): boolean {
         return process.env.DB_BACKUP_ENABLED !== "false";
     }
 
@@ -158,7 +158,13 @@ class BackupScheduleService {
      *   pruned: string[],
      * }>}
      */
-    static async triggerScheduledBackup(label = "cron") {
+    static async triggerScheduledBackup(label: string = "cron"): Promise<{
+        skipped: false | "disabled" | "already-running";
+        due: number;
+        ran: Array<{ eventId: number | string; event: string; archiveId: string; mode: "FULL" | "INCREMENTAL"; }>;
+        failed: Array<{ eventId: number | string; event: string; error: string; }>;
+        pruned: string[];
+    }> {
         if (!BackupScheduleService.isEnabled()) {
             logger.info(dataBackupMessages.SCHEDULE_DISABLED(label));
             return { skipped: "disabled", due: 0, ran: [], failed: [], pruned: [] };
@@ -184,7 +190,7 @@ class BackupScheduleService {
      * @returns {Promise<{ skipped: false, due: number, ran: Array<object>, failed: Array<object>, pruned: string[] }>}
      * @private
      */
-    static async _runDueBackups(label) {
+    static async _runDueBackups(label: string): Promise<{ skipped: false; due: number; ran: Array<Record<string, any>>; failed: Array<Record<string, any>>; pruned: string[]; }> {
         const windowHours = Number(process.env.DB_BACKUP_CATCHUP_WINDOW_HOURS) || DEFAULT_CATCHUP_WINDOW_HOURS;
         const due = await BackupScheduleService._eventSource.getDueEvents(windowHours);
 
@@ -235,14 +241,14 @@ class BackupScheduleService {
      * @returns {Promise<string[]>} `archiveId`s deleted this run.
      * @private
      */
-    static async _pruneExpiredChains(label) {
+    static async _pruneExpiredChains(label: string): Promise<string[]> {
         const retentionDays = Number(process.env.DB_BACKUP_RETENTION_DAYS) || DEFAULT_RETENTION_DAYS;
         const oldestKeptMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
 
         const index = await BackupStoreService.listArchives();
 
         /** @type {Map<string, object[]>} */
-        const chains = new Map();
+        const chains: Map<string, Record<string, any>[]> = new Map();
         for (const entry of index) {
             if (entry.trigger === "PURGE" || !entry.chain) continue;
             const key = entry.chain.baseArchiveId;
@@ -277,7 +283,7 @@ class BackupScheduleService {
     // ─── Pre-scheduled-backup lockout window ─────────────────────────────────
 
     /** @returns {number} `DB_BACKUP_LOCKOUT_WINDOW_MS`, or the 60 s default. */
-    static getLockoutWindowMs() {
+    static getLockoutWindowMs(): number {
         return Number(process.env.DB_BACKUP_LOCKOUT_WINDOW_MS) || DEFAULT_LOCKOUT_WINDOW_MS;
     }
 
@@ -290,7 +296,7 @@ class BackupScheduleService {
      * @param {number} [lookaheadMs] - horizon override (tests)
      * @returns {Promise<number|null>} null when nothing is scheduled in the horizon
      */
-    static async msUntilNextScheduledBackup(lookaheadMs) {
+    static async msUntilNextScheduledBackup(lookaheadMs: number): Promise<number | null> {
         const eventDelayMs = parseInt(process.env.DB_BACKUP_EVENT_DELAY_MS, 10) || DEFAULT_EVENT_DELAY_MS;
         const lockoutWindowMs = BackupScheduleService.getLockoutWindowMs();
         // The horizon must clear both the lockout window and the event delay.
@@ -323,7 +329,7 @@ class BackupScheduleService {
      *
      * @returns {Promise<LockoutStatus>}
      */
-    static async getLockoutStatus() {
+    static async getLockoutStatus(): Promise<LockoutStatus> {
         const lockoutWindowMs = BackupScheduleService.getLockoutWindowMs();
 
         if (BackupScheduleService._backupRunning) {
@@ -343,7 +349,7 @@ class BackupScheduleService {
      * @param {LockoutStatus} status
      * @returns {string|null} null when `status.active` is false
      */
-    static describeLockout(status) {
+    static describeLockout(status: LockoutStatus): string | null {
         if (!status?.active) return null;
         if (status.reason === "running") {
             return "A scheduled backup is currently running. Try again once it completes.";

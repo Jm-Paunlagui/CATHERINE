@@ -65,8 +65,8 @@ import { CacheMiddleware, CacheKeyBuilder, registry } from "../middleware/cache"
 const auditStore = registry.resolve("auditLog");
 
 // ── Access predicates (inline, consistent with original file style) ───────────
-const isAdminOrSuperAdmin = (user) => ["ADMIN", "SUPER_ADMIN"].includes(user.role);
-const isSuperAdmin        = (user) => user.role === "SUPER_ADMIN";
+const isAdminOrSuperAdmin = (user: any) => ["ADMIN", "SUPER_ADMIN"].includes(user.role);
+const isSuperAdmin        = (user: any) => user.role === "SUPER_ADMIN";
 
 // ── Static-segment routes must precede /:requestId/logs ──────────────────────
 // Express matches routes in declaration order. /stats, /export/excel, and

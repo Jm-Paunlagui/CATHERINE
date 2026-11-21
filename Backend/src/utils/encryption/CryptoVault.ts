@@ -45,7 +45,7 @@ const SymmetricCrypto = (() => {
     });
 
     // ─── Helper: Map algorithm enum → Node.js cipher name ───
-    function getCipherName(algorithmID, keyLength) {
+    function getCipherName(algorithmID: any, keyLength: any) {
         switch (algorithmID) {
             case EncryptionAlgorithm.Des:
                 return "des-cbc";
@@ -63,7 +63,7 @@ const SymmetricCrypto = (() => {
     }
 
     // ─── Helper: Default key/IV sizes (bytes) ───
-    function getDefaultSizes(algorithmID) {
+    function getDefaultSizes(algorithmID: any) {
         switch (algorithmID) {
             case EncryptionAlgorithm.Des:
                 return { keySize: 8, ivSize: 8 };
@@ -80,7 +80,10 @@ const SymmetricCrypto = (() => {
 
     // ─── EncryptTransformer ───
     class EncryptTransformer {
-        constructor(algId) {
+        declare _key: null;
+        declare _iv: null;
+        declare algorithmID: any;
+        constructor(algId: any) {
             this.algorithmID = algId;
             this._iv = null;
             this._key = null;
@@ -96,7 +99,7 @@ const SymmetricCrypto = (() => {
             return this._key;
         }
 
-        getCryptoServiceProvider(bytesKey) {
+        getCryptoServiceProvider(bytesKey: any) {
             const { keySize, ivSize } = getDefaultSizes(this.algorithmID);
             const key = bytesKey
                 ? Buffer.from(bytesKey)
@@ -113,16 +116,18 @@ const SymmetricCrypto = (() => {
 
     // ─── DecryptTransformer ───
     class DecryptTransformer {
-        constructor(algId) {
+        declare _iv: null;
+        declare algorithmID: any;
+        constructor(algId: any) {
             this.algorithmID = algId;
             this._iv = null;
         }
 
-        set IV(v) {
+        set IV(v: any) {
             this._iv = v;
         }
 
-        getCryptoServiceProvider(bytesKey) {
+        getCryptoServiceProvider(bytesKey: any) {
             const key = Buffer.from(bytesKey);
             const iv = Buffer.from(this._iv);
             const cipherName = getCipherName(this.algorithmID, key.length);
@@ -132,7 +137,10 @@ const SymmetricCrypto = (() => {
 
     // ─── Encryptor ───
     class Encryptor {
-        constructor(algId) {
+        declare _key: null;
+        declare _iv: null;
+        declare transformer: EncryptTransformer;
+        constructor(algId: any) {
             this.transformer = new EncryptTransformer(algId);
             this._iv = null;
             this._key = null;
@@ -149,7 +157,7 @@ const SymmetricCrypto = (() => {
             return this._key;
         }
 
-        encrypt(bytesData, bytesKey) {
+        encrypt(bytesData: any, bytesKey: any) {
             try {
                 this.transformer.IV = this._iv;
                 const cipher =
@@ -172,16 +180,18 @@ const SymmetricCrypto = (() => {
 
     // ─── Decryptor ───
     class Decryptor {
-        constructor(algId) {
+        declare _iv: null;
+        declare transformer: DecryptTransformer;
+        constructor(algId: any) {
             this.transformer = new DecryptTransformer(algId);
             this._iv = null;
         }
 
-        set IV(v) {
+        set IV(v: any) {
             this._iv = v;
         }
 
-        decrypt(bytesData, bytesKey) {
+        decrypt(bytesData: any, bytesKey: any) {
             try {
                 this.transformer.IV = this._iv;
                 const decipher =
@@ -201,7 +211,7 @@ const SymmetricCrypto = (() => {
 
     // ─── SecurityCryptHelper ───
     class SecurityCryptHelper {
-        static encryptText(text) {
+        static encryptText(text: any) {
             try {
                 const initkey = process.env.PASSWORD_KEY;
                 const prefix = initkey.padEnd(5, "x").substring(0, 5);
@@ -220,7 +230,7 @@ const SymmetricCrypto = (() => {
             }
         }
 
-        static decryptText(base64CipherText) {
+        static decryptText(base64CipherText: any) {
             try {
                 const initkey = process.env.PASSWORD_KEY;
                 const prefix = initkey.padEnd(5, "x").substring(0, 5);
@@ -239,7 +249,7 @@ const SymmetricCrypto = (() => {
             }
         }
 
-        static generateCodeID(text) {
+        static generateCodeID(text: any) {
             const randomBytes = crypto
                 .randomBytes(6)
                 .toString("base64")
@@ -302,7 +312,7 @@ const resolveMode = () => {
  * @throws {Error} When PASSWORD_HASH_MODE is weak and PASSWORD_ENCRYPTION_MODE
  *   is absent, empty, or not one of 'bcrypt' | 'argon2'.
  */
-const resolveAdminMode = () => {
+const resolveAdminMode = (): 'bcrypt' | 'argon2' => {
     const hashMode = getMode(); // triggers normal mode validation first
 
     // Fast path: PASSWORD_HASH_MODE is already strong — use it directly.
@@ -333,13 +343,13 @@ const resolveAdminMode = () => {
 };
 
 // Cache the resolved admin mode (lazy, same pattern as _mode).
-let _adminMode = null;
+let _adminMode: any = null;
 const getAdminMode = () => {
     if (!_adminMode) _adminMode = resolveAdminMode();
     return _adminMode;
 };
 
-const parseEnvInt = (key, fallback, min, max) => {
+const parseEnvInt = (key: any, fallback: any, min: any, max: any) => {
     const raw = process.env[key];
     if (!raw) return fallback;
     const val = parseInt(raw, 10);
@@ -412,11 +422,11 @@ const resolveArgon2Pepper = () => {
 };
 
 // ─── Lazy-init singletons (resolved on first use, not at import time) ───
-let _mode = null;
-let _bcryptRounds = null;
-let _argon2Config = null;
-let _argon2Pepper = null;
-let _signingSecret = null;
+let _mode: any = null;
+let _bcryptRounds: any = null;
+let _argon2Config: any = null;
+let _argon2Pepper: any = null;
+let _signingSecret: any = null;
 
 const getMode = () => {
     if (!_mode) _mode = resolveMode();
@@ -466,13 +476,13 @@ const MAX_PASSWORD_BYTES = parseEnvInt(
 // HMAC-SHA256 here is a keyed pepper transformation, NOT the password hash.
 // Computational hardness is enforced by Argon2 in the caller; this step only
 // binds a server-side secret to the value before it reaches Argon2.
-const applyPepper = (password) =>
+const applyPepper = (password: any) =>
     crypto.createHmac("sha256", getArgon2Pepper()).update(password).digest();
 
 /** bcrypt consumes only the first 72 bytes of its input. */
 const BCRYPT_MAX_PASSWORD_BYTES = 72;
 
-const validatePassword = (value, label = "Password") => {
+const validatePassword = (value: any, label = "Password") => {
     if (!value || typeof value !== "string") {
         throw new TypeError(
             `[CryptoVault] ${label} must be a non-empty string.`,
@@ -490,7 +500,7 @@ const validatePassword = (value, label = "Password") => {
 // security-critical operations (Argon2, TripleDES, HMAC-SHA256 signing). Using
 // console.* in the fallback would emit sensitive operational events outside the
 // structured log pipeline, making them invisible in production environments.
-let _logger;
+let _logger: any;
 try {
     _logger = require("../logger").logger;
 } catch {
@@ -514,7 +524,7 @@ class CryptoVault {
      * @returns {Promise<string>} - The hashed or encrypted password.
      * @throws {TypeError|RangeError|Error}
      */
-    static async hashPassword(password) {
+    static async hashPassword(password: string): Promise<string> {
         validatePassword(password);
         const mode = getMode();
 
@@ -571,7 +581,7 @@ class CryptoVault {
      * @param {string} hashedPassword
      * @returns {Promise<boolean>}
      */
-    static async verifyPassword(password, hashedPassword) {
+    static async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
         validatePassword(password);
 
         if (!hashedPassword || typeof hashedPassword !== "string") {
@@ -644,7 +654,7 @@ class CryptoVault {
      *   for a password being verified.
      * @returns {number}
      */
-    static maxPasswordBytes({ forHash = false } = {}) {
+    static maxPasswordBytes({ forHash = false }: { forHash?: boolean; } = {}): number {
         return forHash && getAdminMode() === "bcrypt"
             ? BCRYPT_MAX_PASSWORD_BYTES
             : MAX_PASSWORD_BYTES;
@@ -662,7 +672,7 @@ class CryptoVault {
      * @returns {Promise<string>} Strong hash string.
      * @throws {TypeError|RangeError|Error}
      */
-    static async hashAdminPassword(password) {
+    static async hashAdminPassword(password: string): Promise<string> {
         validatePassword(password);
         const mode = getAdminMode(); // bcrypt | argon2 only
 
@@ -729,7 +739,7 @@ class CryptoVault {
      * @param {string} storedHash - Stored admin PASSWORD column value.
      * @returns {Promise<{ matched: boolean, newHash: string|null, temporary?: true, expired?: boolean, expiresAt?: number|null }>}
      */
-    static async verifyAdminPassword(password, storedHash) {
+    static async verifyAdminPassword(password: string, storedHash: string): Promise<{ matched: boolean; newHash: string | null; temporary?: true; expired?: boolean; expiresAt?: number | null; }> {
         validatePassword(password);
 
         if (!storedHash || typeof storedHash !== "string") {
@@ -814,7 +824,7 @@ class CryptoVault {
      * @param {string} storedHash
      * @returns {boolean}
      */
-    static adminNeedsRehash(storedHash) {
+    static adminNeedsRehash(storedHash: string): boolean {
         if (!storedHash) return true;
         // Legacy TripleDES / plain — always needs rehash
         if (
@@ -852,7 +862,7 @@ class CryptoVault {
      * @param {string} hashedPassword
      * @returns {boolean}
      */
-    static needsRehash(hashedPassword) {
+    static needsRehash(hashedPassword: string): boolean {
         if (getMode() !== "argon2") return false;
         if (typeof hashedPassword !== "string" || !hashedPassword) return false;
         // A bcrypt / legacy hash under argon2 mode is exactly the "rehash me"
@@ -883,7 +893,7 @@ class CryptoVault {
      * @param {string} bcryptHash
      * @returns {Promise<{ matched: boolean, argon2Hash: string|null, requiresReset?: boolean }>}
      */
-    static async migrateFromBcrypt(password, bcryptHash) {
+    static async migrateFromBcrypt(password: string, bcryptHash: string): Promise<{ matched: boolean; argon2Hash: string | null; requiresReset?: boolean; }> {
         validatePassword(password);
 
         if (!bcryptHash.startsWith("$2b$") && !bcryptHash.startsWith("$2a$")) {
@@ -912,7 +922,7 @@ class CryptoVault {
      * Returns the active mode and configuration snapshot.
      * @returns {object}
      */
-    static get config() {
+    static get config(): Record<string, any> {
         const mode = getMode();
         const base = { mode };
 
@@ -935,7 +945,7 @@ class CryptoVault {
      * Exposes the embedded SymmetricCrypto engine for direct use.
      * @returns {object}
      */
-    static get symmetric() {
+    static get symmetric(): Record<string, any> {
         return SymmetricCrypto;
     }
 
@@ -976,7 +986,7 @@ class CryptoVault {
      * CryptoVault.buildPayload('USERS', { ROLE: 'admin', ID: 1, PW: hash });
      * // → 'USERS:ID=1|PW=<hash>|ROLE=admin'   (keys always sorted A→Z)
      */
-    static buildPayload(context, fields) {
+    static buildPayload(context: string, fields: Record<string, unknown>): string {
         if (!context || typeof context !== "string") {
             throw new TypeError(
                 "[CryptoVault] buildPayload: context must be a non-empty string.",
@@ -1005,7 +1015,7 @@ class CryptoVault {
      * @param {string} payload
      * @returns {Promise<string>} 64-character hex string
      */
-    static async signData(payload) {
+    static async signData(payload: string): Promise<string> {
         if (!payload || typeof payload !== "string") {
             throw new TypeError(
                 "[CryptoVault] signData: payload must be a non-empty string.",
@@ -1026,7 +1036,7 @@ class CryptoVault {
      * @param {string} signature - 64-char hex string returned by signData()
      * @returns {Promise<boolean>}
      */
-    static async verifySignature(payload, signature) {
+    static async verifySignature(payload: string, signature: string): Promise<boolean> {
         if (!payload || typeof payload !== "string") {
             throw new TypeError(
                 "[CryptoVault] verifySignature: payload must be a non-empty string.",
@@ -1077,7 +1087,7 @@ class CryptoVault {
      *     USER_ID: 42, USERNAME: 'jsmith', ROLE: 'editor',
      * });
      */
-    static async signRecord(context, fields) {
+    static async signRecord(context: string, fields: Record<string, unknown>): Promise<string> {
         return CryptoVault.signData(CryptoVault.buildPayload(context, fields));
     }
 
@@ -1095,7 +1105,7 @@ class CryptoVault {
      *     USERNAME: row.USERNAME, PASSWORD: row.PASSWORD, ROLE: row.ROLE,
      * }, row.SYSSIGNATURE);
      */
-    static async verifyRecord(context, fields, signature) {
+    static async verifyRecord(context: string, fields: Record<string, unknown>, signature: string | null | undefined): Promise<boolean> {
         if (!signature) return false;
         // No fallback to the pre-escape ("|" unescaped) form: it was removed
         // once a production count found zero signed rows with a "|" in any
@@ -1124,7 +1134,7 @@ class CryptoVault {
      * const canonical = `${row.ID}|${row.ORDER_NO}|${row.USERNAME}|${row.AMOUNT}|${row.STATUS}|${row.CREATED_DATE}`;
      * const ok = CryptoVault.verifyRowHash(canonical, row.ROW_HASH);
      */
-    static verifyRowHash(canonicalInput, storedHash) {
+    static verifyRowHash(canonicalInput: string, storedHash: string): boolean {
         if (!canonicalInput || !storedHash) return false;
         const computed = crypto
             .createHash("sha256")
@@ -1172,7 +1182,7 @@ class BCryptAdapter {
      * @param {string} password
      * @returns {Promise<string>}
      */
-    static async hashPassword(password) {
+    static async hashPassword(password: string): Promise<string> {
         if (!password || typeof password !== "string")
             throw new TypeError(
                 "[BCryptAdapter] Password must be a non-empty string.",
@@ -1192,7 +1202,7 @@ class BCryptAdapter {
      * @param {string} hashedPassword
      * @returns {Promise<boolean>}
      */
-    static async verifyPassword(password, hashedPassword) {
+    static async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
         if (!password || typeof password !== "string")
             throw new TypeError(
                 "[BCryptAdapter] Password must be a non-empty string.",
@@ -1237,7 +1247,7 @@ class Argon2Adapter {
      * @param {string} password
      * @returns {Promise<string>}
      */
-    static async hashPassword(password) {
+    static async hashPassword(password: string): Promise<string> {
         return CryptoVault.hashPassword(password);
     }
 
@@ -1249,7 +1259,7 @@ class Argon2Adapter {
      * @param {string} hashedPassword
      * @returns {Promise<boolean>}
      */
-    static async verifyPassword(password, hashedPassword) {
+    static async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
         return CryptoVault.verifyPassword(password, hashedPassword);
     }
 
@@ -1261,7 +1271,7 @@ class Argon2Adapter {
      * @param {string} hashedPassword
      * @returns {boolean}
      */
-    static needsRehash(hashedPassword) {
+    static needsRehash(hashedPassword: string): boolean {
         return CryptoVault.needsRehash(hashedPassword);
     }
 
@@ -1274,7 +1284,7 @@ class Argon2Adapter {
      * @param {string} bcryptHash
      * @returns {Promise<{ matched: boolean, argon2Hash: string|null, requiresReset?: boolean }>}
      */
-    static async migrateFromBcrypt(password, bcryptHash) {
+    static async migrateFromBcrypt(password: string, bcryptHash: string): Promise<{ matched: boolean; argon2Hash: string | null; requiresReset?: boolean; }> {
         return CryptoVault.migrateFromBcrypt(password, bcryptHash);
     }
 
@@ -1306,8 +1316,8 @@ if (import.meta.main) {
     const TEST_PASSWORD = "SelfTest-Passw0rd!";
 
     const hr = () => console.log("─".repeat(65));
-    const pass = (label) => console.log(`    ${label}`);
-    const fail = (label, err) =>
+    const pass = (label: any) => console.log(`    ${label}`);
+    const fail = (label: any, err: any) =>
         console.error(`  ❌  ${label}: ${err?.constructor?.name ?? "Error"}`);
 
     const runTests = async () => {

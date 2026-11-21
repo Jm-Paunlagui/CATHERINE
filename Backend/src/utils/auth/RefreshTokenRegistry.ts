@@ -31,11 +31,11 @@ const DEFAULT_MARKER_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 class RefreshTokenRegistry {
     /** @type {Map<string, {familyId: string, userKey: string, expiresAtMs: number, used: boolean, replacedBy: string|null}>} */
-    #entries = new Map();
+    #entries: Map<string, { familyId: string; userKey: string; expiresAtMs: number; used: boolean; replacedBy: string | null; }> = new Map();
     /** @type {Map<string, {revoked: boolean, expiresAtMs: number, jtis: Set<string>, userKey: string|null}>} */
-    #families = new Map();
+    #families: Map<string, { revoked: boolean; expiresAtMs: number; jtis: Set<string>; userKey: string | null; }> = new Map();
     /** @type {Map<string, Set<string>>} */
-    #users = new Map();
+    #users: Map<string, Set<string>> = new Map();
     #maxEntries;
     #now;
     #lastSweep = -Infinity;
@@ -45,13 +45,13 @@ class RefreshTokenRegistry {
      * @param {number} [options.maxEntries=REFRESH_REGISTRY_LIMITS.MAX_ENTRIES]
      * @param {() => number} [options.now=Date.now]
      */
-    constructor({ maxEntries = REFRESH_REGISTRY_LIMITS.MAX_ENTRIES, now = Date.now } = {}) {
+    constructor({ maxEntries = REFRESH_REGISTRY_LIMITS.MAX_ENTRIES, now = Date.now }: { maxEntries?: number; now?: () => number; } = {}) {
         this.#maxEntries = maxEntries;
         this.#now = now;
     }
 
     /** @returns {number} number of tracked refresh tokens */
-    get size() {
+    get size(): number {
         return this.#entries.size;
     }
 
@@ -64,7 +64,7 @@ class RefreshTokenRegistry {
      * @param {string} rec.userKey
      * @param {number} rec.expiresAtMs
      */
-    register({ jtiHash, familyId, userKey, expiresAtMs }) {
+    register({ jtiHash, familyId, userKey, expiresAtMs }: { jtiHash: string; familyId: string; userKey: string; expiresAtMs: number; }) {
         if (this.#entries.has(jtiHash)) return;
         if (this.#entries.size >= this.#maxEntries) this.#makeRoom();
 
@@ -108,7 +108,7 @@ class RefreshTokenRegistry {
      * @returns {"ok"|"reused"|"revoked"|"unknown"}
      *   `reused` also marks the whole family revoked.
      */
-    consume(jtiHash, replacedByHash, nowMs = this.#now(), familyId = undefined) {
+    consume(jtiHash: string, replacedByHash: string | null, nowMs: number = this.#now(), familyId: string = undefined): "ok" | "reused" | "revoked" | "unknown" {
         const entry = this.#entries.get(jtiHash);
         const fid = entry?.familyId ?? familyId;
         if (fid !== undefined && this.#families.get(fid)?.revoked) return "revoked";
@@ -134,7 +134,7 @@ class RefreshTokenRegistry {
      * @param {string|null} replacedByHash - the value passed to `consume`
      * @returns {boolean} true when the consume was undone
      */
-    unconsume(jtiHash, replacedByHash) {
+    unconsume(jtiHash: string, replacedByHash: string | null): boolean {
         const entry = this.#entries.get(jtiHash);
         if (!entry || !entry.used || entry.replacedBy !== (replacedByHash ?? null)) return false;
         entry.used = false;
@@ -150,7 +150,7 @@ class RefreshTokenRegistry {
      * @param {number} [nowMs]
      * @param {number} [ttlMs] - how long to remember the revocation
      */
-    revokeFamily(familyId, nowMs = this.#now(), ttlMs = DEFAULT_MARKER_TTL_MS) {
+    revokeFamily(familyId: string, nowMs: number = this.#now(), ttlMs: number = DEFAULT_MARKER_TTL_MS) {
         let fam = this.#families.get(familyId);
         if (!fam) {
             fam = { revoked: true, expiresAtMs: nowMs + ttlMs, jtis: new Set(), userKey: null };
@@ -169,7 +169,7 @@ class RefreshTokenRegistry {
      * @param {number} [ttlMs]
      * @returns {number} families revoked
      */
-    revokeUser(userKey, nowMs = this.#now(), ttlMs = DEFAULT_MARKER_TTL_MS) {
+    revokeUser(userKey: string, nowMs: number = this.#now(), ttlMs: number = DEFAULT_MARKER_TTL_MS): number {
         const fids = this.#users.get(userKey);
         if (!fids) return 0;
         for (const fid of fids) this.revokeFamily(fid, nowMs, ttlMs);
@@ -182,7 +182,7 @@ class RefreshTokenRegistry {
      * @param {string} userKey - canonicalUserKey()
      * @returns {string[]}
      */
-    familiesOfUser(userKey) {
+    familiesOfUser(userKey: string): string[] {
         return [...(this.#users.get(userKey) ?? [])];
     }
 
@@ -213,7 +213,7 @@ class RefreshTokenRegistry {
         }
     }
 
-    #dropEntry(hash, entry) {
+    #dropEntry(hash: any, entry: any) {
         this.#entries.delete(hash);
         const fam = this.#families.get(entry.familyId);
         if (!fam) return;
@@ -223,7 +223,7 @@ class RefreshTokenRegistry {
         if (fam.jtis.size === 0 && !fam.revoked) this.#dropFamily(entry.familyId, fam);
     }
 
-    #dropFamily(fid, fam) {
+    #dropFamily(fid: any, fam: any) {
         this.#families.delete(fid);
         if (fam.userKey === null) return;
         const fids = this.#users.get(fam.userKey);

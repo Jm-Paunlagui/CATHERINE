@@ -22,10 +22,10 @@ import crypto from "crypto";
 const KEY_INFO = "app-alert-signature-v1";
 
 /** @type {Buffer|null} */
-let _cachedKey = null;
+let _cachedKey: Buffer | null = null;
 
 /** @returns {Buffer} 32-byte HMAC key derived from DATA_SIGNING_SECRET. */
-function getKey() {
+function getKey(): Buffer {
     if (_cachedKey) return _cachedKey;
     const secret = process.env.DATA_SIGNING_SECRET || "unkeyed-dev";
     _cachedKey = Buffer.from(crypto.hkdfSync("sha256", secret, "", KEY_INFO, 32));
@@ -43,7 +43,7 @@ function getKey() {
  * @param {Array<number|string>} members - Identifiers in the finding (e.g. GIDs).
  * @returns {string} 64 lowercase hex characters.
  */
-function computeAlertSignature(kind, members) {
+function computeAlertSignature(kind: string, members: Array<number | string>): string {
     const copy = Array.from(members ?? []);
     const numeric = copy.every((m) => m !== "" && Number.isFinite(Number(m)));
     copy.sort(numeric ? (a, b) => Number(a) - Number(b) : (a, b) => (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0));

@@ -18,7 +18,7 @@
 
 
 
-function _loadAdapter(engine) {
+function _loadAdapter(engine: any) {
   switch (engine.toLowerCase()) {
     case "oracle":
       return require("./adapters/oracle");
@@ -39,7 +39,7 @@ function _loadAdapter(engine) {
  * Resolution order: argument → DB_TYPE env var → 'oracle'
  * @param {string} [engine]
  */
-function createAdapter(engine) {
+function createAdapter(engine: string) {
   return _loadAdapter((engine || process.env.DB_TYPE || "oracle").trim());
 }
 

@@ -54,7 +54,7 @@
  * anything but `code`.
  * @type {Readonly<Record<string, CurrencyEntry>>}
  */
-const CURRENCIES = Object.freeze({
+const CURRENCIES: Readonly<Record<string, CurrencyEntry>> = Object.freeze({
     PHP: { code: "PHP", displayScale: 2, symbol: "₱", locale: "en-PH", name: "Philippine Peso" },
     USD: { code: "USD", displayScale: 2, symbol: "$", locale: "en-US", name: "US Dollar" },
     EUR: { code: "EUR", displayScale: 2, symbol: "€", locale: "de-DE", name: "Euro" },
@@ -75,7 +75,7 @@ const CURRENCIES = Object.freeze({
 });
 
 /** @type {ReadonlyArray<string>} */
-const CURRENCY_CODES = Object.freeze(Object.keys(CURRENCIES));
+const CURRENCY_CODES: ReadonlyArray<string> = Object.freeze(Object.keys(CURRENCIES));
 
 /**
  * True when `code` is a registered ISO 4217 code. Case-sensitive: codes are
@@ -83,7 +83,7 @@ const CURRENCY_CODES = Object.freeze(Object.keys(CURRENCIES));
  * @param {*} code
  * @returns {boolean}
  */
-function isValidCurrency(code) {
+function isValidCurrency(code: any): boolean {
     return typeof code === "string" && Object.prototype.hasOwnProperty.call(CURRENCIES, code);
 }
 
@@ -94,7 +94,7 @@ function isValidCurrency(code) {
  * @param {string} code
  * @returns {CurrencyEntry}
  */
-function getCurrency(code) {
+function getCurrency(code: string): CurrencyEntry {
     if (!isValidCurrency(code)) {
         throw new Error(
             `Unknown currency "${code}". Registered: ${CURRENCY_CODES.join(", ")}.`,
@@ -109,7 +109,7 @@ function getCurrency(code) {
  * @param {string} code
  * @returns {number}
  */
-function getDisplayScale(code) {
+function getDisplayScale(code: string): number {
     return getCurrency(code).displayScale;
 }
 

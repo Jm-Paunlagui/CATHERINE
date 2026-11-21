@@ -50,7 +50,7 @@ import { logger } from "../utils/logger";
  * @param {number} fallbackValue
  * @returns {number}
  */
-function _envInt(name, fallbackValue) {
+function _envInt(name: string, fallbackValue: number): number {
     const n = Number(process.env[name]);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallbackValue;
 }
@@ -70,6 +70,18 @@ const HEALTH_STREAM_MAX_PER_IP = _envInt("HEALTH_STREAM_MAX_PER_IP", 50);
 const HEALTH_STREAM_MAX_TOTAL = _envInt("HEALTH_STREAM_MAX_TOTAL", 2000);
 
 class HealthStreamHub {
+    declare HEALTH_STREAM_MAX_PER_IP: number;
+    declare HEALTH_STREAM_RETRY_MS: number;
+    declare HEALTH_STREAM_HEARTBEAT_MS: number;
+    declare HealthStreamHub: typeof HealthStreamHub;
+    declare _pending: boolean;
+    declare _evaluating: boolean;
+    declare _unsubs: never[];
+    declare _evalTimer: null;
+    declare _heartbeat: null;
+    declare _last: null;
+    declare _perIp: Map<any, any>;
+    declare _clients: Map<any, any>;
     constructor() {
         /** @type {Map<import('express').Response, { ip: string, teardown: () => void }>} */
         this._clients = new Map();
@@ -85,7 +97,7 @@ class HealthStreamHub {
     }
 
     /** @returns {number} open streams on this worker. */
-    size() {
+    size(): number {
         return this._clients.size;
     }
 
@@ -94,7 +106,7 @@ class HealthStreamHub {
      * @param {string} ip
      * @returns {boolean}
      */
-    canAccept(ip) {
+    canAccept(ip: string): boolean {
         if (this._clients.size >= HEALTH_STREAM_MAX_TOTAL) return false;
         return (this._perIp.get(ip) ?? 0) < HEALTH_STREAM_MAX_PER_IP;
     }
@@ -106,7 +118,7 @@ class HealthStreamHub {
      * @param {string} ip
      * @returns {void}
      */
-    open(req, res, ip) {
+    open(req: import('express').Request, res: import('express').Response, ip: string): void {
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache, no-transform");
         res.setHeader("Connection", "keep-alive");
@@ -134,7 +146,7 @@ class HealthStreamHub {
     }
 
     /** @param {import('express').Response} res */
-    _remove(res) {
+    _remove(res: import('express').Response) {
         const meta = this._clients.get(res);
         if (!meta) return;
         this._clients.delete(res);
@@ -150,7 +162,7 @@ class HealthStreamHub {
             // Only a check that contradicts the last verdict is worth a fresh
             // evaluation: a failure while "ready", or a success while "not ready".
             this._unsubs.push(
-                db.onPoolHealthCheck(({ ok }) => {
+                db.onPoolHealthCheck(({ ok }: any) => {
                     if (!this._last || this._last.ready !== ok) this._requestEvaluate();
                 }),
             );
@@ -207,24 +219,24 @@ class HealthStreamHub {
      * Broadcasts `status` when the verdict differs from the last one sent.
      * @param {{ ready: boolean, cause: "database"|null }} verdict
      */
-    _publish(verdict) {
+    _publish(verdict: { ready: boolean; cause: "database" | null; }) {
         const changed = !this._last || this._last.ready !== verdict.ready || this._last.cause !== verdict.cause;
         this._last = verdict;
         if (changed) this._broadcast("status", verdict);
     }
 
     /** @param {string} event @param {object} data */
-    _broadcast(event, data) {
+    _broadcast(event: string, data: Record<string, any>) {
         for (const res of [...this._clients.keys()]) this._send(res, event, data);
     }
 
     /** @param {import('express').Response} res @param {string} event @param {object} data */
-    _send(res, event, data) {
+    _send(res: import('express').Response, event: string, data: Record<string, any>) {
         this._write(res, `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     }
 
     /** Writes and flushes; a dead socket is torn down, never thrown. */
-    _write(res, chunk) {
+    _write(res: any, chunk: any) {
         try {
             res.write(chunk);
             if (typeof res.flush === "function") res.flush();

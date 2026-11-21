@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -39,7 +38,8 @@ const MODELS = Object.freeze({
 
 class ArchitectureService {
     /** @type {Map<string, object>} */
-    static #maps = new Map();
+    static #maps: Map<string, Record<string, any>> = new Map();
+    declare static MAP_NAMES: string[];
 
     /**
      * One map: meta, layers, edgeKinds, nodes, edges, flows, layout.
@@ -48,7 +48,7 @@ class ArchitectureService {
      * @returns {object}
      * @throws {AppError} 500 when the model fails validation
      */
-    static getMap(name = "architecture") {
+    static getMap(name: "architecture" | "runtime" = "architecture"): Record<string, any> {
         const cached = ArchitectureService.#maps.get(name);
         if (cached) return cached;
         try {

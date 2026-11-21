@@ -94,7 +94,7 @@ const SNOWFLAKE_RE = /^(\d{13})-(\d{4})-(\d{4})$/;
  *
  * @returns {number} Machine ID in [0, 1023].
  */
-function _resolveMachineId() {
+function _resolveMachineId(): number {
     // 1. Explicit env var
     const envId = process.env.SNOWFLAKE_MACHINE_ID;
     if (envId !== undefined && envId !== "") {
@@ -131,6 +131,12 @@ function _resolveMachineId() {
 // ─── Snowflake class ────────────────────────────────────────────────────────────
 
 class Snowflake {
+    declare _machineSegment: string;
+    declare _nonce: number;
+    declare _sequence: number;
+    declare _lastTimestamp: number;
+    declare _machineId: number;
+    declare _epoch: number;
     /**
      * Create a Snowflake ID generator.
      *
@@ -138,7 +144,7 @@ class Snowflake {
      * @param {number}  [options.epoch]     - Custom epoch as ms timestamp. Defaults to 2024-01-01.
      * @param {number}  [options.machineId] - Explicit machine ID (0–1023). Auto-resolved if omitted.
      */
-    constructor(options = {}) {
+    constructor(options: { epoch?: number; machineId?: number; } = {}) {
         this._epoch = options.epoch ?? EPOCH;
         this._machineId =
             options.machineId !== undefined
@@ -186,7 +192,7 @@ class Snowflake {
      * @example
      * snowflake.nextId(); // "0078812966528-0448-7293"
      */
-    nextId() {
+    nextId(): string {
         let now = Date.now() - this._epoch;
 
         if (now === this._lastTimestamp) {
@@ -233,7 +239,7 @@ class Snowflake {
      * snowflake.deconstruct("0078812966528-0448-7293");
      * // { timestamp: 1719753600123, machineId: 448, tail: 7293, date: Date(...) }
      */
-    deconstruct(id) {
+    deconstruct(id: string): { timestamp: number; machineId: number; tail: number; date: Date; } {
         const match = SNOWFLAKE_RE.exec(id);
         if (!match) {
             throw new Error(`Invalid Snowflake ID format: "${id}"`);
@@ -255,7 +261,7 @@ class Snowflake {
      *
      * @returns {number}
      */
-    get machineId() {
+    get machineId(): number {
         return this._machineId;
     }
 
@@ -264,7 +270,7 @@ class Snowflake {
      *
      * @returns {number}
      */
-    get epoch() {
+    get epoch(): number {
         return this._epoch;
     }
 }
@@ -277,6 +283,6 @@ class Snowflake {
  *
  * @type {Snowflake}
  */
-const snowflake = new Snowflake();
+const snowflake: Snowflake = new Snowflake();
 
 export { Snowflake, snowflake };

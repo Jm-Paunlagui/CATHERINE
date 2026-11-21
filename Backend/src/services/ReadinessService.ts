@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -38,7 +37,7 @@ import { logger } from "../utils/logger";
  * @param {number} fallbackValue
  * @returns {number}
  */
-function _envInt(name, fallbackValue) {
+function _envInt(name: string, fallbackValue: number): number {
     const n = Number(process.env[name]);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallbackValue;
 }
@@ -51,7 +50,7 @@ const HEALTH_PROBE_TIMEOUT_MS = _envInt("HEALTH_PROBE_TIMEOUT_MS", 2500);
  * @param {string} raw
  * @returns {boolean}
  */
-function _isSaturationError(raw) {
+function _isSaturationError(raw: string): boolean {
     return /NJS-076/.test(raw || "");
 }
 
@@ -62,13 +61,13 @@ function _isSaturationError(raw) {
  * @param {string} poolName
  * @returns {Promise<{ status: "up"|"down", state: "up"|"saturated"|"down", latencyMs?: number, error?: string }>}
  */
-async function probePool(poolName) {
+async function probePool(poolName: string): Promise<{ status: "up" | "down"; state: "up" | "saturated" | "down"; latencyMs?: number; error?: string; }> {
     const start = Date.now();
     let timer;
     try {
         const probe = db.withConnection(
             poolName,
-            async (conn) => {
+            async (conn: any) => {
                 await conn.execute("SELECT 1 FROM DUAL");
             },
             { bypassBreaker: true },
@@ -112,11 +111,11 @@ async function probePool(poolName) {
  * @param {string} name
  * @param {{ status: string, state: string }} check
  */
-const _countsUp = (name, check) =>
+const _countsUp = (name: string, check: { status: string; state: string; }) =>
     check?.status === "up" ||
     (!READINESS_GATING_POOLS.includes(name) && check?.state === "saturated");
 
-let _inFlight = null;
+let _inFlight: any = null;
 
 /**
  * Probes every pool, closes the breaker of each pool that answered, and returns
@@ -124,11 +123,11 @@ let _inFlight = null;
  *
  * @returns {Promise<{ ready: boolean, checks: Record<string, object> }>}
  */
-function evaluate() {
+function evaluate(): Promise<{ ready: boolean; checks: Record<string, Record<string, any>>; }> {
     if (_inFlight) return _inFlight;
     _inFlight = (async () => {
         const results = await Promise.all(POOL_NAMES.map(probePool));
-        const checks = {};
+        const checks: Record<string, any> = {};
         let ready = true;
         POOL_NAMES.forEach((name, i) => {
             const check = results[i];

@@ -1,6 +1,6 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
+import type { NextFunction, Request, Response } from "express";
 import express from "express";
 const app = express();
 
@@ -139,7 +139,7 @@ app.use(defaultCookieParser.handle.bind(defaultCookieParser)); // lgtm[js/missin
 //    doubleCsrf only enforces on state-changing methods (POST/PUT/DELETE/PATCH);
 //    GET /csrf/token and other safe methods pass through automatically.
 const CSRF_EXEMPT_PATHS = ["/api/v1/csrf", "/api/v1/metrics/frontend"];
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
     if (CSRF_EXEMPT_PATHS.some((p) => req.path.startsWith(p))) return next();
     defaultCsrf.handle.bind(defaultCsrf)(req, res, next);
 });

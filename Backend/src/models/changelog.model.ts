@@ -65,7 +65,7 @@ function resolveKey() {
 
 // ── Encrypt / Decrypt ─────────────────────────────────────────────────────────
 
-function encrypt(plaintext) {
+function encrypt(plaintext: any) {
     const key = resolveKey();
     const iv = crypto.randomBytes(IV_BYTES);
     const cipher = crypto.createCipheriv(ALG, key, iv);
@@ -80,7 +80,7 @@ function encrypt(plaintext) {
     });
 }
 
-function decrypt(raw) {
+function decrypt(raw: any) {
     const key = resolveKey();
     const { iv, authTag, ciphertext } = JSON.parse(raw);
     const decipher = crypto.createDecipheriv(ALG, key, Buffer.from(iv, "hex"));
@@ -124,7 +124,7 @@ const LOCK_TIMEOUT_MS = 5_000;
  * without busy-spinning. Dependency-free (Atomics.wait on a private buffer).
  * @param {number} ms
  */
-function _sleepSync(ms) {
+function _sleepSync(ms: number) {
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.max(1, ms));
 }
 
@@ -134,7 +134,7 @@ function _sleepSync(ms) {
  * @returns {number} the open lockfile descriptor (pass to _releaseLock)
  * @throws {AppError} 503 when the lock cannot be acquired within the timeout.
  */
-function _acquireLock() {
+function _acquireLock(): number {
     const deadline = Date.now() + LOCK_TIMEOUT_MS;
     for (;;) {
         try {
@@ -182,7 +182,7 @@ function _acquireLock() {
  * Releases the store lock. Best-effort — never throws.
  * @param {number} fd
  */
-function _releaseLock(fd) {
+function _releaseLock(fd: number) {
     try {
         fs.closeSync(fd);
     } catch {
@@ -203,7 +203,7 @@ function _releaseLock(fd) {
  * @param {() => T} fn
  * @returns {T}
  */
-function withLock(fn) {
+function withLock<T>(fn: () => T): T {
     ensureDataDir();
     const fd = _acquireLock();
     try {
@@ -225,7 +225,7 @@ function ensureDataDir() {
  * @param {object} entry
  * @returns {object}
  */
-function migrateEntry(entry) {
+function migrateEntry(entry: Record<string, any>): Record<string, any> {
     // Old entries had `summary` instead of `message` + `whatChanged`
     if (!entry.message && entry.summary) {
         const { summary, ...rest } = entry;
@@ -244,7 +244,7 @@ function migrateEntry(entry) {
  * Migrates legacy entries (summary → message) on read.
  * @returns {{ entries: object[] }}
  */
-function readStore() {
+function readStore(): { entries: Record<string, any>[]; } {
     ensureDataDir();
 
     if (!fs.existsSync(STORE_PATH)) {
@@ -260,7 +260,7 @@ function readStore() {
         const store = JSON.parse(plaintext);
 
         let needsWrite = false;
-        store.entries = store.entries.map((entry) => {
+        store.entries = store.entries.map((entry: any) => {
             const migrated = migrateEntry(entry);
             if (migrated !== entry) needsWrite = true;
             return migrated;
@@ -280,7 +280,7 @@ function readStore() {
  * Encrypts and writes the store to disk.
  * @param {{ entries: object[] }} store
  */
-function writeStore(store) {
+function writeStore(store: { entries: Record<string, any>[]; }) {
     ensureDataDir();
     try {
         const ciphertext = encrypt(JSON.stringify(store));
@@ -301,7 +301,7 @@ class ChangelogModel {
      * Returns all entries sorted newest displayDate first.
      * @returns {object[]}
      */
-    static listAll() {
+    static listAll(): Record<string, any>[] {
         const { entries } = readStore();
         return [...entries].sort((a, b) => {
             if (b.displayDate !== a.displayDate)
@@ -315,7 +315,7 @@ class ChangelogModel {
      * @param {string} id
      * @returns {object}
      */
-    static findById(id) {
+    static findById(id: string): Record<string, any> {
         const { entries } = readStore();
         const entry = entries.find((e) => e.id === id);
         if (!entry) throw new AppError(CHANGELOG_ERRORS.ENTRY_NOT_FOUND, 404);
@@ -327,7 +327,7 @@ class ChangelogModel {
      * @param {object} data
      * @returns {object} created entry
      */
-    static create(data) {
+    static create(data: Record<string, any>): Record<string, any> {
         // Whole read-modify-write cycle under the cross-process lock: readStore
         // runs AFTER any concurrent writer released the lock, so this create
         // always appends to the latest committed entries array — never a stale
@@ -363,7 +363,7 @@ class ChangelogModel {
      * @param {object} data
      * @returns {object} updated entry
      */
-    static update(id, data) {
+    static update(id: string, data: Record<string, any>): Record<string, any> {
         return withLock(() => {
             const store = readStore();
             const idx = store.entries.findIndex((e) => e.id === id);
@@ -394,7 +394,7 @@ class ChangelogModel {
      * Permanently removes an entry.
      * @param {string} id
      */
-    static delete(id) {
+    static delete(id: string) {
         return withLock(() => {
             const store = readStore();
             const before = store.entries.length;
@@ -414,7 +414,7 @@ class ChangelogModel {
      * @param {object[]} entries  Changelog entries to seed.
      * @returns {number} Count of entries written.
      */
-    static resetStore(entries) {
+    static resetStore(entries: Record<string, any>[]): number {
         return withLock(() => {
             const now = new Date().toISOString();
             const normalised = entries.map((e) => ({

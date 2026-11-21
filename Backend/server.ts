@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 // ─── Boot order (must stay the first two imports) ────────────────────────────
 // ES modules evaluate imports before this file's body, in source order:
 //   1. bootEnv     — UV_THREADPOOL_SIZE, .env (beside the exe when compiled), TZ
@@ -169,7 +168,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // digest), so a breach / crash-loop / forced-kill is emailed with the
     // one-shot notifyCriticalNow (bounded internally). Lazy require + swallowed
     // failure: a notification problem must never crash or block the primary.
-    const notifyCritical = (message) => {
+    const notifyCritical = (message: any) => {
         const AlertNotifierService = require("./src/services/AlertNotifierService").default;
         return AlertNotifierService.notifyCriticalNow({ level: "CRITICAL", message });
     };
@@ -179,7 +178,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // live workers / the leader lazily, so it can be built before it.
     const { ClusterRpcHub } = require("./src/utils/cluster/ClusterRpcHub");
     const { PrimaryStateServices } = require("./src/utils/cluster/PrimaryStateServices");
-    let supervisor = null;
+    let supervisor: any = null;
     const rpcHub = new ClusterRpcHub({
         cluster,
         logger,
@@ -249,7 +248,7 @@ function bootWorker() {
             return "unknown";
         }
     })();
-    let serverRunMarker = null;
+    let serverRunMarker: any = null;
     if (IS_CRON_LEADER_AT_BOOT) {
         const ServerRunMarker = require("./src/utils/lifecycle/ServerRunMarker").default;
         const { SERVER_RUN_MARKER } = require("./src/constants/serverRunMarker");
@@ -271,10 +270,10 @@ function bootWorker() {
         });
     }
     /** @type {null | { verdict: string, previous: object|null, lastNoticeAt: number|null, bootedAtMs: number }} */
-    let bootInfo = null;
+    let bootInfo: null | { verdict: string; previous: Record<string, any> | null; lastNoticeAt: number | null; bootedAtMs: number; } = null;
     let bootAnnounced = false;
     /** @type {NodeJS.Timeout|null} Sends the boot email anyway when the pools are slow. */
-    let bootAnnounceTimer = null;
+    let bootAnnounceTimer: NodeJS.Timeout | null = null;
 
     /**
      * Sends the boot email once (leader only), after the pools settle so the
@@ -300,7 +299,7 @@ function bootWorker() {
                     lastStartNoticeAt: bootInfo.lastNoticeAt,
                     nowMs: Date.now(),
                 })
-                .then((res) => {
+                .then((res: any) => {
                     if (res && res.sent && res.event === "started") serverRunMarker.recordStartNotice(Date.now());
                     // Clear only the unclean restarts that were emailed.
                     if (res && res.uncleanReported) serverRunMarker.clearPendingUnclean();
@@ -329,7 +328,7 @@ function bootWorker() {
      * @param {string} code - e.g. "PFX_MISSING", "EADDRINUSE", "EACCES"
      * @param {() => void} done
      */
-    function reportBootFatal(code, done) {
+    function reportBootFatal(code: string, done: () => void) {
         // Boot-only: once this worker is listening, an EACCES/EADDRINUSE is a
         // runtime fault of one worker, not a reason to stop the cluster.
         if (serverListening) {
@@ -381,7 +380,7 @@ function bootWorker() {
 
     // ─── Server creation ──────────────────────────────────────────────────
 
-    let server;
+    let server: any;
 
     if (USE_HTTPS) {
         const https = require("https");
@@ -426,7 +425,7 @@ function bootWorker() {
     // (nginx, IIS ARR) its read/proxy timeout must independently be at least
     // as large. How long a handler may RUN without progress is the
     // RequestWatchdog's job (below), not this setting.
-    const requestTimeoutMs = parseInt(process.env.SERVER_REQUEST_TIMEOUT_MS, 10);
+    const requestTimeoutMs = parseInt(process.env.SERVER_REQUEST_TIMEOUT_MS ?? "", 10);
     server.requestTimeout =
         Number.isInteger(requestTimeoutMs) && requestTimeoutMs > 0
             ? requestTimeoutMs
@@ -530,7 +529,7 @@ function bootWorker() {
                 const { VERDICTS } = SERVER_RUN_MARKER;
                 const bootedAtMs = Date.now();
                 const { verdict, previous, cause } = serverRunMarker.readPrevious();
-                const iso = (ms) => (Number.isFinite(ms) ? new Date(ms).toISOString() : "unknown");
+                const iso = (ms: any) => (Number.isFinite(ms) ? new Date(ms).toISOString() : "unknown");
                 if (verdict === VERDICTS.FIRST_BOOT && cause) {
                     logger.notice(serverMessages.RUN_MARKER_FOREIGN_HOST(serverRunMarker.filePath));
                 } else if (verdict === VERDICTS.FIRST_BOOT) {
@@ -626,7 +625,7 @@ function bootWorker() {
                         );
                     }
                 })
-                .catch((err) => {
+                .catch((err: any) => {
                     // Still announce the boot: recipients fall back to SERVER_NOTIFY_TO.
                     announceBoot();
                     logger.critical("Pool initialization failed", {
@@ -685,11 +684,11 @@ function bootWorker() {
         const CATCHUP_ON_BOOT =
             process.env.DB_BACKUP_CATCHUP_ON_BOOT !== "false"; // default true
         const EVENT_DELAY_MS =
-            parseInt(process.env.DB_BACKUP_EVENT_DELAY_MS, 10) || 900_000; // default 15 min
+            parseInt(process.env.DB_BACKUP_EVENT_DELAY_MS ?? "", 10) || 900_000; // default 15 min
         // How far ahead timers are armed; the interval sweep re-arms long before it runs out.
         const BACKUP_TIMER_HORIZON_MS = 26 * 60 * 60 * 1000;
 
-        let _backupTimers = [];
+        let _backupTimers: any[] = [];
         // Only the latest arm installs timers, and old ones are cleared after
         // the event list is fetched (two overlapping arms would duplicate them).
         let _backupArmGeneration = 0;
@@ -724,7 +723,7 @@ function bootWorker() {
         }
 
         // Lazy import to avoid loading the service layer before pools are ready.
-        async function _runBackup(label) {
+        async function _runBackup(label: any) {
             if (require("./src/utils/InFlightTaskRegistry").default.isShuttingDown()) return;
             try {
                 const BackupScheduleService = require("./src/services/BackupScheduleService").default;
@@ -810,7 +809,7 @@ function bootWorker() {
     let crashExitCode = 0;
     const pendingCrashEmails = new Set();
     /** Runs the crash handler's EMERGENCY email, tracked for the teardown. Never throws. */
-    const trackCrashEmail = (send) => {
+    const trackCrashEmail = (send: any) => {
         // A send that did not go out (or threw) is recorded in the marker, inside the tracked
         // promise so the teardown waits for it before the process exits.
         const { isReportedSend } = require("./src/utils/lifecycle/StartupNotifier").default;
@@ -831,8 +830,8 @@ function bootWorker() {
     // Shared across gracefulShutdown calls so a crash that arrives DURING a
     // long stop (f) can pull the wait and the failsafe in.
     let phaseDeadline = 0;
-    let teardownHandle = null;
-    let failsafeTimer = null;
+    let teardownHandle: any = null;
+    let failsafeTimer: any = null;
     let failsafeFireAt = 0;
     let shutdownT0 = 0;
 
@@ -850,7 +849,7 @@ function bootWorker() {
      * @param {string} signal - What triggered the stop (signal name or crash kind)
      * @param {number} [exitCode=0] - 0 for a requested stop, 1 for a crash
      */
-    async function gracefulShutdown(signal, exitCode = 0, { unreported = false, reason } = {}) {
+    async function gracefulShutdown(signal: string, exitCode: number = 0, { unreported = false, reason }: { unreported?: boolean; reason?: string } = {}) {
         const previousExitCode = shutdownExitCode;
         shutdownExitCode = Math.max(shutdownExitCode, exitCode);
         if (isShuttingDown) {
@@ -1000,7 +999,7 @@ function bootWorker() {
             logger,
             reason: "server_shutdown",
             httpInFlight,
-            onRequestsCut: (summary, graceMs, total, opts) =>
+            onRequestsCut: (summary: any, graceMs: any, total: any, opts: any) =>
                 shutdownNotifier.requestsCut(summary, graceMs, total, opts),
         });
 
@@ -1101,7 +1100,7 @@ function bootWorker() {
      * keeps no "closed" flag (null = never created or closed), so it cannot be skipped cheaply.
      * @returns {Promise<void>}
      */
-    function drainAlertNotifierForExit() {
+    function drainAlertNotifierForExit(): Promise<void> {
         try {
             return Promise.resolve(
                 require("./src/services/AlertNotifierService").default.drainAndStop({ persist: false }),
@@ -1116,7 +1115,7 @@ function bootWorker() {
      * Keeps a single timer: a re-arm replaces it.
      * @param {number} ms
      */
-    function armFailsafe(ms) {
+    function armFailsafe(ms: number) {
         if (failsafeTimer) clearTimeout(failsafeTimer);
         failsafeFireAt = shutdownT0 + ms;
         failsafeTimer = setTimeout(() => {
@@ -1152,7 +1151,7 @@ function bootWorker() {
      * computeCrashFailsafeMs) from now (never later than the existing one). Exit code stays 1 via shutdownExitCode.
      * @param {string} signal
      */
-    function shortenForCrash(signal) {
+    function shortenForCrash(signal: string) {
         try {
             const now = Date.now();
             teardownHandle?.shortenTo(CRASH_REQUEST_GRACE_MS);
@@ -1168,7 +1167,7 @@ function bootWorker() {
     // The idle watchdog fires its hook on EVERY termination; only a cut made
     // while the process is stopping belongs in the shutdown "requests cut"
     // email, so the shutdown state is checked here.
-    RequestWatchdog.setShutdownHook((entry) => {
+    RequestWatchdog.setShutdownHook((entry: any) => {
         if (isShuttingDown) teardownHandle?.recordIdleCut(entry);
     });
 
@@ -1182,8 +1181,9 @@ function bootWorker() {
         clusterRpc.init({ isLeader: IS_CRON_LEADER_AT_BOOT });
         wireWorkerRpc({ client: clusterRpc, isLeader: IS_CRON_LEADER_AT_BOOT });
 
-        process.on("message", (m) => {
-            if (!m || typeof m !== "object") return;
+        process.on("message", (raw: unknown) => {
+            if (!raw || typeof raw !== "object") return;
+            const m = raw as { cmd?: string; signal?: string; record?: unknown };
             if (m.cmd === CLUSTER_IPC.SHUTDOWN) {
                 gracefulShutdown(m.signal ?? "SIGTERM");
             } else if (m.cmd === CLUSTER_IPC.CRIT_RELAY && IS_CRON_LEADER_AT_BOOT) {
@@ -1203,7 +1203,7 @@ function bootWorker() {
         // the flag (Node internals, lib/internal/cluster/child.js; verified on
         // Node 24, pinned by sim 19q-4) hands the decision to us: stop
         // gracefully, exit code 1 so the supervisor treats it as abnormal.
-        cluster.worker.exitedAfterDisconnect = true;
+        cluster.worker!.exitedAfterDisconnect = true; // set: this branch runs only in a cluster worker
         process.on("disconnect", () => {
             logger.warning(clusterMessages.CLUSTER_PRIMARY_DISCONNECT());
             // unreported: no email goes out for this stop, so the next boot must not claim one did.
@@ -1271,8 +1271,9 @@ function bootWorker() {
         serverRunMarker?.noteExitCodeRaised(1);
         // Port taken / denied: every respawn would fail the same way. Tell the
         // primary FIRST (before the awaited email below) so it stops forking.
-        if (cluster.isWorker && BOOT_FATAL_ERROR_CODES.includes(err?.code)) {
-            reportBootFatal(err.code, () => {});
+        const code = (err as NodeJS.ErrnoException)?.code;
+        if (cluster.isWorker && code && BOOT_FATAL_ERROR_CODES.includes(code)) {
+            reportBootFatal(code, () => {});
         }
         logger.error("Uncaught exception", {
             error: err.message,

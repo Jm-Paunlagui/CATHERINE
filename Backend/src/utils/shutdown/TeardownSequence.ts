@@ -76,7 +76,7 @@ function computeShutdownBudget({
     pendingTasks,
     minGraceMs,
     maxGraceMs = Infinity,
-}) {
+}: { forcedExitMs: number; postDrainReserveMs: number; safetyMarginMs: number; notifyDrainMs: number; pendingTasks: number; minGraceMs: number; maxGraceMs?: number; }): { phaseBudgetMs: number; requestGraceMs: number; drainReservedMs: number; } {
     const phaseBudgetMs = Math.max(0, forcedExitMs - postDrainReserveMs - safetyMarginMs);
     const drainReservedMs = pendingTasks > 0 ? notifyDrainMs : 0;
     const requestGraceMs = Math.min(maxGraceMs, Math.max(minGraceMs, phaseBudgetMs - drainReservedMs));
@@ -90,7 +90,7 @@ function computeShutdownBudget({
  * @param {{phaseDeadline: number, now: number, notifyDrainMs: number}} p
  * @returns {number}
  */
-function remainingDrainMs({ phaseDeadline, now, notifyDrainMs }) {
+function remainingDrainMs({ phaseDeadline, now, notifyDrainMs }: { phaseDeadline: number; now: number; notifyDrainMs: number; }): number {
     return Math.max(0, Math.min(notifyDrainMs, phaseDeadline - now));
 }
 
@@ -148,13 +148,13 @@ function preCloseTeardown({
     httpInFlight,
     onRequestsCut,
     waitNoticeMs = SHUTDOWN_WAIT_NOTICE_MS,
-}) {
+}: { sseRegistry: { endAll: (reason: string) => void; }; server: import('http').Server; forceCloseAfterMs?: number; sseDrainGraceMs?: number; minGraceMs?: number; logger: { notice?: ((...args: any[]) => any); warning: ((...args: any[]) => any); }; reason?: string; httpInFlight?: { beginShutdown: ((...args: any[]) => any); activeCount: () => number; activeSummary?: ((...args: any[]) => any); }; onRequestsCut?: (summary: Array<Record<string, any>>, graceMs: number, total: number, opts: { reason: "cap" | "idle"; }) => void; waitNoticeMs?: number; }): { shortenTo: (ms: number) => void; recordIdleCut: (entry: Record<string, any>) => void; idleCuts: Array<Record<string, any>>; } {
     let graceMs = forceCloseAfterMs ?? sseDrainGraceMs;
     /** @type {Array<object>} */
-    const idleCuts = [];
+    const idleCuts: Array<Record<string, any>> = [];
     const handle = {
         shortenTo() {},
-        recordIdleCut: (entry) => {
+        recordIdleCut: (entry: any) => {
             idleCuts.push(entry);
         },
         idleCuts,
@@ -162,7 +162,7 @@ function preCloseTeardown({
     const closeAll = () => {
         if (typeof server.closeAllConnections === "function") server.closeAllConnections();
     };
-    const unref = (t) => {
+    const unref = (t: any) => {
         if (typeof t.unref === "function") t.unref();
         return t;
     };
@@ -185,8 +185,8 @@ function preCloseTeardown({
     const startedAt = Date.now();
     const initial = httpInFlight.activeCount();
     let finished = false;
-    let cutTimer = null;
-    let noticeTimer = null;
+    let cutTimer: any = null;
+    let noticeTimer: any = null;
 
     // ONE email for everything the idle watchdog cut during the wait.
     const reportIdleCuts = () => {
@@ -202,7 +202,7 @@ function preCloseTeardown({
 
     // Nothing tracked is left: close every remaining socket, no earlier than
     // minGraceMs after the start.
-    const finish = (logFinished) => {
+    const finish = (logFinished: any) => {
         if (finished) return;
         finished = true;
         if (cutTimer) clearTimeout(cutTimer);
@@ -271,7 +271,7 @@ function preCloseTeardown({
         );
     }
 
-    handle.shortenTo = (ms) => {
+    handle.shortenTo = (ms: any) => {
         if (finished) return;
         const remaining = Math.max(0, startedAt + graceMs - Date.now());
         const next = Math.max(0, Math.min(remaining, ms));
@@ -324,7 +324,7 @@ async function postCloseTeardown({
     alertNotifier,
     finalNotifyMs = () => 0,
     onDataTeardownComplete,
-}) {
+}: { inFlight: { drain: (ms: number) => Promise<any>; }; auditLog: { flushPending: (opts?: { final?: boolean; }) => Promise<any>; }; db: { closeAll?: () => Promise<any>; }; sharedTransporter: { closeTransporter: () => void; }; logger: { notice: ((...args: any[]) => any); warning: ((...args: any[]) => any); error: ((...args: any[]) => any); }; notifyDrainMs: number | (() => number); lifecycleSettled?: () => Promise<any>; onDataTeardownComplete?: () => void; alertNotifier?: { flushForShutdown: () => Promise<any>; drainAndStop: (opts: { timeoutMs: number; persist: boolean; }) => Promise<any>; }; finalNotifyMs?: () => number; }): Promise<void> {
     // Phase 2 notifier flush: runs after the pools closed, before the SMTP
     // transporter closes. Single-flight in the service, so calling it from both
     // the happy path and the catch is idempotent. Never throws.
@@ -423,7 +423,7 @@ async function postCloseTeardown({
  * @param {number} p.safetyMarginMs
  * @returns {number}
  */
-function computeCrashFailsafeMs({ crashGraceMs, notifyDrainClampMs, postDrainReserveMs, safetyMarginMs }) {
+function computeCrashFailsafeMs({ crashGraceMs, notifyDrainClampMs, postDrainReserveMs, safetyMarginMs }: { crashGraceMs: number; notifyDrainClampMs: number; postDrainReserveMs: number; safetyMarginMs: number; }): number {
     return crashGraceMs + notifyDrainClampMs + postDrainReserveMs + safetyMarginMs;
 }
 
@@ -434,7 +434,7 @@ function computeCrashFailsafeMs({ crashGraceMs, notifyDrainClampMs, postDrainRes
  * @param {{failsafeFireAt: number, now: number, reserveMs: number}} p
  * @returns {number}
  */
-function finalNotifyBudgetMs({ failsafeFireAt, now, reserveMs }) {
+function finalNotifyBudgetMs({ failsafeFireAt, now, reserveMs }: { failsafeFireAt: number; now: number; reserveMs: number; }): number {
     return Math.max(0, failsafeFireAt - now - reserveMs);
 }
 

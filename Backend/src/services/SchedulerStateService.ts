@@ -30,7 +30,7 @@ class SchedulerStateService {
      * snapshot() always returns a complete shape even before any job runs.
      * @type {Map<string, object|null>}
      */
-    static #state = new Map(KNOWN_JOBS.map((j) => [j, null]));
+    static #state: Map<string, Record<string, any> | null> = new Map(KNOWN_JOBS.map((j) => [j, null]));
 
     /**
      * Records the last-run outcome for a scheduled job.
@@ -53,9 +53,9 @@ class SchedulerStateService {
      * });
      */
     static record(
-        job,
-        { label, status, detail = null, at = new Date() } = {},
-    ) {
+        job: string,
+        { label, status, detail = null, at = new Date() }: { label: string; status: string; detail?: string; at?: Date; } = {},
+    ): void {
         if (!KNOWN_JOBS.includes(job)) {
             logger.warning(serverMessages.SCHEDULER_UNKNOWN_JOB(job));
             return;
@@ -91,7 +91,7 @@ class SchedulerStateService {
      * @param {{label: string, status: string, detail: string|null, at: string|Date}} outcome
      * @returns {boolean} applied
      */
-    static applyRemote(job, outcome) {
+    static applyRemote(job: string, outcome: { label: string; status: string; detail: string | null; at: string | Date; }): boolean {
         if (!KNOWN_JOBS.includes(job) || !outcome) return false;
         SchedulerStateService.#state.set(job, {
             job,
@@ -110,7 +110,7 @@ class SchedulerStateService {
      * @param {Array<{job: string, outcome: object}>} entries
      * @returns {number} entries applied
      */
-    static applySync(entries) {
+    static applySync(entries: Array<{ job: string; outcome: Record<string, any>; }>): number {
         let applied = 0;
         for (const { job, outcome } of entries ?? []) {
             const local = SchedulerStateService.#state.get(job);
@@ -127,7 +127,7 @@ class SchedulerStateService {
      * @returns {Record<string, { job: string, label: string, status: string, detail: string|null, at: Date }|null>}
      *   one entry per KNOWN_JOBS key
      */
-    static snapshot() {
+    static snapshot(): Record<string, { job: string; label: string; status: string; detail: string | null; at: Date; } | null> {
         return Object.fromEntries(SchedulerStateService.#state.entries());
     }
 }

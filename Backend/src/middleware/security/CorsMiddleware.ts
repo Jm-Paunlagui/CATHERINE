@@ -18,6 +18,7 @@
  * explicit allow-list via CORS_ORIGINS instead of trusting network topology.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import { logger } from "../../utils/logger";
 
@@ -30,7 +31,7 @@ import { logger } from "../../utils/logger";
  * @param {RegExp[]} [override] - Explicit override (used in tests / custom instances)
  * @returns {RegExp[]}
  */
-function buildDynamicPatterns(override) {
+function buildDynamicPatterns(override: RegExp[]): RegExp[] {
   if (override !== undefined) return override;
 
   const isProduction = process.env.NODE_ENV === "production";
@@ -74,6 +75,9 @@ function buildDynamicPatterns(override) {
 }
 
 class CorsMiddleware {
+  declare _cors: (req: cors.CorsRequest, res: { statusCode?: number | undefined; setHeader(key: string, value: string): any; end(): any; }, next: (err?: any) => any) => void;
+  declare _dynamicPatterns: RegExp[];
+  declare _explicitOrigins: any;
   constructor(options = {}) {
     this._explicitOrigins =
       options.origins ??
@@ -144,7 +148,7 @@ class CorsMiddleware {
     this.handle = this.handle.bind(this);
   }
 
-  handle(req, res, next) {
+  handle(req: Request, res: Response, next: NextFunction) {
     // CORS has had its say on this request — the error-handler fallback
     // below must never evaluate it a second time.
     if (res.locals) res.locals.corsEvaluated = true;
@@ -171,7 +175,7 @@ class CorsMiddleware {
    * @param {import('express').Response} res
    * @param {() => void} done
    */
-  applyToErrorResponse(req, res, done) {
+  applyToErrorResponse(req: import('express').Request, res: import('express').Response, done: () => void) {
     if (res.locals?.corsEvaluated || req.method === "OPTIONS" || !req.headers?.origin) {
       return done();
     }

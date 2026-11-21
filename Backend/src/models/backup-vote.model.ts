@@ -45,7 +45,7 @@ const _votes = new OracleCollection(TABLE, _db);
  * @param {(row: object) => boolean} [pred]
  * @returns {object[]}
  */
-function demoVotes(pred = () => true) {
+function demoVotes(pred: (row: Record<string, any>) => boolean = () => true): Record<string, any>[] {
     return demo
         .backupVotes()
         .filter(pred)
@@ -59,7 +59,7 @@ class BackupVoteModel {
      * @param {string} archiveId
      * @returns {Promise<Array<{ VOTE_ID: number, ARCHIVE_ID: string, REQUESTED_BY: number, VOTED_BY: number, VOTED_AT: string }>>}
      */
-    static async findVotesByArchive(archiveId) {
+    static async findVotesByArchive(archiveId: string): Promise<Array<{ VOTE_ID: number; ARCHIVE_ID: string; REQUESTED_BY: number; VOTED_BY: number; VOTED_AT: string; }>> {
         if (isDemoMode()) return demoVotes((r) => r.ARCHIVE_ID === archiveId);
         return _votes
             .find({ ARCHIVE_ID: archiveId })
@@ -74,7 +74,7 @@ class BackupVoteModel {
      *
      * @returns {Promise<Array<{ archiveId: string, requestedBy: number, votes: Array<{ votedBy: number, votedAt: string }> }>>}
      */
-    static async findAllPendingVotes() {
+    static async findAllPendingVotes(): Promise<Array<{ archiveId: string; requestedBy: number; votes: Array<{ votedBy: number; votedAt: string; }>; }>> {
         const rows = isDemoMode()
             ? demoVotes()
             : await _votes.find({}).sort({ VOTED_AT: 1 }).toArray();
@@ -108,7 +108,7 @@ class BackupVoteModel {
      * @param {number|string} requestedBy - Numeric admin id (T_ADMINS_DEV.ID) of the admin who initiated the delete request.
      * @returns {Promise<{ inserted: boolean, reason?: string }>}
      */
-    static async castVote(archiveId, votedBy, requestedBy) {
+    static async castVote(archiveId: string, votedBy: number | string, requestedBy: number | string): Promise<{ inserted: boolean; reason?: string; }> {
         if (isDemoMode()) {
             // Emulates UIX_SBDVD_ARCHIVE_VOTER (ARCHIVE_ID, VOTED_BY).
             const rows = demo.backupVotes();
@@ -156,7 +156,7 @@ class BackupVoteModel {
      * @param {string} archiveId
      * @returns {Promise<{ deletedCount: number }>}
      */
-    static async cancelRequest(archiveId) {
+    static async cancelRequest(archiveId: string): Promise<{ deletedCount: number; }> {
         if (isDemoMode()) {
             const rows = demo.backupVotes();
             let deletedCount = 0;
@@ -178,7 +178,7 @@ class BackupVoteModel {
      * @param {string} archiveId
      * @returns {Promise<number>}
      */
-    static async countVotesForArchive(archiveId) {
+    static async countVotesForArchive(archiveId: string): Promise<number> {
         if (isDemoMode()) {
             return demo.backupVotes().filter((r) => r.ARCHIVE_ID === archiveId).length;
         }

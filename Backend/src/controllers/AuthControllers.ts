@@ -1,6 +1,7 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
+import type { Request, Response } from "express";
 import { HTTP_STATUS, AppError, AUTH_ERRORS } from "../constants";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { catchAsync } from "../utils/catchAsync";
@@ -11,7 +12,7 @@ class AuthController {
      * POST /api/v1/auth/login
      * Body: { userId, password }
      */
-    static login = catchAsync(async (req, res) => {
+    static login = catchAsync(async (req: Request, res: Response) => {
         const { userId, password } = req.body;
 
         const { user, accessToken, refreshToken } = await AuthService.login(
@@ -43,7 +44,7 @@ class AuthController {
      * A missing, unsigned or tampered cookie is a 401 REFRESH_TOKEN_MISSING —
      * not USER_NOT_FOUND, which would misreport the cause to clients and logs.
      */
-    static refresh = catchAsync(async (req, res) => {
+    static refresh = catchAsync(async (req: Request, res: Response) => {
         const refreshToken =
             req.signedCookies?.[AuthService.COOKIE_NAMES.REFRESH];
 
@@ -84,7 +85,7 @@ class AuthController {
      * POST /api/v1/auth/logout
      * Requires: AuthMiddleware.authenticate
      */
-    static logout = catchAsync(async (req, res) => {
+    static logout = catchAsync(async (req: Request, res: Response) => {
         // Revokes the session family (best effort) and logs AUTH_LOGOUT.
         await AuthService.logout(req.user);
 
@@ -105,7 +106,7 @@ class AuthController {
      * stale the moment a SUPER_ADMIN edits permissions mid-session).
      * Requires: AuthMiddleware.authenticate
      */
-    static me = catchAsync(async (req, res) => {
+    static me = catchAsync(async (req: Request, res: Response) => {
         const profile = await AuthService.getProfile(req.user);
         res.status(HTTP_STATUS.OK).json(
             sendSuccess(RESPONSE_MESSAGES.FETCHED, profile),
@@ -121,7 +122,7 @@ class AuthController {
      * JWT tokens with requiresPasswordChange=false. New tokens are written
      * into HTTP-only cookies so the browser session is updated transparently.
      */
-    static changePassword = catchAsync(async (req, res) => {
+    static changePassword = catchAsync(async (req: Request, res: Response) => {
         const { currentPassword, newPassword } = req.body;
         const userId = req.user?.userId;
 

@@ -33,7 +33,7 @@ const _db = createDb("appDb");
 
 /** Lazily-built OracleCollection cache (one per physical table). */
 const _collections = new Map();
-function _col(name) {
+function _col(name: any) {
     let c = _collections.get(name);
     if (!c) {
         c = new OracleCollection(name, _db);
@@ -78,6 +78,7 @@ const DEFAULT_SWEEP_BATCH = 5_000;
 class IntegrityModel {
     /** The frozen registry (catalog source of truth). */
     static REGISTRY = TABLE_REGISTRY;
+    declare static TABLE_REGISTRY: typeof TABLE_REGISTRY;
 
     /**
      * Resolves a table config from the allow-list. Returns null for unknown keys
@@ -85,7 +86,7 @@ class IntegrityModel {
      * @param {string} key
      * @returns {TableConfig|null}
      */
-    static getTableConfig(key) {
+    static getTableConfig(key: string): TableConfig | null {
         return Object.prototype.hasOwnProperty.call(TABLE_REGISTRY, key)
             ? TABLE_REGISTRY[key]
             : null;
@@ -95,7 +96,7 @@ class IntegrityModel {
      * Catalog for the FE: one descriptor per table (no SQL surface).
      * @returns {Array<{ key:string, label:string, pk:string, filters:string[], live:boolean }>}
      */
-    static listTables() {
+    static listTables(): Array<{ key: string; label: string; pk: string; filters: string[]; live: boolean; }> {
         return Object.values(TABLE_REGISTRY).map((c) => ({
             key: c.key,
             label: c.label,
@@ -116,7 +117,7 @@ class IntegrityModel {
      * @param {string} key
      * @returns {Promise<Object<string, Array<{ value:string, label:string }>>>}
      */
-    static async getFilterOptions(key) {
+    static async getFilterOptions(key: string): Promise<{ [s: string]: Array<{ value: string; label: string; }>; }> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg || !cfg.enums) return {};
 
@@ -132,8 +133,8 @@ class IntegrityModel {
                         .limit(1000)
                         .toArray();
                     const opts = (rows ?? [])
-                        .filter((r) => r[def.column] != null)
-                        .map((r) => ({
+                        .filter((r: any) => r[def.column] != null)
+                        .map((r: any) => ({
                             value: String(r[def.column]),
                             label: r[def.label] ? `#${r[def.column]} · ${r[def.label]}` : `#${r[def.column]}`,
                         }));
@@ -148,9 +149,9 @@ class IntegrityModel {
                     { $sort: { [def.column]: 1 } },
                 ]);
                 const opts = (rows ?? [])
-                    .map((r) => r[def.column])
-                    .filter((v) => v != null && v !== "")
-                    .map((v) => ({ value: String(v), label: String(v) }));
+                    .map((r: any) => r[def.column])
+                    .filter((v: any) => v != null && v !== "")
+                    .map((v: any) => ({ value: String(v), label: String(v) }));
                 return [fk, opts];
             }),
         );
@@ -167,10 +168,10 @@ class IntegrityModel {
      * @param {object} filters - { <filter key>: value, from?: Date, to?: Date }
      * @returns {object} oracle-mongo-wrapper match
      */
-    static _buildMatch(cfg, filters = {}) {
+    static _buildMatch(cfg: TableConfig, filters: Record<string, any> = {}): Record<string, any> {
         const f = cfg.filters;
         const numeric = cfg.numericFilters ?? [];
-        const match = {};
+        const match: Record<string, any> = {};
 
         for (const [fk, column] of Object.entries(f)) {
             if (fk === "date" || filters[fk] == null) continue;
@@ -178,7 +179,7 @@ class IntegrityModel {
         }
 
         if (f.date && (filters.from instanceof Date || filters.to instanceof Date)) {
-            const range = {};
+            const range: Record<string, any> = {};
             if (filters.from instanceof Date) range.$gte = filters.from;
             if (filters.to instanceof Date) range.$lte = filters.to;
             match[f.date] = range;
@@ -201,7 +202,7 @@ class IntegrityModel {
      * @param {number} [opts.cap=200000]
      * @returns {Promise<{ tampered: object[], rowsScanned: number, truncated: boolean }>}
      */
-    static async sweepTampered(key, filters = {}, opts = {}) {
+    static async sweepTampered(key: string, filters: Record<string, any> = {}, opts: { batch?: number; cap?: number; } = {}): Promise<{ tampered: Record<string, any>[]; rowsScanned: number; truncated: boolean; }> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg) return { tampered: [], rowsScanned: 0, truncated: false };
 
@@ -230,7 +231,7 @@ class IntegrityModel {
             if (!rows || rows.length === 0) break;
 
             // Verify the batch concurrently (HMAC is cheap; this is bounded by `batch`).
-            const verdicts = await Promise.all(rows.map((r) => cfg.verifyFn(r)));
+            const verdicts = await Promise.all(rows.map((r: any) => cfg.verifyFn(r)));
             for (let i = 0; i < rows.length; i++) {
                 if (!verdicts[i]) tampered.push(rows[i]);
             }
@@ -256,7 +257,7 @@ class IntegrityModel {
      * @param {number} [opts.limit=50]
      * @returns {Promise<{ rows: object[], total: number }>}
      */
-    static async listPage(key, filters = {}, opts = {}) {
+    static async listPage(key: string, filters: Record<string, any> = {}, opts: { page?: number; limit?: number; } = {}): Promise<{ rows: Record<string, any>[]; total: number; }> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg) return { rows: [], total: 0 };
 
@@ -287,7 +288,7 @@ class IntegrityModel {
      * @param {object} [filters]
      * @returns {Promise<number|null>}
      */
-    static async getMaxPk(key, filters = {}) {
+    static async getMaxPk(key: string, filters: Record<string, any> = {}): Promise<number | null> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg) return null;
         const match = IntegrityModel._buildMatch(cfg, filters);
@@ -309,7 +310,7 @@ class IntegrityModel {
      * @param {number} [cap=500]
      * @returns {Promise<object[]>}
      */
-    static async listSince(key, filters = {}, afterPk, cap = 500) {
+    static async listSince(key: string, filters: Record<string, any> = {}, afterPk: number, cap: number = 500): Promise<Record<string, any>[]> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg || afterPk == null) return [];
         const match = {

@@ -101,7 +101,7 @@ const CANONICAL_TS_FORMAT = 'YYYY-MM-DD"T"HH24:MI:SS.FF6';
  * @throws {Error}
  * @private
  */
-function _requireEntry(table, callerLabel) {
+function _requireEntry(table: string, callerLabel: string): import('../constants/purgeTables').PurgeTableEntry {
     const entry = getEntry(table);
     if (!entry) {
         throw new Error(
@@ -122,7 +122,7 @@ function _requireEntry(table, callerLabel) {
  * @returns {object}
  * @private
  */
-function _boundedFilter(entry, highWater) {
+function _boundedFilter(entry: import('../constants/purgeTables').PurgeTableEntry, highWater: string | number | null | undefined): Record<string, any> {
     if (!entry.appendOnlyLog || highWater == null || highWater === "") return {};
     return { [entry.pk]: { $lte: String(highWater) } };
 }
@@ -143,8 +143,8 @@ class DataPurgeModel {
      * @example
      * const counts = await DataPurgeModel.countRows(["T_AUDIT_LOGS_DEV", "T_SERVER_ALERT_ACK_DEV"]);
      */
-    static async countRows(tables, highWater = {}) {
-        const counts = {};
+    static async countRows(tables: string[], highWater: Record<string, string> = {}): Promise<Record<string, number>> {
+        const counts: Record<string, any> = {};
         await Promise.all(
             (tables ?? []).map(async (table) => {
                 const entry = _requireEntry(table, "countRows");
@@ -195,7 +195,7 @@ class DataPurgeModel {
      *     onBatch: async (rows) => archive.append(toJsonl(rows), { name: "data/T_AUDIT_LOGS_DEV.jsonl" }),
      * });
      */
-    static async streamTable(table, opts = {}) {
+    static async streamTable(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); } = {}): Promise<number> {
         return DataPurgeModel._streamRows(table, opts, "streamTable");
     }
 
@@ -230,7 +230,7 @@ class DataPurgeModel {
      *     onBatch: (rows) => rows.forEach((r) => collected.push(r)),
      * });
      */
-    static async streamTableFiltered(table, opts = {}) {
+    static async streamTableFiltered(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns: string[]; whereValue: string | number; } = {}): Promise<number> {
         if (!Array.isArray(opts.whereColumns) || opts.whereColumns.length === 0) {
             throw new Error(`DataPurgeModel.streamTableFiltered: "${table}" requires a non-empty opts.whereColumns array.`);
         }
@@ -318,7 +318,7 @@ class DataPurgeModel {
      * );
      * // → { T_AUDIT_LOGS_DEV: 12031, T_SERVER_ALERT_LOG_DEV: 88420 }
      */
-    static async streamAllTables(tables, opts = {}) {
+    static async streamAllTables(tables: string[], opts: { pageSize?: number; onBatch?: (table: string, rows: Record<string, any>[]) => (Promise<void> | void); } = {}): Promise<Record<string, number>> {
         if (!Array.isArray(tables) || tables.length === 0) {
             throw new Error('DataPurgeModel.streamAllTables: "tables" must be a non-empty array.');
         }
@@ -333,14 +333,14 @@ class DataPurgeModel {
         try {
             // Long-hold multi-table read-only stream — routed to the appDbBulk
             // pool so it cannot starve interactive traffic on the appDb pool.
-            return await db.withConnection("appDbBulk", async (conn) => {
+            return await db.withConnection("appDbBulk", async (conn: any) => {
                 // MUST be the first statement issued on this connection —
                 // Oracle only accepts SET TRANSACTION as the first statement
                 // of a transaction (ORA-01453 otherwise). Every table read
                 // below therefore shares this one read-only transaction/SCN.
                 await conn.execute("SET TRANSACTION READ ONLY");
 
-                const perTable = {};
+                const perTable: Record<string, any> = {};
                 for (const entry of entries) {
                     perTable[entry.table] = await DataPurgeModel._streamRowsOnConnection(
                         conn,
@@ -394,11 +394,11 @@ class DataPurgeModel {
      * @returns {Promise<number>}
      * @private
      */
-    static async _streamRows(table, opts, callerLabel) {
+    static async _streamRows(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
         const entry = _requireEntry(table, callerLabel);
         // Per-table row stream (used by backup/export) — long-hold read routed
         // to the appDbBulk pool so it never competes with interactive traffic.
-        return db.withConnection("appDbBulk", (conn) => DataPurgeModel._streamRowsOnConnection(conn, entry, opts, callerLabel));
+        return db.withConnection("appDbBulk", (conn: any) => DataPurgeModel._streamRowsOnConnection(conn, entry, opts, callerLabel));
     }
 
     /**
@@ -423,7 +423,7 @@ class DataPurgeModel {
      * @returns {Promise<number>} Total rows streamed for this table.
      * @private
      */
-    static async _streamRowsOnConnection(conn, entry, opts, callerLabel) {
+    static async _streamRowsOnConnection(conn: import('oracledb').Connection, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
         const outFormat = { outFormat: _db.oracledb.OUT_FORMAT_OBJECT };
         const pageSize = Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
         const onBatch = typeof opts.onBatch === "function" ? opts.onBatch : () => {};
@@ -477,7 +477,7 @@ class DataPurgeModel {
         // on a Lob object serialises to "{}", silently losing the content.
         // fetchInfo forces the driver to return a plain JS string instead —
         // same sanctioned pattern as serverAlertLog.model.js.
-        const fetchInfo = {};
+        const fetchInfo: Record<string, any> = {};
         for (const col of clobColumns) fetchInfo[col] = { type: _db.oracledb.STRING };
 
         const whereClause = whereColumns ? `WHERE ${whereColumns.map((c) => `"${c}" = :whereValue`).join(" OR ")}` : "";
@@ -538,7 +538,7 @@ class DataPurgeModel {
      *     }
      * });
      */
-    static async deleteTable(table, session, highWater) {
+    static async deleteTable(table: string, session: import('../utils/oracle-mongo-wrapper/Transaction').Session, highWater: string): Promise<number> {
         const entry = _requireEntry(table, "deleteTable");
         const result = await session.collection(entry.table).deleteMany(_boundedFilter(entry, highWater));
         return result.deletedCount ?? 0;
@@ -572,15 +572,15 @@ class DataPurgeModel {
      *     (table, n) => logger.notice(dataPurgeMessages.EXECUTE_TABLE_STEP(table, n)),
      * );
      */
-    static async purgeTables(tableNames, onStep = () => {}, highWater = {}) {
+    static async purgeTables(tableNames: string[], onStep: (table: string, deletedCount: number) => void = () => {}, highWater: Record<string, string> = {}): Promise<{ totalDeleted: number; perTable: Array<{ table: string; deletedCount: number; }>; }> {
         const orderedEntries = getDeleteOrder(tableNames);
-        const perTable = [];
+        const perTable: any[] = [];
         let totalDeleted = 0;
 
         // Long-hold multi-table purge — routed through the appDbBulk pool so a
         // full purge cannot exhaust the interactive appDb pool.
         const txManager = new Transaction(_bulkDb);
-        await txManager.withTransaction(async (session) => {
+        await txManager.withTransaction(async (session: any) => {
             for (const entry of orderedEntries) {
                 const deletedCount = await DataPurgeModel.deleteTable(entry.table, session, highWater?.[entry.table]);
                 perTable.push({ table: entry.table, deletedCount });
@@ -651,7 +651,7 @@ class DataPurgeModel {
      * );
      * // returning[i].ID -> the NEW identity value Oracle assigned to remappedRows[i]
      */
-    static async insertRestoreBatch(table, rows, session) {
+    static async insertRestoreBatch(table: string, rows: Record<string, any>[], session: import('../utils/oracle-mongo-wrapper/Transaction').Session): Promise<{ insertedCount: number; returning: Array<Record<string, number>>; }> {
         const entry = _requireEntry(table, "insertRestoreBatch");
         if (!Array.isArray(rows) || rows.length === 0) {
             return { insertedCount: 0, returning: [] };
@@ -669,14 +669,14 @@ class DataPurgeModel {
                 `DataPurgeModel.insertRestoreBatch: USER_TAB_COLUMNS returned no columns for "${entry.table}" — verify the app database user (appDb/appDbBulk pools) has read access and the table name is correct.`,
             );
         }
-        const typeByCol = new Map(columnRows.map((r) => [r.COLUMN_NAME, r.DATA_TYPE]));
+        const typeByCol = new Map(columnRows.map((r: any) => [r.COLUMN_NAME, r.DATA_TYPE]));
 
         const virtualSet = new Set(entry.virtualColumns);
         const identifierSet = new Set(entry.identifierColumns);
         const skipPk = entry.isIdentity;
 
         const insertRows = rows.map((row) => {
-            const out = {};
+            const out: Record<string, any> = {};
             for (const col of Object.keys(row)) {
                 if (virtualSet.has(col)) continue; // ORA-54013 guard — never insert into a virtual column
                 if (skipPk && col === entry.pk) continue; // ORA-32795 guard — never insert into an identity PK
@@ -744,7 +744,7 @@ class DataPurgeModel {
      * @example
      * const exists = await DataPurgeModel.existsByKey("T_SERVER_ALERT_LOG_DEV", "ID", 10234);
      */
-    static async existsByKey(table, keyColumn, keyValue) {
+    static async existsByKey(table: string, keyColumn: string, keyValue: string | number): Promise<boolean> {
         const entry = _requireEntry(table, "existsByKey");
         if (keyColumn !== entry.pk) {
             throw new Error(

@@ -12,6 +12,12 @@
  * The global errorHandler middleware formats these for the client.
  */
 class AppError extends Error {
+    declare retryAfterSec: number | undefined;
+    declare reasons: string[] | undefined;
+    declare hint: string | undefined;
+    declare details: any[] | undefined;
+    declare isOperational: boolean;
+    declare statusCode: number;
     /**
      * @param {string} message  - Human-readable message
      * @param {number} statusCode - HTTP status code (default 500)
@@ -23,7 +29,7 @@ class AppError extends Error {
      * @param {string[]} [opts.reasons] - Machine reason codes; surfaced as
      *   `error.reasons` on the response
      */
-    constructor(message, statusCode = 500, opts = {}) {
+    constructor(message: string, statusCode: number = 500, opts: { type?: string; details?: Array<any>; hint?: string; retryAfterSec?: number; reasons?: string[]; } = {}) {
         super(message);
         this.name = opts.type || "AppError";
         this.statusCode = statusCode;
@@ -204,7 +210,7 @@ const METRICS_ERRORS = {
 const AUDIT_LOG_ERRORS = {
     INVALID_DATE_RANGE:
         "Invalid date range. fromDate must be before toDate and both must be valid ISO dates.",
-    AUDIT_LOG_TRACE_NOT_FOUND: (requestId) =>
+    AUDIT_LOG_TRACE_NOT_FOUND: (requestId: any) =>
         `No audit log record found for request ID: ${requestId}`,
     AUDIT_LOG_INVALID_REQUEST_ID: "Invalid request ID format.",
     AUDIT_LOG_INVALID_DATE_FORMAT: "Invalid date — expected YYYY-MM-DD",

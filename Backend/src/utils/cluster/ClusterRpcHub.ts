@@ -71,7 +71,7 @@ const E = CLUSTER_RPC_ERROR_CODES;
  * @param {Error} [err]
  * @returns {{code: string, message: string, appError?: object}}
  */
-function buildError(code, message, err) {
+function buildError(code: string, message: string, err: Error): { code: string; message: string; appError?: Record<string, any>; } {
     const out = { code, message: String(message).slice(0, CLUSTER_RPC_LIMITS.MAX_ERROR_MESSAGE) };
     if (err && err.isOperational === true && Number.isInteger(err.statusCode)) {
         out.appError = {
@@ -90,17 +90,22 @@ function buildError(code, message, err) {
  */
 class ClusterRpcHub {
     /** @type {Map<string, Function>} method -> (args, ctx) => result | Promise */
-    #handlers = new Map();
+    #handlers: Map<string, ((...args: any[]) => any)> = new Map();
     /** @type {Map<string, {kind: "leader"|"gather", targetId: number, fromId: number, reqId: string, gather?: object, timer?: any}>} */
-    #calls = new Map();
+    #calls: Map<string, { kind: "leader" | "gather"; targetId: number; fromId: number; reqId: string; gather?: Record<string, any>; timer?: any; }> = new Map();
     /** @type {Set<Function>} */
-    #listeningHooks = new Set();
+    #listeningHooks: Set<((...args: any[]) => any)> = new Set();
     /** @type {Set<Function>} */
-    #exitHooks = new Set();
+    #exitHooks: Set<((...args: any[]) => any)> = new Set();
     #seq = 0;
     #leaderCalls = 0;
     #gathers = 0;
     #lastRejectLog = -Infinity;
+    declare _now: () => number;
+    declare _getLeader: () => (Record<string, any> | null | undefined);
+    declare _getLiveWorkers: () => Record<string, any>[];
+    declare _logger: Record<string, any>;
+    declare _cluster: import("cluster").Cluster | undefined;
 
     /**
      * @param {object} deps
@@ -110,7 +115,7 @@ class ClusterRpcHub {
      * @param {() => (object|null|undefined)} deps.getLeader
      * @param {() => number} [deps.now=Date.now]
      */
-    constructor({ cluster, logger, getLiveWorkers, getLeader, now = Date.now }) {
+    constructor({ cluster, logger, getLiveWorkers, getLeader, now = Date.now }: { cluster?: import("cluster").Cluster; logger: Record<string, any>; getLiveWorkers: () => Record<string, any>[]; getLeader: () => (Record<string, any> | null | undefined); now?: () => number; }) {
         this._cluster = cluster;
         this._logger = logger;
         this._getLiveWorkers = getLiveWorkers;
@@ -119,7 +124,7 @@ class ClusterRpcHub {
     }
 
     /** @returns {number} pending leader calls + gathers (diagnostics/tests) */
-    get pendingCount() {
+    get pendingCount(): number {
         return this.#calls.size;
     }
 
@@ -129,17 +134,17 @@ class ClusterRpcHub {
      * @param {string} method
      * @param {(args: object, ctx: {worker: object}) => any} handler
      */
-    register(method, handler) {
+    register(method: string, handler: (args: Record<string, any>, ctx: { worker: Record<string, any>; }) => any) {
         this.#handlers.set(method, handler);
     }
 
     /** @param {(worker: object) => void} fn called when a worker emits `listening` */
-    addListeningHook(fn) {
+    addListeningHook(fn: (worker: Record<string, any>) => void) {
         this.#listeningHooks.add(fn);
     }
 
     /** @param {(worker: object) => void} fn called when a worker exits */
-    addExitHook(fn) {
+    addExitHook(fn: (worker: Record<string, any>) => void) {
         this.#exitHooks.add(fn);
     }
 
@@ -150,7 +155,7 @@ class ClusterRpcHub {
      * @param {*} msg
      * @returns {boolean} true when the message belonged to this protocol
      */
-    handleMessage(worker, msg) {
+    handleMessage(worker: Record<string, any>, msg: any): boolean {
         try {
             const cmd = msg && typeof msg === "object" ? msg.cmd : undefined;
             if (cmd === CLUSTER_IPC.RPC_REQUEST) {
@@ -179,7 +184,7 @@ class ClusterRpcHub {
      * @param {object} payload
      * @param {{exceptId?: number}} [opts]
      */
-    broadcast(topic, payload, { exceptId } = {}) {
+    broadcast(topic: string, payload: Record<string, any>, { exceptId }: { exceptId?: number; } = {}) {
         for (const w of this._getLiveWorkers()) {
             if (exceptId !== undefined && w.id === exceptId) continue;
             this.sendTo(w, topic, payload);
@@ -194,12 +199,12 @@ class ClusterRpcHub {
      * @param {object} payload
      * @returns {boolean}
      */
-    sendTo(worker, topic, payload) {
+    sendTo(worker: Record<string, any>, topic: string, payload: Record<string, any>): boolean {
         return this.#send(worker, { cmd: CLUSTER_IPC.BROADCAST, topic, payload });
     }
 
     /** @param {object} worker - a worker that just emitted `listening` */
-    onWorkerListening(worker) {
+    onWorkerListening(worker: Record<string, any>) {
         for (const fn of this.#listeningHooks) this.#safeHook(fn, worker);
     }
 
@@ -209,7 +214,7 @@ class ClusterRpcHub {
      *
      * @param {object} worker
      */
-    onWorkerExit(worker) {
+    onWorkerExit(worker: Record<string, any>) {
         for (const [callId, call] of [...this.#calls]) {
             if (call.fromId === worker.id) {
                 this.#dropCall(callId, call);
@@ -227,7 +232,7 @@ class ClusterRpcHub {
 
     // ── Inbound ──────────────────────────────────────────────────────────────
 
-    #onRequest(worker, msg) {
+    #onRequest(worker: any, msg: any) {
         const v = validateRequest(msg);
         if (!v.ok) {
             this.#reject(worker, v.reason);
@@ -243,7 +248,7 @@ class ClusterRpcHub {
             return;
         }
         const { id, target, method, args } = v.value;
-        const reply = (ok, result, error) => this.#respond(worker, id, ok, result, error);
+        const reply = (ok: any, result: any, error: any) => this.#respond(worker, id, ok, result, error);
         if (METHOD_TARGET.get(method) !== target) {
             this.#reject(worker, "method-target-mismatch");
             reply(false, undefined, buildError(E.REJECTED, "method-target-mismatch"));
@@ -267,7 +272,7 @@ class ClusterRpcHub {
         }
     }
 
-    #onNotify(worker, msg) {
+    #onNotify(worker: any, msg: any) {
         const v = validateNotify(msg);
         if (!v.ok) return this.#reject(worker, v.reason);
         const { method, args } = v.value;
@@ -277,7 +282,7 @@ class ClusterRpcHub {
         this.#runPrimary(worker, method, a.value).catch((err) => this.#handlerError(method, err));
     }
 
-    #onReturn(worker, msg) {
+    #onReturn(worker: any, msg: any) {
         if (!isPlainObject(msg) || typeof msg.callId !== "string") return this.#reject(worker, "bad-return");
         const call = this.#calls.get(msg.callId);
         // Identity from the worker object: only the worker the call went to may answer it.
@@ -302,13 +307,13 @@ class ClusterRpcHub {
 
     // ── Routing ──────────────────────────────────────────────────────────────
 
-    async #runPrimary(worker, method, args) {
+    async #runPrimary(worker: any, method: any, args: any) {
         const handler = this.#handlers.get(method);
         if (!handler) throw Object.assign(new Error("no-handler"), { code: "NO_HANDLER" });
         return handler(args, { worker });
     }
 
-    #forwardToLeader(worker, reqId, method, args) {
+    #forwardToLeader(worker: any, reqId: any, method: any, args: any) {
         const leader = this._getLeader();
         if (!leader) return this.#respond(worker, reqId, false, undefined, buildError(E.NO_LEADER, "no leader"));
         if (this.#leaderCalls >= CLUSTER_RPC_LIMITS.MAX_LEADER_CALLS) {
@@ -329,7 +334,7 @@ class ClusterRpcHub {
         }
     }
 
-    #gather(worker, reqId, method, args) {
+    #gather(worker: any, reqId: any, method: any, args: any) {
         const live = this._getLiveWorkers();
         if (this.#gathers >= CLUSTER_RPC_LIMITS.MAX_GATHERS) {
             return this.#respond(worker, reqId, false, undefined, buildError(E.OVERLOAD, "too many gathers"));
@@ -367,7 +372,7 @@ class ClusterRpcHub {
         if (g.outstanding === 0) this.#finishGather(g);
     }
 
-    #gatherPartDone(callId, call, value) {
+    #gatherPartDone(callId: any, call: any, value: any) {
         if (!this.#calls.has(callId)) return;
         this.#calls.delete(callId);
         const g = call.gather;
@@ -380,7 +385,7 @@ class ClusterRpcHub {
         if (g.outstanding <= 0) this.#finishGather(g);
     }
 
-    #finishGather(g) {
+    #finishGather(g: any) {
         if (g.done) return;
         g.done = true;
         this.#gathers--;
@@ -390,7 +395,7 @@ class ClusterRpcHub {
         this.#respondTo(g.fromId, g.reqId, true, { parts: g.parts, missing: [...g.missing] });
     }
 
-    #dropCall(callId, call) {
+    #dropCall(callId: any, call: any) {
         if (!this.#calls.delete(callId)) return;
         if (call.timer) clearTimeout(call.timer);
         if (call.kind === "leader") this.#leaderCalls--;
@@ -408,7 +413,7 @@ class ClusterRpcHub {
 
     // ── Wire helpers ─────────────────────────────────────────────────────────
 
-    #handlerError(method, err) {
+    #handlerError(method: any, err: any) {
         const wire = buildError(E.HANDLER_ERROR, err?.isOperational ? err.message : "handler failed", err);
         if (!err?.isOperational) {
             this._logger.warning(clusterMessages.CLUSTER_RPC_HANDLER_FAILED(method, String(err?.message ?? err).slice(0, 200)));
@@ -417,7 +422,7 @@ class ClusterRpcHub {
     }
 
     /** Re-clamps an error object received from a leader before relaying it. */
-    #sanitizeWireError(e) {
+    #sanitizeWireError(e: any) {
         if (!isPlainObject(e) || typeof e.message !== "string") return buildError(E.HANDLER_ERROR, "leader handler failed");
         const out = buildError(E.HANDLER_ERROR, e.message);
         const a = e.appError;
@@ -431,19 +436,19 @@ class ClusterRpcHub {
         return out;
     }
 
-    #respond(worker, id, ok, result, error) {
+    #respond(worker: any, id: any, ok: any, result: any, error: any) {
         const msg = { cmd: CLUSTER_IPC.RPC_RESPONSE, id, ok };
         if (ok) msg.result = result === undefined ? null : result;
         else msg.error = error;
         this.#send(worker, msg);
     }
 
-    #respondTo(workerId, id, ok, result, error) {
+    #respondTo(workerId: any, id: any, ok: any, result: any, error: any) {
         const w = this._getLiveWorkers().find((x) => x.id === workerId);
         if (w) this.#respond(w, id, ok, result, error);
     }
 
-    #send(worker, message) {
+    #send(worker: any, message: any) {
         try {
             worker.send(message);
             return true;
@@ -452,7 +457,7 @@ class ClusterRpcHub {
         }
     }
 
-    #timer(fn, ms) {
+    #timer(fn: any, ms: any) {
         const t = setTimeout(fn, ms);
         t.unref?.();
         return t;
@@ -462,7 +467,7 @@ class ClusterRpcHub {
         return `c${++this.#seq}`;
     }
 
-    #safeHook(fn, worker) {
+    #safeHook(fn: any, worker: any) {
         try {
             fn(worker);
         } catch (err) {
@@ -471,7 +476,7 @@ class ClusterRpcHub {
     }
 
     /** Logs a rejected message at most once per minute (CWE-400 on the log). */
-    #reject(worker, reason) {
+    #reject(worker: any, reason: any) {
         const now = this._now();
         if (now - this.#lastRejectLog < CLUSTER_RPC_LIMITS.REJECT_LOG_GAP_MS) return;
         this.#lastRejectLog = now;

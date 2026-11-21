@@ -24,6 +24,7 @@
  * the UI the moment it changes, so the status banner is proactive.
  */
 
+import type { Request, Response } from "express";
 import express from "express";
 const router = express.Router();
 
@@ -70,7 +71,7 @@ router.get("/live", (_req, res) => {
  */
 router.get(
     "/ready",
-    catchAsync(async (_req, res) => {
+    catchAsync(async (_req: any, res: any) => {
         // Draining: report not-ready at once and do NOT probe the pools -
         // the load-balancer and the UI's "server is restarting" banner only need the 503.
         if (InFlightTaskRegistry.isShuttingDown()) {
@@ -112,7 +113,7 @@ router.get(
  * change, `heartbeat` every 15 s, `shutdown` when the server drains.
  * NOT wrapped in catchAsync: refusals happen before the upgrade.
  */
-router.get("/stream", (req, res) => {
+router.get("/stream", (req: Request, res: Response) => {
     if (InFlightTaskRegistry.isShuttingDown()) {
         res.set("Retry-After", String(SHUTDOWN_RETRY_AFTER_SEC));
         return sendSsePreflightError(req, res, GENERAL_ERRORS.SERVER_SHUTTING_DOWN, 503, {
@@ -137,7 +138,7 @@ router.get("/stream", (req, res) => {
  */
 router.get(
     "/",
-    catchAsync(async (_req, res) => {
+    catchAsync(async (_req: any, res: any) => {
         // Draining: answer 200 from memory with database:"draining" - no pool borrow per monitor poll,
         // and the 200 stays compatible with legacy monitors (shutdownGate.integration pin).
         if (InFlightTaskRegistry.isShuttingDown()) {
@@ -158,7 +159,7 @@ router.get(
         };
 
         try {
-            await db.withConnection(POOL_NAMES[0], async (conn) => {
+            await db.withConnection(POOL_NAMES[0], async (conn: any) => {
                 await conn.execute("SELECT 1 FROM DUAL");
             });
             data.database = "connected";

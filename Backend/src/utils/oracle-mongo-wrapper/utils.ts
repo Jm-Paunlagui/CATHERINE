@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -39,7 +38,7 @@ import { oracleMongoWrapperMessages as MSG } from "../../constants/messages";
  *   quoteIdentifier("status")  // → '"status"'
  *   quoteIdentifier("ORDER")   // → '"ORDER"'   (ORDER is a reserved word)
  */
-function quoteIdentifier(name) {
+function quoteIdentifier(name: string): string {
   // Escape embedded double-quotes to prevent identifier injection (CWE-116)
   const sanitized = String(name).replace(/"/g, '""');
   return `"${sanitized}"`;
@@ -73,9 +72,9 @@ function quoteIdentifier(name) {
  *   convertTypes({ NAME: "Juan", AGE: "25", SALARY: "50000.5000" })
  *   // → { NAME: "Juan", AGE: 25, SALARY: "50000.5000" }  (money left as string)
  */
-function convertTypes(row) {
+function convertTypes(row: Record<string, any>): Record<string, any> {
   if (!row || typeof row !== "object") return row;
-  const out = {};
+  const out: Record<string, any> = {};
   for (const [key, val] of Object.entries(row)) {
     if (
       typeof val === "string" &&
@@ -106,7 +105,7 @@ function convertTypes(row) {
  * @param {Object} row - A raw Oracle row object
  * @returns {Object} Cleaned document with proper types
  */
-function rowToDoc(row) {
+function rowToDoc(row: Record<string, any>): Record<string, any> {
   return convertTypes(row);
 }
 
@@ -138,7 +137,7 @@ function rowToDoc(row) {
  *   mergeBinds({ where_name_0: "Juan" }, { upd_status_0: "active" })
  *   // → { where_name_0: "Juan", upd_status_0: "active" }
  */
-function mergeBinds(a, b) {
+function mergeBinds(a: Record<string, any>, b: Record<string, any>): Record<string, any> {
   const merged = { ...a };
   for (const [k, v] of Object.entries(b)) {
     if (k in merged) {
@@ -167,7 +166,7 @@ function mergeBinds(a, b) {
  *
  *   buildOrderBy(null)  // → ""  (no sorting)
  */
-function buildOrderBy(sortSpec) {
+function buildOrderBy(sortSpec: Record<string, any>): string {
   if (
     !sortSpec ||
     typeof sortSpec !== "object" ||
@@ -219,7 +218,7 @@ function buildOrderBy(sortSpec) {
  *   buildProjection(null)
  *   // → { columns: '*', isExclusion: false, excludedCols: [] }
  */
-function buildProjection(projection) {
+function buildProjection(projection: Record<string, any>): { columns: string; isExclusion: boolean; excludedCols: string[]; } {
   if (
     !projection ||
     typeof projection !== "object" ||

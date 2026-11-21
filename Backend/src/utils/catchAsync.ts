@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -16,8 +15,9 @@
  * @param {Function} fn - Async (req, res, next) => Promise
  * @returns {Function}  Express middleware
  */
-function catchAsync(fn) {
-    return (req, res, next) => {
+import type { NextFunction, Request, Response } from "express";
+function catchAsync(fn: ((...args: any[]) => any)): ((...args: any[]) => any) {
+    return (req: Request, res: Response, next: NextFunction) => {
         try {
             Promise.resolve(fn(req, res, next)).catch(next);
         } catch (err) {

@@ -10,6 +10,7 @@
  * or stack traces to clients in production.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger";
 import ORA_MAP from "./OraCode";
 import { NJS_MAP, TRANSIENT_STRING_PATTERNS, POOL_OVERLOADED_TYPE } from "./NjsCode";
@@ -19,13 +20,14 @@ import { getStatusTitle } from "../../constants/responses";
 const SHUTTING_DOWN_TYPE = "ServerShuttingDown";
 
 class ErrorHandlerMiddleware {
+    declare _cors: any;
     /**
      * @param {object} [options]
      * @param {{ applyToErrorResponse: Function }} [options.cors] - CORS policy
      *   for errors raised before the CORS middleware ran; defaults to the one
      *   `app.js` mounts.
      */
-    constructor(options = {}) {
+    constructor(options: { cors?: { applyToErrorResponse: ((...args: any[]) => any); }; } = {}) {
         this._cors = options.cors ?? require("../security/CorsMiddleware").defaultCors;
         this.handle = this.handle.bind(this);
         this.notFoundHandler = this.notFoundHandler.bind(this);
@@ -34,7 +36,7 @@ class ErrorHandlerMiddleware {
 
     // ─── Main handler ──────────────────────────────────────────────────────────
 
-    handle(err, req, res, _next) {
+    handle(err: any, req: Request, res: Response, _next: any) {
         // The request watchdog already answered (504) or destroyed this
         // response. The handler's late error (ERR_HTTP_HEADERS_SENT, or the
         // RequestStalledError thrown by a later DB call) must not be logged as
@@ -137,7 +139,7 @@ class ErrorHandlerMiddleware {
      *   4. HTTP-level framework errors (body-parser, multer)
      *   5. Fallback generic 500
      */
-    _classify(err) {
+    _classify(err: any) {
         // 1. AppError — already operational and classified
         if (err.isOperational) {
             return {
@@ -276,7 +278,7 @@ class ErrorHandlerMiddleware {
      * client message. The raw DB message (with SQL / binds) is stored in
      * rawMessage for the logger — it is never sent to the client.
      */
-    _classifyOracle(err) {
+    _classifyOracle(err: any) {
         const match = err.message.match(/ORA-(\d+)/);
         const code = match ? parseInt(match[1], 10) : 0;
         const known = ORA_MAP[code];
@@ -295,7 +297,7 @@ class ErrorHandlerMiddleware {
      * client message. The raw driver message is stored in rawMessage for the
      * logger — it is never sent to the client.
      */
-    _classifyNjs(err) {
+    _classifyNjs(err: any) {
         const match = err.message.match(/NJS-(\d+)/);
         const code = match ? parseInt(match[1], 10) : 0;
         const known = NJS_MAP[code];
@@ -317,7 +319,7 @@ class ErrorHandlerMiddleware {
 
     // ─── 404 handler ──────────────────────────────────────────────────────────
 
-    notFoundHandler(req, res, _next) {
+    notFoundHandler(req: Request, res: Response, _next: any) {
         res.status(404).json({
             status: "error",
             code: 404,
@@ -341,7 +343,7 @@ class ErrorHandlerMiddleware {
      *   - Captured body is capped at 64 KiB to prevent memory exhaustion from
      *     unexpectedly large JSON responses.
      */
-    captureResponseBody(req, res, next) {
+    captureResponseBody(req: Request, res: Response, next: NextFunction) {
         // Skip SSE streams — they never end, so buffering would leak memory.
         const accept = req.headers.accept || "";
         if (accept.includes("text/event-stream")) {
@@ -351,7 +353,7 @@ class ErrorHandlerMiddleware {
         const MAX_CAPTURE_BYTES = 64 * 1024; // 64 KiB cap
         const oldWrite = res.write;
         const oldEnd = res.end;
-        const chunks = [];
+        const chunks: any[] = [];
         let totalBytes = 0;
         let capped = false;
 

@@ -7,6 +7,7 @@
  * requests with structured messages.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger";
 import { snowflake } from "../../utils/snowflake";
 import { requestContext } from "../../utils/requestContext";
@@ -40,12 +41,12 @@ const SENSITIVE_PATTERNS = [
     "dob",
 ];
 
-function isSensitiveKey(key) {
+function isSensitiveKey(key: any) {
     const norm = key.toLowerCase().replace(/[-_\s]/g, "");
     return SENSITIVE_PATTERNS.some((p) => norm.includes(p));
 }
 
-function redactValue(key, value) {
+function redactValue(key: any, value: any) {
     return isSensitiveKey(key) ? "[REDACTED]" : value;
 }
 
@@ -82,7 +83,7 @@ function redactValue(key, value) {
  * @returns {*} A redacted copy. Primitives are returned unchanged.
  * @throws {TypeError} On a circular reference.
  */
-function deepRedact(value, depth = 0, seen = new WeakSet()) {
+function deepRedact(value: any, depth: number = 0, seen: WeakSet<Record<string, any>> = new WeakSet()): any {
     // Depth cap: a malicious or accidental deeply-nested payload must not turn
     // a log line into a stack overflow. 8 is far past any real request shape.
     if (depth > 8) return "[MAX_DEPTH]";
@@ -98,7 +99,7 @@ function deepRedact(value, depth = 0, seen = new WeakSet()) {
             return value.map((v) => deepRedact(v, depth + 1, seen));
         }
 
-        const out = {};
+        const out: Record<string, any> = {};
         for (const [k, v] of Object.entries(value)) {
             out[k] = isSensitiveKey(k)
                 ? "[REDACTED]"
@@ -114,6 +115,7 @@ function deepRedact(value, depth = 0, seen = new WeakSet()) {
 }
 
 class TraceabilityMiddleware {
+    declare _excludedUrls: any;
     constructor(options = {}) {
         this._excludedUrls = options.excludedUrls ?? [
             ...(process.env.LOG_EXCLUDE_HEALTH === "true" ? ["/health"] : []),
@@ -131,10 +133,10 @@ class TraceabilityMiddleware {
      * @param {import('express').Request} req
      * @returns {boolean}
      */
-    _shouldLog(req) {
+    _shouldLog(req: import('express').Request): boolean {
         if (req.method === "OPTIONS") return false;
         const url = req.originalUrl || req.url;
-        return !this._excludedUrls.some((u) => url.includes(u.trim()));
+        return !this._excludedUrls.some((u: any) => url.includes(u.trim()));
     }
 
     /**
@@ -142,7 +144,7 @@ class TraceabilityMiddleware {
      *
      * @param {import('express').Request} req
      */
-    _emitIncoming(req) {
+    _emitIncoming(req: import('express').Request) {
         if (req._incomingLogged) return;
         req._incomingLogged = true;
         logger.logIncomingRequest(
@@ -179,12 +181,12 @@ class TraceabilityMiddleware {
      * @param {import('express').Response} res
      * @param {Function} next
      */
-    logIncoming(req, res, next) {
+    logIncoming(req: import('express').Request, res: import('express').Response, next: ((...args: any[]) => any)) {
         if (this._shouldLog(req)) this._emitIncoming(req);
         next();
     }
 
-    handle(req, res, next) {
+    handle(req: Request, res: Response, next: NextFunction) {
         // Inject unique Snowflake request ID — time-sortable, deconstructable,
         // collision-free across distributed instances, PKG-compatible (pure JS).
         // Format: "0078812966528-0448-0000" (Timestamp-MachineID-Sequence).
@@ -194,7 +196,7 @@ class TraceabilityMiddleware {
         const startTime = Date.now();
         const url = req.originalUrl || req.url;
         const isOptions = req.method === "OPTIONS";
-        const shouldLog = !this._excludedUrls.some((u) =>
+        const shouldLog = !this._excludedUrls.some((u: any) =>
             url.includes(u.trim()),
         );
 
@@ -260,7 +262,7 @@ class TraceabilityMiddleware {
      *
      * @example router.post("/upload", auth, upload.any(), TraceabilityMiddleware.restoreContext, Controller.method)
      */
-    static restoreContext(req, res, next) {
+    static restoreContext(req: Request, res: Response, next: NextFunction) {
         if (requestContext.getStore()?.requestId === req.id) return next();
         requestContext.run(
             { requestId: req.id, progress: RequestWatchdog.scopeOf(req) },
@@ -268,7 +270,7 @@ class TraceabilityMiddleware {
         );
     }
 
-    static createRequestMessage(req) {
+    static createRequestMessage(req: any) {
         const url = req.originalUrl || req.url;
         let message = `[${req.method} @ ${url}]`;
 

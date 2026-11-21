@@ -59,7 +59,7 @@ import { parseFilter } from "../parsers/filterParser";
  *     maxLevel: 5
  *   })
  */
-function buildConnectBy(tableName, spec) {
+function buildConnectBy(tableName: string, spec: { startWith?: Record<string, any>; connectBy: Record<string, any>; orderSiblings?: Record<string, any>; maxLevel?: number; includeLevel?: boolean; includePath?: boolean; }): { sql: string; binds: Record<string, any>; } {
   const {
     startWith,
     connectBy,
@@ -68,7 +68,7 @@ function buildConnectBy(tableName, spec) {
     includeLevel,
     includePath,
   } = spec;
-  const binds = {};
+  const binds: Record<string, any> = {};
 
   // SELECT clause
   const selectParts = [];
@@ -150,9 +150,9 @@ function buildConnectBy(tableName, spec) {
  *   })
  *   // Each year gets a row, each region becomes a column with SUM(amount)
  */
-function buildPivot(tableName, spec) {
+function buildPivot(tableName: string, spec: { value: Record<string, any>; pivotOn: string; pivotValues: string[]; groupBy: string; }): { sql: string; binds: Record<string, any>; } {
   const { value, pivotOn, pivotValues, groupBy } = spec;
-  const binds = {};
+  const binds: Record<string, any> = {};
 
   // Determine aggregate function and field
   const [aggOp, aggField] = Object.entries(value)[0];
@@ -200,7 +200,7 @@ function buildPivot(tableName, spec) {
  *   })
  *   // Each Q1/Q2/Q3/Q4 column becomes a row: { quarter: "Q1", revenue: 1000 }
  */
-function buildUnpivot(tableName, spec) {
+function buildUnpivot(tableName: string, spec: { valueColumn: string; nameColumn: string; columns: string[]; includeNulls?: boolean; }): { sql: string; binds: Record<string, any>; } {
   const { valueColumn, nameColumn, columns, includeNulls = false } = spec;
   const nullHandling = includeNulls ? "INCLUDE NULLS" : "EXCLUDE NULLS";
   const colList = columns.map(quoteIdentifier).join(", ");
@@ -213,7 +213,7 @@ function buildUnpivot(tableName, spec) {
 /**
  * Try to determine a name column from spec for SYS_CONNECT_BY_PATH.
  */
-function _getNameColumn(spec) {
+function _getNameColumn(spec: any) {
   if (spec.connectBy) {
     const keys = Object.keys(spec.connectBy);
     // Use a heuristic: first key that looks like 'name'

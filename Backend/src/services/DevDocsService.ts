@@ -155,9 +155,28 @@ const SECTION_SOURCE_MAP = Object.freeze({
 });
 
 /** @type {{ builtAt: number, byId: Map<string, object>, sections: object[] }|null} */
-let _manifestCache = null;
+let _manifestCache: { builtAt: number; byId: Map<string, Record<string, any>>; sections: Record<string, any>[]; } | null = null;
 
 class DevDocsService {
+    declare static FRESHNESS_SNAPSHOT_PATH: string;
+    declare static SECTION_SOURCE_MAP: Readonly<{
+        // Paths are case-exact: git pathspecs are case-sensitive.
+        "System Admin": string[];
+        // The union of what the Support documents describe: the changelog, and the
+        // Architecture / Runtime system maps with the dev-docs viewer that serves them.
+        // Changelog-only left architecture, runtime and viewer docs unable to go SUSPECT.
+        Support: string[];
+        // Cross-cutting. The union of what the documents under Others/ describe:
+        // auth, health probes, CSRF and client error ingestion.
+        Others: string[];
+        // The synthetic section holding root-level README.md. Its sources are what
+        // actually makes it stale: README documents how the corpus is served and
+        // what the freshness badge means, so this service IS its subject.
+        Overview: string[];
+    }>;
+    declare static MIN_QUERY_LENGTH: number;
+    declare static SEARCH_RESULT_CAP: number;
+    declare static CORPUS_ROOT: string;
     // ─── Manifest ────────────────────────────────────────────────────────────
 
     /**
@@ -171,7 +190,7 @@ class DevDocsService {
      * @param {string} absolutePath
      * @throws {AppError} 500 when the path is outside CORPUS_ROOT
      */
-    static _assertInsideCorpus(absolutePath) {
+    static _assertInsideCorpus(absolutePath: string) {
         const resolved = path.resolve(absolutePath);
         const root = CORPUS_ROOT.endsWith(path.sep) ? CORPUS_ROOT : CORPUS_ROOT + path.sep;
         if (resolved !== CORPUS_ROOT && !resolved.startsWith(root)) {
@@ -197,8 +216,8 @@ class DevDocsService {
      * @param {string} fileName
      * @returns {string}
      */
-    static _buildId(section, fileName) {
-        const slug = (v) => String(v).replace(/\.md$/i, "").replace(/[\\/]+/g, "-").trim().toLowerCase();
+    static _buildId(section: string, fileName: string): string {
+        const slug = (v: any) => String(v).replace(/\.md$/i, "").replace(/[\\/]+/g, "-").trim().toLowerCase();
         return `${slug(section)}/${slug(fileName)}`;
     }
 
@@ -215,7 +234,7 @@ class DevDocsService {
      * @param {string} fileName
      * @returns {Promise<string>}
      */
-    static async _readTitle(absolutePath, fileName) {
+    static async _readTitle(absolutePath: string, fileName: string): Promise<string> {
         let handle = null;
         try {
             handle = await fsp.open(absolutePath, "r");
@@ -258,7 +277,7 @@ class DevDocsService {
      * @param {string[]} pathspecs - repo-relative paths or directories
      * @returns {Promise<Map<string, string>>} repo-relative path -> YYYY-MM-DD
      */
-    static async _commitDateIndex(pathspecs) {
+    static async _commitDateIndex(pathspecs: string[]): Promise<Map<string, string>> {
         const index = new Map();
         if (!pathspecs.length) return index;
         try {
@@ -300,10 +319,10 @@ class DevDocsService {
      *
      * @returns {Promise<{ docs: Map<string, string>, sources: Map<string, string> }|null>}
      */
-    static async _loadFreshnessSnapshot() {
+    static async _loadFreshnessSnapshot(): Promise<{ docs: Map<string, string>; sources: Map<string, string>; } | null> {
         try {
             const parsed = JSON.parse(await fsp.readFile(FRESHNESS_SNAPSHOT_PATH, "utf8"));
-            const toMap = (obj) => new Map(
+            const toMap = (obj: any) => new Map(
                 Object.entries(obj ?? {}).filter(([, date]) => typeof date === "string"),
             );
             return { docs: toMap(parsed.docs), sources: toMap(parsed.sources) };
@@ -319,7 +338,7 @@ class DevDocsService {
      *
      * @returns {Promise<{ docIndex: Map<string, string>, sourceIndex: Map<string, string> }>}
      */
-    static async _resolveDateIndexes() {
+    static async _resolveDateIndexes(): Promise<{ docIndex: Map<string, string>; sourceIndex: Map<string, string>; }> {
         // Two `git log` passes for the whole manifest — one over the corpus, one
         // over the source files freshness compares against — instead of one
         // child process per path. See _commitDateIndex.
@@ -347,10 +366,10 @@ class DevDocsService {
      * @param {Map<string, string>} sourceIndex - from _commitDateIndex
      * @returns {string|null}
      */
-    static _sectionSourceDate(section, sourceIndex) {
+    static _sectionSourceDate(section: string, sourceIndex: Map<string, string>): string | null {
         const sources = SECTION_SOURCE_MAP[section];
         if (!sources?.length) return null;
-        const dates = sources.map((src) => sourceIndex.get(src)).filter(Boolean);
+        const dates = sources.map((src: any) => sourceIndex.get(src)).filter(Boolean);
         if (!dates.length) return null;
         return dates.sort().at(-1);
     }
@@ -369,7 +388,7 @@ class DevDocsService {
      * @param {string|null} sourceDate
      * @returns {"CURRENT"|"SUSPECT"|"UNKNOWN"}
      */
-    static _freshness(docDate, sourceDate) {
+    static _freshness(docDate: string | null, sourceDate: string | null): "CURRENT" | "SUSPECT" | "UNKNOWN" {
         if (!docDate || !sourceDate) return "UNKNOWN";
         return docDate >= sourceDate ? "CURRENT" : "SUSPECT";
     }
@@ -381,9 +400,9 @@ class DevDocsService {
      *
      * @returns {Promise<{ builtAt: number, byId: Map<string, object>, sections: object[] }>}
      */
-    static async _buildManifest() {
+    static async _buildManifest(): Promise<{ builtAt: number; byId: Map<string, Record<string, any>>; sections: Record<string, any>[]; }> {
         const byId = new Map();
-        const sections = [];
+        const sections: any[] = [];
 
         const { docIndex, sourceIndex } = await DevDocsService._resolveDateIndexes();
 
@@ -402,7 +421,7 @@ class DevDocsService {
         const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
         const rootDocs = entries.filter((e) => e.isFile() && /\.md$/i.test(e.name)).map((e) => e.name).sort();
 
-        const collect = async (sectionName, dirAbs, fileNames) => {
+        const collect = async (sectionName: any, dirAbs: any, fileNames: any) => {
             const sourceDate = DevDocsService._sectionSourceDate(sectionName, sourceIndex);
             const docs = [];
             for (const fileName of fileNames) {
@@ -459,7 +478,7 @@ class DevDocsService {
      *
      * @returns {Promise<{ builtAt: number, byId: Map<string, object>, sections: object[] }>}
      */
-    static async _manifest() {
+    static async _manifest(): Promise<{ builtAt: number; byId: Map<string, Record<string, any>>; sections: Record<string, any>[]; }> {
         if (_manifestCache && Date.now() - _manifestCache.builtAt < MANIFEST_TTL_MS) {
             return _manifestCache;
         }
@@ -479,7 +498,7 @@ class DevDocsService {
      *
      * @returns {Promise<{ sections: object[], generatedAt: string }>}
      */
-    static async getTree() {
+    static async getTree(): Promise<{ sections: Record<string, any>[]; generatedAt: string; }> {
         const manifest = await DevDocsService._manifest();
         return {
             sections: manifest.sections,
@@ -496,7 +515,7 @@ class DevDocsService {
      * @returns {Promise<object>}
      * @throws {AppError} 404 when the id is unknown
      */
-    static async getDoc(id) {
+    static async getDoc(id: string): Promise<Record<string, any>> {
         const manifest = await DevDocsService._manifest();
         const entry = manifest.byId.get(String(id ?? "").trim().toLowerCase());
         if (!entry) {
@@ -540,7 +559,7 @@ class DevDocsService {
      * @returns {Promise<{ results: object[], total: number, truncated: boolean }>}
      * @throws {AppError} 400 when the query is too short
      */
-    static async search(rawQuery) {
+    static async search(rawQuery: string): Promise<{ results: Record<string, any>[]; total: number; truncated: boolean; }> {
         const query = String(rawQuery ?? "").trim();
         if (query.length < MIN_QUERY_LENGTH) {
             throw new AppError(DEV_DOCS_ERRORS.INVALID_QUERY, HTTP_STATUS.BAD_REQUEST, {

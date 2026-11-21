@@ -29,7 +29,7 @@ const SWEEP_MIN_GAP_MS = 1000;
 
 class LoginLockoutState {
     /** @type {Map<string, {state: object, expiresAt: number}>} */
-    #entries = new Map();
+    #entries: Map<string, { state: Record<string, any>; expiresAt: number; }> = new Map();
     #policy;
     #maxKeys;
     #lastSweep = -Infinity;
@@ -39,13 +39,13 @@ class LoginLockoutState {
      * @param {LoginLockoutPolicy} [options.policy] - default `LoginLockoutPolicy.fromEnv()`
      * @param {number} [options.maxKeys=100000]
      */
-    constructor({ policy = LoginLockoutPolicy.fromEnv(), maxKeys = 100_000 } = {}) {
+    constructor({ policy = LoginLockoutPolicy.fromEnv(), maxKeys = 100_000 }: { policy?: LoginLockoutPolicy; maxKeys?: number; } = {}) {
         this.#policy = policy;
         this.#maxKeys = maxKeys;
     }
 
     /** @returns {number} tracked users (diagnostics/tests) */
-    get size() {
+    get size(): number {
         return this.#entries.size;
     }
 
@@ -56,7 +56,7 @@ class LoginLockoutState {
      * @param {number} now - epoch ms
      * @returns {{locked: boolean, retryAfter?: number, hrReset?: boolean}}
      */
-    check(key, now) {
+    check(key: string, now: number): { locked: boolean; retryAfter?: number; hrReset?: boolean; } {
         const entry = this.#live(key, now);
         if (!entry) return { locked: false };
         const r = this.#policy.evaluate(entry.state, now);
@@ -75,7 +75,7 @@ class LoginLockoutState {
      * @returns {{failCount: number, currentMax: number, cycles: number, engaged: boolean, ignored: boolean, lockDurationMs: number|null}|{fallback: true}}
      *   `{fallback: true}` only when the store is full of locked entries
      */
-    fail(key, now) {
+    fail(key: string, now: number): { failCount: number; currentMax: number; cycles: number; engaged: boolean; ignored: boolean; lockDurationMs: number | null; } | { fallback: true; } {
         const entry = this.#live(key, now);
         if (!entry && this.#entries.size >= this.#maxKeys && !this.#makeRoom(now)) {
             return { fallback: true };
@@ -98,13 +98,13 @@ class LoginLockoutState {
      *
      * @param {string} key
      */
-    clear(key) {
+    clear(key: string) {
         this.#entries.delete(key);
     }
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    #live(key, now) {
+    #live(key: any, now: any) {
         const entry = this.#entries.get(key);
         if (!entry) return null;
         if (entry.expiresAt <= now) {
@@ -114,7 +114,7 @@ class LoginLockoutState {
         return entry;
     }
 
-    #write(key, state, now) {
+    #write(key: any, state: any, now: any) {
         // delete first so Map order tracks last write (oldest-first eviction).
         this.#entries.delete(key);
         this.#entries.set(key, { state, expiresAt: now + ENTRY_TTL_MS });
@@ -126,7 +126,7 @@ class LoginLockoutState {
      *
      * @returns {boolean} true when a slot is free
      */
-    #makeRoom(now) {
+    #makeRoom(now: any): boolean {
         if (now - this.#lastSweep < SWEEP_MIN_GAP_MS) return false;
         for (const [k, e] of this.#entries) {
             if (e.expiresAt <= now) this.#entries.delete(k);

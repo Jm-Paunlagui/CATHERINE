@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -65,7 +64,7 @@ const GROUP_LEN = 4;
  * @param {(max: number) => number} [randomInt=crypto.randomInt] - injectable for tests
  * @returns {string}
  */
-function generateTemporaryPassword(randomInt = crypto.randomInt) {
+function generateTemporaryPassword(randomInt: (max: number) => number = crypto.randomInt): string {
     for (;;) {
         const chars = [];
         for (let i = 0; i < GROUPS * GROUP_LEN; i++) {
@@ -95,7 +94,7 @@ function generateTemporaryPassword(randomInt = crypto.randomInt) {
  *   write, so an oversized ARGON2_HASH_LENGTH surfaces as a configuration error
  *   rather than ORA-12899 halfway through an admin creation
  */
-function wrapTemporaryHash(hash, expiresAtMs) {
+function wrapTemporaryHash(hash: string, expiresAtMs: number): string {
     if (typeof hash !== "string" || !/^\$(?:argon2(?:id|i|d)\$|2[aby]\$)/.test(hash)) {
         throw new TypeError("[adminTempPassword] Only an argon2 or bcrypt hash can be wrapped.");
     }
@@ -127,7 +126,12 @@ function wrapTemporaryHash(hash, expiresAtMs) {
  *   — callers must treat it as unverifiable (fail closed), never fall back to
  *   verifying the raw string.
  */
-function parseStoredAdminPassword(stored) {
+function parseStoredAdminPassword(stored: string): {
+    hash: string | null;
+    temporary: boolean;
+    expiresAt: number | null;
+    malformed: boolean;
+} {
     if (typeof stored !== "string" || !stored.startsWith(MARKER_PREFIX)) {
         return { hash: typeof stored === "string" ? stored : null, temporary: false, expiresAt: null, malformed: false };
     }
@@ -148,7 +152,7 @@ function parseStoredAdminPassword(stored) {
  * @param {number} [now=Date.now()]
  * @returns {boolean}
  */
-function isTemporaryExpired(parsed, now = Date.now()) {
+function isTemporaryExpired(parsed: { temporary: boolean; expiresAt: number | null; }, now: number = Date.now()): boolean {
     if (!parsed?.temporary) return false;
     if (parsed.expiresAt == null) return true;
     return now >= parsed.expiresAt;
@@ -161,7 +165,7 @@ function isTemporaryExpired(parsed, now = Date.now()) {
  * @param {string} stored
  * @returns {string|null}
  */
-function temporaryExpiryIso(stored) {
+function temporaryExpiryIso(stored: string): string | null {
     const parsed = parseStoredAdminPassword(stored);
     return parsed.temporary && parsed.expiresAt != null ? new Date(parsed.expiresAt).toISOString() : null;
 }

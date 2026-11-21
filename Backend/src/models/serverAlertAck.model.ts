@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -57,7 +56,7 @@ import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
 import { isDemoMode } from "../config/demoMode";
 
 /** @returns {string} Resolved table name (env override or NODE_ENV default). */
-function resolveTableName() {
+function resolveTableName(): string {
     if (process.env.SERVER_ALERT_ACK_TABLE)
         return process.env.SERVER_ALERT_ACK_TABLE;
     return process.env.NODE_ENV === "production"
@@ -65,7 +64,7 @@ function resolveTableName() {
         : "T_SERVER_ALERT_ACK_DEV";
 }
 
-let _col = null;
+let _col: any = null;
 /** Lazily resolves the ack collection (never called in DEMO_MODE). */
 function col() {
     if (!_col)
@@ -74,9 +73,10 @@ function col() {
 }
 
 /** @type {Map<string, object>} DEMO_MODE store, keyed by ALERT_KEY. */
-const _demoAcks = new Map();
+const _demoAcks: Map<string, Record<string, any>> = new Map();
 
 class ServerAlertAckModel {
+    declare static resolveTableName: () => string;
     /**
      * Upserts the acknowledgement row for `row.alertKey`. Re-acking an
      * already-acked key overwrites ACKED_BY / ACKED_AT / EXPIRES_AT /
@@ -90,7 +90,7 @@ class ServerAlertAckModel {
      * @param {string|null} [row.note]
      * @returns {Promise<void>}
      */
-    static async upsert(row) {
+    static async upsert(row: { alertKey: string; ackedBy: number | string; expiresAt: Date; severityAtAck: "WARNING" | "CRITICAL"; note?: string | null; }): Promise<void> {
         const alertKey = String(row.alertKey).slice(0, 200);
         const fields = {
             ACKED_BY: Number(row.ackedBy),
@@ -119,7 +119,7 @@ class ServerAlertAckModel {
      * @param {string} alertKey
      * @returns {Promise<boolean>} true when a row was actually deleted
      */
-    static async remove(alertKey) {
+    static async remove(alertKey: string): Promise<boolean> {
         if (isDemoMode()) return _demoAcks.delete(alertKey);
         const result = await col().deleteOne({ ALERT_KEY: alertKey });
         return (result?.deletedCount ?? 0) > 0;
@@ -131,7 +131,7 @@ class ServerAlertAckModel {
      * @param {string} alertKey
      * @returns {Promise<object|null>}
      */
-    static async findOne(alertKey) {
+    static async findOne(alertKey: string): Promise<Record<string, any> | null> {
         if (isDemoMode()) return _demoAcks.get(alertKey) ?? null;
         return col().findOne({ ALERT_KEY: alertKey });
     }
@@ -142,7 +142,7 @@ class ServerAlertAckModel {
      *
      * @returns {Promise<object[]>}
      */
-    static async findAll() {
+    static async findAll(): Promise<Record<string, any>[]> {
         if (isDemoMode()) return [..._demoAcks.values()];
         return col().find({}).toArray();
     }

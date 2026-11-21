@@ -37,7 +37,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
  * @param {{sent?: boolean, reason?: string}|null|undefined} res
  * @returns {boolean}
  */
-function isReportedSend(res) {
+function isReportedSend(res: { sent?: boolean; reason?: string; } | null | undefined): boolean {
     return res?.sent === true || res?.reason === "disabled";
 }
 
@@ -51,7 +51,7 @@ const ANNOUNCED_STOP_REASONS = new Set([STOP_REASONS.SIGNAL, STOP_REASONS.CRASH,
  * @param {number} lastStartNoticeAt - epoch ms
  * @returns {boolean}
  */
-function announcedStopSince(previous, lastStartNoticeAt) {
+function announcedStopSince(previous: Record<string, any> | null | undefined, lastStartNoticeAt: number): boolean {
     if (!previous || !ANNOUNCED_STOP_REASONS.has(previous.stopReason)) return false;
     const stopAt = Number.isFinite(previous.stoppingAt) ? previous.stoppingAt : previous.stoppedAt;
     return Number.isFinite(stopAt) && stopAt >= lastStartNoticeAt;
@@ -59,7 +59,11 @@ function announcedStopSince(previous, lastStartNoticeAt) {
 
 class StartupNotifier {
     /** @type {Set<Promise<any>>} */
-    #pending = new Set();
+    #pending: Set<Promise<any>> = new Set();
+    declare static isReportedSend: (res: { sent?: boolean; reason?: string; } | null | undefined) => boolean;
+    declare _tzOffsetMinutes: () => number;
+    declare _logger: { warning: ((...args: any[]) => any); info: ((...args: any[]) => any); };
+    declare _alertNotifier: { notifyLifecycleNow: (opts: Record<string, any>) => Promise<any>; };
 
     /**
      * @param {object} deps
@@ -67,7 +71,7 @@ class StartupNotifier {
      * @param {{warning: Function, info: Function}} deps.logger
      * @param {() => number} [deps.tzOffsetMinutes] - the DB zone offset reader
      */
-    constructor({ alertNotifier, logger, tzOffsetMinutes = dbTimezoneOffsetMinutes }) {
+    constructor({ alertNotifier, logger, tzOffsetMinutes = dbTimezoneOffsetMinutes }: { alertNotifier: { notifyLifecycleNow: (opts: Record<string, any>) => Promise<any>; }; logger: { warning: ((...args: any[]) => any); info: ((...args: any[]) => any); }; tzOffsetMinutes?: () => number; }) {
         this._alertNotifier = alertNotifier;
         this._logger = logger;
         this._tzOffsetMinutes = tzOffsetMinutes;
@@ -84,18 +88,18 @@ class StartupNotifier {
      * @param {number} p.nowMs
      * @returns {Promise<{sent: boolean, reason?: string, event?: string}>}
      */
-    async announce({ verdict, previous, current, lastStartNoticeAt, nowMs }) {
+    async announce({ verdict, previous, current, lastStartNoticeAt, nowMs }: { verdict: string; previous: Record<string, any> | null; current: { pid: number; version: string; bootedAtMs: number; }; lastStartNoticeAt: number | null; nowMs: number; }): Promise<{ sent: boolean; reason?: string; event?: string; }> {
         // `uncleanReported`: every unclean restart known to this boot was emailed;
         // `reportedKeys`: the pendingKey of each one that was, so the caller clears
         // only those. Notifications switched off counts
         // as reported: nothing should be sent "late" when mail is re-enabled (L-c).
         let uncleanReported = true;
-        const reportedKeys = [];
+        const reportedKeys: any[] = [];
         // Same for cron-leader losses: `reportedLeaderLostKeys` are the ones now emailed.
         let leaderLostReported = true;
-        const reportedLeaderLostKeys = [];
+        const reportedLeaderLostKeys: any[] = [];
         const done = isReportedSend;
-        const tag = (res) => ({ ...res, uncleanReported, reportedKeys, leaderLostReported, reportedLeaderLostKeys });
+        const tag = (res: any) => ({ ...res, uncleanReported, reportedKeys, leaderLostReported, reportedLeaderLostKeys });
         try {
             // Unclean restarts from EARLIER boots whose email failed at the time
             // (always older than this boot's own verdict, so always sent first).
@@ -158,7 +162,7 @@ class StartupNotifier {
      *
      * @returns {Promise<void>}
      */
-    async settled() {
+    async settled(): Promise<void> {
         await Promise.allSettled([...this.#pending]);
     }
 
@@ -169,13 +173,13 @@ class StartupNotifier {
      * @param {number} ms
      * @returns {string}
      */
-    #fmt(ms) {
+    #fmt(ms: number): string {
         if (!Number.isFinite(ms)) return "an unknown time";
         const off = this._tzOffsetMinutes();
         const d = new Date(ms + off * 60_000);
         const h24 = d.getUTCHours();
         const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-        const pad = (n) => String(n).padStart(2, "0");
+        const pad = (n: any) => String(n).padStart(2, "0");
         const sign = off < 0 ? "-" : "+";
         const abs = Math.abs(off);
         return (
@@ -185,7 +189,7 @@ class StartupNotifier {
         );
     }
 
-    #uncleanPayload(previous, current, { late = false } = {}) {
+    #uncleanPayload(previous: any, current: any, { late = false } = {}) {
         const p = previous ?? {};
         const lastAlive = p.lastHeartbeatAt;
         // A late report (email failed at the time) cannot know when that run came back;
@@ -234,7 +238,7 @@ class StartupNotifier {
         };
     }
 
-    #leaderLostPayload(previous, current, { late = false } = {}) {
+    #leaderLostPayload(previous: any, current: any, { late = false } = {}) {
         const p = previous ?? {};
         return {
             severity: "WARNING",
@@ -260,7 +264,7 @@ class StartupNotifier {
         };
     }
 
-    #startedPayload(verdict, previous, current) {
+    #startedPayload(verdict: any, previous: any, current: any) {
         const p = previous ?? {};
         let desc;
         let severity = "NOTICE";
@@ -299,7 +303,7 @@ class StartupNotifier {
         };
     }
 
-    #warn(event, err) {
+    #warn(event: any, err: any) {
         try {
             this._logger.warning(serverMessages.STARTUP_NOTIFY_FAILED(event, err?.message ?? String(err)), {
                 _noNotify: true,
@@ -314,7 +318,7 @@ class StartupNotifier {
      * @param {object} payload
      * @returns {Promise<{sent: boolean, reason?: string, event: string}>}
      */
-    #send(event, payload) {
+    #send(event: string, payload: Record<string, any>): Promise<{ sent: boolean; reason?: string; event: string; }> {
         let p;
         try {
             // Boot emails also land in the alert History tab: the pools are up here.

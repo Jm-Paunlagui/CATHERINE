@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -14,19 +13,19 @@ const metricsMessages = {
      * Logged when the full metrics snapshot is retrieved.
      * @returns {string}
      */
-    SNAPSHOT_FETCHED: () => "Metrics snapshot fetched",
+    SNAPSHOT_FETCHED: (): string => "Metrics snapshot fetched",
 
     /**
      * Logged when the summary metrics are retrieved.
      * @returns {string}
      */
-    SUMMARY_FETCHED: () => "Metrics summary fetched",
+    SUMMARY_FETCHED: (): string => "Metrics summary fetched",
 
     /**
      * Logged when alert evaluations are retrieved.
      * @returns {string}
      */
-    ALERTS_FETCHED: () => "Alert evaluations fetched",
+    ALERTS_FETCHED: (): string => "Alert evaluations fetched",
 
     /**
      * Logged when an alert rule fires against the current snapshot.
@@ -34,7 +33,7 @@ const metricsMessages = {
      * @param {string} severity - Severity level ("warning" | "critical" | "emergency")
      * @returns {string}
      */
-    ALERT_TRIGGERED: (rule, severity) =>
+    ALERT_TRIGGERED: (rule: string, severity: string): string =>
         `Alert triggered: ${rule} [${severity}]`,
 
     /**
@@ -42,7 +41,7 @@ const metricsMessages = {
      * @param {number} count - Number of events in the payload
      * @returns {string}
      */
-    FRONTEND_INGESTED: (count) =>
+    FRONTEND_INGESTED: (count: number): string =>
         `Frontend metrics ingested: ${count} event(s)`,
 
     /**
@@ -50,7 +49,7 @@ const metricsMessages = {
      * @param {string} reason - Human-readable rejection reason
      * @returns {string}
      */
-    FRONTEND_REJECTED: (reason) =>
+    FRONTEND_REJECTED: (reason: string): string =>
         `Frontend metrics payload rejected: ${reason}`,
 };
 

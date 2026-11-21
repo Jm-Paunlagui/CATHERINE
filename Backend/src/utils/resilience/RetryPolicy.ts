@@ -91,7 +91,7 @@ import { resilienceMessages } from "../../constants/messages";
  * @param {number} fallback
  * @returns {number}
  */
-function envInt(name, fallback) {
+function envInt(name: string, fallback: number): number {
     const parsed = parseInt(process.env[name], 10);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
@@ -169,7 +169,7 @@ const CLASSIFICATION_ATTEMPT_CAPS = Object.freeze({
  * @param {*} err
  * @returns {Array<object>}
  */
-function errorChain(err) {
+function errorChain(err: any): Array<Record<string, any>> {
     const chain = [];
     let current = err;
     let guard = 0;
@@ -189,7 +189,7 @@ function errorChain(err) {
  * @param {*} err
  * @returns {number|null}
  */
-function extractOraCode(err) {
+function extractOraCode(err: any): number | null {
     if (typeof err.errorNum === "number") return err.errorNum;
     if (typeof err.message === "string") {
         const match = err.message.match(/ORA-0*(\d+)/i);
@@ -201,6 +201,11 @@ function extractOraCode(err) {
 // ─── RetryPolicy ─────────────────────────────────────────────────────────────
 
 class RetryPolicy {
+    declare _label: string;
+    declare _classifier: (err: any) => string;
+    declare _maxDelayMs: number;
+    declare _baseDelayMs: number;
+    declare _maxAttempts: number;
     /**
      * @param {object} [options]
      * @param {number} [options.maxAttempts=DB_ROW_RETRY_MAX|10] - Attempt cap for classifications whose cap is `null` (e.g. TRANSIENT_DB/TRANSIENT_SMTP).
@@ -216,7 +221,7 @@ class RetryPolicy {
         maxDelayMs = envInt("DB_RETRY_MAX_DELAY_MS", 5000),
         classifier = null,
         label = "operation",
-    } = {}) {
+    }: { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number; classifier?: (err: any) => string; label?: string; } = {}) {
         if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
             throw new RangeError(
                 "RetryPolicy: maxAttempts must be a positive integer.",
@@ -261,7 +266,9 @@ class RetryPolicy {
      *   `.classification` (string|null) attached, when the attempt budget for
      *   its classification is exhausted.
      */
-    async execute(fn, hooks = {}) {
+    async execute<T>(fn: (attempt: number) => Promise<T>, hooks: { onRetry?: (err: any, attempt: number) => Promise<{
+        key: any; resolved: T; 
+} | void>; } = {}): Promise<T> {
         let attempt = 0;
          
         while (true) {
@@ -353,7 +360,7 @@ class RetryPolicy {
      * @param {string|null} classification
      * @returns {number}
      */
-    _attemptCapFor(classification) {
+    _attemptCapFor(classification: string | null): number {
         if (
             classification &&
             Object.prototype.hasOwnProperty.call(
@@ -374,7 +381,7 @@ class RetryPolicy {
      * @param {number} attempt
      * @returns {number} Delay in milliseconds.
      */
-    _computeBackoff(attempt) {
+    _computeBackoff(attempt: number): number {
         const exp = Math.min(
             this._baseDelayMs * Math.pow(2, attempt - 1),
             this._maxDelayMs,
@@ -387,7 +394,7 @@ class RetryPolicy {
      * @param {number} ms
      * @returns {Promise<void>}
      */
-    _sleep(ms) {
+    _sleep(ms: number): Promise<void> {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
@@ -412,7 +419,7 @@ class RetryPolicy {
      * @param {*} err
      * @returns {"TRANSIENT_DB"|"FATAL_SESSION"|"DUPLICATE"|"PERMANENT_DB"}
      */
-    static classifyDbError(err) {
+    static classifyDbError(err: any): "TRANSIENT_DB" | "FATAL_SESSION" | "DUPLICATE" | "PERMANENT_DB" {
         if (!err || typeof err !== "object") return CLASSIFICATIONS.PERMANENT_DB;
         const chain = errorChain(err);
 
@@ -458,7 +465,7 @@ class RetryPolicy {
      * @param {*} err
      * @returns {"TRANSIENT_SMTP"|"PERMANENT_SMTP"}
      */
-    static classifySmtpError(err) {
+    static classifySmtpError(err: any): "TRANSIENT_SMTP" | "PERMANENT_SMTP" {
         if (!err || typeof err !== "object") return CLASSIFICATIONS.PERMANENT_SMTP;
         const chain = errorChain(err);
 
@@ -483,7 +490,7 @@ class RetryPolicy {
      * @param {*} err
      * @returns {boolean} True when `classifyDbError(err) === "TRANSIENT_DB"`.
      */
-    static isTransientDbError(err) {
+    static isTransientDbError(err: any): boolean {
         return RetryPolicy.classifyDbError(err) === CLASSIFICATIONS.TRANSIENT_DB;
     }
 
@@ -491,7 +498,7 @@ class RetryPolicy {
      * @param {*} err
      * @returns {boolean} True when `classifySmtpError(err) === "TRANSIENT_SMTP"`.
      */
-    static isTransientSmtpError(err) {
+    static isTransientSmtpError(err: any): boolean {
         return RetryPolicy.classifySmtpError(err) === CLASSIFICATIONS.TRANSIENT_SMTP;
     }
 }

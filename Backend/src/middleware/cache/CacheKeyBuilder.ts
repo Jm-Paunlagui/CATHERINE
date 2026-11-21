@@ -38,10 +38,12 @@ import crypto from "crypto";
 const MAX_KEY_LENGTH = 200;
 
 class CacheKeyBuilder {
+  declare _params: Map<any, any>;
+  declare _prefix: string;
   /**
    * @param {string} prefix  - The logical namespace for this key (e.g. "users", "report").
    */
-  constructor(prefix) {
+  constructor(prefix: string) {
     if (!prefix || typeof prefix !== "string") {
       throw new TypeError(
         "CacheKeyBuilder: prefix must be a non-empty string.",
@@ -60,7 +62,7 @@ class CacheKeyBuilder {
    * @param {string} prefix
    * @returns {CacheKeyBuilder}
    */
-  static of(prefix) {
+  static of(prefix: string): CacheKeyBuilder {
     return new CacheKeyBuilder(prefix);
   }
 
@@ -72,7 +74,7 @@ class CacheKeyBuilder {
    * @param {*}       value  - Any scalar, array, or object value.
    * @returns {this}
    */
-  param(name, value) {
+  param(name: string, value: any): this {
     this._params.set(name, CacheKeyBuilder._normalise(value));
     return this;
   }
@@ -82,7 +84,7 @@ class CacheKeyBuilder {
    * @param {Object.<string, *>} obj
    * @returns {this}
    */
-  params(obj) {
+  params(obj: { [s: string]: any; }): this {
     for (const [k, v] of Object.entries(obj)) {
       this.param(k, v);
     }
@@ -97,7 +99,7 @@ class CacheKeyBuilder {
    *
    * @returns {string}
    */
-  build() {
+  build(): string {
     const parts = [...this._params.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => `${k}=${v}`);
@@ -128,7 +130,7 @@ class CacheKeyBuilder {
    * @param {*} value
    * @returns {string}
    */
-  static _normalise(value) {
+  static _normalise(value: any): string {
     if (value === null || value === undefined) return "null";
 
     if (Array.isArray(value)) {
@@ -160,7 +162,7 @@ class CacheKeyBuilder {
    * @param {Object.<string, *>}  [paramsObj={}]
    * @returns {string}
    */
-  static build(prefix, paramsObj = {}) {
+  static build(prefix: string, paramsObj: { [s: string]: any; } = {}): string {
     return CacheKeyBuilder.of(prefix).params(paramsObj).build();
   }
 }

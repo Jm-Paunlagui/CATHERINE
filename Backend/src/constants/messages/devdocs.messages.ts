@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -25,7 +24,7 @@ const devDocsMessages = {
      * @param {string} docId        - Opaque manifest id
      * @returns {string}
      */
-    DOC_READ: (adminId, docId) =>
+    DOC_READ: (adminId: number | string, docId: string): string =>
         `Dev-docs document read — ADMIN_ID: ${adminId}, DOC_ID: ${docId}.`,
 
     /**
@@ -36,7 +35,7 @@ const devDocsMessages = {
      * @param {number} docCount
      * @returns {string}
      */
-    TREE_SERVED: (adminId, sectionCount, docCount) =>
+    TREE_SERVED: (adminId: number | string, sectionCount: number, docCount: number): string =>
         `Dev-docs index served — ADMIN_ID: ${adminId}, sections: ${sectionCount}, documents: ${docCount}.`,
 
     /**
@@ -50,7 +49,7 @@ const devDocsMessages = {
      * @param {number} returned  - Matches actually returned after the cap
      * @returns {string}
      */
-    SEARCH_COMPLETED: (adminId, total, returned) =>
+    SEARCH_COMPLETED: (adminId: number | string, total: number, returned: number): string =>
         `Dev-docs search completed — ADMIN_ID: ${adminId}, matches: ${total}, returned: ${returned}.`,
 
     /**
@@ -62,7 +61,7 @@ const devDocsMessages = {
      * @param {string} resolvedPath
      * @returns {string}
      */
-    CORPUS_ESCAPE_BLOCKED: (resolvedPath) =>
+    CORPUS_ESCAPE_BLOCKED: (resolvedPath: string): string =>
         `Dev-docs path escaped the corpus root and was refused — resolved: ${resolvedPath}. This indicates a manifest defect, not a client attack.`,
 
     /**
@@ -72,7 +71,7 @@ const devDocsMessages = {
      * @param {string} reason
      * @returns {string}
      */
-    CORPUS_UNREADABLE: (corpusRoot, reason) =>
+    CORPUS_UNREADABLE: (corpusRoot: string, reason: string): string =>
         `Dev-docs corpus unreadable at ${corpusRoot} — ${reason}.`,
 
     /**
@@ -82,7 +81,7 @@ const devDocsMessages = {
      * @param {string} reason
      * @returns {string}
      */
-    DOC_READ_FAILED: (docId, reason) =>
+    DOC_READ_FAILED: (docId: string, reason: string): string =>
         `Dev-docs document read failed — DOC_ID: ${docId}, reason: ${reason}.`,
 
     /**
@@ -94,7 +93,7 @@ const devDocsMessages = {
      * @param {string} snapshotPath
      * @returns {string}
      */
-    FRESHNESS_SNAPSHOT_UNAVAILABLE: (snapshotPath) =>
+    FRESHNESS_SNAPSHOT_UNAVAILABLE: (snapshotPath: string): string =>
         `Dev-docs freshness unavailable — no git history and no build snapshot at ${snapshotPath}. Documents will show "Age unknown".`,
 };
 

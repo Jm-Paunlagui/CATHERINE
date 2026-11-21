@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -22,6 +21,7 @@
  */
 
 class SingleFlight {
+  declare _inflight: Map<any, any>;
   constructor() {
     /** @type {Map<string, Promise<*>>} */
     this._inflight = new Map();
@@ -35,7 +35,7 @@ class SingleFlight {
    * @param {() => Promise<*>}  loader - Async function that produces the value.
    * @returns {Promise<*>}
    */
-  run(key, loader) {
+  run(key: string, loader: () => Promise<any>): Promise<any> {
     const existing = this._inflight.get(key);
     if (existing) return existing;
 
@@ -52,7 +52,7 @@ class SingleFlight {
    * @param {string} key
    * @returns {boolean}
    */
-  isInFlight(key) {
+  isInFlight(key: string): boolean {
     return this._inflight.has(key);
   }
 
@@ -60,7 +60,7 @@ class SingleFlight {
    * Number of keys currently in flight (observability/tests).
    * @returns {number}
    */
-  size() {
+  size(): number {
     return this._inflight.size;
   }
 }

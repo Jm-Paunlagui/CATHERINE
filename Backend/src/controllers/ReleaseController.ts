@@ -10,6 +10,7 @@
  * there are no mutating release endpoints.
  */
 
+import type { Request, Response } from "express";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { catchAsync } from "../utils/catchAsync";
 import ReleaseService from "../services/ReleaseService";
@@ -21,7 +22,7 @@ class ReleaseController {
      * each action would pre-fill in the create form.
      * @type {import("express").RequestHandler}
      */
-    static current = catchAsync(async (req, res) => {
+    static current: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
         res.json(
             sendSuccess(
                 RESPONSE_MESSAGES.RELEASE_STATE_FETCHED,

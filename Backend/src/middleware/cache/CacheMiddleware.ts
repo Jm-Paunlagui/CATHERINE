@@ -41,6 +41,7 @@
  *   );
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger";
 import { cacheMessages } from "../../constants/messages/cache.messages";
 import { currentScope } from "../../utils/progress/progress";
@@ -58,7 +59,7 @@ class CacheMiddleware {
    *
    * @type {Map<string, Promise<void>>}
    */
-  static _inflight = new Map();
+  static _inflight: Map<string, Promise<void>> = new Map();
 
   /**
    * Returns an Express middleware that:
@@ -98,7 +99,7 @@ class CacheMiddleware {
    *
    * @returns {import('express').RequestHandler}
    */
-  static read(store, keyFn, options = {}) {
+  static read(store: import('./CacheStore').CacheStore, keyFn: (req: import('express').Request) => string, options: { bypassMethods?: string[]; ttl?: number; setHeaders?: boolean; coalesce?: boolean; shouldCache?: (req: import('express').Request, resBody: any) => boolean; } = {}): import('express').RequestHandler {
     const bypass = new Set(
       options.bypassMethods ?? ["POST", "PUT", "PATCH", "DELETE"],
     );
@@ -107,7 +108,7 @@ class CacheMiddleware {
     const coalesce = options.coalesce !== false;
     const shouldCache = options.shouldCache ?? (() => true);
 
-    return async (req, res, next) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
       // Skip write verbs — they should never be cached.
       if (bypass.has(req.method)) return next();
 
@@ -134,7 +135,7 @@ class CacheMiddleware {
       const flightKey = store.name + "|" + key;
 
       if (coalesce) {
-        const serveCoalesced = (value) => {
+        const serveCoalesced = (value: any) => {
           if (setHeaders) {
             res.set("X-Cache", "COALESCED");
             res.set("X-Cache-Key", key);
@@ -181,7 +182,7 @@ class CacheMiddleware {
           // ourselves, becoming the leader below.
         }
 
-        let settle;
+        let settle: any;
         const flight = new Promise((resolve) => {
           settle = resolve;
         });
@@ -257,11 +258,11 @@ class CacheMiddleware {
    *
    * @returns {import('express').RequestHandler}
    */
-  static invalidate(store, keyFn, options = {}) {
+  static invalidate(store: import('./CacheStore').CacheStore | import('./CacheStore').CacheStore[], keyFn: (req: import('express').Request, res: import('express').Response) => string | string[] | null, options: { usePattern?: boolean; } = {}): import('express').RequestHandler {
     const stores = Array.isArray(store) ? store : [store];
     const usePattern = options.usePattern === true;
 
-    return (req, res, next) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const originalJson = res.json.bind(res);
       res.json = function (data) {
         const result = originalJson(data);
@@ -326,11 +327,11 @@ class CacheMiddleware {
    * @param {boolean} [options.usePattern=false]
    * @returns {import('express').RequestHandler}
    */
-  static invalidateOnFinish(store, keyFn, options = {}) {
+  static invalidateOnFinish(store: import('./CacheStore').CacheStore | import('./CacheStore').CacheStore[], keyFn: (req: import('express').Request, res: import('express').Response) => string | string[] | null, options: { usePattern?: boolean; } = {}): import('express').RequestHandler {
     const stores = Array.isArray(store) ? store : [store];
     const usePattern = options.usePattern === true;
 
-    return (req, res, next) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       res.once("finish", () => {
         // Only invalidate on a successful (2xx) response.
         if (res.statusCode < 200 || res.statusCode >= 300) return;
@@ -369,10 +370,10 @@ class CacheMiddleware {
    * @param {(key: string, req: import('express').Request) => boolean} predicateFn
    * @returns {import('express').RequestHandler}
    */
-  static invalidateWhere(store, predicateFn) {
+  static invalidateWhere(store: import('./CacheStore').CacheStore | import('./CacheStore').CacheStore[], predicateFn: (key: string, req: import('express').Request) => boolean): import('express').RequestHandler {
     const stores = Array.isArray(store) ? store : [store];
 
-    return (req, res, next) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const originalJson = res.json.bind(res);
       res.json = function (data) {
         const result = originalJson(data);

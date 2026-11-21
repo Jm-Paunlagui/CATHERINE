@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -31,6 +30,10 @@ import ServerAlertLogModel from "../models/serverAlertLog.model";
 const STATE_CHANNEL = "server-critical-notification";
 
 class AlertSignatureStore {
+    declare _messages: { readFailed: ((...args: any[]) => any); writeFailed: ((...args: any[]) => any); };
+    declare _logger: { warning: ((...args: any[]) => any); };
+    declare _model: { findLatestByAlertKey: ((...args: any[]) => any); insertOne: ((...args: any[]) => any); };
+    declare _rule: string;
     /**
      * @param {object} deps
      * @param {string} deps.rule - Rule name, e.g. "ORPHAN_ORDER_ROWS" (<= 64 chars).
@@ -39,7 +42,7 @@ class AlertSignatureStore {
      * @param {{readFailed: Function, writeFailed: Function}} deps.messages -
      *   (scopeKey, cause, label) => string, from the module's constants/messages file.
      */
-    constructor({ rule, model = ServerAlertLogModel, logger, messages }) {
+    constructor({ rule, model = ServerAlertLogModel, logger, messages }: { rule: string; model?: { findLatestByAlertKey: ((...args: any[]) => any); insertOne: ((...args: any[]) => any); }; logger: { warning: ((...args: any[]) => any); }; messages: { readFailed: ((...args: any[]) => any); writeFailed: ((...args: any[]) => any); }; }) {
         this._rule = rule;
         this._model = model;
         this._logger = logger;
@@ -47,7 +50,7 @@ class AlertSignatureStore {
     }
 
     /** @param {string} scopeKey @returns {string} */
-    alertKey(scopeKey) {
+    alertKey(scopeKey: string): string {
         return `${this._rule}::${scopeKey}`;
     }
 
@@ -58,7 +61,7 @@ class AlertSignatureStore {
      *   null = nothing alerted (no row, or the last row is RECOVERED);
      *   undefined = the read failed (unknown).
      */
-    async getLastSignature(scopeKey, { label = "" } = {}) {
+    async getLastSignature(scopeKey: string, { label = "" }: { label?: string; } = {}): Promise<string | null | undefined> {
         try {
             const row = await this._model.findLatestByAlertKey(this._rule, this.alertKey(scopeKey));
             if (!row || row.TRANSITION !== "FIRED") return null;
@@ -75,7 +78,7 @@ class AlertSignatureStore {
      * @param {{signatureHash: string, kind: string, count: number, label: string, description: string}} f
      * @returns {Promise<boolean>} true when the row was written
      */
-    async recordFired(scopeKey, { signatureHash, kind, count, label, description }) {
+    async recordFired(scopeKey: string, { signatureHash, kind, count, label, description }: { signatureHash: string; kind: string; count: number; label: string; description: string; }): Promise<boolean> {
         return this._insert(
             scopeKey,
             label,
@@ -94,7 +97,7 @@ class AlertSignatureStore {
      * @param {{label: string, description: string}} r
      * @returns {Promise<boolean>} true when the row was written
      */
-    async recordResolved(scopeKey, { label, description }) {
+    async recordResolved(scopeKey: string, { label, description }: { label: string; description: string; }): Promise<boolean> {
         return this._insert(scopeKey, label, {
             severity: "RESOLVED",
             transition: "RECOVERED",
@@ -105,7 +108,7 @@ class AlertSignatureStore {
     }
 
     /** @private */
-    async _insert(scopeKey, label, row) {
+    async _insert(scopeKey: any, label: any, row: any) {
         try {
             await this._model.insertOne({
                 alertKey: this.alertKey(scopeKey),
@@ -124,7 +127,7 @@ class AlertSignatureStore {
     }
 
     /** @private */
-    _warn(template, scopeKey, err, label) {
+    _warn(template: any, scopeKey: any, err: any, label: any) {
         try {
             this._logger.warning(template(scopeKey, err?.message ?? String(err), label));
         } catch {

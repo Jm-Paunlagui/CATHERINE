@@ -24,6 +24,7 @@
  * `rejectBodyOnBodylessMethods` constructor option.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger";
 import { getStatusTitle } from "../../constants/responses";
 import { middlewareMessages } from "../../constants/messages/middleware.messages";
@@ -56,7 +57,7 @@ const CONTENT_LENGTH_RE = /^\s*\d+\s*$/;
  * @param {Record<string, string | string[] | undefined> | null | undefined} headers
  * @returns {boolean}
  */
-function hasDeclaredBody(headers) {
+function hasDeclaredBody(headers: Record<string, string | string[] | undefined> | null | undefined): boolean {
     if (headers == null) return false;
     if (headers["transfer-encoding"] !== undefined) return true;
     const cl = headers["content-length"];
@@ -64,6 +65,13 @@ function hasDeclaredBody(headers) {
 }
 
 class SecurityFilterMiddleware {
+    declare _suspiciousIPs: any;
+    declare _tracker: SuspiciousIpTracker;
+    declare _rejectBodyOnBodylessMethods: any;
+    declare _blockedMethods: any;
+    declare _methodWhitelistedPaths: any;
+    declare _injectionPatterns: any;
+    declare _maliciousPatterns: any;
     constructor(options = {}) {
         // ── Path-only patterns (checked against req.path) ─────────────────────
         // Known exploit paths, scanner fingerprints, dangerous file extensions.
@@ -219,7 +227,7 @@ class SecurityFilterMiddleware {
      * @returns {import('express').Response}
      * @private
      */
-    _refuse(req, res, status, message, type, logRefusal) {
+    _refuse(req: import('express').Request, res: import('express').Response, status: number, message: string, type: string, logRefusal: () => void): import('express').Response {
         if (!req.id) req.id = snowflake.nextId();
         try {
             res.setHeader("X-Request-ID", req.id);
@@ -255,7 +263,7 @@ class SecurityFilterMiddleware {
      * @param {string} [actor="system"] - Who requested it, for the audit line.
      * @returns {boolean} `true` if a record existed and was removed.
      */
-    unblock(ip, actor = "system") {
+    unblock(ip: string, actor: string = "system"): boolean {
         const existed = this._tracker.unblock(ip);
         if (existed) {
             logger.notice(middlewareMessages.SUSPICIOUS_IP_UNBLOCKED(ip, actor));
@@ -273,7 +281,7 @@ class SecurityFilterMiddleware {
      * @param {string} [actor="system"]
      * @returns {Promise<boolean>} a record existed and was removed
      */
-    async unblockClusterWide(ip, actor = "system") {
+    async unblockClusterWide(ip: string, actor: string = "system"): Promise<boolean> {
         if (!clusterRpc.active || !isIp(ip)) return this.unblock(ip, actor);
         try {
             const result = await clusterRpc.call(
@@ -296,12 +304,12 @@ class SecurityFilterMiddleware {
      * @param {string} ip
      * @param {number} blockedUntil - epoch ms
      */
-    applyRemoteBlock(ip, blockedUntil) {
+    applyRemoteBlock(ip: string, blockedUntil: number) {
         this._tracker.applyBlock(ip, blockedUntil);
     }
 
     /** @param {string} ip - mirrors an unblock the primary broadcast */
-    applyRemoteUnblock(ip) {
+    applyRemoteUnblock(ip: string) {
         this._tracker.unblock(ip);
     }
 
@@ -310,11 +318,11 @@ class SecurityFilterMiddleware {
      *
      * @param {{ip: string, blockedUntil: number}[]} blocks
      */
-    applySync(blocks) {
+    applySync(blocks: { ip: string; blockedUntil: number; }[]) {
         for (const b of blocks ?? []) this._tracker.applyBlock(b.ip, b.blockedUntil);
     }
 
-    handle(req, res, next) {
+    handle(req: Request, res: Response, next: NextFunction) {
         const ip = req.ip || req.connection?.remoteAddress || "unknown";
         const reqPath = req.path;
         const method = req.method;
@@ -353,7 +361,7 @@ class SecurityFilterMiddleware {
         }
 
         // Blocked method check — skip only for health/root paths (not all /api/ paths).
-        const isMethodWhitelisted = this._methodWhitelistedPaths.some((p) =>
+        const isMethodWhitelisted = this._methodWhitelistedPaths.some((p: any) =>
             p.test(reqPath),
         );
         if (!isMethodWhitelisted && this._blockedMethods.has(method)) {
@@ -376,7 +384,7 @@ class SecurityFilterMiddleware {
         }
 
         // Path-only pattern check — scanner fingerprints, exploit paths, file extensions.
-        if (this._maliciousPatterns.some((p) => p.test(reqPath))) {
+        if (this._maliciousPatterns.some((p: any) => p.test(reqPath))) {
             this._trackSuspiciousIP(ip);
             return this._refuse(req, res, 404, "Not Found", "NotFound", () =>
                 logger.warning(
@@ -392,7 +400,7 @@ class SecurityFilterMiddleware {
         // Injection pattern check — scans the FULL URL (path + query string).
         // Catches XSS, SQLi, traversal, and command injection payloads
         // regardless of whether they appear in the path or query parameters.
-        if (this._injectionPatterns.some((p) => p.test(fullUrl))) {
+        if (this._injectionPatterns.some((p: any) => p.test(fullUrl))) {
             this._trackSuspiciousIP(ip);
             return this._refuse(
                 req,
@@ -459,7 +467,7 @@ class SecurityFilterMiddleware {
      * @param {string} ip
      * @returns {boolean} the IP is blocked as far as this worker knows
      */
-    _trackSuspiciousIP(ip) {
+    _trackSuspiciousIP(ip: string): boolean {
         if (clusterRpc.active && isIp(ip) && clusterRpc.notify(CLUSTER_RPC_METHODS.SF_STRIKE, { ip })) {
             return this._tracker.isBlocked(ip);
         }

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -51,7 +50,7 @@ import { OracleCollection } from "./core/OracleCollection";
  * Validate a savepoint name — must be a safe Oracle identifier.
  * Only allows letters, digits, and underscores to prevent SQL injection.
  */
-function _validateSavepointName(name) {
+function _validateSavepointName(name: any) {
     if (typeof name !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
         throw new Error(
             `Invalid savepoint name "${name}": must match /^[A-Za-z_][A-Za-z0-9_]*$/`,
@@ -71,11 +70,13 @@ function _validateSavepointName(name) {
  * with no transactional guarantee.
  */
 class Session {
+    declare db: Record<string, any>;
+    declare _conn: Record<string, any>;
     /**
      * @param {Object} conn - The raw Oracle database connection (from the pool)
      * @param {Object} db  - The db interface (from createDb) for driver constants
      */
-    constructor(conn, db) {
+    constructor(conn: Record<string, any>, db: Record<string, any>) {
         this._conn = conn;
         this.db = db;
     }
@@ -95,7 +96,7 @@ class Session {
      *   await users.insertOne({ name: "Ana" });
      *   // This INSERT is not committed yet — it's part of the transaction
      */
-    collection(tableName) {
+    collection(tableName: string): OracleCollection {
         return new OracleCollection(tableName, this.db, this._conn);
     }
 
@@ -122,7 +123,7 @@ class Session {
      *   const r = await session.execute("SELECT MY_SEQ.NEXTVAL FROM DUAL");
      *   const nextId = Number(r.rows[0][0]);
      */
-    async execute(sql, binds = {}, opts = {}) {
+    async execute(sql: string, binds: Record<string, any> = {}, opts: Record<string, any> = {}): Promise<Record<string, any>> {
         return this._conn.execute(sql, binds, opts);
     }
 
@@ -140,7 +141,7 @@ class Session {
      *   // If something goes wrong:
      *   await session.rollbackTo("step_1_done"); // undo work after step_1
      */
-    async savepoint(name) {
+    async savepoint(name: string) {
         _validateSavepointName(name);
         await this._conn.execute(`SAVEPOINT ${name}`);
     }
@@ -160,7 +161,7 @@ class Session {
      *   await session.rollbackTo("after_order");
      *   // The order INSERT is kept, but the payment INSERT is undone
      */
-    async rollbackTo(name) {
+    async rollbackTo(name: string) {
         _validateSavepointName(name);
         await this._conn.execute(`ROLLBACK TO SAVEPOINT ${name}`);
     }
@@ -174,7 +175,7 @@ class Session {
      *
      * @param {string} _name - The savepoint name (ignored in Oracle)
      */
-    async releaseSavepoint(_name) {
+    async releaseSavepoint(_name: string) {
         // Oracle does not support RELEASE SAVEPOINT — no-op
     }
 }
@@ -191,6 +192,7 @@ class Session {
  *   - You never need to call COMMIT or ROLLBACK manually
  */
 class Transaction {
+    declare db: Record<string, any>;
     /**
      * @param {Object} db - The db interface from createDb()
      *
@@ -198,7 +200,7 @@ class Transaction {
      *   const db = createDb("appDb");
      *   const txManager = new Transaction(db);
      */
-    constructor(db) {
+    constructor(db: Record<string, any>) {
         this.db = db;
     }
 
@@ -222,8 +224,8 @@ class Transaction {
      *     // Both inserts COMMIT together when this function returns
      *   });
      */
-    async withTransaction(fn) {
-        return this.db.withTransaction(async (conn) => {
+    async withTransaction(fn: ((...args: any[]) => any)): Promise<any> {
+        return this.db.withTransaction(async (conn: any) => {
             const session = new Session(conn, this.db);
             return fn(session);
         });

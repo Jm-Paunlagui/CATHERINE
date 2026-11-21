@@ -146,7 +146,7 @@ const APDEX_THRESHOLD_MS = 500;
  * @param {number}   pct    - Percentile 0–1 (e.g. 0.95 for p95)
  * @returns {number}
  */
-function calcPercentile(sorted, pct) {
+function calcPercentile(sorted: number[], pct: number): number {
   if (!sorted.length) return 0;
   const idx = Math.floor(sorted.length * pct);
   return sorted[Math.min(idx, sorted.length - 1)];
@@ -163,7 +163,7 @@ function calcPercentile(sorted, pct) {
  * @param {number[]} ys - Dependent values (heapUsed bytes)
  * @returns {number} Slope in y-units per x-unit (bytes per ms); 0 if undeterminable
  */
-function linRegSlope(xs, ys) {
+function linRegSlope(xs: number[], ys: number[]): number {
   const n = xs.length;
   if (n < 2) return 0;
   let sx = 0, sy = 0, sxx = 0, sxy = 0;
@@ -199,7 +199,7 @@ function linRegSlope(xs, ys) {
  * @param {number} serverErrors - Count of 5xx responses
  * @returns {{ availability: number, errorRate: number, clientErrorRate: number }}
  */
-function computeRates(total, clientErrors, serverErrors) {
+function computeRates(total: number, clientErrors: number, serverErrors: number): { availability: number; errorRate: number; clientErrorRate: number; } {
   const serviced = total - clientErrors; // 2xx/3xx + 5xx
   return {
     // No serviced requests → nothing failed → fully available by definition.
@@ -244,13 +244,39 @@ const BACKGROUND_PROBES_DEFAULT = !(
 const WATCHDOG_ROUTES_MAX = 200;
 
 class MetricsStore {
+  declare _backgroundProbes: boolean;
+  declare _prevCpuUsage: NodeJS.CpuUsage;
+  declare _prevGcPauseMs: number;
+  declare _gcPauses: never[];
+  declare _heapBaselines: never[];
+  declare _system: {
+      cpu: { user: number; system: number; percent: number; }; memory: { heapUsed: number; heapTotal: number; heapSizeLimit: number; rss: number; external: number; arrayBuffers: number; }; eventLoopLag: number; gc: {
+          collections: number; // lifetime total across all kinds (back-compat)
+          pauseMs: number; // lifetime total pause across all kinds (back-compat)
+          // Per-kind breakdown — minor churn is healthy; rising majors/overhead is not
+          major: { count: number; pauseMs: number; }; minor: { count: number; pauseMs: number; }; incremental: { count: number; pauseMs: number; }; weakcb: { count: number; pauseMs: number; }; overheadPct: number;
+      }; handles: number; requests: number;
+  };
+  declare _frontendErrors: never[];
+  declare _frontendVitals: never[];
+  declare _watchdog: { terminated: number; byRoute: Map<any, any>; };
+  declare _notifications: Map<any, any>;
+  declare _oraclePoolStats: Map<any, any>;
+  declare _oracle: Map<any, any>;
+  declare _errorWindow: Map<any, any>;
+  declare _serverErrorsTotal: number;
+  declare _clientErrorsTotal: number;
+  declare _notModifiedTotal: number;
+  declare _redirectsTotal: number;
+  declare _requestsTotal: number;
+  declare _routes: Map<any, any>;
   /**
    * @param {object} [options]
    * @param {boolean} [options.backgroundProbes] - Run the recurring system
    *   poller and event-loop-lag probe. Defaults to false under a test runner
    *   (see BACKGROUND_PROBES_DEFAULT), true otherwise.
    */
-  constructor(options = {}) {
+  constructor(options: { backgroundProbes?: boolean; } = {}) {
     /**
      * Per-route RED data.
      * Key: "<METHOD> <path>" e.g. "GET /api/v1/health"
@@ -545,7 +571,14 @@ class MetricsStore {
    *   suspected: boolean
    * }}
    */
-  #analyzeHeapTrend() {
+  #analyzeHeapTrend(): {
+      sampleCount: number;
+      windowMs: number;
+      growthBytesPerMin: number;
+      firstHeapUsed: number;
+      lastHeapUsed: number;
+      suspected: boolean;
+  } {
     const baselines = this._heapBaselines;
     const sampleCount = baselines.length;
     if (sampleCount < 2) {
@@ -592,7 +625,7 @@ class MetricsStore {
    * @param {number[]} buf      - The ring buffer array
    * @param {number}   durationMs
    */
-  #pushRing(buf, durationMs) {
+  #pushRing(buf: number[], durationMs: number) {
     if (buf.length >= RING_BUFFER_SIZE) {
       buf.shift(); // O(n) but n is bounded and small; acceptable for 1000 items
     }
@@ -610,7 +643,7 @@ class MetricsStore {
    * @param {number} now - epoch ms
    * @returns {number[]}
    */
-  #windowedSorted(entry, now) {
+  #windowedSorted(entry: { durations: number[]; timestamps?: number[]; }, now: number): number[] {
     const cutoff = now - LATENCY_WINDOW_MS;
     const ts = entry.timestamps ?? [];
     const out = [];
@@ -631,7 +664,7 @@ class MetricsStore {
    * @param {boolean} isClientError
    * @param {boolean} isServerError
    */
-  #recordWindow(now, isClientError, isServerError) {
+  #recordWindow(now: number, isClientError: boolean, isServerError: boolean) {
     const idx = Math.floor(now / ERROR_WINDOW_BUCKET_MS);
     let bucket = this._errorWindow.get(idx);
     if (!bucket) {
@@ -650,7 +683,7 @@ class MetricsStore {
    * Sums the last ERROR_WINDOW_MS of requests.
    * @returns {{ windowMs: number, requests: number, clientErrors: number, serverErrors: number, serviced: number, errorRate: number, availability: number }}
    */
-  #windowTotals() {
+  #windowTotals(): { windowMs: number; requests: number; clientErrors: number; serverErrors: number; serviced: number; errorRate: number; availability: number; } {
     const nowIdx = Math.floor(Date.now() / ERROR_WINDOW_BUCKET_MS);
     let requests = 0;
     let clientErrors = 0;
@@ -681,7 +714,7 @@ class MetricsStore {
    * @param {number} statusCode - HTTP response status code
    * @param {number} durationMs - Request duration in milliseconds
    */
-  recordRequest(route, method, statusCode, durationMs) {
+  recordRequest(route: string, method: string, statusCode: number, durationMs: number) {
     const now = Date.now();
     this._requestsTotal++;
 
@@ -723,7 +756,7 @@ class MetricsStore {
    *
    * @param {string} route - Bounded "<METHOD> <route-pattern>" label.
    */
-  recordWatchdogTermination(route) {
+  recordWatchdogTermination(route: string) {
     this._watchdog.terminated++;
     const map = this._watchdog.byRoute;
     if (map.has(route) || map.size < WATCHDOG_ROUTES_MAX) {
@@ -738,7 +771,7 @@ class MetricsStore {
    * @param {number}  durationMs - Query round-trip duration in milliseconds
    * @param {boolean} success    - Whether the query succeeded
    */
-  recordDbQuery(poolName, durationMs, success) {
+  recordDbQuery(poolName: string, durationMs: number, success: boolean) {
     let entry = this._oracle.get(poolName);
     if (!entry) {
       entry = { queryCount: 0, errorCount: 0, totalMs: 0, durations: [] };
@@ -765,7 +798,7 @@ class MetricsStore {
    * @param {string} poolName - Named connection pool (e.g. "appDb")
    * @param {{ connectionsInUse: number, connectionsOpen: number, poolMax: number, queueLength: number, healthy?: boolean, consecutiveFailures?: number }} stats
    */
-  recordPoolStats(poolName, stats) {
+  recordPoolStats(poolName: string, stats: { connectionsInUse: number; connectionsOpen: number; poolMax: number; queueLength: number; healthy?: boolean; consecutiveFailures?: number; }) {
     const open = Number(stats?.connectionsOpen) || 0;
     const inUse = Number(stats?.connectionsInUse) || 0;
     const poolMax = Number(stats?.poolMax) || 0;
@@ -796,7 +829,7 @@ class MetricsStore {
    * @param {boolean}     ok      - Whether the send succeeded
    * @param {string|null} [cause] - Failure reason when ok is false
    */
-  recordNotificationDelivery(channel, ok, cause = null) {
+  recordNotificationDelivery(channel: string, ok: boolean, cause: string | null = null) {
     let entry = this._notifications.get(channel);
     if (!entry) {
       entry = {
@@ -832,7 +865,7 @@ class MetricsStore {
    * @param {string} channel - Channel key (normally "server-critical-notification")
    * @param {number} count   - Number of events suppressed in this window
    */
-  recordNotificationSuppressed(channel, count = 1) {
+  recordNotificationSuppressed(channel: string, count: number = 1) {
     let entry = this._notifications.get(channel);
     if (!entry) {
       entry = {
@@ -858,7 +891,7 @@ class MetricsStore {
    * @param {string} rating  - "good" | "needs-improvement" | "poor"
    * @param {object} [context={}] - Additional context from the client
    */
-  recordFrontendVital(name, value, rating, context = {}) {
+  recordFrontendVital(name: string, value: number, rating: string, context: Record<string, any> = {}) {
     if (this._frontendVitals.length >= FRONTEND_VITALS_MAX) {
       this._frontendVitals.shift();
     }
@@ -873,7 +906,7 @@ class MetricsStore {
    * @param {string} [stack]  - Error stack trace
    * @param {object} [context={}] - Additional context (page, userAgent, etc.)
    */
-  recordFrontendError(message, stack = "", context = {}) {
+  recordFrontendError(message: string, stack: string = "", context: Record<string, any> = {}) {
     if (this._frontendErrors.length >= FRONTEND_VITALS_MAX) {
       this._frontendErrors.shift();
     }
@@ -889,7 +922,7 @@ class MetricsStore {
    *
    * @returns {{ status: "up"|"degraded"|"down", consecutiveFailures: number, lastSuccessAt: string|null, lastFailureAt: string|null }}
    */
-  #buildSmtpDependencySnapshot() {
+  #buildSmtpDependencySnapshot(): { status: "up" | "degraded" | "down"; consecutiveFailures: number; lastSuccessAt: string | null; lastFailureAt: string | null; } {
     let consecutiveFailures = 0;
     let lastSuccessAt = null;
     let lastFailureAt = null;
@@ -934,11 +967,20 @@ class MetricsStore {
    *   frontendErrors: Array
    * }}
    */
-  getSnapshot() {
+  getSnapshot(): {
+      timestamp: string;
+      uptime: number;
+      red: { [s: string]: { count: number; clientErrorCount: number; serverErrorCount: number; errorRate: number; clientErrorRate: number; availability: number; p50: number; p95: number; p99: number; avgMs: number; window: { windowMs: number; count: number; p99: number; }; }; };
+      system: { cpu: Record<string, any>; memory: Record<string, any>; eventLoopLag: number; gc: Record<string, any>; handles: number; requests: number; };
+      dependencies: { oracle: { [s: string]: { queryCount: number; errorCount: number; avgMs: number; p95Ms: number; poolUtilization: number | null; connectionsInUse: number | null; connectionsOpen: number | null; poolMax: number | null; queueLength: number | null; capacity: number | null; healthy: boolean | null; consecutiveFailures: number | null; }; }; };
+      totals: { requestsTotal: number; clientErrorsTotal: number; serverErrorsTotal: number; errorRate: number; clientErrorRate: number; availability: number; };
+      frontendVitals: Array<any>;
+      frontendErrors: Array<any>;
+  } {
     // Build RED metrics per route. Apdex is accumulated globally in the same
     // pass over each route's duration ring buffer — O(total samples), no extra
     // allocation beyond the per-route sort already needed for percentiles.
-    const red = {};
+    const red: Record<string, any> = {};
     const apdexT = APDEX_THRESHOLD_MS;
     let apdexSatisfied = 0; // d ≤ T
     let apdexTolerating = 0; // T < d ≤ 4T
@@ -994,7 +1036,7 @@ class MetricsStore {
     // and live pool saturation (recordPoolStats). Either source may be absent:
     // recordDbQuery is optional instrumentation, while pool stats arrive from the
     // adapter's 30 s health poll. A pool appears here as soon as either reports.
-    const oracleDeps = {};
+    const oracleDeps: Record<string, any> = {};
     const oracleNames = new Set([
       ...this._oracle.keys(),
       ...this._oraclePoolStats.keys(),
@@ -1120,7 +1162,7 @@ class MetricsStore {
    *
    * @returns {{ snapshot: object, extras: { routeSketches: object, routeWindowSketches: object, oracleSketches: object, oracleTotalMs: object, apdexCounts: { satisfied: number, tolerating: number, samples: number } } }}
    */
-  getMergeableSnapshot() {
+  getMergeableSnapshot(): { snapshot: Record<string, any>; extras: { routeSketches: Record<string, any>; routeWindowSketches: Record<string, any>; oracleSketches: Record<string, any>; oracleTotalMs: Record<string, any>; apdexCounts: { satisfied: number; tolerating: number; samples: number; }; }; } {
     // Lazy: metricsMerge requires this module for computeRates.
     const { buildQuantileSketch } = require("./metricsMerge");
     const snapshot = this.getSnapshot();

@@ -79,7 +79,7 @@ const METRICS_EXCLUDED_PREFIXES = (
  * @param {import('express').Request} req
  * @returns {string}
  */
-function getRequestPath(req) {
+function getRequestPath(req: import('express').Request): string {
   const raw = req.originalUrl || req.url || req.path || "";
   const qIdx = raw.indexOf("?");
   return qIdx === -1 ? raw : raw.slice(0, qIdx);
@@ -93,7 +93,7 @@ function getRequestPath(req) {
  * @param {string} path
  * @returns {boolean}
  */
-function isMetricsExcludedPath(path) {
+function isMetricsExcludedPath(path: string): boolean {
   return METRICS_EXCLUDED_PREFIXES.some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );
@@ -113,7 +113,7 @@ const CAPTURED_LABEL_KEY = "_routeLabel";
  * @param {object} [params]   - req.params (decoded values).
  * @returns {string} e.g. "/A1/9988/history". Unknown params keep their token.
  */
-function fillRouteTemplate(routePath, params) {
+function fillRouteTemplate(routePath: string, params: Record<string, any>): string {
   if (!params) return routePath;
   return routePath.replace(PARAM_TOKEN_RE, (token, name) =>
     params[name] != null ? String(params[name]) : token,
@@ -134,7 +134,7 @@ function fillRouteTemplate(routePath, params) {
  * @param {string} routePath - Leaf route template.
  * @returns {string} Reconstructed baseUrl, or "" if it cannot be determined.
  */
-function reconstructBaseUrl(req, routePath) {
+function reconstructBaseUrl(req: import('express').Request, routePath: string): string {
   const rawPath = (req.originalUrl || req.url || "").split("?")[0];
   if (!rawPath) return "";
 
@@ -181,7 +181,7 @@ function reconstructBaseUrl(req, routePath) {
  * @example
  * buildRouteLabel(req); // → "POST /api/v1/users/verify"
  */
-function buildRouteLabel(req) {
+function buildRouteLabel(req: import('express').Request): string {
   const matched = req.route?.path;
 
   if (matched === undefined || matched === null) {
@@ -212,7 +212,7 @@ function buildRouteLabel(req) {
  * @param {import('express').Request} req
  * @returns {void}
  */
-function captureRouteLabel(req) {
+function captureRouteLabel(req: import('express').Request): void {
   if (req[CAPTURED_LABEL_KEY] === undefined && req.route) {
     req[CAPTURED_LABEL_KEY] = buildRouteLabel(req);
   }
@@ -225,7 +225,7 @@ function captureRouteLabel(req) {
  * @param {import('express').Request} req
  * @returns {string}
  */
-function resolveRouteLabel(req) {
+function resolveRouteLabel(req: import('express').Request): string {
   return req[CAPTURED_LABEL_KEY] ?? buildRouteLabel(req);
 }
 
@@ -246,7 +246,7 @@ function resolveRouteLabel(req) {
  * @example
  * shouldRecordRouteMetrics({ method: "OPTIONS" }); // → false
  */
-function shouldRecordRouteMetrics(req) {
+function shouldRecordRouteMetrics(req: import('express').Request): boolean {
   if (req.method === "OPTIONS") return false;
   if (isMetricsExcludedPath(getRequestPath(req))) return false;
   return true;

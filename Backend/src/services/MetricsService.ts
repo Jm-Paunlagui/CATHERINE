@@ -177,7 +177,7 @@ const LATENCY_P99_BULK_ROUTE_PATTERNS = [
  * @param {string} route - Metrics route key, `"METHOD /path"`.
  * @returns {number} Threshold in milliseconds.
  */
-function latencyThresholdFor(route) {
+function latencyThresholdFor(route: string): number {
     const key = String(route ?? "");
     return LATENCY_P99_BULK_ROUTE_PATTERNS.some((re) => re.test(key))
         ? LATENCY_P99_BULK_THRESHOLD_MS
@@ -199,7 +199,7 @@ class MetricsService {
      * @returns {object} Full metrics snapshot (see MetricsStore.getSnapshot)
      * @throws {AppError} 503 if snapshot retrieval fails unexpectedly
      */
-    static getSnapshot() {
+    static getSnapshot(): Record<string, any> {
         try {
             return metricsStore.getSnapshot();
         } catch (err) {
@@ -220,7 +220,7 @@ class MetricsService {
      *
      * @returns {Promise<object>|object} merged snapshot (see MetricsStore.getSnapshot)
      */
-    static getClusterSnapshot() {
+    static getClusterSnapshot(): Promise<Record<string, any>> | Record<string, any> {
         if (!clusterRpc.active) return MetricsService.getSnapshot();
         const share = MetricsService.#clusterShare;
         if (share && Date.now() - share.at < CLUSTER_RPC_TIMEOUTS.METRICS_SHARE_MS) return share.promise;
@@ -265,7 +265,7 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot (the controller passes the cluster one)
      * @returns {{ totals: object, topSlowRoutes: Array, alertCount: number, uptime: number }}
      */
-    static getSummary(snapshot = null) {
+    static getSummary(snapshot: Record<string, any> = null): { totals: Record<string, any>; topSlowRoutes: Array<any>; alertCount: number; uptime: number; } {
         snapshot = snapshot || MetricsService.getSnapshot();
         const alerts = MetricsService.evaluateAlerts(snapshot);
 
@@ -315,7 +315,7 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
      * @returns {string[]} Alert keys to hold; `"*"` holds every active key not seen this tick
      */
-    static evaluateAlertHolds(snapshot = null) {
+    static evaluateAlertHolds(snapshot: Record<string, any> = null): string[] {
         const snap = snapshot || MetricsService.getSnapshot();
         const holds = [];
         const win = snap.totals?.window;
@@ -376,7 +376,7 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
      * @returns {Array<{ rule: string, severity: string, value: number, route?: string, pool?: string }>}
      */
-    static evaluateAlerts(snapshot = null) {
+    static evaluateAlerts(snapshot: Record<string, any> = null): Array<{ rule: string; severity: string; value: number; route?: string; pool?: string; }> {
         const snap = snapshot || MetricsService.getSnapshot();
         const alerts = [];
 
@@ -720,7 +720,7 @@ class MetricsService {
      * @param {Array} payload - Array of frontend metric events from the client
      * @throws {AppError} 400 on validation failure
      */
-    static async ingestFrontendMetrics(payload) {
+    static async ingestFrontendMetrics(payload: Array<any>) {
         if (!Array.isArray(payload)) {
             throw new AppError(METRICS_ERRORS.INVALID_PAYLOAD, 400, {
                 type: "ValidationError",

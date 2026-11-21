@@ -6,6 +6,7 @@
  * O(1) memory per key, ~0.003% error rate, IETF RateLimit-* headers.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { SlidingWindowCounter } from "./SlidingWindowCounter";
 import { clusterRpc } from "../../utils/cluster/ClusterRpcClient";
 import { validateArgs } from "../../utils/cluster/ipcSchemas";
@@ -38,6 +39,20 @@ import { logger } from "../../utils/logger";
 const HEALTH_PATH_RE = /^\/api\/v\d+\/health(\/|$)/;
 
 class RateLimiterMiddleware {
+  declare _store: any;
+  declare _counter: SlidingWindowCounter;
+  declare _maxKeys: any;
+  declare _countMode: any;
+  declare _lastStoreFullLog: number;
+  declare _lastFallbackLog: number;
+  declare _sharedLabel: string;
+  declare _label: any;
+  declare _dryRun: any;
+  declare _onLimit: any;
+  declare _skip: any;
+  declare _keyBy: any;
+  declare _windowMs: any;
+  declare _max: any;
   constructor(options = {}) {
     this._max =
       options.max ?? parseInt(process.env.RATE_LIMIT_MAX || "100", 10);
@@ -73,7 +88,7 @@ class RateLimiterMiddleware {
     this.handle = this.handle.bind(this);
   }
 
-  handle(req, res, next) {
+  handle(req: Request, res: Response, next: NextFunction) {
     if (req.method === "OPTIONS" || HEALTH_PATH_RE.test(req.path)) return next();
     if (this._skip?.(req)) return next();
 
@@ -94,9 +109,9 @@ class RateLimiterMiddleware {
    * limit, today's behaviour) and `CLUSTER_RL_FALLBACK` is logged at most once a
    * minute per label. Every rejection reaches `next(err)`; `next` is called once.
    */
-  _handleShared(req, res, next, key) {
+  _handleShared(req: Request, res: Response, next: NextFunction, key: any) {
     let settled = false;
-    const once = (err) => {
+    const once = (err: any) => {
       if (settled) return;
       settled = true;
       next(err);
@@ -114,7 +129,7 @@ class RateLimiterMiddleware {
       });
   }
 
-  async _hitShared(key) {
+  async _hitShared(key: any) {
     const args = {
       label: this._sharedLabel,
       key,
@@ -150,7 +165,7 @@ class RateLimiterMiddleware {
   }
 
   /** CLUSTER_RL_FALLBACK, at most once a minute per limiter label. */
-  _warnFallback(reason) {
+  _warnFallback(reason: any) {
     const now = Date.now();
     if (now - this._lastFallbackLog < CLUSTER_RPC_LIMITS.REJECT_LOG_GAP_MS) return;
     this._lastFallbackLog = now;
@@ -158,7 +173,7 @@ class RateLimiterMiddleware {
   }
 
   /** Headers, limit refusal and pass log: shared by the local and cluster paths. */
-  _finish(req, res, next, key, result) {
+  _finish(req: Request, res: Response, next: NextFunction, key: any, result: any) {
     this._setHeaders(res, {
       limit: this._max,
       remaining: result.remaining,
@@ -237,7 +252,7 @@ class RateLimiterMiddleware {
    * (fire-and-forget: a lost refund only makes the limit stricter); hits counted
    * locally (single process or fallback) are refunded locally. Never throws.
    */
-  _refund(key, result) {
+  _refund(key: any, result: any) {
     try {
       if (result.source === "shared") {
         const args = {
@@ -261,7 +276,7 @@ class RateLimiterMiddleware {
     return this._store.getStats();
   }
 
-  clearKey(key) {
+  clearKey(key: any) {
     const n = this._store.del(key);
     logger.info("Rate Limit Key cleared", { key, deleted: n });
     this._notifyClear(key);
@@ -275,7 +290,7 @@ class RateLimiterMiddleware {
   }
 
   /** Cluster only: tells the primary to clear its counters for this limiter. */
-  _notifyClear(key) {
+  _notifyClear(key: any) {
     if (!clusterRpc.active) return;
     const args = { label: this._sharedLabel, key };
     if (validateArgs(CLUSTER_RPC_METHODS.RL_CLEAR, args).ok) {
@@ -285,7 +300,7 @@ class RateLimiterMiddleware {
 
   // ── Private helpers ───────────────────────────────────────────────────
 
-  _getKey(req) {
+  _getKey(req: any) {
     if (typeof this._keyBy === "function") return this._keyBy(req);
     return (
       RateLimiterMiddleware.keyGenerators[this._keyBy] ??
@@ -293,7 +308,7 @@ class RateLimiterMiddleware {
     )(req);
   }
 
-  _slidingWindowCounter(key) {
+  _slidingWindowCounter(key: any) {
     try {
       return { ...this._counter.hit(key, this._max, this._windowMs), source: "local" };
     } catch (err) {
@@ -321,7 +336,7 @@ class RateLimiterMiddleware {
     logger.warning(middlewareMessages.RATE_LIMIT_STORE_FULL(this._label));
   }
 
-  _setHeaders(res, { limit, remaining, resetAt, windowMs }) {
+  _setHeaders(res: any, { limit, remaining, resetAt, windowMs }: any) {
     const resetSec = Math.ceil(resetAt / 1000);
     const windowSec = Math.ceil(windowMs / 1000);
     res.setHeader("RateLimit-Limit", limit);
@@ -354,25 +369,25 @@ class RateLimiterMiddleware {
    * @param {import('express').Request} req
    * @returns {string}
    */
-  static extractIp(req) {
+  static extractIp(req: import('express').Request): string {
     return req.ip || req.socket?.remoteAddress || "unknown";
   }
 
   static keyGenerators = {
-    ip: (req) => `rl:ip:${RateLimiterMiddleware.extractIp(req)}`,
-    user: (req) =>
+    ip: (req: any) => `rl:ip:${RateLimiterMiddleware.extractIp(req)}`,
+    user: (req: any) =>
       req.user?.sub
         ? `rl:user:${req.user.sub}`
         : `rl:ip:${RateLimiterMiddleware.extractIp(req)}`,
-    apiKey: (req) => {
+    apiKey: (req: any) => {
       const key = req.headers["x-api-key"];
       return key
         ? `rl:apikey:${key}`
         : `rl:ip:${RateLimiterMiddleware.extractIp(req)}`;
     },
-    ipAndRoute: (req) =>
+    ipAndRoute: (req: any) =>
       `rl:ip+route:${RateLimiterMiddleware.extractIp(req)}:${req.route?.path || req.path}`,
-    userAndRoute: (req) => {
+    userAndRoute: (req: any) => {
       const id = req.user?.sub || RateLimiterMiddleware.extractIp(req);
       return `rl:user+route:${id}:${req.route?.path || req.path}`;
     },
@@ -419,13 +434,14 @@ const credentialEmailRateLimiter = new RateLimiterMiddleware({
  * (the four auth limiters). Holds state (its members), so it is a class.
  */
 class RateLimiterGroup {
+  declare _members: readonly RateLimiterMiddleware[];
   /** @param {RateLimiterMiddleware[]} members */
-  constructor(members) {
+  constructor(members: RateLimiterMiddleware[]) {
     this._members = Object.freeze([...members]);
   }
 
   /** @returns {ReadonlyArray<RateLimiterMiddleware>} */
-  get members() {
+  get members(): ReadonlyArray<RateLimiterMiddleware> {
     return this._members;
   }
 
@@ -435,8 +451,8 @@ class RateLimiterGroup {
   }
 
   /** @returns {Object<string, object>} NodeCache stats keyed by member label */
-  getStats() {
-    const out = {};
+  getStats(): { [s: string]: Record<string, any>; } {
+    const out: Record<string, any> = {};
     for (const m of this._members) out[m._label] = m.getStats();
     return out;
   }

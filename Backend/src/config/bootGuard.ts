@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -39,7 +38,7 @@ const KNOWN_PLACEHOLDERS = [
  * @param {string} val
  * @returns {string}
  */
-function normalise(val) {
+function normalise(val: string): string {
     return String(val)
         .replace(/[\s_-]/g, "")
         .toLowerCase();
@@ -97,7 +96,7 @@ const SECRET_RULES = [
  * @param {boolean} isProduction
  * @returns {void}
  */
-function validateMoneyConfig(violations, isProduction) {
+function validateMoneyConfig(violations: string[], isProduction: boolean): void {
     const base = (process.env.MONEY_BASE_CURRENCY || "").trim();
 
     // Not configuring money is fine on the bare template. Only validate if set.
@@ -143,7 +142,7 @@ function validateMoneyConfig(violations, isProduction) {
  * @param {string[]} violations
  * @returns {void}
  */
-function validateSecretRules(violations) {
+function validateSecretRules(violations: string[]): void {
     for (const rule of SECRET_RULES) {
         const value = process.env[rule.env];
 
@@ -192,7 +191,7 @@ function validateSecretRules(violations) {
  */
 function validateSecrets() {
     const isProduction = process.env.NODE_ENV === "production";
-    const violations = [];
+    const violations: any[] = [];
 
     validateSecretRules(violations);
 

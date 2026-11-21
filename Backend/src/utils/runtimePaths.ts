@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -21,7 +20,7 @@
 import path from "path";
 
 /** True when `main` is an entry point inside a compiled Bun executable's embedded filesystem. */
-function isBunCompiledMain(main) {
+function isBunCompiledMain(main: any) {
     return typeof main === "string" && (main.startsWith("/$bunfs/") || /^[A-Za-z]:[\\/]~BUN[\\/]/.test(main));
 }
 
@@ -30,7 +29,7 @@ const IS_COMPILED = typeof Bun !== "undefined" && isBunCompiledMain(Bun.main);
 const APP_ROOT = IS_COMPILED ? path.dirname(process.execPath) : path.resolve(__dirname, "..", "..");
 
 /** Absolute path to a file or folder under APP_ROOT. */
-function appPath(...segments) {
+function appPath(...segments: any[]) {
     return path.join(APP_ROOT, ...segments);
 }
 

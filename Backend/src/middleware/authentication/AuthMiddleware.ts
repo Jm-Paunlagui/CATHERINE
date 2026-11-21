@@ -9,6 +9,7 @@
  * logic inline at the route level via requireAccess(predicate).
  */
 
+import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { AppError, AUTH_ERRORS, VALIDATION_ERRORS } from "../../constants/errors";
 import { logger } from "../../utils/logger";
@@ -43,7 +44,7 @@ class AuthMiddleware {
      * @returns {{ source: string, cookieNames: string[], signed: string }}
      * @private
      */
-    static _describeCredential(req) {
+    static _describeCredential(req: import('express').Request): { source: string; cookieNames: string[]; signed: string; } {
         const hasHeaderToken = Boolean(
             req.headers?.["authorization"]?.split(" ")[1],
         );
@@ -94,7 +95,7 @@ class AuthMiddleware {
      * @param {object} [outcome.err]   - jsonwebtoken error (failure only).
      * @private
      */
-    static _traceAuth(req, { result, status, user, err }) {
+    static _traceAuth(req: import('express').Request, { result, status, user, err }: { result: string; status: number; user?: Record<string, any>; err?: Record<string, any>; }) {
         const { source, cookieNames, signed } =
             AuthMiddleware._describeCredential(req);
 
@@ -139,7 +140,7 @@ class AuthMiddleware {
      * Middleware that authenticates JWT tokens from cookies or Authorization header.
      * Attaches decoded user payload to `req.user`.
      */
-    static authenticate(req, res, next) {
+    static authenticate(req: Request, res: Response, next: NextFunction) {
         AuthMiddleware._doAuthenticate(req, res, next, false);
     }
 
@@ -156,7 +157,7 @@ class AuthMiddleware {
      *     ReportController.export,
      * );
      */
-    static authenticateForDownload(req, res, next) {
+    static authenticateForDownload(req: Request, res: Response, next: NextFunction) {
         AuthMiddleware._doAuthenticate(req, res, next, true);
     }
 
@@ -172,7 +173,7 @@ class AuthMiddleware {
      * choice is made at route definition — never derived from the request
      * path (CWE-807).
      */
-    static authenticatePendingPasswordChange(req, res, next) {
+    static authenticatePendingPasswordChange(req: Request, res: Response, next: NextFunction) {
         AuthMiddleware._doAuthenticate(req, res, next, false, true);
     }
 
@@ -190,7 +191,7 @@ class AuthMiddleware {
      *   true only via authenticatePendingPasswordChange.
      * @private
      */
-    static _doAuthenticate(req, res, next, isFileDownload, allowPendingPasswordChange = false) {
+    static _doAuthenticate(req: Request, res: Response, next: NextFunction, isFileDownload: boolean, allowPendingPasswordChange: boolean = false) {
         // Authorization header takes precedence (standard convention).
         // signedCookies are HMAC-verified by cookie-parser (server-controlled).
         // Both sources are validated by jwt.verify below.
@@ -205,7 +206,7 @@ class AuthMiddleware {
             token,
             process.env.JWT_SECRET,
             { algorithms: ["HS256"] },
-            (err, user) => {
+            (err: any, user: any) => {
                 if (err) {
                     // TokenExpiredError   → session timed out                       → 440
                     // NotBeforeError      → token used before its nbf claim         → 403
@@ -400,7 +401,7 @@ class AuthMiddleware {
      * @param {boolean} isFileDownload - Server-controlled flag.
      * @private
      */
-    static _rejectTokenClass(req, res, next, claimClass, isFileDownload) {
+    static _rejectTokenClass(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction, claimClass: "legacy" | "wrong-type", isFileDownload: boolean) {
         const legacy = claimClass === "legacy";
         const statusCode = legacy ? 440 : 401;
         AuthMiddleware._traceAuth(req, {
@@ -454,7 +455,7 @@ class AuthMiddleware {
      * @param {boolean} isFileDownload - Server-controlled flag.
      * @private
      */
-    static _rejectRevokedSession(req, res, next, user, isFileDownload) {
+    static _rejectRevokedSession(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction, user: Record<string, any>, isFileDownload: boolean) {
         AuthMiddleware._traceAuth(req, { result: "revoked", status: 440 });
         logger.warning(
             authMessages.ACCESS_SESSION_REVOKED_REFUSED(user.userId, String(user.fid).slice(0, 8)),
@@ -487,13 +488,13 @@ class AuthMiddleware {
      * @param {string} token
      * @returns {Promise<object>} decoded payload
      */
-    static verifyToken(token) {
+    static verifyToken(token: string): Promise<Record<string, any>> {
         return new Promise((resolve, reject) => {
             jwt.verify(
                 token,
                 process.env.JWT_SECRET,
                 { algorithms: ["HS256"] },
-                (err, payload) => {
+                (err: any, payload: any) => {
                     if (
                         err ||
                         classifyAccessClaims(payload) !== "access" ||
@@ -534,8 +535,8 @@ class AuthMiddleware {
      *     user.userLevel >= 3 && user.permissions?.includes('DELETE_USERS')
      * )
      */
-    static requireAccess(predicate, options = {}) {
-        return (req, res, next) => {
+    static requireAccess(predicate: (user: Record<string, any>) => boolean, options: { message?: string; } = {}): import('express').RequestHandler {
+        return (req: Request, res: Response, next: NextFunction) => {
             if (!req.user) {
                 return next(
                     new AppError(AUTH_ERRORS.USER_NOT_FOUND, 401, {
@@ -573,10 +574,10 @@ class AuthMiddleware {
      *   service layer validates the shape). Primitive values are still coerced to
      *   strings even when stringOnly is false.
      */
-    static validateRequiredFields(requiredFields, options = {}) {
+    static validateRequiredFields(requiredFields: string[], options: { stringOnly?: boolean; } = {}) {
         const stringOnly = options.stringOnly !== false;
 
-        return (req, res, next) => {
+        return (req: Request, res: Response, next: NextFunction) => {
             const source = req.method === "GET" ? req.query : req.body;
             const missing = [];
             const typeErrors = [];
@@ -635,13 +636,13 @@ class AuthMiddleware {
      * @param {string[]} [fields.verify=[]] - passwords checked against a stored hash
      * @param {string[]} [fields.hash=[]]   - new passwords about to be hashed
      */
-    static validatePasswordFields({ verify = [], hash = [] } = {}) {
+    static validatePasswordFields({ verify = [], hash = [] }: { verify?: string[]; hash?: string[]; } = {}) {
         const checks = [
             ...verify.map((field) => [field, false]),
             ...hash.map((field) => [field, true]),
         ];
 
-        return (req, res, next) => {
+        return (req: Request, res: Response, next: NextFunction) => {
             const body = req.body ?? {};
             const errors = [];
 
@@ -671,7 +672,7 @@ class AuthMiddleware {
         };
     }
 
-    static _escapeHtml(str) {
+    static _escapeHtml(str: any) {
         return String(str)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
@@ -680,7 +681,7 @@ class AuthMiddleware {
             .replace(/'/g, "&#39;");
     }
 
-    static _authHtmlError(title, line1, line2) {
+    static _authHtmlError(title: any, line1: any, line2: any) {
         const t = AuthMiddleware._escapeHtml(title);
         const l1 = AuthMiddleware._escapeHtml(line1);
         const l2 = AuthMiddleware._escapeHtml(line2);

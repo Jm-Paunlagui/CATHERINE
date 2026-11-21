@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -7,29 +6,29 @@
  */
 
 const adminMessages = {
-  ADMIN_SEARCH: (query) => `Account search executed with query: "${query}".`,
+  ADMIN_SEARCH: (query: any) => `Account search executed with query: "${query}".`,
   ADMIN_LIST_FETCHED: () =>
     "Admin list fetched and enriched with user profile data.",
-  ADMIN_CREATED: (username, role) =>
+  ADMIN_CREATED: (username: any, role: any) =>
     `Admin created — USERNAME: ${username}, ROLE: ${role}.`,
-  ADMIN_UPDATED: (username) => `Admin record updated — USERNAME: ${username}.`,
-  ADMIN_DELETED: (username) => `Admin removed — USERNAME: ${username}.`,
-  ADMIN_PASSWORD_RESET: (username) =>
+  ADMIN_UPDATED: (username: any) => `Admin record updated — USERNAME: ${username}.`,
+  ADMIN_DELETED: (username: any) => `Admin removed — USERNAME: ${username}.`,
+  ADMIN_PASSWORD_RESET: (username: any) =>
     `Admin password reset to a new temporary password — USERNAME: ${username}.`,
 
   // ── Temporary-password delivery ──
   // Never interpolate the address or the password — USERNAME, source and outcome only.
   /** @param {string} username @param {'granted'|'reset'} kind @param {string} source */
-  TEMP_PASSWORD_EMAIL_SENT: (username, kind, source) =>
+  TEMP_PASSWORD_EMAIL_SENT: (username: string, kind: 'granted' | 'reset', source: string) =>
     `Temporary password email sent (${kind}) — USERNAME: ${username}, recipient source: ${source}.`,
   /** @param {string} username @param {'granted'|'reset'} kind @param {string} cause */
-  TEMP_PASSWORD_EMAIL_FAILED: (username, kind, cause) =>
+  TEMP_PASSWORD_EMAIL_FAILED: (username: string, kind: 'granted' | 'reset', cause: string) =>
     `Temporary password email NOT delivered (${kind}) — USERNAME: ${username}. The account holds an unclaimed temporary password; use Reset Password to send a new one. Cause: ${cause}`,
   /** @param {string} username @param {string} reason */
-  TEMP_PASSWORD_RECIPIENT_REFUSED: (username, reason) =>
+  TEMP_PASSWORD_RECIPIENT_REFUSED: (username: string, reason: string) =>
     `Temporary password not issued — USERNAME: ${username}, recipient refused: ${reason}. Nothing was written.`,
   /** @param {string} username @param {string} cause */
-  TEMP_PASSWORD_RECIPIENT_LOOKUP_FAILED: (username, cause) =>
+  TEMP_PASSWORD_RECIPIENT_LOOKUP_FAILED: (username: string, cause: string) =>
     `Recipient email lookup failed — USERNAME: ${username}. Nothing was written. Cause: ${cause}`,
   /**
    * Role-policy refusal. Both identifiers carry the `USERNAME:` label so
@@ -37,48 +36,48 @@ const adminMessages = {
    * @param {string} callerUsername @param {string|null} callerRole
    * @param {string} action @param {string|null} targetUsername
    */
-  ROLE_POLICY_DENIED: (callerUsername, callerRole, action, targetUsername) =>
+  ROLE_POLICY_DENIED: (callerUsername: string, callerRole: string | null, action: string, targetUsername: string | null) =>
     `Access Control refused — USERNAME: ${callerUsername} (${callerRole ?? "no role"}) may not ${action}` +
     (targetUsername != null ? ` on USERNAME: ${targetUsername}.` : "."),
   /** @param {string} username */
-  TEMP_PASSWORD_LEGACY_FIELDS_REFUSED: (username) =>
+  TEMP_PASSWORD_LEGACY_FIELDS_REFUSED: (username: string) =>
     `Admin creation refused — USERNAME: ${username}; the request carried retainPassword/newPassword, which the server no longer accepts.`,
-  ADMIN_SIGNATURE_RESET: (username) =>
+  ADMIN_SIGNATURE_RESET: (username: any) =>
     `Admin SYSSIGNATURE recomputed — USERNAME: ${username}.`,
-  ADMIN_SIGNATURE_INVALID: (username) =>
+  ADMIN_SIGNATURE_INVALID: (username: any) =>
     `SYSSIGNATURE mismatch detected for USERNAME: ${username} — record may have been tampered with.`,
-  ADMIN_ALREADY_EXISTS: (username) =>
+  ADMIN_ALREADY_EXISTS: (username: any) =>
     `Admin creation rejected — USERNAME: ${username} already exists in T_ADMINS_DEV.`,
-  ADMIN_NOT_FOUND: (username) =>
+  ADMIN_NOT_FOUND: (username: any) =>
     `Admin operation failed — USERNAME: ${username} not found in T_ADMINS_DEV.`,
 
   // ── Permission flags ──────────────────────────────────────────────────────
   /** @param {string} username @param {object} flags */
-  ADMIN_PERMISSIONS_UPDATED: (username, flags) =>
+  ADMIN_PERMISSIONS_UPDATED: (username: string, flags: Record<string, any>) =>
     `Admin permission flags updated — USERNAME: ${username}, flags: ${JSON.stringify(flags)}.`,
   /** @param {string} username */
-  ADMIN_INACTIVE_LOGIN_BLOCKED: (username) =>
+  ADMIN_INACTIVE_LOGIN_BLOCKED: (username: string) =>
     `Login blocked — admin USERNAME: ${username} has IS_ACTIVE='N'.`,
 
   // ── Access Control revoke ───────────────────────────────────────────────────
   // Every identifier carries a label — logRedaction only matches prefixed ids.
   /** @param {string} username - target admin @param {number|string} adminId - issuing admin (T_ADMINS_DEV.ID) */
-  ADMIN_REVOKE_BACKUP_ISSUED: (username, adminId) =>
+  ADMIN_REVOKE_BACKUP_ISSUED: (username: string, adminId: number | string) =>
     `Revoke-backup archive issued — target USERNAME: ${username}, issued to ADMIN_ID: ${adminId}.`,
   /** @param {string} username @param {string} reason */
-  ADMIN_REVOKE_TOKEN_REJECTED: (username, reason) =>
+  ADMIN_REVOKE_TOKEN_REJECTED: (username: string, reason: string) =>
     `Admin revoke/delete rejected — USERNAME: ${username}, backup token invalid: ${reason}.`,
   /** @param {string} username @param {string} updatedBy */
-  ADMIN_REVOKED: (username, updatedBy) =>
+  ADMIN_REVOKED: (username: string, updatedBy: string) =>
     `Admin access revoked (deactivated, all CAN_* flags cleared, SYSSIGNATURE re-signed) — USERNAME: ${username}, by USERNAME: ${updatedBy}.`,
   /** @param {string} username */
-  ADMIN_REVOKE_SELF_BLOCKED: (username) =>
+  ADMIN_REVOKE_SELF_BLOCKED: (username: string) =>
     `Admin revoke rejected — USERNAME: ${username} attempted to revoke their own account.`,
   /** @param {string} username */
-  ADMIN_DELETE_SELF_BLOCKED: (username) =>
+  ADMIN_DELETE_SELF_BLOCKED: (username: string) =>
     `Admin delete rejected — USERNAME: ${username} attempted to delete their own account.`,
   /** @param {number|string} adminId - T_ADMINS_DEV.ID */
-  ADMIN_LAST_SUPER_ADMIN_BLOCKED: (adminId) =>
+  ADMIN_LAST_SUPER_ADMIN_BLOCKED: (adminId: number | string) =>
     `Admin action rejected — ADMIN_ID: ${adminId} is the last active SUPER_ADMIN.`,
 };
 

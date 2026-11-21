@@ -17,6 +17,7 @@
  * re-checks the role.
  */
 
+import type { Request, Response } from "express";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { catchAsync } from "../utils/catchAsync";
 import ArchitectureService from "../services/ArchitectureService";
@@ -32,8 +33,8 @@ import { logger } from "../utils/logger";
  * @param {string} message - success message from RESPONSE_MESSAGES
  * @returns {import("express").RequestHandler}
  */
-function _serve(name, message) {
-    return catchAsync(async (req, res) => {
+function _serve(name: "architecture" | "runtime", message: string): import("express").RequestHandler {
+    return catchAsync(async (req: Request, res: Response) => {
         const { meta, layers, edgeKinds, nodes, edges, flows, layout } = ArchitectureService.getMap(name);
 
         logger.info(architectureMessages.MAP_SERVED(name, req.user?.userId, nodes.length, flows.length));

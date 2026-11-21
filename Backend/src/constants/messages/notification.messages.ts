@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -20,7 +19,7 @@ const notificationMessages = {
      * @param {number} pollIntervalMs - Metrics poll interval in milliseconds
      * @returns {string}
      */
-    NOTIFIER_STARTED: (pollIntervalMs) =>
+    NOTIFIER_STARTED: (pollIntervalMs: number): string =>
         `AlertNotifierService started — polling metrics every ${pollIntervalMs}ms for dependency/red/system alerts and subscribed to the critical logger tap.`,
 
     /**
@@ -28,7 +27,7 @@ const notificationMessages = {
      * and unsubscribes the critical logger tap (graceful shutdown).
      * @returns {string}
      */
-    NOTIFIER_STOPPED: () =>
+    NOTIFIER_STOPPED: (): string =>
         "AlertNotifierService stopped — poll timer cleared and critical logger tap unsubscribed.",
 
     /**
@@ -42,7 +41,7 @@ const notificationMessages = {
      * @param {number} days    Retention window in days.
      * @returns {string}
      */
-    RETENTION_PURGED: (deleted, days) =>
+    RETENTION_PURGED: (deleted: number, days: number): string =>
         `AlertNotifierService: purged ${deleted} SERVER_ALERT_LOG row(s) older than ${days} days.`,
 
     NOTIFIER_SHUTDOWN_BEGUN: () =>
@@ -54,7 +53,7 @@ const notificationMessages = {
      * @param {string} outcome "done" | "timeout" | "error".
      * @returns {string}
      */
-    NOTIFIER_SHUTDOWN_FLUSH: (events, outcome) =>
+    NOTIFIER_SHUTDOWN_FLUSH: (events: number, outcome: string): string =>
         `AlertNotifierService shutdown flush — ${events} buffered critical event(s), outcome: ${outcome}.`,
 
     /**
@@ -62,7 +61,7 @@ const notificationMessages = {
      * @param {number} events Buffered critical events left unsent.
      * @returns {string}
      */
-    NOTIFIER_FINAL_FLUSH_SKIPPED: (events) =>
+    NOTIFIER_FINAL_FLUSH_SKIPPED: (events: number): string =>
         `AlertNotifierService final flush skipped — no time left before the forced exit; ${events} buffered critical event(s) not emailed yet.`,
 
     /**
@@ -70,7 +69,7 @@ const notificationMessages = {
      * @param {number} n Discarded critical event count.
      * @returns {string}
      */
-    NOTIFIER_STOP_DISCARDED: (n) =>
+    NOTIFIER_STOP_DISCARDED: (n: number): string =>
         `AlertNotifierService.stop() discarded ${n} buffered critical event(s) without emailing — graceful shutdown must use drainAndStop().`,
 
     /**
@@ -84,7 +83,7 @@ const notificationMessages = {
      * @param {number} n Rows saved.
      * @returns {string}
      */
-    SHUTDOWN_ROWS_SAVED_EMAIL_DEFERRED: (n) =>
+    SHUTDOWN_ROWS_SAVED_EMAIL_DEFERRED: (n: number): string =>
         `AlertNotifierService shutdown — ${n} buffered critical row(s) saved before the pools close; the email follows after the stop is marked clean.`,
 
     /**
@@ -93,7 +92,7 @@ const notificationMessages = {
      */
     SHUTDOWN_ROW_EMAIL_NOTE: "emailed during shutdown, after this row was saved; delivery not recorded",
 
-    ALERT_LOG_ROWS_SKIPPED_SHUTDOWN: (n) =>
+    ALERT_LOG_ROWS_SKIPPED_SHUTDOWN: (n: any) =>
         `${n} SERVER_ALERT_LOG row(s) not persisted — the final shutdown flush runs after the Oracle pools closed.`,
 
     /**
@@ -102,7 +101,7 @@ const notificationMessages = {
      * @param {string} reason - Human-readable reason (e.g. "ENABLE_SERVER_NOTIFICATIONS is not 'true'")
      * @returns {string}
      */
-    NOTIFIER_DISABLED: (reason) =>
+    NOTIFIER_DISABLED: (reason: string): string =>
         `AlertNotifierService not started — server email notifications are disabled (${reason}).`,
 
     /**
@@ -111,7 +110,7 @@ const notificationMessages = {
      * @param {string} notificationId - Snowflake-based digest id stamped on the email
      * @returns {string}
      */
-    EMAIL_SENT: (channel, notificationId) =>
+    EMAIL_SENT: (channel: string, notificationId: string): string =>
         `Server notification email sent on channel '${channel}' (${notificationId}).`,
 
     /**
@@ -122,7 +121,7 @@ const notificationMessages = {
      *                           short synthetic reason like "no resolvable recipients")
      * @returns {string}
      */
-    EMAIL_FAILED: (channel, cause) =>
+    EMAIL_FAILED: (channel: string, cause: string): string =>
         `Server notification email failed on channel '${channel}': ${cause}`,
 
     /**
@@ -131,7 +130,7 @@ const notificationMessages = {
      * @param {number} ms - Wait budget in milliseconds
      * @returns {string}
      */
-    RECIPIENT_REFRESH_WAIT_EXCEEDED: (ms) =>
+    RECIPIENT_REFRESH_WAIT_EXCEEDED: (ms: number): string =>
         `Server notification recipients: the Access Control opt-in lookup did not answer within ${ms} ms; sending to the last known list and SERVER_NOTIFY_TO (the lookup continues in the background)`,
 
     /**
@@ -145,7 +144,7 @@ const notificationMessages = {
      * @param {string} channel    - Mapped channel key
      * @returns {string}
      */
-    ALERT_TRANSITION: (rule, scope, fromStatus, toStatus, channel) =>
+    ALERT_TRANSITION: (rule: string, scope: string, fromStatus: string, toStatus: string, channel: string): string =>
         `Alert transition: ${rule} (${scope}) ${fromStatus} -> ${toStatus} on channel '${channel}'.`,
 
     /**
@@ -155,7 +154,7 @@ const notificationMessages = {
      * @param {number} totalSuppressed - Running suppressed count since the last successful send
      * @returns {string}
      */
-    STORM_SUPPRESSED: (count, totalSuppressed) =>
+    STORM_SUPPRESSED: (count: number, totalSuppressed: number): string =>
         `Critical digest suppressed by the hourly ceiling — ${count} event(s) dropped this window (${totalSuppressed} suppressed since the last successful send).`,
 
     /**
@@ -165,14 +164,14 @@ const notificationMessages = {
      * @param {string} rule - Unmapped alert rule identifier
      * @returns {string}
      */
-    UNMAPPED_RULE: (rule) =>
+    UNMAPPED_RULE: (rule: string): string =>
         `Alert rule '${rule}' has no channel mapping — falling back to server-system-notification.`,
 
     /**
      * Logged when the notification status endpoint is read.
      * @returns {string}
      */
-    STATUS_FETCHED: () => "Server notification status fetched",
+    STATUS_FETCHED: (): string => "Server notification status fetched",
 
     /**
      * Logged when an admin manually requests a test send.
@@ -180,7 +179,7 @@ const notificationMessages = {
      * @param {string} testedBy - Requesting admin's user id
      * @returns {string}
      */
-    TEST_SEND_REQUESTED: (channel, testedBy) =>
+    TEST_SEND_REQUESTED: (channel: string, testedBy: string): string =>
         `Test notification requested on channel '${channel}' by ${testedBy}.`,
 
     // ── Phase 4: Alert Acknowledgement ─────────────────────────────────────────
@@ -192,7 +191,7 @@ const notificationMessages = {
      * @param {string|number} ackedBy - Admin ID of the requesting admin
      * @returns {string}
      */
-    ALERT_ACK_REQUESTED: (alertKey, ackedBy) =>
+    ALERT_ACK_REQUESTED: (alertKey: string, ackedBy: string | number): string =>
         `Alert acknowledgement requested for '${alertKey}' by ADMIN_ID ${ackedBy}.`,
 
     /**
@@ -202,7 +201,7 @@ const notificationMessages = {
      * @param {string} expiresAtIso     - ISO timestamp the ack lapses at
      * @returns {string}
      */
-    ALERT_ACKNOWLEDGED: (alertKey, ackedBy, expiresAtIso) =>
+    ALERT_ACKNOWLEDGED: (alertKey: string, ackedBy: string | number, expiresAtIso: string): string =>
         `Alert '${alertKey}' acknowledged by ADMIN_ID ${ackedBy}, expires ${expiresAtIso}.`,
 
     /**
@@ -210,7 +209,7 @@ const notificationMessages = {
      * @param {string} alertKey
      * @returns {string}
      */
-    ALERT_UNACK_REQUESTED: (alertKey) =>
+    ALERT_UNACK_REQUESTED: (alertKey: string): string =>
         `Alert unacknowledge requested for '${alertKey}'.`,
 
     /**
@@ -219,7 +218,7 @@ const notificationMessages = {
      * @param {string} alertKey
      * @returns {string}
      */
-    ALERT_UNACKNOWLEDGED: (alertKey) =>
+    ALERT_UNACKNOWLEDGED: (alertKey: string): string =>
         `Alert '${alertKey}' acknowledgement cleared.`,
 
     /**
@@ -233,7 +232,7 @@ const notificationMessages = {
      * @param {string} toSeverity   - Current (higher) severity
      * @returns {string}
      */
-    ALERT_ACK_ESCALATION_CLEARED: (alertKey, fromSeverity, toSeverity) =>
+    ALERT_ACK_ESCALATION_CLEARED: (alertKey: string, fromSeverity: string, toSeverity: string): string =>
         `Alert '${alertKey}' escalated past its acknowledgement (${fromSeverity} -> ${toSeverity}) — acknowledgement cleared, notification will send.`,
 
     /**
@@ -242,7 +241,7 @@ const notificationMessages = {
      * @param {string} alertKey
      * @returns {string}
      */
-    ALERT_ACK_EXPIRED: (alertKey) =>
+    ALERT_ACK_EXPIRED: (alertKey: string): string =>
         `Alert '${alertKey}' acknowledgement TTL expired — resuming normal cooldown re-notify.`,
 
     /**
@@ -251,7 +250,7 @@ const notificationMessages = {
      * @param {string} alertKey
      * @returns {string}
      */
-    ALERT_ACK_SUPPRESSED: (alertKey) =>
+    ALERT_ACK_SUPPRESSED: (alertKey: string): string =>
         `Alert '${alertKey}' cooldown re-notify suppressed by an active acknowledgement.`,
 
     /**
@@ -263,7 +262,7 @@ const notificationMessages = {
      * @param {string} alertKey
      * @returns {string}
      */
-    ALERT_ACK_SUPPRESSED_AFTER_RESTART: (alertKey) =>
+    ALERT_ACK_SUPPRESSED_AFTER_RESTART: (alertKey: string): string =>
         `Alert '${alertKey}' re-fired after a restart; email suppressed by an active acknowledgement.`,
 
     /**
@@ -272,7 +271,7 @@ const notificationMessages = {
      * @param {number} dropped - Rows dropped during this write
      * @returns {string}
      */
-    ALERT_LOG_QUEUE_DROPPED: (dropped) =>
+    ALERT_LOG_QUEUE_DROPPED: (dropped: number): string =>
         `Alert-log queue full — dropped ${dropped} oldest queued row(s) (not persisted to SERVER_ALERT_LOG).`,
 
     /**
@@ -281,7 +280,7 @@ const notificationMessages = {
      * @param {number} count - Number of active (non-expired) acks loaded
      * @returns {string}
      */
-    ACK_HYDRATED: (count) =>
+    ACK_HYDRATED: (count: number): string =>
         `AlertNotifierService hydrated ${count} active acknowledgement(s) from SERVER_ALERT_ACK.`,
 
     /**
@@ -289,14 +288,14 @@ const notificationMessages = {
      * @param {number} cap - CRITICAL_BUFFER_MAX
      * @returns {string}
      */
-    CRITICAL_BUFFER_CAPPED: (cap) =>
+    CRITICAL_BUFFER_CAPPED: (cap: number): string =>
         `Critical digest buffer reached its cap of ${cap} records this window — further events are counted but not itemised.`,
 
     /**
      * Logged (debug) when a poll tick is skipped because the previous tick is still running.
      * @returns {string}
      */
-    POLL_TICK_OVERLAP_SKIPPED: () =>
+    POLL_TICK_OVERLAP_SKIPPED: (): string =>
         "Alert poll tick skipped — the previous tick is still in flight.",
 };
 

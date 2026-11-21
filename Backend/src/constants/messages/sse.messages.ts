@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -19,7 +18,7 @@ const sseMessages = {
      * @param {string} scope - Scope key (e.g. "report:5:FULL").
      * @returns {string}
      */
-    SSE_SCOPE_OPENED: (name, scope) =>
+    SSE_SCOPE_OPENED: (name: string, scope: string): string =>
         `${name} SSE stream opened — scope: ${scope}.`,
 
     /**
@@ -27,7 +26,7 @@ const sseMessages = {
      * @param {string} scope
      * @returns {string}
      */
-    SSE_SCOPE_CLOSED: (name, scope) =>
+    SSE_SCOPE_CLOSED: (name: string, scope: string): string =>
         `${name} SSE stream closed — scope: ${scope}.`,
 
     /**
@@ -36,21 +35,21 @@ const sseMessages = {
      * @param {number} connectionCount
      * @returns {string}
      */
-    SSE_SCOPE_CONNECTED: (name, scope, connectionCount) =>
+    SSE_SCOPE_CONNECTED: (name: string, scope: string, connectionCount: number): string =>
         `${name} SSE connection joined scope "${scope}" — ${connectionCount} connection(s) now sharing it.`,
 
     /**
      * @param {string} name
      * @returns {string}
      */
-    SSE_SHARED_POLL_STARTED: (name) =>
+    SSE_SHARED_POLL_STARTED: (name: string): string =>
         `${name} SSE shared poller started (per-scope, one Oracle query per distinct scope per tick).`,
 
     /**
      * @param {string} name
      * @returns {string}
      */
-    SSE_SHARED_POLL_STOPPED: (name) =>
+    SSE_SHARED_POLL_STOPPED: (name: string): string =>
         `${name} SSE shared poller stopped — no scopes remain.`,
 
     /**
@@ -59,7 +58,7 @@ const sseMessages = {
      * @param {string} err
      * @returns {string}
      */
-    SSE_POLL_ERROR: (name, scope, err) =>
+    SSE_POLL_ERROR: (name: string, scope: string, err: string): string =>
         `${name} SSE poll error for scope "${scope}": ${err}.`,
 
     /**
@@ -69,7 +68,7 @@ const sseMessages = {
      * @param {number} threshold
      * @returns {string}
      */
-    SSE_SCOPE_MAX_ERRORS: (name, scope, connCount, threshold) =>
+    SSE_SCOPE_MAX_ERRORS: (name: string, scope: string, connCount: number, threshold: number): string =>
         `${name} SSE scope "${scope}" hit ${threshold} consecutive poll errors — notifying ${connCount} connection(s) and dropping the scope.`,
 
     /**
@@ -77,7 +76,7 @@ const sseMessages = {
      * @param {string} scope
      * @returns {string}
      */
-    SSE_UPDATE_SENT: (name, scope) =>
+    SSE_UPDATE_SENT: (name: string, scope: string): string =>
         `${name} SSE update pushed for scope "${scope}" — cursor changed, onChange ran.`,
 
     /**
@@ -87,9 +86,9 @@ const sseMessages = {
      * @returns {string}
      */
     /** @param {number} count */
-    SSE_SESSION_ENDED: (count) =>
+    SSE_SESSION_ENDED: (count: number) =>
         `Ended ${count} live stream(s) whose session was signed out or had its password changed.`,
-    SSE_SHUTDOWN_BROADCAST: (count) =>
+    SSE_SHUTDOWN_BROADCAST: (count: any) =>
         `SSE graceful shutdown — sent 'shutdown' event to ${count} live stream(s).`,
 };
 

@@ -7,6 +7,7 @@
  * forced token rotation, and multiple token sources.
  */
 
+import type { NextFunction, Request, Response } from "express";
 import { doubleCsrf } from "csrf-csrf";
 import { logger } from "../../utils/logger";
 import { middlewareMessages } from "../../constants/messages";
@@ -16,6 +17,14 @@ const TOKEN_TTL_MS = 5 * 60 * 1000;
 const TOKEN_SIZE = 64;
 
 class CsrfMiddleware {
+  declare handle: any;
+    declare statusHandler: (req: any, res: any) => void;
+    declare refreshHandler: (req: any, res: any) => any;
+    declare tokenHandler: (req: any, res: any) => void;
+    declare _doubleCsrfProtection: import("csrf-csrf").DoubleCsrfProtection;
+    declare _generateCsrfToken: import("csrf-csrf").CsrfTokenGenerator;
+    declare _secret: any;
+    declare _isSecure: any;
   constructor(options = {}) {
     this._isSecure =
       options.forceSecure ??
@@ -47,7 +56,7 @@ class CsrfMiddleware {
         maxAge: TOKEN_TTL_MS,
       },
       size: TOKEN_SIZE,
-      getTokenFromRequest: (req) =>
+      getTokenFromRequest: (req: any) =>
         req.headers["x-csrf-token"] ?? req.body?._csrf ?? req.body?.csrfToken,
     });
 
@@ -72,7 +81,7 @@ class CsrfMiddleware {
     return this._doubleCsrfProtection;
   }
 
-  _buildTokenResponse(res, token) {
+  _buildTokenResponse(res: any, token: any) {
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MS).toISOString();
     res.json({
       success: true,
@@ -84,7 +93,7 @@ class CsrfMiddleware {
     });
   }
 
-  _sendError(res, statusCode, message, error) {
+  _sendError(res: any, statusCode: any, message: any, error: any) {
     res.status(statusCode).json({
       success: false,
       message,
@@ -95,7 +104,7 @@ class CsrfMiddleware {
     });
   }
 
-  _tokenHandler(req, res) {
+  _tokenHandler(req: Request, res: Response) {
     try {
       const token = this._generateCsrfToken(req, res);
       if (!token) throw new Error("Token generation returned an empty value");
@@ -123,7 +132,7 @@ class CsrfMiddleware {
     }
   }
 
-  _refreshHandler(req, res) {
+  _refreshHandler(req: Request, res: Response) {
     // AuthMiddleware.authenticate (applied at the route level) always populates
     // req.user before this handler runs. The fallback guards against accidental
     // misconfiguration without masking the real identity when auth is present.
@@ -189,7 +198,7 @@ class CsrfMiddleware {
     }
   }
 
-  _statusHandler(req, res) {
+  _statusHandler(req: Request, res: Response) {
     try {
       const cookieName = this._cookieName;
       const hasCookie = !!req.cookies?.[cookieName];
@@ -229,7 +238,7 @@ class CsrfMiddleware {
     }
   }
 
-  _protect(req, res, next) {
+  _protect(req: Request, res: Response, next: NextFunction) {
     this._doubleCsrfProtection(req, res, (err) => {
       if (err) {
         logger.warning(

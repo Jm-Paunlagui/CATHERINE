@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -79,7 +78,7 @@ class BackupTokenModel {
      *     jti: "3f9c2e10-...", adminId: 10234, expiresAt: new Date(),
      * });
      */
-    static async consumeJti({ jti, adminId, expiresAt }) {
+    static async consumeJti({ jti, adminId, expiresAt }: { jti: string; adminId: number | string; expiresAt: Date; }): Promise<{ consumed: true; } | { consumed: false; reason: "already-consumed"; }> {
         if (isDemoMode()) {
             // Same exactly-once semantics as the PK: has-then-set with no
             // await in between, so a concurrent replay cannot also win.

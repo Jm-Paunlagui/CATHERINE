@@ -60,6 +60,16 @@ const DEFAULT_HEARTBEAT_MS = 10_000;
 const NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 class FileLease {
+    declare _lastBeatProgressAt: number;
+    declare _timer: null;
+    declare _token: null;
+    declare _heartbeatMs: number;
+    declare _pollMs: number;
+    declare _scope: import("../progress/ProgressScope").ProgressScope | null;
+    declare _staleMs: number;
+    declare _path: string;
+    declare _name: string;
+    declare _dir: string;
     /**
      * @param {object} options
      * @param {string} options.dir - Already-resolved directory that holds the lease file.
@@ -76,7 +86,7 @@ class FileLease {
         scope = null,
         pollMs = DEFAULT_POLL_MS,
         heartbeatMs = DEFAULT_HEARTBEAT_MS,
-    }) {
+    }: { dir: string; name: string; staleMs: number; scope?: import("../progress/ProgressScope").ProgressScope | null; pollMs?: number; heartbeatMs?: number; }) {
         if (
             typeof name !== "string" ||
             !NAME_PATTERN.test(name) ||
@@ -100,12 +110,12 @@ class FileLease {
     }
 
     /** @returns {string} Absolute lease file path. */
-    get path() {
+    get path(): string {
         return this._path;
     }
 
     /** @returns {boolean} True while this instance holds the lease. */
-    get held() {
+    get held(): boolean {
         return this._token !== null;
     }
 
@@ -114,7 +124,7 @@ class FileLease {
      * work scope is created after the lease is taken).
      * @param {import("../progress/ProgressScope").ProgressScope|null} scope
      */
-    bindScope(scope) {
+    bindScope(scope: import("../progress/ProgressScope").ProgressScope | null) {
         this._scope = scope;
         this._lastBeatProgressAt = 0;
     }
@@ -124,7 +134,7 @@ class FileLease {
      * waiting scope is aborted.
      * @returns {Promise<void>}
      */
-    async acquire() {
+    async acquire(): Promise<void> {
         const waitScope = this._scope ?? currentScope() ?? null;
         let lastMtime = null;
         let announced = false;
@@ -171,7 +181,7 @@ class FileLease {
      * Idempotent.
      * @returns {Promise<void>}
      */
-    async release() {
+    async release(): Promise<void> {
         this._stopHeartbeat();
         const token = this._token;
         this._token = null;
@@ -192,7 +202,7 @@ class FileLease {
      * @param {(lease: FileLease) => Promise<T>} fn
      * @returns {Promise<T>}
      */
-    static async withLease(options, fn) {
+    static async withLease<T>(options: ConstructorParameters<typeof FileLease>[0], fn: (lease: FileLease) => Promise<T>): Promise<T> {
         const lease = new FileLease(options);
         await lease.acquire();
         try {
@@ -205,7 +215,7 @@ class FileLease {
     // ── internals ────────────────────────────────────────────────────────────
 
     /** @returns {Promise<boolean>} true if we created the file. */
-    async _tryCreate() {
+    async _tryCreate(): Promise<boolean> {
         const token = crypto.randomBytes(16).toString("hex");
         let handle;
         try {
@@ -234,7 +244,7 @@ class FileLease {
     }
 
     /** @returns {Promise<object|null>} Parsed lease body, null if missing/unreadable. */
-    async _readInfo() {
+    async _readInfo(): Promise<Record<string, any> | null> {
         try {
             return JSON.parse(await fsPromises.readFile(this._path, "utf8"));
         } catch {
@@ -247,7 +257,7 @@ class FileLease {
      * @param {object|null} info
      * @returns {boolean}
      */
-    _isStale(stat, info) {
+    _isStale(stat: import("fs").Stats, info: Record<string, any> | null): boolean {
         if (Date.now() - stat.mtimeMs > this._staleMs) return true;
         if (
             info &&
@@ -269,7 +279,7 @@ class FileLease {
      * @param {object|null} observed - Lease body seen when judged stale.
      * @returns {Promise<boolean>} true if WE removed the stale lease.
      */
-    async _steal(observed) {
+    async _steal(observed: Record<string, any> | null): Promise<boolean> {
         const graveyard = `${this._path}.stale-${crypto.randomBytes(4).toString("hex")}`;
         try {
             await fsPromises.rename(this._path, graveyard);

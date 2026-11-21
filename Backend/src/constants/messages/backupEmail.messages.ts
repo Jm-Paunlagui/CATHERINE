@@ -35,7 +35,7 @@ const backupEmailMessages = {
      * @param {number|string} adminId
      * @returns {string}
      */
-    SEND_SKIPPED_DISABLED: (adminId) =>
+    SEND_SKIPPED_DISABLED: (adminId: number | string): string =>
         `Purge backup email skipped for ADMIN_ID ${adminId} — backup email delivery is disabled (BACKUP_EMAIL_ENABLED=false).`,
 
     /**
@@ -44,7 +44,7 @@ const backupEmailMessages = {
      * @param {number|string} adminId
      * @returns {string}
      */
-    SEND_SKIPPED_NO_RECIPIENTS: (adminId) =>
+    SEND_SKIPPED_NO_RECIPIENTS: (adminId: number | string): string =>
         `Purge backup email skipped for ADMIN_ID ${adminId} — no resolvable recipient email address (no opted-in active SUPER_ADMIN, and the acting operator has no resolvable email).`,
 
     /**
@@ -54,7 +54,7 @@ const backupEmailMessages = {
      * @param {Error|string} err
      * @returns {string}
      */
-    RECIPIENT_LOOKUP_FAILED: (err) =>
+    RECIPIENT_LOOKUP_FAILED: (err: Error | string): string =>
         `Purge backup email recipient lookup failed — falling back to whatever could be resolved: ${err?.message ?? err}`,
 
     /**
@@ -63,7 +63,7 @@ const backupEmailMessages = {
      * @param {number} recipientCount
      * @returns {string}
      */
-    SEND_SUCCESS: (adminId, recipientCount) =>
+    SEND_SUCCESS: (adminId: number | string, recipientCount: number): string =>
         `Purge notification email sent — triggered by ADMIN_ID ${adminId}, ${recipientCount} recipient(s) (notification only, no attachment).`,
 
     /**
@@ -74,7 +74,7 @@ const backupEmailMessages = {
      * @param {string} cause
      * @returns {string}
      */
-    SEND_FAILED: (adminId, cause) =>
+    SEND_FAILED: (adminId: number | string, cause: string): string =>
         `Purge backup email failed for ADMIN_ID ${adminId}: ${cause}`,
 
     /**
@@ -88,7 +88,7 @@ const backupEmailMessages = {
      * @param {Error|string} err
      * @returns {string}
      */
-    DISPATCH_REJECTED: (adminId, err) =>
+    DISPATCH_REJECTED: (adminId: number | string, err: Error | string): string =>
         `Purge backup email dispatch rejected at the fire-and-forget call site (ADMIN_ID ${adminId}) — the purge backup response itself was NOT affected: ${err?.message ?? err}`,
 };
 

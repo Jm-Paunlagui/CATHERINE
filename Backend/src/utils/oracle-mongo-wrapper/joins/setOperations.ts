@@ -48,12 +48,18 @@ import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
  *   to prevent collisions with the first query's binds.
  */
 class SetResultBuilder {
+  declare _skipVal: null;
+  declare _limitVal: null;
+  declare _sort: null;
+  declare _operator: string;
+  declare _qb2: QueryBuilder;
+  declare _qb1: QueryBuilder;
   /**
    * @param {QueryBuilder} qb1
    * @param {QueryBuilder} qb2
    * @param {string} operator - 'UNION' | 'UNION ALL' | 'INTERSECT' | 'MINUS'
    */
-  constructor(qb1, qb2, operator) {
+  constructor(qb1: QueryBuilder, qb2: QueryBuilder, operator: string) {
     // Validate column counts if projections are set
     if (qb1._projection && qb2._projection) {
       const count1 = Object.keys(qb1._projection).filter(
@@ -78,7 +84,7 @@ class SetResultBuilder {
    * @param {Object} sortSpec - { col: 1|-1 }
    * @returns {SetResultBuilder}
    */
-  sort(sortSpec) {
+  sort(sortSpec: Record<string, any>): SetResultBuilder {
     this._sort = sortSpec;
     return this;
   }
@@ -87,7 +93,7 @@ class SetResultBuilder {
    * @param {number} n
    * @returns {SetResultBuilder}
    */
-  limit(n) {
+  limit(n: number): SetResultBuilder {
     this._limitVal = n;
     return this;
   }
@@ -96,7 +102,7 @@ class SetResultBuilder {
    * @param {number} n
    * @returns {SetResultBuilder}
    */
-  skip(n) {
+  skip(n: number): SetResultBuilder {
     this._skipVal = n;
     return this;
   }
@@ -105,13 +111,13 @@ class SetResultBuilder {
    * Build the combined SQL.
    * @returns {{ sql: string, binds: Object }}
    */
-  _buildSQL() {
+  _buildSQL(): { sql: string; binds: Record<string, any>; } {
     const { sql: sql1, binds: binds1 } = this._qb1._buildSQL();
     const { sql: sql2, binds: binds2Raw } = this._qb2._buildSQL();
 
     // Re-key binds2 to avoid collisions with binds1
-    const binds2 = {};
-    const keyMap = {};
+    const binds2: Record<string, any> = {};
+    const keyMap: Record<string, any> = {};
     for (const [k, v] of Object.entries(binds2Raw)) {
       const newKey = `set2_${k}`;
       binds2[newKey] = v;
@@ -156,7 +162,7 @@ class SetResultBuilder {
   /**
    * Make SetResultBuilder thenable so `await union(...)` returns rows directly.
    */
-  then(resolve, reject) {
+  then(resolve: any, reject: any) {
     return this.toArray().then(resolve, reject);
   }
 
@@ -164,12 +170,12 @@ class SetResultBuilder {
    * Execute the set operation and return all rows.
    * @returns {Promise<Array>}
    */
-  async toArray() {
+  async toArray(): Promise<Array<any>> {
     const db = this._qb1.db;
     const conn = this._qb1._conn;
     const { sql, binds } = this._buildSQL();
 
-    const exec = async (connection) => {
+    const exec = async (connection: any) => {
       try {
         const result = await connection.execute(sql, binds, {
           outFormat: db.oracledb.OUT_FORMAT_OBJECT,

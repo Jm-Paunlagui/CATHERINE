@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -16,7 +15,7 @@ const clientMessages = {
      * @param {string|number} userId - The reporting user's identifier (JWT userId).
      * @returns {string}
      */
-    CLIENT_ERROR: (userId) =>
+    CLIENT_ERROR: (userId: string | number): string =>
         `Client-side render error reported by user ${userId}`,
 
     /**
@@ -28,7 +27,7 @@ const clientMessages = {
      * @param {string} surface - "assistant" (launcher) or "center" (full page).
      * @returns {string}
      */
-    HELP_SEARCH_MISS: (query, surface) =>
+    HELP_SEARCH_MISS: (query: string, surface: string): string =>
         `Help search miss (${surface}): "${query}" returned no results`,
 };
 

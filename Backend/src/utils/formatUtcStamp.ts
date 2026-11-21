@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -15,7 +14,7 @@
  *   the default matches `timeStyle: "short"`.
  * @returns {string} e.g. "Nov 3, 2026, 2:32 PM" or "Nov 3, 2026, 2:32:05 PM".
  */
-function formatUtcStamp(date, { seconds = false } = {}) {
+function formatUtcStamp(date: Date, { seconds = false }: { seconds?: boolean; } = {}): string {
     const fmt = new Intl.DateTimeFormat("en-US", {
         timeZone: "UTC",
         month: "short",

@@ -54,6 +54,12 @@ import { clusterRpc } from "../../utils/cluster/ClusterRpcClient";
 import { CLUSTER_RPC_METHODS } from "../../constants/clusterIpc";
 
 class RecipientResolver {
+    declare RecipientResolver: typeof RecipientResolver;
+    declare static REFRESH_WAIT_MS: any;
+    declare _lastRefreshOk: boolean;
+    declare _refreshPromise: null;
+    declare _lastRefreshAt: number;
+    declare _cache: Map<any, any>;
     constructor() {
         /** @type {Map<string, string[]>} channel -> resolved DB opt-in emails */
         this._cache = new Map();
@@ -74,7 +80,7 @@ class RecipientResolver {
      * @param {string} channel
      * @returns {Promise<{ dbUp: boolean, emails: string[] }>}
      */
-    async getDbRecipientsWithState(channel) {
+    async getDbRecipientsWithState(channel: string): Promise<{ dbUp: boolean; emails: string[]; }> {
         // A cached success can be up to RECIPIENT_REFRESH_MIN old; the pool
         // health monitor knows sooner that the database stopped answering.
         if (!this._poolsHealthy()) return { dbUp: false, emails: [] };
@@ -90,7 +96,7 @@ class RecipientResolver {
      * @param {string} channel - One of the four server notification channel keys
      * @returns {Promise<string[]>}
      */
-    async getDbRecipients(channel) {
+    async getDbRecipients(channel: string): Promise<string[]> {
         await this._refreshBounded();
         return this._cache.get(channel) ?? [];
     }
@@ -102,7 +108,7 @@ class RecipientResolver {
      * @returns {boolean}
      * @private
      */
-    _poolsHealthy() {
+    _poolsHealthy(): boolean {
         try {
             const db = require("../../config").default;
             if (typeof db.isPoolHealthy !== "function") return true;
@@ -117,7 +123,7 @@ class RecipientResolver {
      * @returns {Promise<{ timedOut: boolean }>}
      * @private
      */
-    async _refreshBounded() {
+    async _refreshBounded(): Promise<{ timedOut: boolean; }> {
         // Bounded: when the database is the thing that hung (a
         // stop's failsafe, a pool outage) the refresh can hang too, and an
         // unbounded wait made the whole send lose its 5 s race, env floor
@@ -164,7 +170,7 @@ class RecipientResolver {
      * every call (not frozen at construction) so it can be changed per test.
      * @returns {number}
      */
-    _refreshMinutes() {
+    _refreshMinutes(): number {
         return Number(process.env.RECIPIENT_REFRESH_MIN) || 5;
     }
 
@@ -173,7 +179,7 @@ class RecipientResolver {
      * in-flight refresh.
      * @returns {Promise<void>}
      */
-    async _maybeRefresh() {
+    async _maybeRefresh(): Promise<void> {
         const staleMs = this._refreshMinutes() * 60_000;
         const isStale = Date.now() - this._lastRefreshAt >= staleMs;
         if (!isStale) return;
@@ -195,7 +201,7 @@ class RecipientResolver {
      * @returns {Promise<void>}
      * @private
      */
-    async _doRefresh() {
+    async _doRefresh(): Promise<void> {
         // Lazy require — avoids a load-order cycle with admin.model.js pulling
         // in the DB config before it is ready, and keeps this file requirable
         // standalone in unit tests.

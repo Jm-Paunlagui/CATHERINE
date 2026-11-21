@@ -124,11 +124,16 @@ const BUCKET_ORDER = Object.freeze([
  * contract. One instance per request — never share across batches.
  */
 class UploadOutcomeBuilder {
+    declare _seen: Map<any, any>;
+    declare _rows: { skipped: never[]; failed: never[]; pending: never[]; };
+    declare _counts: { inserted: number; updated: number; skipped: number; failed: number; pending: number; };
+    declare _total: number;
+    declare _feature: string;
     /**
      * @param {string} feature - Short feature slug identifying the upload.
      * @param {number} total   - Number of rows the client submitted in this request.
      */
-    constructor(feature, total) {
+    constructor(feature: string, total: number) {
         this._feature = String(feature);
         this._total = Number.isFinite(Number(total)) ? Number(total) : 0;
 
@@ -159,7 +164,7 @@ class UploadOutcomeBuilder {
      * @returns {{ key: string, label: string|null }}
      * @private
      */
-    static _identity(key, label) {
+    static _identity(key: any, label: any): { key: string; label: string | null; } {
         const k = key === null || key === undefined || key === "" ? "—" : String(key);
         const l = label === null || label === undefined || label === "" ? null : String(label);
         return { key: k, label: l };
@@ -173,7 +178,7 @@ class UploadOutcomeBuilder {
      * @param {string} bucket
      * @private
      */
-    _track(key, bucket) {
+    _track(key: string, bucket: string) {
         if (key === "—") return; // unidentifiable rows cannot be de-duplicated
         const first = this._seen.get(key);
         if (first !== undefined) {
@@ -191,7 +196,7 @@ class UploadOutcomeBuilder {
      * @param {*} [label]
      * @returns {this}
      */
-    insert(key, label) {
+    insert(key: any, label: any): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.INSERTED]++;
         this._track(id.key, OUTCOME.INSERTED);
@@ -204,7 +209,7 @@ class UploadOutcomeBuilder {
      * @param {*} [label]
      * @returns {this}
      */
-    update(key, label) {
+    update(key: any, label: any): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.UPDATED]++;
         this._track(id.key, OUTCOME.UPDATED);
@@ -222,7 +227,7 @@ class UploadOutcomeBuilder {
      *   (e.g. `{ code: "LOCKED" }`). Never overrides key/label/reason/category.
      * @returns {this}
      */
-    skip(key, label, reason, category = SKIP_REASON.NOT_ACTIONABLE, extra = {}) {
+    skip(key: any, label: any, reason: string, category: string = SKIP_REASON.NOT_ACTIONABLE, extra: Record<string, any> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.SKIPPED]++;
         this._rows[OUTCOME.SKIPPED].push({
@@ -246,7 +251,7 @@ class UploadOutcomeBuilder {
      *   (e.g. `{ attempts: 3 }`). Never overrides key/label/reason/category.
      * @returns {this}
      */
-    fail(key, label, reason, category = FAIL_REASON.DATABASE, extra = {}) {
+    fail(key: any, label: any, reason: string, category: string = FAIL_REASON.DATABASE, extra: Record<string, any> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.FAILED]++;
         this._rows[OUTCOME.FAILED].push({
@@ -269,7 +274,7 @@ class UploadOutcomeBuilder {
      * @param {object} [extra]
      * @returns {this}
      */
-    pend(key, label, reason, category = PENDING_REASON.RETRY_EXHAUSTED, extra = {}) {
+    pend(key: any, label: any, reason: string, category: string = PENDING_REASON.RETRY_EXHAUSTED, extra: Record<string, any> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.PENDING]++;
         this._rows[OUTCOME.PENDING].push({
@@ -283,7 +288,7 @@ class UploadOutcomeBuilder {
     }
 
     /** @returns {number} Terminal outcomes recorded so far. */
-    get recorded() {
+    get recorded(): number {
         return BUCKET_ORDER.reduce((sum, b) => sum + this._counts[b], 0);
     }
 
@@ -306,7 +311,12 @@ class UploadOutcomeBuilder {
      *   balanced: boolean,
      * }}
      */
-    build(extra = {}) {
+    build(extra: Record<string, any> = {}): {
+        feature: string;
+        counts: { total: number; inserted: number; updated: number; skipped: number; failed: number; pending: number; unaccounted: number; };
+        rows: { skipped: Array<Record<string, any>>; failed: Array<Record<string, any>>; pending: Array<Record<string, any>>; };
+        balanced: boolean;
+    } {
         const recorded = this.recorded;
         const unaccounted = this._total - recorded;
 
@@ -394,7 +404,7 @@ class UploadOutcome {
      *   Never the parsed-file count, never the actionable subset.
      * @returns {UploadOutcomeBuilder}
      */
-    static for(feature, total) {
+    static for(feature: string, total: number): UploadOutcomeBuilder {
         return new UploadOutcomeBuilder(feature, total);
     }
 
@@ -406,7 +416,7 @@ class UploadOutcome {
      * @param {{ counts?: object, balanced?: boolean }} summary
      * @returns {boolean}
      */
-    static isPartial(summary) {
+    static isPartial(summary: { counts?: Record<string, any>; balanced?: boolean; }): boolean {
         const c = summary?.counts ?? {};
         return (
             Number(c.failed ?? 0) > 0 ||
@@ -423,7 +433,7 @@ class UploadOutcome {
      * @param {{ counts?: object }} summary
      * @returns {boolean}
      */
-    static isNoop(summary) {
+    static isNoop(summary: { counts?: Record<string, any>; }): boolean {
         const c = summary?.counts ?? {};
         return Number(c.inserted ?? 0) === 0 && Number(c.updated ?? 0) === 0;
     }
