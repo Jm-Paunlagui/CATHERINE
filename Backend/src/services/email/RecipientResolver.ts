@@ -109,7 +109,7 @@ class RecipientResolver {
      */
     _poolsHealthy(): boolean {
         try {
-            const db = require("../../config").default;
+            const db = (require("../../config") as typeof import("../../config")).default;
             if (typeof db.isPoolHealthy !== "function") return true;
             return db.isPoolHealthy("appDb");
         } catch {
@@ -204,7 +204,7 @@ class RecipientResolver {
         // Lazy require — avoids a load-order cycle with admin.model.js pulling
         // in the DB config before it is ready, and keeps this file requirable
         // standalone in unit tests.
-        const AdminModel = require("../../models/admin.model").default;
+        const AdminModel = (require("../../models/admin.model") as typeof import("../../models/admin.model")).default;
 
         try {
             const channels = Object.keys(AdminModel.SERVER_NOTIFY_FLAG_COLUMNS);

@@ -953,7 +953,7 @@ class AdminManagementService {
      * @private
      */
     static _invalidateRecipientCache() {
-        const ServerNotificationService = require("./email/ServerNotificationService").default;
+        const ServerNotificationService = (require("./email/ServerNotificationService") as typeof import("./email/ServerNotificationService")).default;
         ServerNotificationService.invalidateRecipientCache();
     }
 

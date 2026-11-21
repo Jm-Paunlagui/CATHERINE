@@ -131,7 +131,7 @@ function makeSignedFields({ domain, fields, moneyFields = [] }: { domain: string
      * @param {Object} row @returns {Promise<string>}
      */
     async function sign(row: Record<string, any>): Promise<string> {
-        const { CryptoVault } = require("../encryption/CryptoVault");
+        const { CryptoVault } = (require("../encryption/CryptoVault") as typeof import("../encryption/CryptoVault"));
         return CryptoVault.signRecord(domain, project(row));
     }
 
@@ -140,7 +140,7 @@ function makeSignedFields({ domain, fields, moneyFields = [] }: { domain: string
      * @param {Object} row @param {string} signature @returns {Promise<boolean>}
      */
     async function verify(row: Record<string, any>, signature: string): Promise<boolean> {
-        const { CryptoVault } = require("../encryption/CryptoVault");
+        const { CryptoVault } = (require("../encryption/CryptoVault") as typeof import("../encryption/CryptoVault"));
         return CryptoVault.verifyRecord(domain, project(row), signature);
     }
 

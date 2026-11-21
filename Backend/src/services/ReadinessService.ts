@@ -72,7 +72,7 @@ async function probePool(poolName: string): Promise<{ status: "up" | "down"; sta
             },
             { bypassBreaker: true },
         );
-        const timeout = new Promise((resolve) => {
+        const timeout = new Promise<{ status: "down"; state: "down"; error: string; latencyMs: number }>((resolve) => {
             timer = setTimeout(
                 () =>
                     resolve({
@@ -88,8 +88,8 @@ async function probePool(poolName: string): Promise<{ status: "up" | "down"; sta
         probe.catch(() => {});
         return await Promise.race([
             probe.then(() => ({
-                status: "up",
-                state: "up",
+                status: "up" as const,
+                state: "up" as const,
                 latencyMs: Date.now() - start,
             })),
             timeout,

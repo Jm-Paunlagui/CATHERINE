@@ -505,7 +505,7 @@ const validatePassword = (value: unknown, label = "Password") => {
 // structured log pipeline, making them invisible in production environments.
 let _logger: any;
 try {
-    _logger = require("../logger").logger;
+    _logger = (require("../logger") as typeof import("../logger")).logger;
 } catch {
     const noop = () => {};
     _logger = { error: noop, warn: noop, info: noop };

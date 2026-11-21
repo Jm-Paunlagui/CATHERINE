@@ -1521,7 +1521,7 @@ class OracleCollection {
      *   // Returns the top 5 regions by total order amount
      */
     aggregate(pipeline: Array<any>): Promise<Record<string, unknown>[]> & { _buildSQL: () => { sql: string; binds: Record<string, unknown> } } {
-        const { buildAggregateSQL } = require("../pipeline/aggregatePipeline");
+        const { buildAggregateSQL } = (require("../pipeline/aggregatePipeline") as typeof import("../pipeline/aggregatePipeline"));
         // Deep-clone preserving Date instances — JSON round-trip converts Dates to
         // ISO strings which then fail Oracle's NLS_DATE_FORMAT implicit conversion
         // (ORA-01843) when used as bind values against DATE columns.
@@ -1886,8 +1886,8 @@ class OracleCollection {
      *     maxLevel: 5,
      *   });
      */
-    async connectBy(spec: Record<string, any>): Promise<Array<any>> {
-        const { buildConnectBy } = require("../advanced/oracleAdvanced");
+    async connectBy(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildConnectBy>[1]): Promise<Array<any>> {
+        const { buildConnectBy } = (require("../advanced/oracleAdvanced") as typeof import("../advanced/oracleAdvanced"));
         const { sql, binds } = buildConnectBy(this.tableName, spec);
 
         return this._execute(async (conn) => {
@@ -1923,8 +1923,8 @@ class OracleCollection {
      *   - groupBy: Column(s) to keep as rows (e.g. ["product"])
      * @returns {Promise<Array>} Pivoted rows
      */
-    async pivot(spec: Record<string, any>): Promise<Array<any>> {
-        const { buildPivot } = require("../advanced/oracleAdvanced");
+    async pivot(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildPivot>[1]): Promise<Array<any>> {
+        const { buildPivot } = (require("../advanced/oracleAdvanced") as typeof import("../advanced/oracleAdvanced"));
         const { sql, binds } = buildPivot(this.tableName, spec);
 
         return this._execute(async (conn) => {
@@ -1955,8 +1955,8 @@ class OracleCollection {
      *   - includeNulls: true to include NULL values (uses INCLUDE NULLS)
      * @returns {Promise<Array>} Unpivoted rows
      */
-    async unpivot(spec: Record<string, any>): Promise<Array<any>> {
-        const { buildUnpivot } = require("../advanced/oracleAdvanced");
+    async unpivot(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildUnpivot>[1]): Promise<Array<any>> {
+        const { buildUnpivot } = (require("../advanced/oracleAdvanced") as typeof import("../advanced/oracleAdvanced"));
         const { sql, binds } = buildUnpivot(this.tableName, spec);
 
         return this._execute(async (conn) => {
@@ -1994,7 +1994,7 @@ class OracleCollection {
      *   ).toArray();
      */
     static union(qb1: QueryBuilder, qb2: QueryBuilder, options: Record<string, any> = {}): import("../joins/setOperations").SetResultBuilder {
-        const { SetResultBuilder } = require("../joins/setOperations");
+        const { SetResultBuilder } = (require("../joins/setOperations") as typeof import("../joins/setOperations"));
         return new SetResultBuilder(
             qb1,
             qb2,
@@ -2010,7 +2010,7 @@ class OracleCollection {
      * @returns {SetResultBuilder}
      */
     static intersect(qb1: QueryBuilder, qb2: QueryBuilder): import("../joins/setOperations").SetResultBuilder {
-        const { SetResultBuilder } = require("../joins/setOperations");
+        const { SetResultBuilder } = (require("../joins/setOperations") as typeof import("../joins/setOperations"));
         return new SetResultBuilder(qb1, qb2, "INTERSECT");
     }
 
@@ -2022,7 +2022,7 @@ class OracleCollection {
      * @returns {SetResultBuilder}
      */
     static minus(qb1: QueryBuilder, qb2: QueryBuilder): import("../joins/setOperations").SetResultBuilder {
-        const { SetResultBuilder } = require("../joins/setOperations");
+        const { SetResultBuilder } = (require("../joins/setOperations") as typeof import("../joins/setOperations"));
         return new SetResultBuilder(qb1, qb2, "MINUS");
     }
 

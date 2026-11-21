@@ -269,7 +269,7 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static listBackups = catchAsync(async (_req, res) => {
-        const BackupStoreService = require("../services/BackupStoreService").default;
+        const BackupStoreService = (require("../services/BackupStoreService") as typeof import("../services/BackupStoreService")).default;
         const archives = await BackupStoreService.listArchives();
 
         // Derive aggregate disk usage from the index entries.
@@ -297,8 +297,8 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static runManualBackup = catchAsync(async (req: Request, res: Response) => {
-        const BackupStoreService = require("../services/BackupStoreService").default;
-        const { getAllTableNames } = require("../constants/purgeTables");
+        const BackupStoreService = (require("../services/BackupStoreService") as typeof import("../services/BackupStoreService")).default;
+        const { getAllTableNames } = (require("../constants/purgeTables") as typeof import("../constants/purgeTables"));
         const adminId = _callerAdminId(req);
 
         logger.info(dataBackupMessages.MANUAL_BACKUP_REQUESTED(adminId));
@@ -344,7 +344,7 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static downloadBackup = catchAsync(async (req: Request, res: Response) => {
-        const BackupStoreService = require("../services/BackupStoreService").default;
+        const BackupStoreService = (require("../services/BackupStoreService") as typeof import("../services/BackupStoreService")).default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id as string; // a named :param is one string
 
@@ -373,7 +373,7 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static verifyBackup = catchAsync(async (req: Request, res: Response) => {
-        const BackupStoreService = require("../services/BackupStoreService").default;
+        const BackupStoreService = (require("../services/BackupStoreService") as typeof import("../services/BackupStoreService")).default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id as string; // a named :param is one string
 
@@ -405,8 +405,8 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static requestDeleteBackup = catchAsync(async (req: Request, res: Response) => {
-        const BackupStoreService = require("../services/BackupStoreService").default;
-        const BackupVoteModel = require("../models/backup-vote.model").default;
+        const BackupStoreService = (require("../services/BackupStoreService") as typeof import("../services/BackupStoreService")).default;
+        const BackupVoteModel = (require("../models/backup-vote.model") as typeof import("../models/backup-vote.model")).default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id as string; // a named :param is one string
 
@@ -483,8 +483,8 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static voteDeleteBackup = catchAsync(async (req: Request, res: Response) => {
-        const BackupStoreService = require("../services/BackupStoreService").default;
-        const BackupVoteModel = require("../models/backup-vote.model").default;
+        const BackupStoreService = (require("../services/BackupStoreService") as typeof import("../services/BackupStoreService")).default;
+        const BackupVoteModel = (require("../models/backup-vote.model") as typeof import("../models/backup-vote.model")).default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id as string; // a named :param is one string
 
@@ -574,8 +574,8 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static cancelDeleteRequest = catchAsync(async (req: Request, res: Response) => {
-        const BackupStoreService = require("../services/BackupStoreService").default;
-        const BackupVoteModel = require("../models/backup-vote.model").default;
+        const BackupStoreService = (require("../services/BackupStoreService") as typeof import("../services/BackupStoreService")).default;
+        const BackupVoteModel = (require("../models/backup-vote.model") as typeof import("../models/backup-vote.model")).default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id as string; // a named :param is one string
 

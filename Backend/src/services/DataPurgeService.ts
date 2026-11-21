@@ -684,8 +684,8 @@ class DataPurgeService {
         tableCount: number;
         rowCounts: Record<string, number>;
     }> {
-        const BackupArchiveService = require("./BackupArchiveService").default;
-        const BackupEmailService = require("./BackupEmailService").default;
+        const BackupArchiveService = (require("./BackupArchiveService") as typeof import("./BackupArchiveService")).default;
+        const BackupEmailService = (require("./BackupEmailService") as typeof import("./BackupEmailService")).default;
 
         const result = await BackupArchiveService.buildBackup({
             selection,
@@ -704,7 +704,7 @@ class DataPurgeService {
         // A server-side copy of the pre-purge state, visible in the Backup
         // tab's "Purge Backups" section.
         try {
-            const BackupStoreService = require("./BackupStoreService").default;
+            const BackupStoreService = (require("./BackupStoreService") as typeof import("./BackupStoreService")).default;
             BackupStoreService.runBackup({
                 trigger: "PURGE",
                 tables: getAllTableNames(),
@@ -831,7 +831,7 @@ class DataPurgeService {
         // method (BackupArchiveService, BackupEmailService, AlertNotifierService
         // below) to avoid a hard dependency at module load for callers who
         // never reach this path.
-        const BackupScheduleService = require("./BackupScheduleService").default;
+        const BackupScheduleService = (require("./BackupScheduleService") as typeof import("./BackupScheduleService")).default;
         const lockoutStatus = await BackupScheduleService.getLockoutStatus();
         if (lockoutStatus.active) {
             logger.warning(
@@ -846,7 +846,7 @@ class DataPurgeService {
                 HTTP_STATUS.CONFLICT,
                 {
                     type: "ConflictError",
-                    hint: BackupScheduleService.describeLockout(lockoutStatus),
+                    hint: BackupScheduleService.describeLockout(lockoutStatus) ?? undefined,
                 },
             );
         }
@@ -1221,7 +1221,7 @@ class DataPurgeService {
         // Required lazily to avoid a hard dependency at module load for a
         // service most of this feature's paths never touch, and to sidestep
         // any startup-order coupling with AlertNotifierService.start().
-        const AlertNotifierService = require("./AlertNotifierService").default;
+        const AlertNotifierService = (require("./AlertNotifierService") as typeof import("./AlertNotifierService")).default;
         await AlertNotifierService.notifyCriticalNow({
             level: "EMERGENCY",
             message: `Data purge executed by admin ${adminId} - ${totalDeleted} row(s) deleted across ${scope.tables.length} table(s).`,

@@ -220,7 +220,7 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
       }
 
       case "$lookup": {
-        const { buildJoinSQL } = require("../joins/joinBuilder");
+        const { buildJoinSQL } = (require("../joins/joinBuilder") as typeof import("../joins/joinBuilder"));
         const joinSql = buildJoinSQL(prevSource, stage.$lookup);
         ctes.push({ alias: stageAlias, sql: joinSql });
         break;
@@ -560,7 +560,7 @@ function _buildAggExpr(expr: Record<string, any>, binds: Record<string, any>, co
         case "$size":
           return `JSON_ARRAY_LENGTH(${_fieldRef(val)})`;
         case "$window": {
-          const { buildWindowExpr } = require("./windowFunctions");
+          const { buildWindowExpr } = (require("./windowFunctions") as typeof import("./windowFunctions"));
           return buildWindowExpr(val);
         }
         default:

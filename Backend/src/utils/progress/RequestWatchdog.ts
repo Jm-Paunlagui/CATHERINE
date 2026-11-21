@@ -132,7 +132,7 @@ class RequestWatchdog {
     _corsPolicy(): { applyToErrorResponse: ((...args: any[]) => any); } {
         return (
             this._corsOverride ??
-            require("../../middleware/security/CorsMiddleware").defaultCors
+            (require("../../middleware/security/CorsMiddleware") as typeof import("../../middleware/security/CorsMiddleware")).defaultCors
         );
     }
 

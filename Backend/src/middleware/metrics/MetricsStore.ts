@@ -1189,7 +1189,7 @@ class MetricsStore {
    */
   getMergeableSnapshot(): { snapshot: Record<string, any>; extras: { routeSketches: Record<string, any>; routeWindowSketches: Record<string, any>; oracleSketches: Record<string, any>; oracleTotalMs: Record<string, any>; apdexCounts: { satisfied: number; tolerating: number; samples: number; }; }; } {
     // Lazy: metricsMerge requires this module for computeRates.
-    const { buildQuantileSketch } = require("./metricsMerge");
+    const { buildQuantileSketch } = (require("./metricsMerge") as typeof import("./metricsMerge"));
     const snapshot = this.getSnapshot();
 
     const routeSketches = new Map();

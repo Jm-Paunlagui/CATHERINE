@@ -95,13 +95,10 @@ export interface BackupEventSource {
     getUpcomingEvents: (horizonMs?: number) => Promise<BackupScheduleEvent[]>;
 }
 
-/** Whether operator-initiated actions are locked out around a backup. */
-export interface LockoutStatus {
-    active: boolean;
-    reason: "running" | "imminent" | null;
-    msRemaining: number | null;
-    lockoutWindowMs: number;
-}
+/** Whether operator-initiated actions are locked out around a backup (reason is set exactly when active). */
+export type LockoutStatus =
+    | { active: true; reason: "running" | "imminent"; msRemaining: number | null; lockoutWindowMs: number }
+    | { active: false; reason: null; msRemaining: number | null; lockoutWindowMs: number };
 
 /** No events: scheduled backups stay idle until a project registers a source. */
 const EMPTY_EVENT_SOURCE = Object.freeze({

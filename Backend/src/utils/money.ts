@@ -510,7 +510,7 @@ class Money {
      */
     format(currencyCode: string, localeOverride: string): string {
         // Lazy require to avoid a constants<->utils cycle at module load.
-        const { getCurrency } = require("../constants/currencies");
+        const { getCurrency } = (require("../constants/currencies") as typeof import("../constants/currencies"));
         const entry = getCurrency(currencyCode);
         const locale = localeOverride || entry.locale;
 

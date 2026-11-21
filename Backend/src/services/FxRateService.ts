@@ -212,7 +212,7 @@ class FxRateService {
         }
         // Live path: append via the wrapper. Lazily required so the driver is not
         // pulled in under DEMO_MODE (matches the model lazy-require pattern).
-        const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
+        const { createDb, OracleCollection } = (require("../utils/oracle-mongo-wrapper") as typeof import("../utils/oracle-mongo-wrapper"));
         const col = new OracleCollection(table, createDb("appDb"));
         const res = await col.insertOne(record);
         return { insertedId: res.insertedId };
@@ -239,7 +239,7 @@ class FxRateService {
                 type: "ConfigurationError",
             });
         }
-        const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
+        const { createDb, OracleCollection } = (require("../utils/oracle-mongo-wrapper") as typeof import("../utils/oracle-mongo-wrapper"));
         const col = new OracleCollection(table, createDb("appDb"));
         return col.find({ CURRENCY_CODE: currencyCode }).toArray();
     }

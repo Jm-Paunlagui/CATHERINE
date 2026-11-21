@@ -861,7 +861,7 @@ class DataRestoreService {
         // Backup tab) gets a clear rejection rather than a silent partial
         // restore of only the tables that happened to be INCLUDED.
         if (manifest?.mode === "INCREMENTAL") {
-            const { dataBackupMessages } = require("../constants/messages");
+            const { dataBackupMessages } = (require("../constants/messages") as typeof import("../constants/messages"));
             logger.warning(
                 dataBackupMessages.RESTORE_INCREMENTAL_REJECTED(
                     manifest?.archiveId ?? "unknown",

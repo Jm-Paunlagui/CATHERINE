@@ -28,7 +28,7 @@ class ShutdownNotifier {
     #pending: Set<Promise<any>> = new Set();
     declare _announce: boolean;
     declare _logger: { warning: ((...args: any[]) => any); };
-    declare _alertNotifier: { notifyLifecycleNow: (opts: Record<string, any>) => Promise<any>; };
+    declare _alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; };
 
     /**
      * @param {object} deps
@@ -41,7 +41,7 @@ class ShutdownNotifier {
      *   OWN failsafe fires (otherwise a hung non-leader worker would be
      *   force-exited with no email at all).
      */
-    constructor({ alertNotifier, logger, announce = true }: { alertNotifier: { notifyLifecycleNow: (opts: Record<string, any>) => Promise<any>; }; logger: { warning: ((...args: any[]) => any); }; announce?: boolean; }) {
+    constructor({ alertNotifier, logger, announce = true }: { alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; }; logger: { warning: ((...args: any[]) => any); }; announce?: boolean; }) {
         this._alertNotifier = alertNotifier;
         this._logger = logger;
         this._announce = announce !== false;
@@ -149,7 +149,7 @@ class ShutdownNotifier {
      * @param {object} payload
      * @returns {Promise<any>}
      */
-    #send(event: string, payload: Record<string, any>): Promise<any> {
+    #send(event: string, payload: Parameters<import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]>[0]): Promise<any> {
         let p;
         try {
             p = Promise.resolve(this._alertNotifier.notifyLifecycleNow(payload));

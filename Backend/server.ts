@@ -162,22 +162,22 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // cron-leader election rationale is in src/utils/clusterRole.ts's header.
     // Its failsafe is FORCED_EXIT_MS (clamped above, so a lowered
     // SHUTDOWN_FORCED_EXIT_MS applies) + CLUSTER_SHUTDOWN_MARGIN_MS.
-    const { ClusterSupervisor } = require("./src/utils/cluster/ClusterSupervisor");
+    const { ClusterSupervisor } = (require("./src/utils/cluster/ClusterSupervisor") as typeof import("./src/utils/cluster/ClusterSupervisor"));
 
     // The primary never starts AlertNotifierService (that would duplicate every
     // digest), so a breach / crash-loop / forced-kill is emailed with the
     // one-shot notifyCriticalNow (bounded internally). Lazy require + swallowed
     // failure: a notification problem must never crash or block the primary.
-    const notifyCritical = (message: unknown) => {
-        const AlertNotifierService = require("./src/services/AlertNotifierService").default;
+    const notifyCritical = (message: string) => {
+        const AlertNotifierService = (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default;
         return AlertNotifierService.notifyCriticalNow({ level: "CRITICAL", message });
     };
 
     // Shared-state RPC (rate limiter, security filter, scheduler, metrics,
     // alert ack, recipients). The hub asks the supervisor for
     // live workers / the leader lazily, so it can be built before it.
-    const { ClusterRpcHub } = require("./src/utils/cluster/ClusterRpcHub");
-    const { PrimaryStateServices } = require("./src/utils/cluster/PrimaryStateServices");
+    const { ClusterRpcHub } = (require("./src/utils/cluster/ClusterRpcHub") as typeof import("./src/utils/cluster/ClusterRpcHub"));
+    const { PrimaryStateServices } = (require("./src/utils/cluster/PrimaryStateServices") as typeof import("./src/utils/cluster/PrimaryStateServices"));
     let supervisor: any = null;
     const rpcHub = new ClusterRpcHub({
         cluster,
@@ -204,7 +204,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // every sibling, or they keep serving stale data until TTL expiry.
     const {
         ClusterCacheSync,
-    } = require("./src/middleware/cache/ClusterCacheSync");
+    } = (require("./src/middleware/cache/ClusterCacheSync") as typeof import("./src/middleware/cache/ClusterCacheSync"));
     ClusterCacheSync.initPrimary();
 } else {
     bootWorker();
@@ -242,7 +242,7 @@ function bootWorker() {
     // src/utils/lifecycle/ServerRunMarker.ts.
     const appVersion = (() => {
         try {
-            return require("./package.json").version;
+            return (require("./package.json") as typeof import("./package.json")).version;
         } catch {
             /* c8 ignore next -- package.json is always bundled */
             return "unknown";
@@ -250,8 +250,8 @@ function bootWorker() {
     })();
     let serverRunMarker: any = null;
     if (IS_CRON_LEADER_AT_BOOT) {
-        const ServerRunMarker = require("./src/utils/lifecycle/ServerRunMarker").default;
-        const { SERVER_RUN_MARKER } = require("./src/constants/serverRunMarker");
+        const ServerRunMarker = (require("./src/utils/lifecycle/ServerRunMarker") as typeof import("./src/utils/lifecycle/ServerRunMarker")).default;
+        const { SERVER_RUN_MARKER } = (require("./src/constants/serverRunMarker") as typeof import("./src/constants/serverRunMarker"));
         const resolvedMarker = ServerRunMarker.resolveMarkerPath();
         if (resolvedMarker.ignoredOverride) {
             logger.warning(
@@ -286,9 +286,9 @@ function bootWorker() {
         if (bootAnnounceTimer) clearTimeout(bootAnnounceTimer);
         bootAnnounceTimer = null;
         try {
-            const StartupNotifier = require("./src/utils/lifecycle/StartupNotifier").default;
+            const StartupNotifier = (require("./src/utils/lifecycle/StartupNotifier") as typeof import("./src/utils/lifecycle/StartupNotifier")).default;
             const notifier = new StartupNotifier({
-                alertNotifier: require("./src/services/AlertNotifierService").default,
+                alertNotifier: (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default,
                 logger,
             });
             const sending = notifier
@@ -310,7 +310,7 @@ function bootWorker() {
                     }
                 })
                 .catch(() => {});
-            require("./src/utils/InFlightTaskRegistry").default.track("startup-notifier", sending);
+            (require("./src/utils/InFlightTaskRegistry") as typeof import("./src/utils/InFlightTaskRegistry")).default.track("startup-notifier", sending);
         } catch (err) {
             logger.warning(serverMessages.STARTUP_NOTIFY_FAILED("announce", err?.message ?? String(err)), {
                 _noNotify: true,
@@ -355,9 +355,9 @@ function bootWorker() {
         setTimeout(finish, 500).unref();
     }
 
-    const app = require("./src/app").default;
-    const db = require("./src/config").default;
-    const { isDemoMode } = require("./src/config/demoMode");
+    const app = (require("./src/app") as typeof import("./src/app")).default;
+    const db = (require("./src/config") as typeof import("./src/config")).default;
+    const { isDemoMode } = (require("./src/config/demoMode") as typeof import("./src/config/demoMode"));
 
     // ── Native-module preflight (compiled exe) ────────────────────────────
     // argon2 loads its prebuilt .node via node-gyp-build, which the compiled
@@ -437,9 +437,9 @@ function bootWorker() {
     // request listener runs. The shared IdleWatchdog sweeps all scopes (and
     // the BackupStore's guarded runs), so it starts once here. A server-level
     // listener — the 13-step middleware chain is untouched.
-    const { RequestWatchdog } = require("./src/utils/progress/RequestWatchdog");
-    const { defaultIdleWatchdog } = require("./src/utils/progress/IdleWatchdog");
-    const { resolveIdleLimits } = require("./src/constants/requestWatchdog");
+    const { RequestWatchdog } = (require("./src/utils/progress/RequestWatchdog") as typeof import("./src/utils/progress/RequestWatchdog"));
+    const { defaultIdleWatchdog } = (require("./src/utils/progress/IdleWatchdog") as typeof import("./src/utils/progress/IdleWatchdog"));
+    const { resolveIdleLimits } = (require("./src/constants/requestWatchdog") as typeof import("./src/constants/requestWatchdog"));
     defaultIdleWatchdog.start();
     new RequestWatchdog({ idleWatchdog: defaultIdleWatchdog }).attach(server);
 
@@ -447,12 +447,12 @@ function bootWorker() {
     // let them finish (src/utils/shutdown/HttpInFlightTracker.ts). A
     // server-level listener (after the Express app) — the middleware chain
     // is untouched.
-    const HttpInFlightTracker = require("./src/utils/shutdown/HttpInFlightTracker").default;
+    const HttpInFlightTracker = (require("./src/utils/shutdown/HttpInFlightTracker") as typeof import("./src/utils/shutdown/HttpInFlightTracker")).default;
     const httpInFlight = new HttpInFlightTracker().attach(server);
 
     // Failsafe delay for a crash, computed ONCE at boot (not lazily inside
     // gracefulShutdown: armFailsafe must not be preceded by anything that can throw).
-    const { computeCrashFailsafeMs, finalNotifyBudgetMs } = require("./src/utils/shutdown/TeardownSequence");
+    const { computeCrashFailsafeMs, finalNotifyBudgetMs } = (require("./src/utils/shutdown/TeardownSequence") as typeof import("./src/utils/shutdown/TeardownSequence"));
     const CRASH_FAILSAFE_MS = computeCrashFailsafeMs({
         crashGraceMs: CRASH_REQUEST_GRACE_MS,
         notifyDrainClampMs: NOTIFY_DRAIN_MS_CLAMP_MAX,
@@ -519,13 +519,13 @@ function bootWorker() {
         // ENABLE_SERVER_NOTIFICATIONS is not 'true'. The cron-leader gate
         // keeps exactly one worker notifying in a clustered deployment.
         if (IS_CRON_LEADER) {
-            const AlertNotifierService = require("./src/services/AlertNotifierService").default;
+            const AlertNotifierService = (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default;
             AlertNotifierService.start();
 
             // ── Restart detection ───────────────────────────────────
             // READ the previous process's record FIRST: start() overwrites it.
             if (serverRunMarker) {
-                const { SERVER_RUN_MARKER } = require("./src/constants/serverRunMarker");
+                const { SERVER_RUN_MARKER } = (require("./src/constants/serverRunMarker") as typeof import("./src/constants/serverRunMarker"));
                 const { VERDICTS } = SERVER_RUN_MARKER;
                 const bootedAtMs = Date.now();
                 const { verdict, previous, cause } = serverRunMarker.readPrevious();
@@ -589,7 +589,7 @@ function bootWorker() {
         // same as AlertNotifierService's notice-only branch would be noise
         // duplicated per worker.
         if (IS_CRON_LEADER) {
-            require("./src/services/LogRetentionService").default.start();
+            (require("./src/services/LogRetentionService") as typeof import("./src/services/LogRetentionService")).default.start();
         }
 
         if (isDemoMode()) {
@@ -604,7 +604,7 @@ function bootWorker() {
 
                     // Warn when the database clock zone differs from the app's, which
                     // shifts every DEFAULT SYSTIMESTAMP column (Alert History "Created").
-                    require("./src/utils/dbTimezone").verifyDbClockOffset(db);
+                    (require("./src/utils/dbTimezone") as typeof import("./src/utils/dbTimezone")).verifyDbClockOffset(db);
 
                     // ── Ended sessions ─────────────────────────────────
                     // EVERY process, not only the leader: each keeps its own
@@ -614,7 +614,7 @@ function bootWorker() {
                     // refused. Best effort, never throws (logs at error level).
                     // A respawned cluster worker also gets the primary's copy on
                     // `listening` (AUTH_SYNC).
-                    require("./src/services/AccessRevocationService").default.loadRecent();
+                    (require("./src/services/AccessRevocationService") as typeof import("./src/services/AccessRevocationService")).default.loadRecent();
 
                     // Project-specific scheduled jobs are armed here too, leader only.
                     if (IS_CRON_LEADER) {
@@ -696,7 +696,7 @@ function bootWorker() {
         async function _armBackupTimers() {
             const gen = ++_backupArmGeneration;
             try {
-                const BackupScheduleService = require("./src/services/BackupScheduleService").default;
+                const BackupScheduleService = (require("./src/services/BackupScheduleService") as typeof import("./src/services/BackupScheduleService")).default;
                 const events = await BackupScheduleService.getUpcomingEvents(BACKUP_TIMER_HORIZON_MS);
                 if (gen !== _backupArmGeneration) return; // a newer arm owns the timers
                 for (const t of _backupTimers) clearTimeout(t);
@@ -723,11 +723,11 @@ function bootWorker() {
         }
 
         // Lazy import to avoid loading the service layer before pools are ready.
-        async function _runBackup(label: unknown) {
-            if (require("./src/utils/InFlightTaskRegistry").default.isShuttingDown()) return;
+        async function _runBackup(label: string) {
+            if ((require("./src/utils/InFlightTaskRegistry") as typeof import("./src/utils/InFlightTaskRegistry")).default.isShuttingDown()) return;
             try {
-                const BackupScheduleService = require("./src/services/BackupScheduleService").default;
-                const SchedulerStateService = require("./src/services/SchedulerStateService").default;
+                const BackupScheduleService = (require("./src/services/BackupScheduleService") as typeof import("./src/services/BackupScheduleService")).default;
+                const SchedulerStateService = (require("./src/services/SchedulerStateService") as typeof import("./src/services/SchedulerStateService")).default;
 
                 const result =
                     await BackupScheduleService.triggerScheduledBackup(label);
@@ -749,7 +749,7 @@ function bootWorker() {
                 );
                 // Lazy import is guarded — if it fails at module load, catch reports it.
                 try {
-                    const SchedulerStateService = require("./src/services/SchedulerStateService").default;
+                    const SchedulerStateService = (require("./src/services/SchedulerStateService") as typeof import("./src/services/SchedulerStateService")).default;
                     SchedulerStateService.record("dbBackup", {
                         label,
                         status: "error",
@@ -809,10 +809,10 @@ function bootWorker() {
     let crashExitCode = 0;
     const pendingCrashEmails = new Set();
     /** Runs the crash handler's EMERGENCY email, tracked for the teardown. Never throws. */
-    const trackCrashEmail = (send: any) => {
+    const trackCrashEmail = (send: () => Promise<{ sent?: boolean; reason?: string } | null | undefined>) => {
         // A send that did not go out (or threw) is recorded in the marker, inside the tracked
         // promise so the teardown waits for it before the process exits.
-        const { isReportedSend } = require("./src/utils/lifecycle/StartupNotifier").default;
+        const { isReportedSend } = (require("./src/utils/lifecycle/StartupNotifier") as typeof import("./src/utils/lifecycle/StartupNotifier")).default;
         const p = Promise.resolve()
             .then(send)
             .then(
@@ -835,12 +835,12 @@ function bootWorker() {
     let failsafeFireAt = 0;
     let shutdownT0 = 0;
 
-    const ShutdownNotifier = require("./src/utils/shutdown/ShutdownNotifier").default;
+    const ShutdownNotifier = (require("./src/utils/shutdown/ShutdownNotifier") as typeof import("./src/utils/shutdown/ShutdownNotifier")).default;
     // Cluster: `started` comes from the cron leader only (one email, not one per
     // worker); `forcedExit` from any process whose OWN failsafe fires (one
     // per hung worker); `requestsCut` from whichever worker cut.
     const shutdownNotifier = new ShutdownNotifier({
-        alertNotifier: require("./src/services/AlertNotifierService").default,
+        alertNotifier: (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default,
         logger,
         announce: IS_CRON_LEADER_AT_BOOT,
     });
@@ -887,8 +887,8 @@ function bootWorker() {
         // never rejects; the catch is belt-and-braces. Detached so it is not
         // refused by any aborted request scope.
         try {
-            const AuditLogService = require("./src/services/AuditLogService").default;
-            const { runDetached } = require("./src/utils/progress/progress");
+            const AuditLogService = (require("./src/services/AuditLogService") as typeof import("./src/services/AuditLogService")).default;
+            const { runDetached } = (require("./src/utils/progress/progress") as typeof import("./src/utils/progress/progress"));
             Promise.resolve(runDetached(() => AuditLogService.flushPending())).catch((err) => {
                 logger.warning(serverMessages.SHUTDOWN_EARLY_AUDIT_FLUSH_FAILED(err?.message ?? String(err)));
             });
@@ -900,7 +900,7 @@ function bootWorker() {
         // via the cooperative flag instead of being drained or abandoned
         // later (D4).
         try {
-            require("./src/utils/InFlightTaskRegistry").default.beginShutdown();
+            (require("./src/utils/InFlightTaskRegistry") as typeof import("./src/utils/InFlightTaskRegistry")).default.beginShutdown();
         } catch (err) {
             logger.warning("InFlightTaskRegistry beginShutdown failed during shutdown", {
                 error: err.message,
@@ -913,14 +913,14 @@ function bootWorker() {
         // the final flush in postCloseTeardown, so criticals logged during the
         // wait still reach the digest. Synchronous.
         try {
-            const AlertNotifierService = require("./src/services/AlertNotifierService").default;
+            const AlertNotifierService = (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default;
             AlertNotifierService.beginShutdown();
         } catch (err) {
             logger.warning(serverMessages.SHUTDOWN_NOTIFIER_STEP_FAILED("beginShutdown", err.message));
         }
 
         try {
-            require("./src/services/LogRetentionService").default.stop();
+            (require("./src/services/LogRetentionService") as typeof import("./src/services/LogRetentionService")).default.stop();
         } catch (err) {
             logger.warning("LogRetentionService stop failed during shutdown", {
                 error: err.message,
@@ -940,14 +940,14 @@ function bootWorker() {
         // ordering can be asserted against the REAL implementation rather than
         // against a synthetic fixture. Same statements, same order, same
         // guards — see that module's header.
-        const SseConnectionRegistry = require("./src/utils/sse/SseConnectionRegistry").default;
-        const InFlightTaskRegistry = require("./src/utils/InFlightTaskRegistry").default;
+        const SseConnectionRegistry = (require("./src/utils/sse/SseConnectionRegistry") as typeof import("./src/utils/sse/SseConnectionRegistry")).default;
+        const InFlightTaskRegistry = (require("./src/utils/InFlightTaskRegistry") as typeof import("./src/utils/InFlightTaskRegistry")).default;
         const {
             preCloseTeardown,
             postCloseTeardown,
             computeShutdownBudget,
             remainingDrainMs,
-        } = require("./src/utils/shutdown/TeardownSequence");
+        } = (require("./src/utils/shutdown/TeardownSequence") as typeof import("./src/utils/shutdown/TeardownSequence"));
 
         // Split the forced-exit budget: requests already in progress may
         // finish for up to requestGraceMs; the notify drain (reserved only
@@ -999,7 +999,7 @@ function bootWorker() {
             logger,
             reason: "server_shutdown",
             httpInFlight,
-            onRequestsCut: (summary: unknown, graceMs: unknown, total: unknown, opts: unknown) =>
+            onRequestsCut: (summary, graceMs, total, opts) =>
                 shutdownNotifier.requestsCut(summary, graceMs, total, opts),
         });
 
@@ -1018,9 +1018,9 @@ function bootWorker() {
             // tracked — see InFlightTaskRegistry.drain()'s own JSDoc.
             await postCloseTeardown({
                 inFlight: InFlightTaskRegistry,
-                auditLog: require("./src/services/AuditLogService").default,
+                auditLog: (require("./src/services/AuditLogService") as typeof import("./src/services/AuditLogService")).default,
                 db,
-                sharedTransporter: require("./src/services/email/SharedTransporter").default,
+                sharedTransporter: (require("./src/services/email/SharedTransporter") as typeof import("./src/services/email/SharedTransporter")).default,
                 logger,
                 // Evaluated after phase 1 (up to 5 s), never past phaseDeadline.
                 notifyDrainMs: () =>
@@ -1043,7 +1043,7 @@ function bootWorker() {
                 // reboot that cuts the remaining email wait (up to 5 s) is not
                 // reported as "restarted without a clean shutdown".
                 onDataTeardownComplete: () => serverRunMarker?.noteTeardownComplete(Math.max(shutdownExitCode, crashExitCode)),
-                alertNotifier: require("./src/services/AlertNotifierService").default,
+                alertNotifier: (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default,
                 finalNotifyMs: () =>
                     finalNotifyBudgetMs({
                         failsafeFireAt,
@@ -1100,10 +1100,10 @@ function bootWorker() {
      * keeps no "closed" flag (null = never created or closed), so it cannot be skipped cheaply.
      * @returns {Promise<void>}
      */
-    function drainAlertNotifierForExit(): Promise<void> {
+    function drainAlertNotifierForExit(): Promise<unknown> {
         try {
             return Promise.resolve(
-                require("./src/services/AlertNotifierService").default.drainAndStop({ persist: false }),
+                (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default.drainAndStop({ persist: false }),
             ).catch(() => {});
         } catch {
             return Promise.resolve();
@@ -1130,7 +1130,7 @@ function bootWorker() {
                 // "Server started" notice says so. The require sits inside the promise so a
                 // throw can only reject this entry, never skip process.exit below.
                 Promise.resolve(shutdownNotifier.forcedExit(ms)).then((res) => {
-                    const { isReportedSend } = require("./src/utils/lifecycle/StartupNotifier").default;
+                    const { isReportedSend } = (require("./src/utils/lifecycle/StartupNotifier") as typeof import("./src/utils/lifecycle/StartupNotifier")).default;
                     if (serverRunMarker && !isReportedSend(res)) serverRunMarker.noteStopUnreported();
                 }),
                 drainAlertNotifierForExit(),
@@ -1188,7 +1188,7 @@ function bootWorker() {
                 gracefulShutdown(m.signal ?? "SIGTERM");
             } else if (m.cmd === CLUSTER_IPC.CRIT_RELAY && IS_CRON_LEADER_AT_BOOT) {
                 try {
-                    require("./src/services/AlertNotifierService").default.ingestRelayedCritical(m.record);
+                    (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default.ingestRelayedCritical(m.record as Parameters<import("./src/services/AlertNotifierService").AlertNotifierService["ingestRelayedCritical"]>[0]); // validated inside
                 } catch (err) {
                     logger.warning(clusterMessages.CLUSTER_RELAY_INGEST_FAILED(err.message), {
                         _noNotify: true,
@@ -1207,14 +1207,14 @@ function bootWorker() {
         process.on("disconnect", () => {
             logger.warning(clusterMessages.CLUSTER_PRIMARY_DISCONNECT());
             // unreported: no email goes out for this stop, so the next boot must not claim one did.
-            gracefulShutdown("PRIMARY_DISCONNECT", 1, { unreported: true, reason: require("./src/constants/serverRunMarker").SERVER_RUN_MARKER.STOP_REASONS.PRIMARY_DISCONNECT });
+            gracefulShutdown("PRIMARY_DISCONNECT", 1, { unreported: true, reason: (require("./src/constants/serverRunMarker") as typeof import("./src/constants/serverRunMarker")).SERVER_RUN_MARKER.STOP_REASONS.PRIMARY_DISCONNECT });
         });
 
         // Non-leader workers: their critical logs would never be emailed (the
         // AlertNotifierService tap runs on the leader only). Relay them via the
         // primary to the leader, which feeds the same digest + hourly cap.
         if (!IS_CRON_LEADER_AT_BOOT) {
-            require("./src/utils/cluster/critRelay").subscribeCriticalRelay(logger, process);
+            (require("./src/utils/cluster/critRelay") as typeof import("./src/utils/cluster/critRelay")).subscribeCriticalRelay(logger, process);
         }
     }
 
@@ -1248,7 +1248,7 @@ function bootWorker() {
         // timeout (see AlertNotifierService.notifyCriticalNow) so a hung SMTP
         // send can never delay process exit beyond that ceiling.
         try {
-            const AlertNotifierService = require("./src/services/AlertNotifierService").default;
+            const AlertNotifierService = (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default;
             await trackCrashEmail(() =>
                 AlertNotifierService.notifyCriticalNow({
                     level: "EMERGENCY",
@@ -1281,7 +1281,7 @@ function bootWorker() {
         });
 
         try {
-            const AlertNotifierService = require("./src/services/AlertNotifierService").default;
+            const AlertNotifierService = (require("./src/services/AlertNotifierService") as typeof import("./src/services/AlertNotifierService")).default;
             await trackCrashEmail(() =>
                 AlertNotifierService.notifyCriticalNow({
                     level: "EMERGENCY",

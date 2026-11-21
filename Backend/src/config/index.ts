@@ -20,7 +20,7 @@
 function _loadAdapter(engine: any) {
   switch (engine.toLowerCase()) {
     case "oracle":
-      return require("./adapters/oracle");
+      return (require("./adapters/oracle") as typeof import("./adapters/oracle"));
 
     // case 'postgres': return require('./adapters/postgres');
     // case 'mssql':    return require('./adapters/mssql');
@@ -47,5 +47,5 @@ const _default = createAdapter();
 export default {
   ..._default,
   createAdapter,
-  ...require("./database"),
+  ...(require("./database") as typeof import("./database")),
 };

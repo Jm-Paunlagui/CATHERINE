@@ -56,13 +56,16 @@ function announcedStopSince(previous: Record<string, any> | null | undefined, la
     return Number.isFinite(stopAt) && stopAt >= lastStartNoticeAt;
 }
 
+
+/** What a lifecycle email needs (AlertNotifierService.notifyLifecycleNow), minus `persist`. */
+type LifecyclePayload = Omit<Parameters<import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]>[0], "persist">;
 class StartupNotifier {
     /** @type {Set<Promise<any>>} */
     #pending: Set<Promise<any>> = new Set();
     declare static isReportedSend: (res: { sent?: boolean; reason?: string; } | null | undefined) => boolean;
     declare _tzOffsetMinutes: () => number;
     declare _logger: { warning: ((...args: any[]) => any); info: ((...args: any[]) => any); };
-    declare _alertNotifier: { notifyLifecycleNow: (opts: Record<string, any>) => Promise<any>; };
+    declare _alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; };
 
     /**
      * @param {object} deps
@@ -70,7 +73,7 @@ class StartupNotifier {
      * @param {{warning: Function, info: Function}} deps.logger
      * @param {() => number} [deps.tzOffsetMinutes] - the DB zone offset reader
      */
-    constructor({ alertNotifier, logger, tzOffsetMinutes = dbTimezoneOffsetMinutes }: { alertNotifier: { notifyLifecycleNow: (opts: Record<string, any>) => Promise<any>; }; logger: { warning: ((...args: any[]) => any); info: ((...args: any[]) => any); }; tzOffsetMinutes?: () => number; }) {
+    constructor({ alertNotifier, logger, tzOffsetMinutes = dbTimezoneOffsetMinutes }: { alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; }; logger: { warning: ((...args: any[]) => any); info: ((...args: any[]) => any); }; tzOffsetMinutes?: () => number; }) {
         this._alertNotifier = alertNotifier;
         this._logger = logger;
         this._tzOffsetMinutes = tzOffsetMinutes;
@@ -189,7 +192,7 @@ class StartupNotifier {
         );
     }
 
-    #uncleanPayload(previous: any, current: any, { late = false }: Record<string, any> = {}) {
+    #uncleanPayload(previous: any, current: any, { late = false }: { late?: boolean } = {}): LifecyclePayload {
         const p = previous ?? {};
         const lastAlive = p.lastHeartbeatAt;
         // A late report (email failed at the time) cannot know when that run came back;
@@ -238,7 +241,7 @@ class StartupNotifier {
         };
     }
 
-    #leaderLostPayload(previous: any, current: any, { late = false }: Record<string, any> = {}) {
+    #leaderLostPayload(previous: any, current: any, { late = false }: { late?: boolean } = {}): LifecyclePayload {
         const p = previous ?? {};
         return {
             severity: "WARNING",
@@ -264,10 +267,10 @@ class StartupNotifier {
         };
     }
 
-    #startedPayload(verdict: unknown, previous: any, current: any) {
+    #startedPayload(verdict: unknown, previous: any, current: any): LifecyclePayload {
         const p = previous ?? {};
         let desc;
-        let severity = "NOTICE";
+        let severity: LifecyclePayload["severity"] = "NOTICE";
         if (verdict === VERDICTS.FIRST_BOOT) {
             desc = "unknown, first start with restart tracking";
         } else if (verdict === VERDICTS.UNREADABLE) {
@@ -318,7 +321,7 @@ class StartupNotifier {
      * @param {object} payload
      * @returns {Promise<{sent: boolean, reason?: string, event: string}>}
      */
-    #send(event: string, payload: Record<string, any>): Promise<{ sent: boolean; reason?: string; event: string; }> {
+    #send(event: string, payload: LifecyclePayload): Promise<{ sent: boolean; reason?: string; event: string; }> {
         let p;
         try {
             // Boot emails also land in the alert History tab: the pools are up here.

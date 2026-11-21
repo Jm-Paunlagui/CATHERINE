@@ -240,7 +240,7 @@ function addNormalizedRow(sheet: import('exceljs').Worksheet, rowData: Record<st
  */
 function moneyFmtFor(currencyCode: string): string {
     // Lazy require to avoid a constants<->utils load cycle.
-    const { getCurrency } = require("../constants/currencies");
+    const { getCurrency } = (require("../constants/currencies") as typeof import("../constants/currencies"));
     const { symbol, displayScale } = getCurrency(currencyCode);
     const decimals = displayScale > 0 ? `.${"0".repeat(displayScale)}` : "";
     const body = `#,##0${decimals}`;

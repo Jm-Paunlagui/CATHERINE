@@ -49,7 +49,7 @@ class HttpInFlightTracker {
             scopeOf ??
             ((req) => {
                 try {
-                    return require("../progress/RequestWatchdog").RequestWatchdog.scopeOf(req);
+                    return (require("../progress/RequestWatchdog") as typeof import("../progress/RequestWatchdog")).RequestWatchdog.scopeOf(req);
                 } catch {
                     return undefined;
                 }

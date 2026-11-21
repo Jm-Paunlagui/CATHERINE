@@ -32,8 +32,8 @@ import * as systemMap from "../utils/systemMap";
 
 /** Map name → model. The names are hardcoded here and at the route; never caller input. */
 const MODELS = Object.freeze({
-    architecture: require("../constants/architectureModel"),
-    runtime: require("../constants/runtimeModel"),
+    architecture: (require("../constants/architectureModel") as typeof import("../constants/architectureModel")),
+    runtime: (require("../constants/runtimeModel") as typeof import("../constants/runtimeModel")),
 });
 
 class ArchitectureService {

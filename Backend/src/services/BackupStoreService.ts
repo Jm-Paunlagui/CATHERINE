@@ -462,7 +462,7 @@ class BackupStoreService {
      * @returns {Promise<number>}
      */
     static async countActiveSuperAdmins(): Promise<number> {
-        const AdminModel = require("../models/admin.model").default;
+        const AdminModel = (require("../models/admin.model") as typeof import("../models/admin.model")).default;
         return AdminModel.countActiveByRole("SUPER_ADMIN", null);
     }
 
@@ -474,7 +474,7 @@ class BackupStoreService {
      * @returns {Promise<Array<object>>}
      */
     static async listArchives(): Promise<Array<Record<string, any>>> {
-        const BackupVoteModel: typeof import("../models/backup-vote.model").default = require("../models/backup-vote.model").default;
+        const BackupVoteModel: typeof import("../models/backup-vote.model").default = (require("../models/backup-vote.model") as typeof import("../models/backup-vote.model")).default;
 
         const index = await BackupStoreService._loadIndex();
         const sorted = index
@@ -936,7 +936,7 @@ class BackupStoreService {
         // module top, so an eager top-level require here would be
         // circular.
         if (trigger === "MANUAL") {
-            const BackupScheduleService = require("./BackupScheduleService").default;
+            const BackupScheduleService = (require("./BackupScheduleService") as typeof import("./BackupScheduleService")).default;
             const lockout = await BackupScheduleService.getLockoutStatus();
             if (lockout.active) {
                 logger.warning(
@@ -950,7 +950,7 @@ class BackupStoreService {
                     HTTP_STATUS.CONFLICT,
                     {
                         type: "ConflictError",
-                        hint: BackupScheduleService.describeLockout(lockout),
+                        hint: BackupScheduleService.describeLockout(lockout) ?? undefined,
                     },
                 );
             }
