@@ -104,7 +104,7 @@ class AdminManagementController {
      * can refuse them (400).
      */
     static update = catchAsync(async (req: Request, res: Response) => {
-        const { username } = req.params;
+        const username = req.params.username as string; // a named :param is one string
         const { role, changePassword, newPassword } = req.body;
         const result = await AdminManagementService.updateAdmin({
             username,
@@ -124,7 +124,7 @@ class AdminManagementController {
      * Issue and email a new temporary password.
      */
     static resetPassword = catchAsync(async (req: Request, res: Response) => {
-        const { username } = req.params;
+        const username = req.params.username as string; // a named :param is one string
         const result = await AdminManagementService.resetPassword(username, {
             overrideEmail: req.body?.overrideEmail,
             caller: _caller(req),
@@ -139,7 +139,7 @@ class AdminManagementController {
      * Recompute the SYSSIGNATURE for a tampered or broken admin record.
      */
     static resetSignature = catchAsync(async (req: Request, res: Response) => {
-        const { username } = req.params;
+        const username = req.params.username as string; // a named :param is one string
         const result = await AdminManagementService.resetSignature(username, {
             caller: _caller(req),
         });
@@ -179,7 +179,7 @@ class AdminManagementController {
      * (POST /:username/revoke-backup) bound to this admin and the caller.
      */
     static remove = catchAsync(async (req: Request, res: Response) => {
-        const { username } = req.params;
+        const username = req.params.username as string; // a named :param is one string
         const { backupToken } = req.body;
         const caller = _caller(req);
         const result = await AdminManagementService.deleteAdmin({
@@ -203,7 +203,7 @@ class AdminManagementController {
      * downloaded file as credential material.
      */
     static revokeBackup = catchAsync(async (req: Request, res: Response) => {
-        const { username } = req.params;
+        const username = req.params.username as string; // a named :param is one string
 
         const result = await AdminManagementService.buildRevokeBackup({
             username,
@@ -228,7 +228,7 @@ class AdminManagementController {
      * flag 'N'. The default, non-destructive way access is removed.
      */
     static revoke = catchAsync(async (req: Request, res: Response) => {
-        const { username } = req.params;
+        const username = req.params.username as string; // a named :param is one string
         const { backupToken } = req.body;
         const caller = _caller(req);
 
@@ -250,7 +250,7 @@ class AdminManagementController {
      * SUPER_ADMIN only.
      */
     static updatePermissions = catchAsync(async (req: Request, res: Response) => {
-        const { username } = req.params;
+        const username = req.params.username as string; // a named :param is one string
         const { flags } = req.body;
 
         const result = await AdminManagementService.updatePermissions({

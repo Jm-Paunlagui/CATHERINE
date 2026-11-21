@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -32,6 +31,7 @@
  * ============================================================================
  */
 
+import type { QueryBuilder } from "../core/QueryBuilder";
 import { quoteIdentifier } from "../utils";
 
 /**
@@ -73,16 +73,16 @@ function buildScalarSubquery(spec: { collection: string; fn?: string; filter?: R
       aggExpr = "COUNT(*)";
       break;
     case "SUM":
-      aggExpr = `SUM(${quoteIdentifier(field)})`;
+      aggExpr = `SUM(${quoteIdentifier(field as string)})`;
       break;
     case "AVG":
-      aggExpr = `AVG(${quoteIdentifier(field)})`;
+      aggExpr = `AVG(${quoteIdentifier(field as string)})`;
       break;
     case "MIN":
-      aggExpr = `MIN(${quoteIdentifier(field)})`;
+      aggExpr = `MIN(${quoteIdentifier(field as string)})`;
       break;
     case "MAX":
-      aggExpr = `MAX(${quoteIdentifier(field)})`;
+      aggExpr = `MAX(${quoteIdentifier(field as string)})`;
       break;
     default:
       aggExpr = "COUNT(*)";
@@ -125,7 +125,7 @@ function buildExistsSubquery(spec: { collection: string; match: Record<string, a
  * @param {string} [outerAlias='t0']
  * @returns {string} e.g. 'NOT EXISTS (SELECT 1 FROM "orders" WHERE ...)'
  */
-function buildNotExistsSubquery(spec: Record<string, any>, outerAlias: string = "t0"): string {
+function buildNotExistsSubquery(spec: Parameters<typeof buildExistsSubquery>[0], outerAlias: string = "t0"): string {
   const inner = buildExistsSubquery(spec, outerAlias);
   return `NOT ${inner}`;
 }
@@ -145,7 +145,7 @@ function buildNotExistsSubquery(spec: Record<string, any>, outerAlias: string = 
 function buildCorrelatedSubquery(spec: { collection: string; field: string; aggregate?: string; where?: Record<string, any>; }, outerAlias: string = "t0"): string {
   const { collection, field, aggregate, where = {} } = spec;
   const aggFn = (aggregate || "$avg").replace("$", "").toUpperCase();
-  const aggExpr = `${aggFn}(${quoteIdentifier(field)})`;
+  const aggExpr = `${aggFn}(${quoteIdentifier(field as string)})`;
 
   const whereParts = [];
   for (const [col, val] of Object.entries(where)) {
@@ -184,7 +184,7 @@ function buildInSelectSubquery(queryBuilder: QueryBuilder): string {
  */
 function buildAnyAllSubquery(spec: Record<string, any>, comparison: string = "ANY"): string {
   const { collection, field } = spec;
-  return `${comparison} (SELECT ${quoteIdentifier(field)} FROM ${quoteIdentifier(collection)})`;
+  return `${comparison} (SELECT ${quoteIdentifier(field as string)} FROM ${quoteIdentifier(collection)})`;
 }
 
 export { buildScalarSubquery, buildExistsSubquery, buildNotExistsSubquery, buildCorrelatedSubquery, buildInSelectSubquery, buildAnyAllSubquery };

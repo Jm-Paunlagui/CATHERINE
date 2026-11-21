@@ -271,7 +271,7 @@ class AuditLogController {
   });
 
   static getRequestLogs = catchAsync(async (req: Request, res: Response) => {
-    const { requestId } = req.params;
+    const requestId = req.params.requestId as string; // a named :param is one string
     const { date }      = req.query;
     const data = await AuditLogService.getRequestLogs(requestId, date);
     res.json(sendSuccess(RESPONSE_MESSAGES.AUDIT_LOG_TRACE_FETCHED, data));
@@ -286,7 +286,7 @@ class AuditLogController {
    * @param {import('express').Response} res
    */
   static exportTraceExcel = catchAsync(async (req: Request, res: Response) => {
-    const { requestId } = req.params;
+    const requestId = req.params.requestId as string; // a named :param is one string
     const { date }      = req.query;
     const buffer = await AuditLogService.exportTraceExcel(requestId, date);
     const safeId = requestId.replace(/[^A-Za-z0-9_-]/g, '');

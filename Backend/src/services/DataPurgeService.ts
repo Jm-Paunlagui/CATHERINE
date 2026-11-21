@@ -58,7 +58,7 @@ import { AppError, PURGE_ERRORS } from "../constants/errors";
 import { HTTP_STATUS } from "../constants";
 import { logger } from "../utils/logger";
 import { dataPurgeMessages, backupEmailMessages, dataBackupMessages } from "../constants/messages";
-import { NEVER_PURGE, IMMUTABLE_TIMESTAMP_COLUMNS, PURGE_GROUP_KEYS, GROUP_CLOSURE_HINTS, PURGE_TABLES, getEntry, getTablesByGroup, getAllTableNames } from "../constants/purgeTables";
+import { NEVER_PURGE, IMMUTABLE_TIMESTAMP_COLUMNS, PURGE_GROUP_KEYS, GROUP_CLOSURE_HINTS, PURGE_TABLES, getEntry, requireEntry, getTablesByGroup, getAllTableNames } from "../constants/purgeTables";
 import DataPurgeModel from "../models/data-purge.model";
 import AdminModel from "../models/admin.model";
 import AuditLogModel from "../models/audit.log.model";
@@ -311,11 +311,11 @@ class DataPurgeService {
         // named — either as a whole-group pick or as an individual table.
         const explicitlyTouchedGroups = new Set([
             ...requestedGroups,
-            ...requestedTables.map((t) => getEntry(t).group),
+            ...requestedTables.map((t) => requireEntry(t).group),
         ]);
         const autoIncludedGroups = new Set<string>();
         for (const table of resolved) {
-            const group = getEntry(table).group;
+            const group = requireEntry(table).group;
             if (!explicitlyTouchedGroups.has(group))
                 autoIncludedGroups.add(group);
         }
@@ -472,14 +472,14 @@ class DataPurgeService {
 
         const explicitlyTouchedGroups = new Set([
             ...scope.requestedGroups,
-            ...scope.requestedTables.map((t) => getEntry(t).group),
+            ...scope.requestedTables.map((t) => requireEntry(t).group),
         ]);
 
         const counts = await DataPurgeModel.countRows(scope.tables);
         const totalRows = Object.values(counts).reduce((sum, n) => sum + n, 0);
 
         const tables = scope.tables.map((table) => {
-            const entry = getEntry(table);
+            const entry = requireEntry(table);
             return {
                 table,
                 group: entry.group,
@@ -491,7 +491,7 @@ class DataPurgeService {
         const fidelityNotes = DataPurgeService.buildFidelityNotes(scope.tables);
 
         const groupsInScope = [
-            ...new Set(scope.tables.map((t) => getEntry(t).group)),
+            ...new Set(scope.tables.map((t) => requireEntry(t).group)),
         ];
         const confirmPhrase = DataPurgeService.buildConfirmPhrase(
             groupsInScope,
@@ -991,7 +991,7 @@ class DataPurgeService {
             );
         }
         const groupsInScope = [
-            ...new Set(scope.tables.map((t) => getEntry(t).group)),
+            ...new Set(scope.tables.map((t) => requireEntry(t).group)),
         ];
         const tokenTotalRows = Object.values(
             tokenPayload.rowCounts ?? {},

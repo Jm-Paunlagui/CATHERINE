@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -102,7 +101,7 @@ class BackupTokenService {
      * });
      */
     static async issue({ adminId, scopeHash, rowCounts, highWater, ttlMinutes }: { adminId: number | string; scopeHash: string; rowCounts: Record<string, number>; highWater?: Record<string, string>; ttlMinutes?: number; }): Promise<{ token: string; issuedAt: number; expiresAt: number; }> {
-        const ttl = Number.isFinite(ttlMinutes)
+        const ttl = typeof ttlMinutes === "number" && Number.isFinite(ttlMinutes)
             ? ttlMinutes
             : parseInt(process.env.BACKUP_TOKEN_TTL_MINUTES ?? "", 10) || DEFAULT_TTL_MINUTES;
 
@@ -113,7 +112,7 @@ class BackupTokenService {
         // is what `consume()` persists exactly once — see the file header
         // for why `verify()` alone cannot provide replay protection.
         const jti = crypto.randomUUID();
-        const payload = {
+        const payload: { scopeHash: string; rowCounts: Record<string, number>; adminId: number | string; issuedAt: number; expiresAt: number; jti: string; highWater?: Record<string, string> } = {
             scopeHash,
             rowCounts,
             adminId,

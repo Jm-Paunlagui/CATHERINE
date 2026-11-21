@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { IS_COMPILED, APP_ROOT } from "../utils/runtimePaths";
 
@@ -70,7 +69,7 @@ const CONFIG = Object.freeze({
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
-    },
+    } satisfies Intl.DateTimeFormatOptions,
 });
 
 /** Sequential write chain — serializes appends so lines never interleave. */
@@ -598,7 +597,7 @@ class AuditLogFileModel {
             for (const r of records) {
                 const cat = (r.STATUS_CATEGORY ?? "").trim();
                 if (Object.prototype.hasOwnProperty.call(buckets, cat)) {
-                    buckets[cat] += 1;
+                    buckets[cat as keyof typeof buckets] += 1;
                 }
                 if (r.USER_ID && r.USER_ID > 0) userSet.add(r.USER_ID);
                 totalRespTime += r.RESPONSE_TIME_MS ?? 0;

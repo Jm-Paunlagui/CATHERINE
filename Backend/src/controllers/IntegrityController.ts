@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -67,7 +66,7 @@ class IntegrityController {
                 details: [{ field: "from", issue: "'from' must be on or before 'to'." }],
             });
         }
-        const filters = { from, to };
+        const filters: { from: Date | null; to: Date | null; [key: string]: string | Date | null } = { from, to };
         for (const [key, value] of Object.entries(src ?? {})) {
             if (NON_FILTER_KEYS.has(key) || !FILTER_KEY_PATTERN.test(key)) continue;
             if (typeof value !== "string" || value === "") continue;
@@ -96,7 +95,7 @@ class IntegrityController {
      * The headline tampered-only feed (paginated from a cached sweep result).
      */
     static getTamper = catchAsync(async (req: Request, res: Response) => {
-        const { table } = req.params;
+        const table = req.params.table as string; // a named :param is one string
         const filters = IntegrityController.parseFilters(req.query);
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 50;
@@ -114,7 +113,7 @@ class IntegrityController {
      * Distinct dropdown options for the table's enum filters.
      */
     static getFilterOptions = catchAsync(async (req: Request, res: Response) => {
-        const options = await IntegrityService.getFilterOptions(req.params.table);
+        const options = await IntegrityService.getFilterOptions(req.params.table as string);
         res.status(HTTP_STATUS.OK).json(
             sendSuccess(RESPONSE_MESSAGES.INTEGRITY_FILTER_OPTIONS_FETCHED, { options }),
         );
@@ -127,7 +126,7 @@ class IntegrityController {
      * Browse-all: an offset page over the scoped slice with a per-row verdict.
      */
     static browse = catchAsync(async (req: Request, res: Response) => {
-        const { table } = req.params;
+        const table = req.params.table as string; // a named :param is one string
         const filters = IntegrityController.parseFilters(req.query);
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 50;
@@ -158,7 +157,7 @@ class IntegrityController {
      * the last place to relax it.
      */
     static exportRows = catchAsync(async (req: Request, res: Response) => {
-        const { table } = req.params;
+        const table = req.params.table as string; // a named :param is one string
         const filters = IntegrityController.parseFilters(req.query);
         const mode = req.query.mode === "all" ? "all" : "tamper";
 
@@ -176,7 +175,7 @@ class IntegrityController {
      * CSRF token is auto-required (all POST routes are CSRF-covered).
      */
     static rescan = catchAsync(async (req: Request, res: Response) => {
-        const { table } = req.params;
+        const table = req.params.table as string; // a named :param is one string
         // Scope may come from query or body — accept both.
         const filters = IntegrityController.parseFilters({ ...req.query, ...req.body });
         const limit = Number(req.query.limit ?? req.body?.limit) || 50;

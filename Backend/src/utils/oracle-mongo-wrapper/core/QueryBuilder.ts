@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -70,6 +69,13 @@ import { quoteIdentifier, buildOrderBy, buildProjection } from "../utils";
 import { parseFilter } from "../parsers/filterParser";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
+/** A `{ $subquery }` projection value: a correlated scalar subquery column. */
+interface ProjectionSubquery {
+    collection: string;
+    fn?: string;
+    filter?: Record<string, unknown>;
+}
+
 class QueryBuilder {
     declare _terminated: boolean;
     declare _asOf: any;
@@ -79,7 +85,7 @@ class QueryBuilder {
     declare _skip: any;
     declare _limit: any;
     declare _sort: any;
-    declare _conn: Record<string, any>;
+    declare _conn: Record<string, any> | null;
     declare db: Record<string, any>;
     declare filter: Record<string, any>;
     declare tableName: string;
@@ -92,7 +98,7 @@ class QueryBuilder {
      * @param {Object} [conn] - Raw connection (if inside a transaction/session)
      * @param {Object} [options] - Initial options: sort, limit, skip, projection, etc.
      */
-    constructor(tableName: string, filter: Record<string, any>, db: Record<string, any>, conn: Record<string, any> = null, options: Record<string, any> = {}) {
+    constructor(tableName: string, filter: Record<string, any>, db: Record<string, any>, conn: Record<string, any> | null = null, options: Record<string, any> = {}) {
         this.tableName = tableName;
         this.filter = filter || {};
         this.db = db;
@@ -225,8 +231,8 @@ class QueryBuilder {
             const subParts = [];
             const regularParts = [];
             for (const [key, val] of Object.entries(this._projection)) {
-                if (typeof val === "object" && val !== null && val.$subquery) {
-                    const sub = val.$subquery;
+                if (typeof val === "object" && val !== null && "$subquery" in val && val.$subquery) {
+                    const sub = val.$subquery as ProjectionSubquery;
                     const subColl = quoteIdentifier(sub.collection);
                     const fnMap = {
                         count: "COUNT(*)",
@@ -235,7 +241,7 @@ class QueryBuilder {
                         min: "MIN",
                         max: "MAX",
                     };
-                    const fnExpr = fnMap[sub.fn] || "COUNT(*)";
+                    const fnExpr = fnMap[sub.fn as keyof typeof fnMap] || "COUNT(*)";
 
                     // Build correlated WHERE
                     const subWhere = [];
@@ -353,7 +359,7 @@ class QueryBuilder {
      * where a filter value is itself a Promise that needs to be awaited.
      */
     async _resolveFilterPromises() {
-        const resolve = async (obj: any) => {
+        const resolve = async (obj: any): Promise<unknown> => {
             if (obj && typeof obj.then === "function") return await obj;
             if (Array.isArray(obj)) return Promise.all(obj.map(resolve));
             if (obj && typeof obj === "object" && !(obj instanceof Date)) {
@@ -365,7 +371,7 @@ class QueryBuilder {
             }
             return obj;
         };
-        this.filter = await resolve(this.filter);
+        this.filter = (await resolve(this.filter)) as Record<string, any>;
     }
 
     /**
@@ -465,7 +471,7 @@ class QueryBuilder {
         const proj = buildProjection(this._projection);
 
         const run = (conn: any) =>
-            new Promise((resolve, reject) => {
+            new Promise<void>((resolve, reject) => {
                 const stream = conn.queryStream(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 });

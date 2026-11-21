@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -30,8 +29,8 @@ import ChangelogModel from "../models/changelog.model";
 // ── Stage ladder ──────────────────────────────────────────────────────────────
 
 const STAGE_LADDER = ["dev", "alpha", "beta", "rc", "stable"];
-const STAGE_ORDER = { dev: 0, alpha: 1, beta: 2, rc: 3, stable: 4 };
-const STAGE_LABEL = {
+const STAGE_ORDER: Record<string, number> = { dev: 0, alpha: 1, beta: 2, rc: 3, stable: 4 };
+const STAGE_LABEL: Record<string, string> = {
     dev: "Developer Preview",
     alpha: "Alpha",
     beta: "Beta",

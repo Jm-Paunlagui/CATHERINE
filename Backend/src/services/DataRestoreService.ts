@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -96,7 +95,7 @@ import { AppError, PURGE_ERRORS } from "../constants/errors";
 import { HTTP_STATUS } from "../constants";
 import { logger } from "../utils/logger";
 import { dataPurgeMessages } from "../constants/messages";
-import { NEVER_PURGE, PURGE_POOL, getEntry, getRestoreOrder } from "../constants/purgeTables";
+import { NEVER_PURGE, PURGE_POOL, getEntry, requireEntry, getRestoreOrder } from "../constants/purgeTables";
 import DataPurgeModel from "../models/data-purge.model";
 import DataPurgeService from "./DataPurgeService";
 // Required for BackupArchiveService.SCHEMA_VERSION ONLY — restore's
@@ -142,6 +141,15 @@ function _chunk<T>(arr: T[], size: number): T[][] {
     return out;
 }
 
+/** Provenance copied from an archive's manifest into preview / restore reports. */
+interface ArchiveMeta {
+    createdBy: unknown;
+    createdAt: string | null;
+    requestId: string | null;
+    appVersion: string | null;
+    scopeHash: string | null;
+}
+
 class DataRestoreService {
     // ─── Public entry points ────────────────────────────────────────────────
 
@@ -167,7 +175,7 @@ class DataRestoreService {
         tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, any> | null;
         rowCounts: Record<string, number>; tablesGettingNewPks: string[];
         fidelityNotes: string[];
-        archiveMeta: { createdBy: any; createdAt: string | null; requestId: string | null; appVersion: string | null; scopeHash: string | null; };
+        archiveMeta: ArchiveMeta;
     }> {
         const { manifest, dataByTable } =
             await DataRestoreService._verifyAndParseArchive(zipBuffer);
@@ -229,7 +237,8 @@ class DataRestoreService {
     }: { zipBuffer: Buffer; adminId: number | string; adminPassword: string; confirmPhrase: string; clientIp?: string | null; requestId?: string | null; }): Promise<{
         kind: string; tables: string[]; totalInserted: number; totalResigned: number;
         perTable: Array<{ table: string; insertedCount: number; hashesResigned: number; }>;
-        durationMs: number; archiveMeta: Record<string, any>; fidelityNotes: string[];
+        durationMs: number; archiveMeta: ArchiveMeta; fidelityNotes: string[];
+        tamperedRowsRestoredUnsigned: number;
     }> {
         const startedAt = Date.now();
 
@@ -305,7 +314,7 @@ class DataRestoreService {
             );
         }
         const groupsInScope = [
-            ...new Set(preflight.tables.map((t) => getEntry(t).group)),
+            ...new Set(preflight.tables.map((t) => requireEntry(t).group)),
         ];
         const totalArchiveRows = Object.values(preflight.rowCounts).reduce(
             (s, n) => s + n,
@@ -378,7 +387,7 @@ class DataRestoreService {
                 });
 
                 let insertedCount = 0;
-                const newPkMap = entry.isIdentity ? new Map() : null;
+                const newPkMap = entry.isIdentity ? new Map<string, unknown>() : null;
                 /** @type {Array<{ row: object, original: object, newPk: number|string }>} */
                 const insertedForResign: Array<{ row: Record<string, any>; original: Record<string, any>; newPk: number | string; }> = [];
 
@@ -395,7 +404,7 @@ class DataRestoreService {
                     if (entry.isIdentity) {
                         batch.forEach((row, idx) => {
                             const newPk = returning[idx]?.[entry.pk];
-                            newPkMap.set(String(row[entry.pk]), newPk);
+                            newPkMap!.set(String(row[entry.pk]), newPk); // non-null: entry.isIdentity
                             if (entry.rowHashDomain)
                                 insertedForResign.push({ row, original: originalOf.get(row) ?? row, newPk });
                         });
@@ -516,6 +525,8 @@ class DataRestoreService {
      */
     static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, any>; original: Record<string, any>; newPk: number | string; }>, session: { execute: ((...args: any[]) => any); }): Promise<{ signRows: Array<Record<string, any>>; tampered: number; }> {
         const domain = entry.rowHashDomain;
+        // Callers only route tables with a ROW_HASH domain here.
+        if (!domain) throw new Error(`_verifyThenSign: ${entry.table} has no rowHashDomain.`);
         const tsCols = entry.canonicalTimestampColumns ?? [];
         const canonical = new Map();
         if (tsCols.length > 0) {
@@ -560,7 +571,7 @@ class DataRestoreService {
                     });
                     return { [entry.pk]: newPk, ROW_HASH: null };
                 }
-                const signingRow = { ...row, [entry.pk]: newPk };
+                const signingRow: Record<string, unknown> = { ...row, [entry.pk]: newPk };
                 const stored = canonical.get(String(newPk));
                 for (const c of tsCols) if (stored) signingRow[c] = stored[c];
                 const rowHash = await CryptoVault.signRecord(
@@ -703,7 +714,7 @@ class DataRestoreService {
         for (const name of dataFileNames) {
             // Sequential zip entry extraction, archives are small.
             dataBuffers[name] = Buffer.from(
-                await zip.file(name).async("nodebuffer"),
+                await zip.file(name)!.async("nodebuffer"), // name came from zip.files
             );
         }
 
@@ -824,7 +835,7 @@ class DataRestoreService {
         tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, any> | null;
         rowCounts: Record<string, number>; tablesGettingNewPks: string[];
         fidelityNotes: string[];
-        archiveMeta: Record<string, any>;
+        archiveMeta: ArchiveMeta;
     }> {
         // ── schemaVersion ────────────────────────────────────────────────
         if (manifest?.schemaVersion !== BackupArchiveService.SCHEMA_VERSION) {
@@ -1068,7 +1079,7 @@ class DataRestoreService {
         const fidelityNotes =
             DataPurgeService.buildFidelityNotes(requestedTables);
         const tablesGettingNewPks = requestedTables.filter(
-            (t: any) => getEntry(t).isIdentity,
+            (t: any) => requireEntry(t).isIdentity,
         );
         const rowCounts = Object.fromEntries(
             requestedTables.map((t: any) => [t, (dataByTable[t] ?? []).length]),

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -41,6 +40,7 @@
  * ============================================================================
  */
 
+import type { QueryBuilder } from "../core/QueryBuilder";
 import { quoteIdentifier } from "../utils";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
@@ -115,7 +115,7 @@ class OracleSchema {
         colDefs.push(parts.join(" "));
       }
 
-      const allDefs: any[] = [...colDefs, ...constraints].join(", ");
+      const allDefs: string = [...colDefs, ...constraints].join(", ");
       let sql = `CREATE TABLE ${quoteIdentifier(tableName)} (${allDefs})`;
 
       if (options.ifNotExists) {

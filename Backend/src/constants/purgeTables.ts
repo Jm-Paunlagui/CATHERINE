@@ -64,29 +64,45 @@ const GROUP_CLOSURE_HINTS: Readonly<Record<string, ReadonlyArray<string>>> = Obj
     [PURGE_GROUP_KEYS.SERVER]: Object.freeze([]),
 });
 
-/**
- * @typedef {object} FkEdge
- * @property {string} column    - The child table's FK column.
- * @property {string} refTable  - The parent table name.
- * @property {string} refColumn - The parent table's referenced column.
- */
+/** A child→parent foreign-key edge between two registered tables. */
+export interface FkEdge {
+    /** The child table's FK column. */
+    column: string;
+    /** The parent table name. */
+    refTable: string;
+    /** The parent table's referenced column. */
+    refColumn: string;
+}
 
-/**
- * @typedef {object} PurgeTableEntry
- * @property {string} table             - Physical Oracle table name (unquoted — resolves in the pool's schema).
- * @property {string} group             - One of {@link PURGE_GROUP_KEYS}'s values.
- * @property {string} pool              - ALWAYS {@link PURGE_POOL}. Asserted by {@link getEntry} and at module load.
- * @property {string} pk                - Primary key column name.
- * @property {boolean} isIdentity       - true when pk is an IDENTITY column (restore must regenerate + remap).
- * @property {string[]} virtualColumns  - `GENERATED ALWAYS AS <expr> VIRTUAL` columns — excluded from INSERT lists (ORA-54013).
- * @property {FkEdge[]} fkEdges         - Child→parent FK edges to OTHER tables in this registry.
- * @property {number} deleteOrderTier   - Leaves→roots ordering. Lower runs first.
- * @property {number} restoreOrderTier  - Roots→leaves ordering. Lower runs first.
- * @property {string|null} rowHashDomain - CryptoVault.signRecord/verifyRecord domain key for the ROW_HASH column, or null.
- * @property {string[]} canonicalTimestampColumns - Signed TIMESTAMP columns exported as the canonical FF6 string. Usually empty.
- * @property {boolean} [appendOnlyLog]  - true for identity-PK log tables the app appends to continuously; purge only deletes `pk <= highWater` of the backup.
- * @property {string[]} identifierColumns - NUMBER identifier columns serialised as exact digit STRINGS on backup, never `Number()`.
- */
+/** One purgeable table and everything purge / backup / restore needs to know about it. */
+export interface PurgeTableEntry {
+    /** Physical Oracle table name (unquoted — resolves in the pool's schema). */
+    table: string;
+    /** One of {@link PURGE_GROUP_KEYS}'s values. */
+    group: string;
+    /** ALWAYS {@link PURGE_POOL}. Asserted by {@link getEntry} and at module load. */
+    pool: string;
+    /** Primary key column name. */
+    pk: string;
+    /** true when pk is an IDENTITY column (restore must regenerate + remap). */
+    isIdentity: boolean;
+    /** `GENERATED ALWAYS AS <expr> VIRTUAL` columns — excluded from INSERT lists (ORA-54013). */
+    virtualColumns: string[];
+    /** Child→parent FK edges to OTHER tables in this registry. */
+    fkEdges: FkEdge[];
+    /** Leaves→roots ordering. Lower runs first. */
+    deleteOrderTier: number;
+    /** Roots→leaves ordering. Lower runs first. */
+    restoreOrderTier: number;
+    /** CryptoVault.signRecord/verifyRecord domain key for the ROW_HASH column, or null. */
+    rowHashDomain: string | null;
+    /** Signed TIMESTAMP columns exported as the canonical FF6 string. Usually empty. */
+    canonicalTimestampColumns: string[];
+    /** true for identity-PK log tables the app appends to continuously; purge only deletes `pk <= highWater` of the backup. */
+    appendOnlyLog?: boolean;
+    /** NUMBER identifier columns serialised as exact digit STRINGS on backup, never `Number()`. */
+    identifierColumns: string[];
+}
 
 /**
  * The registry. Array order is irrelevant — the order tiers are the authority.
@@ -264,4 +280,16 @@ function getRestoreOrder(tableNames: ReadonlyArray<string>): Readonly<PurgeTable
     }
 })();
 
-export { PURGE_POOL, NEVER_PURGE, IMMUTABLE_TIMESTAMP_COLUMNS, PURGE_GROUP_KEYS, GROUP_CLOSURE_HINTS, PURGE_TABLES, getEntry, getTablesByGroup, getAllTableNames, getDeleteOrder, getRestoreOrder };
+/**
+ * getEntry for a table name the caller already validated against the registry
+ * (scope building rejects unknown names first). Never returns null.
+ *
+ * @throws {Error} when the name is not registered: a caller bug, not user input
+ */
+function requireEntry(tableName: string): Readonly<PurgeTableEntry> {
+    const entry = getEntry(tableName);
+    if (!entry) throw new Error(`purgeTables: "${tableName}" is not a registered table.`);
+    return entry;
+}
+
+export { PURGE_POOL, NEVER_PURGE, IMMUTABLE_TIMESTAMP_COLUMNS, PURGE_GROUP_KEYS, GROUP_CLOSURE_HINTS, PURGE_TABLES, getEntry, requireEntry, getTablesByGroup, getAllTableNames, getDeleteOrder, getRestoreOrder };

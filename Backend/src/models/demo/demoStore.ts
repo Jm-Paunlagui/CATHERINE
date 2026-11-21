@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -27,11 +26,23 @@ const DEMO_PASSWORD = "Demo@123";
 
 let _accountsPromise: any = null;
 
+/** A seeded demo admin (T_ADMINS_DEV shape); SYSSIGNATURE is added after hashing. */
+interface DemoAdminRow {
+    ID: number;
+    USERNAME: string;
+    PASSWORD: string;
+    ROLE: string;
+    IS_ACTIVE: string;
+    CREATED_AT: Date;
+    UPDATED_AT: Date;
+    SYSSIGNATURE?: string;
+}
+
 async function _buildAccounts() {
     const pw = await CryptoVault.hashPassword(DEMO_PASSWORD);
     const now = new Date();
 
-    const admins = [
+    const admins: DemoAdminRow[] = [
         {
             ID: 1,
             USERNAME: "admin",
@@ -161,7 +172,19 @@ function auditInsert(record: any) {
 // CURRENCY_CODE is the non-base side; the base currency is a system fact
 // (MONEY_BASE_CURRENCY), never a column. All rates here are quoted against a
 // PHP base for the demo (1 CODE = RATE PHP).
-const _fxRates = [
+/** One T_FX_RATE_DEV row. */
+interface FxRateRow {
+    ID: number;
+    CURRENCY_CODE: string;
+    RATE: string;
+    EFFECTIVE_FROM: Date;
+    EFFECTIVE_TO: Date | null;
+    SOURCE: string;
+    RETRIEVED_AT: Date;
+    SET_BY: string;
+}
+
+const _fxRates: FxRateRow[] = [
     { ID: 1, CURRENCY_CODE: "USD", RATE: "56.25000000", EFFECTIVE_FROM: new Date("2026-01-01T00:00:00Z"), EFFECTIVE_TO: new Date("2026-06-30T23:59:59Z"), SOURCE: "MANUAL", RETRIEVED_AT: new Date("2026-01-01T08:00:00Z"), SET_BY: "demo-admin" },
     { ID: 2, CURRENCY_CODE: "USD", RATE: "58.10000000", EFFECTIVE_FROM: new Date("2026-07-01T00:00:00Z"), EFFECTIVE_TO: null, SOURCE: "MANUAL", RETRIEVED_AT: new Date("2026-07-01T08:00:00Z"), SET_BY: "demo-admin" },
     { ID: 3, CURRENCY_CODE: "EUR", RATE: "61.40000000", EFFECTIVE_FROM: new Date("2026-01-01T00:00:00Z"), EFFECTIVE_TO: null, SOURCE: "MANUAL", RETRIEVED_AT: new Date("2026-01-01T08:00:00Z"), SET_BY: "demo-admin" },
@@ -170,7 +193,7 @@ const _fxRates = [
 let _fxSeq = _fxRates.length;
 
 /** All demo FX rate rows (append-only). @returns {object[]} */
-function fxRates(): Record<string, any>[] {
+function fxRates(): FxRateRow[] {
     return _fxRates;
 }
 
@@ -179,7 +202,7 @@ function fxRates(): Record<string, any>[] {
  * @param {object} record
  * @returns {{rowsAffected: number, insertedId: number}}
  */
-function fxRateInsert(record: Record<string, any>): { rowsAffected: number; insertedId: number; } {
+function fxRateInsert(record: Omit<FxRateRow, "ID">): { rowsAffected: number; insertedId: number; } {
     const id = ++_fxSeq;
     _fxRates.push({ ID: id, ...record });
     return { rowsAffected: 1, insertedId: id };
@@ -191,7 +214,17 @@ function fxRateInsert(record: Record<string, any>): { rowsAffected: number; inse
 // documented, not hidden. AMOUNT is a fixed-scale STRING (Money.toStorage(), scale
 // 4). Rows are APPEND-ONLY: a mistake is corrected with a reversing entry
 // (equal-and-opposite), never an UPDATE — see reverseEntry below.
-const _ledger = [
+/** One T_LEDGER_DEV row (append-only). */
+interface LedgerRow {
+    ID: number;
+    DIRECTION: string;
+    AMOUNT: string;
+    MEMO: string | null;
+    REVERSES_ID: number | null;
+    CREATED_AT: Date;
+}
+
+const _ledger: LedgerRow[] = [
     { ID: 1, DIRECTION: "CREDIT", AMOUNT: "10000.0000", MEMO: "Opening balance", REVERSES_ID: null, CREATED_AT: new Date("2026-07-01T09:00:00Z") },
     { ID: 2, DIRECTION: "DEBIT", AMOUNT: "2500.0000", MEMO: "Supplier payment", REVERSES_ID: null, CREATED_AT: new Date("2026-07-02T10:30:00Z") },
     { ID: 3, DIRECTION: "CREDIT", AMOUNT: "750.5000", MEMO: "Refund received", REVERSES_ID: null, CREATED_AT: new Date("2026-07-03T14:15:00Z") },
@@ -310,9 +343,8 @@ function match(row: Record<string, any>, filter: Record<string, any>): boolean {
         ) {
             for (const [op, expected] of Object.entries(cond)) {
                 if (op === "$regex") {
-                    const flags = cond.$options?.includes("i") ? "i" : "";
-                    if (op === "$options") continue;
-                    if (!new RegExp(expected, flags).test(String(value ?? "")))
+                    const flags = (cond as { $options?: string }).$options?.includes("i") ? "i" : "";
+                    if (!new RegExp(expected as string | RegExp, flags).test(String(value ?? "")))
                         return false;
                 } else if (op === "$options") {
                     // handled with $regex

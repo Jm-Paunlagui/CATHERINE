@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 // Environment variables are loaded once at process startup by server.ts (and by
@@ -103,8 +102,8 @@ const connections = {
     // },
 };
 
-function getConnectionConfig(name: any) {
-    const config = connections[name];
+function getConnectionConfig(name: string) {
+    const config = connections[name as keyof typeof connections];
     if (!config) {
         const available = Object.keys(connections).join(", ");
         throw new Error(

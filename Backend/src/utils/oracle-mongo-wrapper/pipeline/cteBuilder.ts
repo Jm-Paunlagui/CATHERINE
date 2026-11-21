@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -46,6 +45,7 @@
  * ============================================================================
  */
 
+import type { QueryBuilder } from "../core/QueryBuilder";
 import { quoteIdentifier } from "../utils";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
@@ -116,7 +116,7 @@ class CTEResult {
   declare _sort: any;
   declare _join: any;
   declare _from: any;
-  declare _cteDefs: any;
+  declare _cteDefs: Record<string, QueryBuilder>;
   declare _db: any;
   constructor(db: any, cteDefs: any) {
     this._db = db;
@@ -269,7 +269,7 @@ class RecursiveCTEResult {
     const recTable = recursive.collection;
     const joinParts = Object.entries(recursive.joinOn)
       .map(([childCol, parentRef]) => {
-        const parentCol = parentRef.replace(`$${this._cteName}.`, "");
+        const parentCol = (parentRef as string).replace(`$${this._cteName}.`, "");
         return `e.${quoteIdentifier(childCol)} = o.${quoteIdentifier(parentCol)}`;
       })
       .join(" AND ");
