@@ -13,7 +13,7 @@
 
 const request = require("supertest");
 const agent = require("../helpers/request");
-const app = require("../../../src/app");
+const app = require("../../../src/app").default;
 const { signToken } = require("../helpers/auth");
 
 const adminToken = signToken({ userLevel: 2 });
@@ -135,7 +135,7 @@ describe("POST /api/v1/metrics/frontend (CSRF-exempt, no auth)", function () {
     beforeEach(async function () {
         const {
             frontendIngestLimiter,
-        } = require("../../../src/routes/metrics.route");
+        } = require("../../../src/routes/metrics.route").default;
         frontendIngestLimiter.flushAll();
 
         csrfAgent = request.agent(app);

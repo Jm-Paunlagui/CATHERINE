@@ -17,9 +17,9 @@
 const {
     OracleCollection,
 } = require("../../../../src/utils/oracle-mongo-wrapper");
-const AuditLogModel = require("../../../../src/models/audit.log.model");
-const AuditLogFileModel = require("../../../../src/models/audit.log.file.model");
-const demo = require("../../../../src/models/demo/demoStore");
+const AuditLogModel = require("../../../../src/models/audit.log.model").default;
+const AuditLogFileModel = require("../../../../src/models/audit.log.file.model").default;
+const demo = require("../../../../src/models/demo/demoStore").default;
 
 const ORIGINAL_DEMO_MODE = process.env.DEMO_MODE;
 

@@ -50,7 +50,7 @@ import httpClient from "../../src/middleware/HttpClient.js";
 import csrfMiddleware from "../../src/middleware/security/CsrfMiddleware.js";
 import { ok } from "../helpers/fixtures/contract.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 
 /**
  * The CSRF_EXEMPT list from HttpClient.js, mirrored as assertion input. NOT

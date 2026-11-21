@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview AlertSignatureStore - remembers "the finding I last
@@ -26,7 +26,7 @@
  * Security: CWE-359 (no identifiers stored), CWE-89 (binds only, in the model).
  */
 
-const ServerAlertLogModel = require("../models/serverAlertLog.model");
+import ServerAlertLogModel from "../models/serverAlertLog.model";
 
 const STATE_CHANNEL = "server-critical-notification";
 
@@ -133,4 +133,4 @@ class AlertSignatureStore {
     }
 }
 
-module.exports = AlertSignatureStore;
+export default AlertSignatureStore;

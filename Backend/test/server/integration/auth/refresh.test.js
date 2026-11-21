@@ -18,8 +18,8 @@ const { randomUUID } = require("crypto");
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
 const cookieSignature = require("cookie-signature");
-const app = require("../../../../src/app");
-const AuthService = require("../../../../src/services/AuthService");
+const app = require("../../../../src/app").default;
+const AuthService = require("../../../../src/services/AuthService").default;
 const { AppError, AUTH_ERRORS } = require("../../../../src/constants/errors");
 const { HTTP_STATUS } = require("../../../../src/constants");
 const {

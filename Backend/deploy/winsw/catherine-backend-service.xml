@@ -27,7 +27,7 @@
   <!-- Window for the backend's graceful shutdown: requests already in
        progress may finish for as long as they keep making progress (absolute
        cap 30 min; a request idle past its limit is cut much sooner), then
-       pool close and audit flush. Must exceed server.js's FORCED_EXIT_MS
+       pool close and audit flush. Must exceed server.ts's FORCED_EXIT_MS
        (1834 s) + CLUSTER_SHUTDOWN_MARGIN_MS (10 s) + the forced-exit alert
        email (<=5.5 s) with margin, or Windows force-kills the service
        mid-teardown. A stop with nothing in flight still exits in seconds -

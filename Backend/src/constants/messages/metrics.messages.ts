@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for the metrics subsystem.
@@ -54,4 +54,4 @@ const metricsMessages = {
         `Frontend metrics payload rejected: ${reason}`,
 };
 
-module.exports = { metricsMessages };
+export { metricsMessages };

@@ -7,7 +7,7 @@ module.exports = defineConfig([
   // BLOCK 0 — global ignores
   globalIgnores(["dist", "coverage", "node_modules"]),
 
-  // BLOCK 1 — base: all .js/.ts (src + server.js + root configs).
+  // BLOCK 1 — base: all .js/.ts (server.ts + src + scripts/tests + root configs).
   // BLOCK 1b below layers the TypeScript parser and rules onto the .ts files.
   {
     files: ["**/*.{js,ts}"],

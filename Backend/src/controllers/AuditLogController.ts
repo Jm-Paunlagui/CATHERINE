@@ -1,15 +1,15 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
 
-const { catchAsync } = require('../utils/catchAsync');
-const { sendSuccess, RESPONSE_MESSAGES } = require('../constants/responses');
-const { AUDIT_LOG_ERRORS } = require('../constants/errors');
-const AuditLogService = require('../services/AuditLogService');
-const MetricsService = require('../services/MetricsService');
-const systemLogTail = require('../services/SystemLogTailService');
-const { logger } = require('../utils/logger');
-const { auditLogMessages } = require('../constants/messages');
-const SseConnectionRegistry = require('../utils/sse/SseConnectionRegistry');
+
+import { catchAsync } from "../utils/catchAsync";
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { AUDIT_LOG_ERRORS } from "../constants/errors";
+import AuditLogService from "../services/AuditLogService";
+import MetricsService from "../services/MetricsService";
+import systemLogTail from "../services/SystemLogTailService";
+import { logger } from "../utils/logger";
+import { auditLogMessages } from "../constants/messages";
+import SseConnectionRegistry from "../utils/sse/SseConnectionRegistry";
 
 // ── SSE shared poller ─────────────────────────────────────────────────────────
 //
@@ -524,4 +524,4 @@ class AuditLogController {
   };
 }
 
-module.exports = AuditLogController;
+export default AuditLogController;

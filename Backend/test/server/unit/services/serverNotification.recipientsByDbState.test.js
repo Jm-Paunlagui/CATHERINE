@@ -14,9 +14,9 @@
  *     SERVER_NOTIFY_TO only — the cached opt-in list is not used.
  */
 
-const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService");
-const RecipientResolver = require("../../../../src/services/email/RecipientResolver");
-const AdminModel = require("../../../../src/models/admin.model");
+const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService").default;
+const RecipientResolver = require("../../../../src/services/email/RecipientResolver").default;
+const AdminModel = require("../../../../src/models/admin.model").default;
 const { logger } = require("../../../../src/utils/logger");
 
 const CH = "server-critical-notification";
@@ -105,7 +105,7 @@ describe("server alert recipients follow the database state", function () {
         dbUp();
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([OPT_IN]);
 
-        const db = require("../../../../src/config");
+        const db = require("../../../../src/config").default;
         vi.spyOn(db, "isPoolHealthy").mockImplementation((name) => name !== "appDb");
         // No invalidate(): the cached successful lookup is still fresh.
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([ENV_ADDR]);

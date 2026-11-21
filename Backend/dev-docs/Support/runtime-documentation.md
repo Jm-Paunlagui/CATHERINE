@@ -3,7 +3,7 @@
 > **Scope:** The **Runtime page** — Support → **Runtime** (`/support/runtime`), **SUPER_ADMIN only**. An interactive map of how the backend *runs*: boot and its guards, cluster roles, the cron-leader schedulers, scheduled backups, the request and backup watchdogs, rate limiting and the security filter, the pool breaker, alerting, crash handling and graceful shutdown. Each flow carries a `ref` badge naming the code site (or test) that exercises it.
 > **Source (FE):** `Frontend/src/features/support/runtime/` — `Runtime.view.jsx`, `runtime.hook.js`, `runtime.api.js` — a thin feature over the shared engine in `Frontend/src/components/shared/systemMap/` (see `Support/architecture-documentation.md` §3). Route registered in `Frontend/src/App.jsx`; nav item (SUPER_ADMIN block only) in `Frontend/src/components/layout/config/nav.config.jsx`.
 > **Source (BE):** `Backend/src/constants/runtimeModel.ts` (the hand-authored map), served by `GET /api/v1/architecture/runtime` through `src/routes/architecture.route.ts`, `src/controllers/ArchitectureController.ts` (`getRuntimeMap`), `src/services/ArchitectureService.ts` (`getMap("runtime")`) and `src/utils/systemMap.ts`. `RUNTIME_MAP_FETCHED` in `src/constants/responses/index.ts`.
-> **Verified 2026-10-29.** Re-checked against the CATHERINE source: `Backend/src/constants/runtimeModel.ts` (`MAP_VERIFIED_AT = "2026-10-26"`, `META.system` "CATHERINE — backend runtime: scheduling, backup, resilience, shutdown", 44 nodes, 95 edges, 21 flows counted by hand), the shared route/controller/service/builder (see the Architecture doc), `runtime.hook.js` (`cacheKey "architecture/runtime"`, `downloadName "runtime.json"`), `FlowPanel.jsx` (`ref` badge), `SystemMapView.jsx` (endpoint count hidden when 0), `Backend/src/constants/clusterIpc.ts`, `PrimaryStateServices.js`, `LoginLockoutState.js`, `RevokedSessionSet.js`, `AccessRevocationService.js`, `HealthStreamHub.js`, `LogRetentionService.js` and `Backend/deploy/winsw/`. There is **no** `scripts/sim-server/` and no `sim:server` package script in this repo, so flow `ref`s name code sites (mostly `server.js`), not simulation stages. No system-map test exists in `Backend/test/` or `Frontend/test/`; §8 says so. No test counts are quoted.
+> **Verified 2026-10-29.** Re-checked against the CATHERINE source: `Backend/src/constants/runtimeModel.ts` (`MAP_VERIFIED_AT = "2026-10-26"`, `META.system` "CATHERINE — backend runtime: scheduling, backup, resilience, shutdown", 44 nodes, 95 edges, 21 flows counted by hand), the shared route/controller/service/builder (see the Architecture doc), `runtime.hook.js` (`cacheKey "architecture/runtime"`, `downloadName "runtime.json"`), `FlowPanel.jsx` (`ref` badge), `SystemMapView.jsx` (endpoint count hidden when 0), `Backend/src/constants/clusterIpc.ts`, `PrimaryStateServices.js`, `LoginLockoutState.js`, `RevokedSessionSet.js`, `AccessRevocationService.js`, `HealthStreamHub.js`, `LogRetentionService.js` and `Backend/deploy/winsw/`. There is **no** `scripts/sim-server/` and no `sim:server` package script in this repo, so flow `ref`s name code sites (mostly `server.ts`), not simulation stages. No system-map test exists in `Backend/test/` or `Frontend/test/`; §8 says so. No test counts are quoted.
 >
 > **Related docs:**
 > - `Support/architecture-documentation.md` — the sibling whole-system map; same engine, route and gate.
@@ -20,25 +20,25 @@ The Runtime page draws the server as 44 nodes and 95 edges in seven layers — *
 
 | Flow | `ref` badge (as served) |
 | --- | --- |
-| Boot and readiness | `server.js` |
-| Leader arms the schedulers | `server.js` |
-| Scheduled backup with watchdog | `server.js` |
-| Database outage (breaker, load-shed, alerts) | `server.js` |
-| Critical alert storm (digest, hourly ceiling) | `server.js` |
-| Crash and restart | `server.js` |
-| Graceful stop | `server.js` |
-| Shutdown failsafe | `server.js` |
-| Request watchdog | `server.js` |
-| Rate limit and security filter | `server.js` |
-| Logging under pressure | `server.js` |
-| Cluster lifecycle | `server.js` |
-| Cluster shared state | `server.js` |
-| Ended session across the cluster | `server.js` |
-| Compressed request bodies (Brotli refused) | `server.js` |
-| Multipart field-name index (index > 100 refused) | `server.js` |
-| Readiness: server vs database | `server.js` |
-| Readiness push stream | `server.js` |
-| Sign-in lockout | `server.js` |
+| Boot and readiness | `server.ts` |
+| Leader arms the schedulers | `server.ts` |
+| Scheduled backup with watchdog | `server.ts` |
+| Database outage (breaker, load-shed, alerts) | `server.ts` |
+| Critical alert storm (digest, hourly ceiling) | `server.ts` |
+| Crash and restart | `server.ts` |
+| Graceful stop | `server.ts` |
+| Shutdown failsafe | `server.ts` |
+| Request watchdog | `server.ts` |
+| Rate limit and security filter | `server.ts` |
+| Logging under pressure | `server.ts` |
+| Cluster lifecycle | `server.ts` |
+| Cluster shared state | `server.ts` |
+| Ended session across the cluster | `server.ts` |
+| Compressed request bodies (Brotli refused) | `server.ts` |
+| Multipart field-name index (index > 100 refused) | `server.ts` |
+| Readiness: server vs database | `server.ts` |
+| Readiness push stream | `server.ts` |
+| Sign-in lockout | `server.ts` |
 | Restart detection and boot emails | `serverProcess.restartMarker.reliability.test.js · bootAlertHistoryLiveOracle.test.js` |
 | Restore verifies before it re-signs | `restore.verifyBeforeResign VBR-01–08` |
 
@@ -102,7 +102,7 @@ Edge kinds specific to this map: `signal` (signals and exit codes), `schedule`, 
 
 **Keeping the map honest.** The model's header names `test/server/unit/architecture/systemMap.test.js` as the guard against stale `Backend/...` paths and flow steps without an edge. **That test does not exist in this repo**; only `buildSystemMap` runs, at the first request (see `Support/architecture-documentation.md` §6). There is no server-simulation harness either, so nothing ties a flow to a runnable stage.
 
-What nothing catches: a threshold that changed in code but not here. Every number on the page (120 s idle, 30 min wait cap, 1 834 s failsafe, 30 s digest window, 10 emails/hour, 90-day log-file retention (`LOG_RETENTION_DAYS`, `DEFAULT_RETENTION_DAYS = 90` in `LogRetentionService.js`), `HEALTH_STREAM_MAX_PER_IP` default 50 …) is a **code default**; production can override several through `.env`. Only the log-retention and health-stream defaults were re-read for this document; the others are as the model states them. Re-check against `server.js` and bump `MAP_VERIFIED_AT` after changing any of them.
+What nothing catches: a threshold that changed in code but not here. Every number on the page (120 s idle, 30 min wait cap, 1 834 s failsafe, 30 s digest window, 10 emails/hour, 90-day log-file retention (`LOG_RETENTION_DAYS`, `DEFAULT_RETENTION_DAYS = 90` in `LogRetentionService.js`), `HEALTH_STREAM_MAX_PER_IP` default 50 …) is a **code default**; production can override several through `.env`. Only the log-retention and health-stream defaults were re-read for this document; the others are as the model states them. Re-check against `server.ts` and bump `MAP_VERIFIED_AT` after changing any of them.
 
 **Single-process vs clustered.** Flows that mention the primary, shared state or the critical relay apply only with `ENABLE_CLUSTERING=true`. In single-process mode the one process is always the cron leader and registers no IPC listener.
 
@@ -137,7 +137,7 @@ SUPER_ADMIN only.
 **Evidence (UI):** source only — `nav.config.jsx` lists "Runtime" (`/support/runtime`) in the SUPER_ADMIN-only group; `App.jsx` wraps it in `ProtectedRoute role={[ROLES.SADMIN]}`. _Status: no test in this repo._
 
 **Q: Is every flow tied to something that proves it?**
-Every flow has a `ref`, but it is a label, not a link. 19 of 21 say `server.js`; the other two name test files that do not exist in this repo.
+Every flow has a `ref`, but it is a label, not a link. 19 of 21 say `server.ts`; the other two name test files that do not exist in this repo.
 **Evidence (API):** source only — `ref:` on each flow in `runtimeModel.js`.
 **Evidence (UI):** source only — `FlowPanel.jsx` renders `f.ref` / `flow.ref`. _Status: no test in this repo._
 

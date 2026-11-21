@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview `IdempotencyMiddleware` — replay protection for money-moving
@@ -50,10 +50,10 @@
  * through.
  */
 
-const crypto = require("crypto");
-const { registry } = require("../cache/CacheRegistry");
-const { AppError } = require("../../constants/errors");
-const { logger } = require("../../utils/logger");
+import crypto from "crypto";
+import { registry } from "../cache/CacheRegistry";
+import { AppError } from "../../constants/errors";
+import { logger } from "../../utils/logger";
 
 /** Methods that move state and therefore require idempotency. */
 const GUARDED_METHODS = new Set(["POST", "PUT", "PATCH"]);
@@ -232,9 +232,4 @@ class IdempotencyMiddleware {
     }
 }
 
-module.exports = {
-    IdempotencyMiddleware,
-    GUARDED_METHODS,
-    DEFAULT_TTL_SECONDS,
-    HEADER,
-};
+export { IdempotencyMiddleware, GUARDED_METHODS, DEFAULT_TTL_SECONDS, HEADER };

@@ -207,7 +207,7 @@ The template's `admin-management.route.js` reads the admin list from `adminList`
 
 ### 7.1 `ClusterCacheSync` — cross-worker invalidation
 
-Wired at both ends: the primary relays messages (`initPrimary`, in `server.js`) and each worker applies relayed operations (`initWorker(registry)`, in `app.js`, called **after** `registerAll` so every relayed store name resolves). It is a **no-op outside a cluster worker** — `broadcast` returns early when `process.send` is unavailable, so single-process mode carries zero overhead. A `_applyingRemote` re-entrancy guard stops a relayed operation from re-broadcasting (no message storms). IPC failures are swallowed — the worst case is one worker serving stale data until TTL, exactly the situation without sync. The `_cluster`/`_send`/`_canSend` indirections exist so unit tests can substitute fakes.
+Wired at both ends: the primary relays messages (`initPrimary`, in `server.ts`) and each worker applies relayed operations (`initWorker(registry)`, in `app.js`, called **after** `registerAll` so every relayed store name resolves). It is a **no-op outside a cluster worker** — `broadcast` returns early when `process.send` is unavailable, so single-process mode carries zero overhead. A `_applyingRemote` re-entrancy guard stops a relayed operation from re-broadcasting (no message storms). IPC failures are swallowed — the worst case is one worker serving stale data until TTL, exactly the situation without sync. The `_cluster`/`_send`/`_canSend` indirections exist so unit tests can substitute fakes.
 
 ### 7.2 Frontend caches (independent, purpose-built)
 

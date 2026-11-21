@@ -1,12 +1,12 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Cookie parsing middleware.
  * Uses COOKIE_SECRET env var for signed cookies when available.
  */
 
-const cookieParser = require("cookie-parser");
+import cookieParser from "cookie-parser";
 
 class CookieParserMiddleware {
   constructor(options = {}) {
@@ -22,4 +22,4 @@ class CookieParserMiddleware {
 }
 
 const defaultCookieParser = new CookieParserMiddleware();
-module.exports = { CookieParserMiddleware, defaultCookieParser };
+export { CookieParserMiddleware, defaultCookieParser };

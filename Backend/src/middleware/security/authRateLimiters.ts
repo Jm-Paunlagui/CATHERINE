@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview The four auth-route rate limiters (shared-PC sign-in
@@ -29,19 +29,13 @@
  * @author senior-nodejs-engineer
  */
 
-const {
-  RateLimiterMiddleware,
-  RateLimiterGroup,
-} = require("./RateLimiterMiddleware");
-const {
-  AUTH_RATE_LIMITS,
-  RATE_LIMIT_COUNT_MODES,
-} = require("../../constants/authRateLimits");
-const { canonicalUserKey } = require("../../utils/auth/userKey");
-const { refreshFamilyOf } = require("../../utils/auth/refreshFamily");
-const { getStatusTitle } = require("../../constants/responses");
-const { COOKIE_NAMES } = require("../../constants/authTokens");
-const { hashJti } = require("../../utils/auth/tokenClaims");
+import { RateLimiterMiddleware, RateLimiterGroup } from "./RateLimiterMiddleware";
+import { AUTH_RATE_LIMITS, RATE_LIMIT_COUNT_MODES } from "../../constants/authRateLimits";
+import { canonicalUserKey } from "../../utils/auth/userKey";
+import { refreshFamilyOf } from "../../utils/auth/refreshFamily";
+import { getStatusTitle } from "../../constants/responses";
+import { COOKIE_NAMES } from "../../constants/authTokens";
+import { hashJti } from "../../utils/auth/tokenClaims";
 
 /** Name of the refresh cookie (shared constant; never import AuthService here). */
 const REFRESH_COOKIE = COOKIE_NAMES.REFRESH;
@@ -141,14 +135,4 @@ const authRateLimiters = new RateLimiterGroup([
   changePasswordRateLimiter,
 ]);
 
-module.exports = {
-  loginIpKey,
-  loginUserKey,
-  refreshKey,
-  changePasswordKey,
-  loginIpLimiter,
-  loginUserLimiter,
-  refreshRateLimiter,
-  changePasswordRateLimiter,
-  authRateLimiters,
-};
+export { loginIpKey, loginUserKey, refreshKey, changePasswordKey, loginIpLimiter, loginUserLimiter, refreshRateLimiter, changePasswordRateLimiter, authRateLimiters };

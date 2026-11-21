@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview The three shutdown alert emails — shutdown started, in-flight
@@ -15,8 +15,8 @@
  * @author senior-nodejs-engineer
  */
 
-const os = require("os");
-const { serverMessages } = require("../../constants/messages/server.messages");
+import os from "os";
+import { serverMessages } from "../../constants/messages/server.messages";
 
 const SIGNAL_LABEL = Object.freeze({
     SIGTERM: "service stop (SIGTERM)",
@@ -176,4 +176,4 @@ class ShutdownNotifier {
     }
 }
 
-module.exports = ShutdownNotifier;
+export default ShutdownNotifier;

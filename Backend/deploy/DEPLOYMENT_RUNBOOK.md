@@ -82,7 +82,7 @@ cookie policy first).
     `deploy/RESTART_VERIFICATION.md`; `deploy/winsw/check-shutdown-readiness.ps1`
     shows the primary, the workers and the marker writer.
 - **`APP_TZ`** (default `Asia/Manila`) must be the zone the database's
-  wall-clock values are written in. `server.js` pins the process time zone to
+  wall-clock values are written in. `server.ts` pins the process time zone to
   it before the first `Date` is built, and the daily cron runs on that local
   clock — node-cron's own `timezone` option is not used because a
   small-ICU runtime build can silently break its resolution (the tick never

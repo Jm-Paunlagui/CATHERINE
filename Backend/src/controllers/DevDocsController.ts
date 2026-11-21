@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * DevDocsController
@@ -23,11 +23,11 @@
  * re-checks a role — one gate, in one place, that a reader can find.
  */
 
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { catchAsync } = require("../utils/catchAsync");
-const DevDocsService = require("../services/DevDocsService");
-const devDocsMessages = require("../constants/messages/devdocs.messages");
-const { logger } = require("../utils/logger");
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { catchAsync } from "../utils/catchAsync";
+import DevDocsService from "../services/DevDocsService";
+import devDocsMessages from "../constants/messages/devdocs.messages";
+import { logger } from "../utils/logger";
 
 /**
  * @private
@@ -144,4 +144,4 @@ class DevDocsController {
     });
 }
 
-module.exports = DevDocsController;
+export default DevDocsController;

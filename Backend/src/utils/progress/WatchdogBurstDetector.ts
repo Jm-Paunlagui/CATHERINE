@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview WatchdogBurstDetector — turns a burst of request-watchdog cuts
@@ -29,8 +29,8 @@
  * Class: holds a sliding window + cooldown state.
  */
 
-const { logger } = require("../logger");
-const { watchdogMessages } = require("../../constants/messages");
+import { logger } from "../logger";
+import { watchdogMessages } from "../../constants/messages";
 
 /** Defaults and bounds for the env settings. */
 const DEFAULT_BURST = 3;
@@ -132,4 +132,4 @@ class WatchdogBurstDetector {
 
 const defaultBurstDetector = new WatchdogBurstDetector();
 
-module.exports = { WatchdogBurstDetector, defaultBurstDetector };
+export { WatchdogBurstDetector, defaultBurstDetector };

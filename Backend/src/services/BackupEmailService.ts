@@ -1,8 +1,8 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { appPath } = require("../utils/runtimePaths");
 
-const { formatUtcStamp } = require("../utils/formatUtcStamp");
+import { appPath } from "../utils/runtimePaths";
+
+import { formatUtcStamp } from "../utils/formatUtcStamp";
 
 /**
  * @fileoverview Purge Backup — notification-only email.
@@ -40,15 +40,15 @@ const { formatUtcStamp } = require("../utils/formatUtcStamp");
  *   // { sent: true, recipientCount: 2 }
  */
 
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-const { logger } = require("../utils/logger");
-const { dbTimezoneOffsetMinutes } = require("../utils/dbTimezone");
-const { backupEmailMessages } = require("../constants/messages");
-const { credentialAddressOf } = require("../utils/emailAddress");
-const AdminModel = require("../models/admin.model");
-const SharedTransporter = require("./email/SharedTransporter");
+import { logger } from "../utils/logger";
+import { dbTimezoneOffsetMinutes } from "../utils/dbTimezone";
+import { backupEmailMessages } from "../constants/messages";
+import { credentialAddressOf } from "../utils/emailAddress";
+import AdminModel from "../models/admin.model";
+import SharedTransporter from "./email/SharedTransporter";
 
 /** Product name shown in the subject line and body. */
 const PRODUCT_NAME = process.env.APP_NAME || "CATHERINE";
@@ -387,4 +387,4 @@ class BackupEmailService {
     }
 }
 
-module.exports = BackupEmailService;
+export default BackupEmailService;

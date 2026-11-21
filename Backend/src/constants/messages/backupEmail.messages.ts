@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Purge Backup — notification email log message templates.
@@ -92,4 +92,4 @@ const backupEmailMessages = {
         `Purge backup email dispatch rejected at the fire-and-forget call site (ADMIN_ID ${adminId}) — the purge backup response itself was NOT affected: ${err?.message ?? err}`,
 };
 
-module.exports = { backupEmailMessages };
+export { backupEmailMessages };

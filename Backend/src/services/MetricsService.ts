@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Business logic for the metrics domain.
@@ -7,13 +7,13 @@
  * frontend metrics ingestion with validation.
  */
 
-const { metricsStore } = require("../middleware/metrics");
-const { AppError, METRICS_ERRORS } = require("../constants/errors");
-const { logger } = require("../utils/logger");
-const { metricsMessages, clusterMessages } = require("../constants/messages");
-const { clusterRpc } = require("../utils/cluster/ClusterRpcClient");
-const { mergeMetricsSnapshots } = require("../middleware/metrics/metricsMerge");
-const { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS, CLUSTER_RPC_LIMITS } = require("../constants/clusterIpc");
+import { metricsStore } from "../middleware/metrics";
+import { AppError, METRICS_ERRORS } from "../constants/errors";
+import { logger } from "../utils/logger";
+import { metricsMessages, clusterMessages } from "../constants/messages";
+import { clusterRpc } from "../utils/cluster/ClusterRpcClient";
+import { mergeMetricsSnapshots } from "../middleware/metrics/metricsMerge";
+import { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS, CLUSTER_RPC_LIMITS } from "../constants/clusterIpc";
 
 /**
  * @constant {number} Server-error rate (5xx-only) that raises a WARNING alert.
@@ -782,4 +782,4 @@ class MetricsService {
     }
 }
 
-module.exports = MetricsService;
+export default MetricsService;

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview The Oracle server's UTC offset in minutes, read from
@@ -16,8 +16,8 @@
  * WARNING per distinct bad value.
  */
 
-const { logger } = require("./logger");
-const { databaseMessages } = require("../constants/messages");
+import { logger } from "./logger";
+import { databaseMessages } from "../constants/messages";
 
 /** UTC+8 — Asia/Manila, the deployment zone. */
 const DEFAULT_DB_TZ_OFFSET_MINUTES = 480;
@@ -91,4 +91,4 @@ async function verifyDbClockOffset(db, { appOffsetMinutes = -new Date().getTimez
     }
 }
 
-module.exports = { dbTimezoneOffsetMinutes, verifyDbClockOffset, DEFAULT_DB_TZ_OFFSET_MINUTES };
+export { dbTimezoneOffsetMinutes, verifyDbClockOffset, DEFAULT_DB_TZ_OFFSET_MINUTES };

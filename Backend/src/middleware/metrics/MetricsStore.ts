@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview In-process metrics store — RED (Rate, Errors, Duration) + system metrics.
@@ -26,9 +26,9 @@
  *   const snapshot = metricsStore.getSnapshot();
  */
 
-const { PerformanceObserver } = require("perf_hooks");
-const v8 = require("node:v8");
-const os = require("node:os");
+import { PerformanceObserver } from "perf_hooks";
+import v8 from "node:v8";
+import os from "node:os";
 
 /**
  * @constant {number} Logical CPU count, read once at module load. Used to
@@ -1166,17 +1166,4 @@ class MetricsStore {
 
 const metricsStore = new MetricsStore();
 
-module.exports = {
-  MetricsStore,
-  metricsStore,
-  computeRates,
-  calcPercentile,
-  linRegSlope,
-  GC_KIND,
-  REDIRECT_MIN_STATUS,
-  NOT_MODIFIED_STATUS,
-  CLIENT_ERROR_MIN_STATUS,
-  SERVER_ERROR_MIN_STATUS,
-  APDEX_THRESHOLD_MS,
-  LATENCY_WINDOW_MS,
-};
+export { MetricsStore, metricsStore, computeRates, calcPercentile, linRegSlope, GC_KIND, REDIRECT_MIN_STATUS, NOT_MODIFIED_STATUS, CLIENT_ERROR_MIN_STATUS, SERVER_ERROR_MIN_STATUS, APDEX_THRESHOLD_MS, LATENCY_WINDOW_MS };

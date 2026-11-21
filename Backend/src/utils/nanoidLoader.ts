@@ -1,8 +1,8 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-const { logger } = require("./logger");
+import { logger } from "./logger";
 
 // Check if we're running as a compiled executable
-const { IS_COMPILED: isCompiled } = require("./runtimePaths");
+import { IS_COMPILED as isCompiled } from "./runtimePaths";
 
 let nanoid;
 
@@ -83,4 +83,4 @@ async function getNanoid() {
   return nanoid;
 }
 
-module.exports = { nanoid, getNanoid };
+export { nanoid, getNanoid };

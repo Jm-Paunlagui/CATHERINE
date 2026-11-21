@@ -1,6 +1,6 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
+
+import { IS_COMPILED, APP_ROOT } from "../utils/runtimePaths";
 
 /**
  * @fileoverview AuditLogFileModel — text-file fallback storage for the audit
@@ -48,9 +48,9 @@ const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
  * (append-only log semantics).
  */
 
-const fs = require("fs").promises;
-const path = require("path");
-const { logger } = require("../utils/logger");
+import { promises as fs } from "fs";
+import path from "path";
+import { logger } from "../utils/logger";
 
 const CONFIG = Object.freeze({
     /**
@@ -643,4 +643,4 @@ class AuditLogFileModel {
     }
 }
 
-module.exports = AuditLogFileModel;
+export default AuditLogFileModel;

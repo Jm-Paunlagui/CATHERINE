@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Data Purge & Restore — business logic (SUPER_ADMIN only).
@@ -53,32 +53,19 @@
  *   // preview.confirmPhrase === "DELETE SERVER_ 4213 ROWS" (example)
  */
 
-const crypto = require("crypto");
+import crypto from "crypto";
 
-const { AppError, PURGE_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const {
-    dataPurgeMessages,
-    backupEmailMessages,
-    dataBackupMessages,
-} = require("../constants/messages");
-const {
-    NEVER_PURGE,
-    IMMUTABLE_TIMESTAMP_COLUMNS,
-    PURGE_GROUP_KEYS,
-    GROUP_CLOSURE_HINTS,
-    PURGE_TABLES,
-    getEntry,
-    getTablesByGroup,
-    getAllTableNames,
-} = require("../constants/purgeTables");
-const DataPurgeModel = require("../models/data-purge.model");
-const AdminModel = require("../models/admin.model");
-const AuditLogModel = require("../models/audit.log.model");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const BackupTokenService = require("./BackupTokenService");
-const { registry } = require("../middleware/cache");
+import { AppError, PURGE_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import { dataPurgeMessages, backupEmailMessages, dataBackupMessages } from "../constants/messages";
+import { NEVER_PURGE, IMMUTABLE_TIMESTAMP_COLUMNS, PURGE_GROUP_KEYS, GROUP_CLOSURE_HINTS, PURGE_TABLES, getEntry, getTablesByGroup, getAllTableNames } from "../constants/purgeTables";
+import DataPurgeModel from "../models/data-purge.model";
+import AdminModel from "../models/admin.model";
+import AuditLogModel from "../models/audit.log.model";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import BackupTokenService from "./BackupTokenService";
+import { registry } from "../middleware/cache";
 
 /**
  * Safety valve for step 6 (row counts must still match the
@@ -671,8 +658,8 @@ class DataPurgeService {
      * });
      */
     static async backup({ selection, adminId, requestId = null }) {
-        const BackupArchiveService = require("./BackupArchiveService");
-        const BackupEmailService = require("./BackupEmailService");
+        const BackupArchiveService = require("./BackupArchiveService").default;
+        const BackupEmailService = require("./BackupEmailService").default;
 
         const result = await BackupArchiveService.buildBackup({
             selection,
@@ -691,7 +678,7 @@ class DataPurgeService {
         // A server-side copy of the pre-purge state, visible in the Backup
         // tab's "Purge Backups" section.
         try {
-            const BackupStoreService = require("./BackupStoreService");
+            const BackupStoreService = require("./BackupStoreService").default;
             BackupStoreService.runBackup({
                 trigger: "PURGE",
                 tables: getAllTableNames(),
@@ -812,7 +799,7 @@ class DataPurgeService {
         // method (BackupArchiveService, BackupEmailService, AlertNotifierService
         // below) to avoid a hard dependency at module load for callers who
         // never reach this path.
-        const BackupScheduleService = require("./BackupScheduleService");
+        const BackupScheduleService = require("./BackupScheduleService").default;
         const lockoutStatus = await BackupScheduleService.getLockoutStatus();
         if (lockoutStatus.active) {
             logger.warning(
@@ -1190,7 +1177,7 @@ class DataPurgeService {
     /**
      * Fires the ops alert email for a completed purge — "a full purge is
      * exactly the class of event that channel exists for" (step 9). Uses `AlertNotifierService.notifyCriticalNow`, the same
-     * best-effort immediate-send path `server.js` uses for process-crash
+     * best-effort immediate-send path `server.ts` uses for process-crash
      * notifications — bypasses the normal digest-window buffering since
      * this is a rare, high-value, already-happened event.
      *
@@ -1202,7 +1189,7 @@ class DataPurgeService {
         // Required lazily to avoid a hard dependency at module load for a
         // service most of this feature's paths never touch, and to sidestep
         // any startup-order coupling with AlertNotifierService.start().
-        const AlertNotifierService = require("./AlertNotifierService");
+        const AlertNotifierService = require("./AlertNotifierService").default;
         await AlertNotifierService.notifyCriticalNow({
             level: "EMERGENCY",
             message: `Data purge executed by admin ${adminId} - ${totalDeleted} row(s) deleted across ${scope.tables.length} table(s).`,
@@ -1216,4 +1203,4 @@ class DataPurgeService {
     }
 }
 
-module.exports = DataPurgeService;
+export default DataPurgeService;

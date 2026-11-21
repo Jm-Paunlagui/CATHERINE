@@ -1,8 +1,8 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { appPath } = require("../utils/runtimePaths");
 
-const { formatUtcStamp } = require("../utils/formatUtcStamp");
+import { appPath } from "../utils/runtimePaths";
+
+import { formatUtcStamp } from "../utils/formatUtcStamp";
 
 /**
  * @fileoverview Access Control — who receives a temporary admin password, and
@@ -32,18 +32,18 @@ const { formatUtcStamp } = require("../utils/formatUtcStamp");
  * the address (PII) and never the password.
  */
 
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
 
-const { AppError, ADMIN_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const { adminMessages } = require("../constants/messages");
-const { dbTimezoneOffsetMinutes } = require("../utils/dbTimezone");
-const { singleAddress, maskAddress, credentialAddressOf } = require("../utils/emailAddress");
-const AdminModel = require("../models/admin.model");
-const UserModel = require("../models/user.model");
-const SharedTransporter = require("./email/SharedTransporter");
+import { AppError, ADMIN_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import { adminMessages } from "../constants/messages";
+import { dbTimezoneOffsetMinutes } from "../utils/dbTimezone";
+import { singleAddress, maskAddress, credentialAddressOf } from "../utils/emailAddress";
+import AdminModel from "../models/admin.model";
+import UserModel from "../models/user.model";
+import SharedTransporter from "./email/SharedTransporter";
 
 const TEMPLATE_PATH = appPath("src", "utils",
     "email-templates",
@@ -351,4 +351,4 @@ class AdminAccessEmailService {
     }
 }
 
-module.exports = AdminAccessEmailService;
+export default AdminAccessEmailService;

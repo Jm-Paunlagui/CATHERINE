@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -45,7 +45,7 @@
  * ============================================================================
  */
 
-const { OracleCollection } = require("./core/OracleCollection");
+import { OracleCollection } from "./core/OracleCollection";
 
 /**
  * Validate a savepoint name — must be a safe Oracle identifier.
@@ -230,4 +230,4 @@ class Transaction {
     }
 }
 
-module.exports = { Transaction, Session };
+export { Transaction, Session };

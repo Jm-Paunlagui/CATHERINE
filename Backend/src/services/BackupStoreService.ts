@@ -1,6 +1,6 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
+
+import { IS_COMPILED, APP_ROOT } from "../utils/runtimePaths";
 
 /**
  * @fileoverview Scheduled DB Backup — filesystem store, chain index,
@@ -79,23 +79,23 @@ const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
  *   const { zipBuffer, filename } = await BackupStoreService.materialise(run.archiveId);
  */
 
-const fsPromises = require("fs").promises;
-const path = require("path");
-const crypto = require("crypto");
-const { PassThrough } = require("stream");
-const archiver = require("archiver");
-const JSZip = require("jszip");
-const ExcelJS = require("exceljs");
+import { promises as fsPromises } from "fs";
+import path from "path";
+import crypto from "crypto";
+import { PassThrough } from "stream";
+import archiver from "archiver";
+import JSZip from "jszip";
+import ExcelJS from "exceljs";
 
-const { logger } = require("../utils/logger");
-const { dataBackupMessages, watchdogMessages } = require("../constants/messages");
-const { AppError, PURGE_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const { addNormalizedRow } = require("../utils/excelFormat");
-const { runGuarded, currentScope } = require("../utils/progress/progress");
-const { FileLease } = require("../utils/locks/FileLease");
-const BackupArchiveService = require("./BackupArchiveService");
+import { logger } from "../utils/logger";
+import { dataBackupMessages, watchdogMessages } from "../constants/messages";
+import { AppError, PURGE_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import { addNormalizedRow } from "../utils/excelFormat";
+import { runGuarded, currentScope } from "../utils/progress/progress";
+import { FileLease } from "../utils/locks/FileLease";
+import BackupArchiveService from "./BackupArchiveService";
 
 /** Default backup directory name when `DB_BACKUP_DIR` is unset. */
 const DEFAULT_BACKUP_DIR = "db-backup";
@@ -458,7 +458,7 @@ class BackupStoreService {
      * @returns {Promise<number>}
      */
     static async countActiveSuperAdmins() {
-        const AdminModel = require("../models/admin.model");
+        const AdminModel = require("../models/admin.model").default;
         return AdminModel.countActiveByRole("SUPER_ADMIN", null);
     }
 
@@ -470,7 +470,7 @@ class BackupStoreService {
      * @returns {Promise<Array<object>>}
      */
     static async listArchives() {
-        const BackupVoteModel = require("../models/backup-vote.model");
+        const BackupVoteModel = require("../models/backup-vote.model").default;
 
         const index = await BackupStoreService._loadIndex();
         const sorted = index
@@ -922,7 +922,7 @@ class BackupStoreService {
         // module top, so an eager top-level require here would be
         // circular.
         if (trigger === "MANUAL") {
-            const BackupScheduleService = require("./BackupScheduleService");
+            const BackupScheduleService = require("./BackupScheduleService").default;
             const lockout = await BackupScheduleService.getLockoutStatus();
             if (lockout.active) {
                 logger.warning(
@@ -1714,8 +1714,11 @@ class BackupStoreService {
     }
 }
 
-module.exports = BackupStoreService;
+const __default = BackupStoreService;
+export default __default;
 // Exported so tests (and a later BackupScheduleService) can point the store
 // at a temp directory without mutating process.env for the whole suite.
-module.exports.DEFAULT_BACKUP_DIR = DEFAULT_BACKUP_DIR;
-module.exports.INDEX_CACHE_TTL_MS = INDEX_CACHE_TTL_MS;
+__default.DEFAULT_BACKUP_DIR = DEFAULT_BACKUP_DIR;
+export { DEFAULT_BACKUP_DIR };
+__default.INDEX_CACHE_TTL_MS = INDEX_CACHE_TTL_MS;
+export { INDEX_CACHE_TTL_MS };

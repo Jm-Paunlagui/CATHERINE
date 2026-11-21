@@ -1,77 +1,25 @@
-// ─── libuv thread pool sizing (must run before any async I/O) ────────────────
-// node-oracledb (Thick mode) executes EVERY database call on a libuv worker
-// thread. The default pool of 4 threads serialises concurrent Oracle work:
-// only 4 queries actually execute at once and the rest queue — under a burst of
-// N concurrent requests this inflates P95 by roughly N/4 × query-time
-// regardless of how large the connection pool is. So the thread pool must cover
-// the SUM of every connection pool's poolMax, plus headroom for non-DB worker
-// use (fs / crypto / dns).
-//
-// DERIVATION — re-derive this if any poolMax in src/config/database.ts changes:
-//     SUM(poolMax)  = appDb 20 + appDbBulk 6 = 26
-//     + headroom    = 22  (fs / crypto / dns worker-thread work)
-//     ────────────────────────────────────────────────────────
-//     UV_THREADPOOL_SIZE = 48
-//
-// This is a STATIC literal on purpose: it must be set before the thread pool is
-// created (first async I/O), so it cannot be computed from the pool registry at
-// runtime and cannot live in .env. If you change a poolMax, recompute the sum
-// above and update this literal by hand. Override with a real OS environment
-// variable when needed. See .env.example for documentation.
-if (!process.env.UV_THREADPOOL_SIZE) {
-    process.env.UV_THREADPOOL_SIZE = "48";
-}
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
+// ─── Boot order (must stay the first two imports) ────────────────────────────
+// ES modules evaluate imports before this file's body, in source order:
+//   1. bootEnv     — UV_THREADPOOL_SIZE, .env (beside the exe when compiled), TZ
+//   2. bootSecrets — validateSecrets(): exit before any pool opens or port binds
+import "./src/config/bootEnv";
+import "./src/config/bootSecrets";
 
+import cluster from "cluster";
+import os from "os";
+import http from "http";
+import fs from "fs";
+import path from "path";
 
-// In the compiled exe resolve .env NEXT TO THE EXE, not the working
-// directory — a service/scheduled-task can start the exe with cwd anywhere
-// (e.g. System32), and bootGuard reads process.env immediately below.
-const path = require("path");
-const dotenv = require("dotenv");
-const { IS_COMPILED, APP_ROOT, appPath } = require("./src/utils/runtimePaths");
-dotenv.config({
-    path: IS_COMPILED ? appPath(".env") : ".env",
-});
-
-// ─── Process timezone (must run before ANYTHING constructs a Date) ───────────
-// node-oracledb converts DATE / TIMESTAMP columns to JS Dates using the
-// PROCESS timezone, and converts them back the same way on write. The schema
-// stores LOCAL wall-clock in the deployment's zone, so a process running in
-// any other zone reads and writes every timestamp shifted: API dates are off
-// by the offset, exact-time scheduler timers (`ev.at.getTime() - Date.now()`)
-// fire hours out, and every `new Date()` write lands shifted.
-//
-// Pinning it here rather than relying on the launch environment means the app
-// is correct however it is started — a service, a scheduled task, a bare
-// `bun server.js`, or the compiled exe on a machine whose clock is set to anything.
-// Set APP_TZ to the zone the database's wall-clock values are written in.
-//
-// Order matters twice over. dotenv runs FIRST so an APP_TZ written in the
-// repo/cwd `.env` is honoured (a real OS environment APP_TZ still wins —
-// dotenv never overrides). TZ is then assigned before the first Date is
-// constructed: neither the polyfill nor dotenv builds one, and Node (>= 13)
-// honours a runtime assignment to process.env.TZ, so it takes effect for
-// every Date created afterwards.
-process.env.TZ = process.env.APP_TZ || "Asia/Manila";
-
-// ─── Boot guard — fail-fast on placeholder secrets / unsafe config ────────────
-// Must run after dotenv.config() (above) but before any app/db requires so the process
-// exits before opening pools or listening on a port. Also runs validateMoneyConfig.
-const { validateSecrets } = require("./src/config/bootGuard");
-validateSecrets();
-
-const cluster = require("cluster");
-const os = require("os");
-const http = require("http");
-const fs = require("fs");
-
-const { logger } = require("./src/utils/logger");
-const { consoleManager } = require("./src/utils/consoleManager");
-const { ClusterRole } = require("./src/utils/clusterRole");
-const { serverMessages, clusterMessages } = require("./src/constants/messages");
-const { CLUSTER_IPC, BOOT_FATAL_ERROR_CODES } = require("./src/constants/clusterIpc");
-const { clusterRpc } = require("./src/utils/cluster/ClusterRpcClient");
-const { wireWorkerRpc } = require("./src/utils/cluster/workerRpcWiring");
+import { APP_ROOT } from "./src/utils/runtimePaths";
+import { logger } from "./src/utils/logger";
+import { consoleManager } from "./src/utils/consoleManager";
+import { ClusterRole } from "./src/utils/clusterRole";
+import { serverMessages, clusterMessages } from "./src/constants/messages";
+import { CLUSTER_IPC, BOOT_FATAL_ERROR_CODES } from "./src/constants/clusterIpc";
+import { clusterRpc } from "./src/utils/cluster/ClusterRpcClient";
+import { wireWorkerRpc } from "./src/utils/cluster/workerRpcWiring";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -222,7 +170,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // one-shot notifyCriticalNow (bounded internally). Lazy require + swallowed
     // failure: a notification problem must never crash or block the primary.
     const notifyCritical = (message) => {
-        const AlertNotifierService = require("./src/services/AlertNotifierService");
+        const AlertNotifierService = require("./src/services/AlertNotifierService").default;
         return AlertNotifierService.notifyCriticalNow({ level: "CRITICAL", message });
     };
 
@@ -260,6 +208,15 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     } = require("./src/middleware/cache/ClusterCacheSync");
     ClusterCacheSync.initPrimary();
 } else {
+    bootWorker();
+}
+
+/**
+ * Worker / single-process boot. A function, not the else-block body, because
+ * it stops early with `return` (e.g. the HTTPS PFX is missing): CommonJS
+ * allowed a top-level return, ES modules do not.
+ */
+function bootWorker() {
     // ── Worker / single-process boot ──────────────────────────────────────
 
     // Initialise console manager (process title, ASCII art, daily clearing)
@@ -294,7 +251,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     })();
     let serverRunMarker = null;
     if (IS_CRON_LEADER_AT_BOOT) {
-        const ServerRunMarker = require("./src/utils/lifecycle/ServerRunMarker");
+        const ServerRunMarker = require("./src/utils/lifecycle/ServerRunMarker").default;
         const { SERVER_RUN_MARKER } = require("./src/constants/serverRunMarker");
         const resolvedMarker = ServerRunMarker.resolveMarkerPath();
         if (resolvedMarker.ignoredOverride) {
@@ -330,9 +287,9 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         if (bootAnnounceTimer) clearTimeout(bootAnnounceTimer);
         bootAnnounceTimer = null;
         try {
-            const StartupNotifier = require("./src/utils/lifecycle/StartupNotifier");
+            const StartupNotifier = require("./src/utils/lifecycle/StartupNotifier").default;
             const notifier = new StartupNotifier({
-                alertNotifier: require("./src/services/AlertNotifierService"),
+                alertNotifier: require("./src/services/AlertNotifierService").default,
                 logger,
             });
             const sending = notifier
@@ -354,7 +311,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
                     }
                 })
                 .catch(() => {});
-            require("./src/utils/InFlightTaskRegistry").track("startup-notifier", sending);
+            require("./src/utils/InFlightTaskRegistry").default.track("startup-notifier", sending);
         } catch (err) {
             logger.warning(serverMessages.STARTUP_NOTIFY_FAILED("announce", err?.message ?? String(err)), {
                 _noNotify: true,
@@ -399,8 +356,8 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         setTimeout(finish, 500).unref();
     }
 
-    const app = require("./src/app");
-    const db = require("./src/config");
+    const app = require("./src/app").default;
+    const db = require("./src/config").default;
     const { isDemoMode } = require("./src/config/demoMode");
 
     // ── Native-module preflight (compiled exe) ────────────────────────────
@@ -428,7 +385,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
 
     if (USE_HTTPS) {
         const https = require("https");
-        // certs/ sits next to the compiled exe, or next to server.js in a
+        // certs/ sits next to the compiled exe, or next to server.ts in a
         // source run (APP_ROOT covers both).
         const certDir = path.join(APP_ROOT, "certs");
 
@@ -491,7 +448,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // let them finish (src/utils/shutdown/HttpInFlightTracker.ts). A
     // server-level listener (after the Express app) — the middleware chain
     // is untouched.
-    const HttpInFlightTracker = require("./src/utils/shutdown/HttpInFlightTracker");
+    const HttpInFlightTracker = require("./src/utils/shutdown/HttpInFlightTracker").default;
     const httpInFlight = new HttpInFlightTracker().attach(server);
 
     // Failsafe delay for a crash, computed ONCE at boot (not lazily inside
@@ -563,7 +520,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // ENABLE_SERVER_NOTIFICATIONS is not 'true'. The cron-leader gate
         // keeps exactly one worker notifying in a clustered deployment.
         if (IS_CRON_LEADER) {
-            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            const AlertNotifierService = require("./src/services/AlertNotifierService").default;
             AlertNotifierService.start();
 
             // ── Restart detection ───────────────────────────────────
@@ -633,7 +590,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // same as AlertNotifierService's notice-only branch would be noise
         // duplicated per worker.
         if (IS_CRON_LEADER) {
-            require("./src/services/LogRetentionService").start();
+            require("./src/services/LogRetentionService").default.start();
         }
 
         if (isDemoMode()) {
@@ -658,7 +615,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
                     // refused. Best effort, never throws (logs at error level).
                     // A respawned cluster worker also gets the primary's copy on
                     // `listening` (AUTH_SYNC).
-                    require("./src/services/AccessRevocationService").loadRecent();
+                    require("./src/services/AccessRevocationService").default.loadRecent();
 
                     // Project-specific scheduled jobs are armed here too, leader only.
                     if (IS_CRON_LEADER) {
@@ -740,7 +697,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         async function _armBackupTimers() {
             const gen = ++_backupArmGeneration;
             try {
-                const BackupScheduleService = require("./src/services/BackupScheduleService");
+                const BackupScheduleService = require("./src/services/BackupScheduleService").default;
                 const events = await BackupScheduleService.getUpcomingEvents(BACKUP_TIMER_HORIZON_MS);
                 if (gen !== _backupArmGeneration) return; // a newer arm owns the timers
                 for (const t of _backupTimers) clearTimeout(t);
@@ -768,10 +725,10 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
 
         // Lazy import to avoid loading the service layer before pools are ready.
         async function _runBackup(label) {
-            if (require("./src/utils/InFlightTaskRegistry").isShuttingDown()) return;
+            if (require("./src/utils/InFlightTaskRegistry").default.isShuttingDown()) return;
             try {
-                const BackupScheduleService = require("./src/services/BackupScheduleService");
-                const SchedulerStateService = require("./src/services/SchedulerStateService");
+                const BackupScheduleService = require("./src/services/BackupScheduleService").default;
+                const SchedulerStateService = require("./src/services/SchedulerStateService").default;
 
                 const result =
                     await BackupScheduleService.triggerScheduledBackup(label);
@@ -793,7 +750,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
                 );
                 // Lazy import is guarded — if it fails at module load, catch reports it.
                 try {
-                    const SchedulerStateService = require("./src/services/SchedulerStateService");
+                    const SchedulerStateService = require("./src/services/SchedulerStateService").default;
                     SchedulerStateService.record("dbBackup", {
                         label,
                         status: "error",
@@ -856,7 +813,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     const trackCrashEmail = (send) => {
         // A send that did not go out (or threw) is recorded in the marker, inside the tracked
         // promise so the teardown waits for it before the process exits.
-        const { isReportedSend } = require("./src/utils/lifecycle/StartupNotifier");
+        const { isReportedSend } = require("./src/utils/lifecycle/StartupNotifier").default;
         const p = Promise.resolve()
             .then(send)
             .then(
@@ -879,12 +836,12 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     let failsafeFireAt = 0;
     let shutdownT0 = 0;
 
-    const ShutdownNotifier = require("./src/utils/shutdown/ShutdownNotifier");
+    const ShutdownNotifier = require("./src/utils/shutdown/ShutdownNotifier").default;
     // Cluster: `started` comes from the cron leader only (one email, not one per
     // worker); `forcedExit` from any process whose OWN failsafe fires (one
     // per hung worker); `requestsCut` from whichever worker cut.
     const shutdownNotifier = new ShutdownNotifier({
-        alertNotifier: require("./src/services/AlertNotifierService"),
+        alertNotifier: require("./src/services/AlertNotifierService").default,
         logger,
         announce: IS_CRON_LEADER_AT_BOOT,
     });
@@ -931,7 +888,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // never rejects; the catch is belt-and-braces. Detached so it is not
         // refused by any aborted request scope.
         try {
-            const AuditLogService = require("./src/services/AuditLogService");
+            const AuditLogService = require("./src/services/AuditLogService").default;
             const { runDetached } = require("./src/utils/progress/progress");
             Promise.resolve(runDetached(() => AuditLogService.flushPending())).catch((err) => {
                 logger.warning(serverMessages.SHUTDOWN_EARLY_AUDIT_FLUSH_FAILED(err?.message ?? String(err)));
@@ -944,7 +901,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // via the cooperative flag instead of being drained or abandoned
         // later (D4).
         try {
-            require("./src/utils/InFlightTaskRegistry").beginShutdown();
+            require("./src/utils/InFlightTaskRegistry").default.beginShutdown();
         } catch (err) {
             logger.warning("InFlightTaskRegistry beginShutdown failed during shutdown", {
                 error: err.message,
@@ -957,14 +914,14 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // the final flush in postCloseTeardown, so criticals logged during the
         // wait still reach the digest. Synchronous.
         try {
-            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            const AlertNotifierService = require("./src/services/AlertNotifierService").default;
             AlertNotifierService.beginShutdown();
         } catch (err) {
             logger.warning(serverMessages.SHUTDOWN_NOTIFIER_STEP_FAILED("beginShutdown", err.message));
         }
 
         try {
-            require("./src/services/LogRetentionService").stop();
+            require("./src/services/LogRetentionService").default.stop();
         } catch (err) {
             logger.warning("LogRetentionService stop failed during shutdown", {
                 error: err.message,
@@ -984,8 +941,8 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // ordering can be asserted against the REAL implementation rather than
         // against a synthetic fixture. Same statements, same order, same
         // guards — see that module's header.
-        const SseConnectionRegistry = require("./src/utils/sse/SseConnectionRegistry");
-        const InFlightTaskRegistry = require("./src/utils/InFlightTaskRegistry");
+        const SseConnectionRegistry = require("./src/utils/sse/SseConnectionRegistry").default;
+        const InFlightTaskRegistry = require("./src/utils/InFlightTaskRegistry").default;
         const {
             preCloseTeardown,
             postCloseTeardown,
@@ -1062,9 +1019,9 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
             // tracked — see InFlightTaskRegistry.drain()'s own JSDoc.
             await postCloseTeardown({
                 inFlight: InFlightTaskRegistry,
-                auditLog: require("./src/services/AuditLogService"),
+                auditLog: require("./src/services/AuditLogService").default,
                 db,
-                sharedTransporter: require("./src/services/email/SharedTransporter"),
+                sharedTransporter: require("./src/services/email/SharedTransporter").default,
                 logger,
                 // Evaluated after phase 1 (up to 5 s), never past phaseDeadline.
                 notifyDrainMs: () =>
@@ -1087,7 +1044,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
                 // reboot that cuts the remaining email wait (up to 5 s) is not
                 // reported as "restarted without a clean shutdown".
                 onDataTeardownComplete: () => serverRunMarker?.noteTeardownComplete(Math.max(shutdownExitCode, crashExitCode)),
-                alertNotifier: require("./src/services/AlertNotifierService"),
+                alertNotifier: require("./src/services/AlertNotifierService").default,
                 finalNotifyMs: () =>
                     finalNotifyBudgetMs({
                         failsafeFireAt,
@@ -1147,7 +1104,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     function drainAlertNotifierForExit() {
         try {
             return Promise.resolve(
-                require("./src/services/AlertNotifierService").drainAndStop({ persist: false }),
+                require("./src/services/AlertNotifierService").default.drainAndStop({ persist: false }),
             ).catch(() => {});
         } catch {
             return Promise.resolve();
@@ -1174,7 +1131,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
                 // "Server started" notice says so. The require sits inside the promise so a
                 // throw can only reject this entry, never skip process.exit below.
                 Promise.resolve(shutdownNotifier.forcedExit(ms)).then((res) => {
-                    const { isReportedSend } = require("./src/utils/lifecycle/StartupNotifier");
+                    const { isReportedSend } = require("./src/utils/lifecycle/StartupNotifier").default;
                     if (serverRunMarker && !isReportedSend(res)) serverRunMarker.noteStopUnreported();
                 }),
                 drainAlertNotifierForExit(),
@@ -1231,7 +1188,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
                 gracefulShutdown(m.signal ?? "SIGTERM");
             } else if (m.cmd === CLUSTER_IPC.CRIT_RELAY && IS_CRON_LEADER_AT_BOOT) {
                 try {
-                    require("./src/services/AlertNotifierService").ingestRelayedCritical(m.record);
+                    require("./src/services/AlertNotifierService").default.ingestRelayedCritical(m.record);
                 } catch (err) {
                     logger.warning(clusterMessages.CLUSTER_RELAY_INGEST_FAILED(err.message), {
                         _noNotify: true,
@@ -1291,7 +1248,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         // timeout (see AlertNotifierService.notifyCriticalNow) so a hung SMTP
         // send can never delay process exit beyond that ceiling.
         try {
-            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            const AlertNotifierService = require("./src/services/AlertNotifierService").default;
             await trackCrashEmail(() =>
                 AlertNotifierService.notifyCriticalNow({
                     level: "EMERGENCY",
@@ -1323,7 +1280,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
         });
 
         try {
-            const AlertNotifierService = require("./src/services/AlertNotifierService");
+            const AlertNotifierService = require("./src/services/AlertNotifierService").default;
             await trackCrashEmail(() =>
                 AlertNotifierService.notifyCriticalNow({
                     level: "EMERGENCY",

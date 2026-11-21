@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview Cache subsystem barrel — import everything from here.
@@ -51,19 +51,11 @@
  *      );
  */
 
-const { CacheStore } = require("./CacheStore");
-const { CacheRegistry, registry } = require("./CacheRegistry");
-const { CacheKeyBuilder } = require("./CacheKeyBuilder");
-const { CacheMiddleware } = require("./CacheMiddleware");
-const { SingleFlight } = require("./SingleFlight");
-const { ClusterCacheSync } = require("./ClusterCacheSync");
+import { CacheStore } from "./CacheStore";
+import { CacheRegistry, registry } from "./CacheRegistry";
+import { CacheKeyBuilder } from "./CacheKeyBuilder";
+import { CacheMiddleware } from "./CacheMiddleware";
+import { SingleFlight } from "./SingleFlight";
+import { ClusterCacheSync } from "./ClusterCacheSync";
 
-module.exports = {
-  CacheStore,
-  CacheRegistry,
-  registry,
-  CacheKeyBuilder,
-  CacheMiddleware,
-  SingleFlight,
-  ClusterCacheSync,
-};
+export { CacheStore, CacheRegistry, registry, CacheKeyBuilder, CacheMiddleware, SingleFlight, ClusterCacheSync };

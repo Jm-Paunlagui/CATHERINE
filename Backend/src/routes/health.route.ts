@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Health check routes.
@@ -24,19 +24,20 @@
  * the UI the moment it changes, so the status banner is proactive.
  */
 
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const db = require("../config");
-const { POOL_NAMES } = require("../config/database");
-const InFlightTaskRegistry = require("../utils/InFlightTaskRegistry");
-const ReadinessService = require("../services/ReadinessService");
-const HealthStreamHub = require("../services/HealthStreamHub");
-const { catchAsync } = require("../utils/catchAsync");
-const { sendSuccess, sendError } = require("../constants/responses");
-const { GENERAL_ERRORS } = require("../constants/errors");
-const { sendSsePreflightError } = require("../utils/sse/ssePreflight");
-const { SHUTDOWN_RETRY_AFTER_SEC } = require("../constants/shutdownGate");
+import db from "../config";
+import { POOL_NAMES } from "../config/database";
+import InFlightTaskRegistry from "../utils/InFlightTaskRegistry";
+import * as ReadinessService from "../services/ReadinessService";
+import HealthStreamHub from "../services/HealthStreamHub";
+import { catchAsync } from "../utils/catchAsync";
+import { sendSuccess, sendError } from "../constants/responses";
+import { GENERAL_ERRORS } from "../constants/errors";
+import { sendSsePreflightError } from "../utils/sse/ssePreflight";
+import __shutdownGate from "../constants/shutdownGate";
+const { SHUTDOWN_RETRY_AFTER_SEC } = __shutdownGate;
 
 // Probing + the readiness rule live in services/ReadinessService.js (shared with /stream).
 
@@ -169,4 +170,4 @@ router.get(
     }),
 );
 
-module.exports = router;
+export default router;

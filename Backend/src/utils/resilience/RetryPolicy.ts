@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Transient-failure retry primitive with exponential backoff.
@@ -79,8 +79,8 @@
  * | PERMANENT_SMTP | responseCode >= 500; anything unclassified                    | 1 (no retry)       |
  */
 
-const { logger } = require("../logger");
-const { resilienceMessages } = require("../../constants/messages");
+import { logger } from "../logger";
+import { resilienceMessages } from "../../constants/messages";
 
 // ─── Env-driven defaults (centralized tuning for the whole template) ────────
 
@@ -496,4 +496,4 @@ class RetryPolicy {
     }
 }
 
-module.exports = { RetryPolicy };
+export { RetryPolicy };

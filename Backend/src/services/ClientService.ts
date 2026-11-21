@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Service for the /api/v1/client resource.
@@ -17,8 +17,8 @@
  *     can index every field.
  */
 
-const { logger } = require("../utils/logger");
-const { clientMessages } = require("../constants/messages");
+import { logger } from "../utils/logger";
+import { clientMessages } from "../constants/messages";
 
 class ClientService {
     /**
@@ -97,4 +97,4 @@ class ClientService {
     }
 }
 
-module.exports = ClientService;
+export default ClientService;

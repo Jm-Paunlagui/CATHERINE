@@ -49,7 +49,7 @@ Optional but recommended: a SQL client (SQL Developer / SQLcl) to run the schema
 ```
 CATHERINE/
 ├── Backend/                  # Express 5 API (OracleDB, JWT, audit, metrics)
-│   ├── server.js             # Entry point — `bun run start`
+│   ├── server.ts             # Entry point — `bun run start`
 │   ├── .env.example          # Documented env vars (copy → .env)
 │   ├── sql/                  # ← Platform schema (auth, RBAC, audit, alerts, refresh tokens, backups, config)
 │   │   ├── 01_schema.sql                          # fresh install (drops + creates 9 tables)
@@ -130,7 +130,7 @@ defaults in `.env.example`; tune it later.
 ### 3.5 Start the backend
 
 ```bash
-bun run start          # bun server.js  →  http://localhost:2108
+bun run start          # bun server.ts  →  http://localhost:2108
 ```
 
 Health check: open `http://localhost:2108/api/v1/health` — it should return
@@ -243,7 +243,7 @@ Features to explore as `admin`:
 
 | Command                    | What it does                                  |
 | -------------------------- | --------------------------------------------- |
-| `bun run start`                | Start the API (`bun server.js`).              |
+| `bun run start`                | Start the API (`bun server.ts`).              |
 | `bun run test`                 | Run the Vitest suite.                         |
 | `bun run test:unit`        | Unit tests only (also `test:integration`, `test:security`, …). |
 | `bun run lint`             | ESLint.                                       |

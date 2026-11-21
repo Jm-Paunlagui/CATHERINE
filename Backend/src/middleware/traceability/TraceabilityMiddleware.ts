@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Request traceability middleware.
@@ -7,10 +7,10 @@
  * requests with structured messages.
  */
 
-const { logger } = require("../../utils/logger");
-const { snowflake } = require("../../utils/snowflake");
-const { requestContext } = require("../../utils/requestContext");
-const { RequestWatchdog } = require("../../utils/progress/RequestWatchdog");
+import { logger } from "../../utils/logger";
+import { snowflake } from "../../utils/snowflake";
+import { requestContext } from "../../utils/requestContext";
+import { RequestWatchdog } from "../../utils/progress/RequestWatchdog";
 
 const SENSITIVE_PATTERNS = [
     "password",
@@ -215,7 +215,7 @@ class TraceabilityMiddleware {
         // downstream logger.info() call automatically includes [req_id].
         // `progress` is the request's ProgressScope (created by
         // RequestWatchdog.attach on the server's "request" event, which runs
-        // BEFORE this middleware). Undefined under supertest / no server.js, so
+        // BEFORE this middleware). Undefined under supertest / no server.ts, so
         // every touch() downstream is a no-op there.
         requestContext.run({ requestId: req.id, progress: RequestWatchdog.scopeOf(req) }, () => {
             // The "[Incoming Request]" line is NOT emitted here — `logIncoming`
@@ -317,14 +317,4 @@ class TraceabilityMiddleware {
 }
 
 const defaultTraceability = new TraceabilityMiddleware();
-module.exports = {
-    TraceabilityMiddleware,
-    defaultTraceability,
-    // Exported so any future consumer of `res.locals.body` (see
-    // ErrorHandlerMiddleware.captureResponseBody) can redact sensitive keys
-    // in the captured response JSON with the exact same rules used for
-    // request logging, instead of re-implementing key-substring matching.
-    isSensitiveKey,
-    redactValue,
-    deepRedact,
-};
+export { TraceabilityMiddleware, defaultTraceability, isSensitiveKey, redactValue, deepRedact };

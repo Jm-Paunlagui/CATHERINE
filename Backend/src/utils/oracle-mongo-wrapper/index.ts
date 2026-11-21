@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * ============================================================================
@@ -27,104 +27,38 @@
  */
 
 // ─── Core: The essentials you need for basic CRUD operations ─────
-const { createDb } = require("./db"); // Factory to create a db interface
-const { OracleCollection } = require("./core/OracleCollection"); // Main class — find, insert, update, delete
-const { OracleSchema } = require("./schema/OracleSchema"); // DDL — CREATE/ALTER/DROP tables/views
-const { OracleDCL } = require("./schema/OracleDCL"); // DCL — GRANT/REVOKE permissions
-const { QueryBuilder } = require("./core/QueryBuilder"); // Lazy cursor from .find()
-const { Transaction } = require("./Transaction"); // Transaction manager with savepoints
+import { createDb } from "./db"; // Factory to create a db interface
+import { OracleCollection } from "./core/OracleCollection"; // Main class — find, insert, update, delete
+import { OracleSchema } from "./schema/OracleSchema"; // DDL — CREATE/ALTER/DROP tables/views
+import { OracleDCL } from "./schema/OracleDCL"; // DCL — GRANT/REVOKE permissions
+import { QueryBuilder } from "./core/QueryBuilder"; // Lazy cursor from .find()
+import { Transaction } from "./Transaction"; // Transaction manager with savepoints
 
 // ─── Parsers: Convert MongoDB operators to SQL fragments ─────────
-const { parseFilter } = require("./parsers/filterParser"); // { status: "active" } → WHERE clause
-const { parseUpdate } = require("./parsers/updateParser"); // { $set: { name: "X" } } → SET clause
+import { parseFilter } from "./parsers/filterParser"; // { status: "active" } → WHERE clause
+import { parseUpdate } from "./parsers/updateParser"; // { $set: { name: "X" } } → SET clause
 
 // ─── Aggregation pipeline: Complex queries via MongoDB-style stages ──
-const { buildAggregateSQL } = require("./pipeline/aggregatePipeline"); // Pipeline → CTE-chained SQL
-const { buildWindowExpr } = require("./pipeline/windowFunctions"); // $window → OVER() analytics
+import { buildAggregateSQL } from "./pipeline/aggregatePipeline"; // Pipeline → CTE-chained SQL
+import { buildWindowExpr } from "./pipeline/windowFunctions"; // $window → OVER() analytics
 
 // ─── Joins & Set Operations ─────────────────────────────────────
-const { buildJoinSQL } = require("./joins/joinBuilder"); // $lookup → JOIN SQL
-const { SetResultBuilder } = require("./joins/setOperations"); // UNION, INTERSECT, MINUS
+import { buildJoinSQL } from "./joins/joinBuilder"; // $lookup → JOIN SQL
+import { SetResultBuilder } from "./joins/setOperations"; // UNION, INTERSECT, MINUS
 
 // ─── CTE (Common Table Expressions) ─────────────────────────────
-const { withCTE, withRecursiveCTE } = require("./pipeline/cteBuilder"); // Named subquery builders
+import { withCTE, withRecursiveCTE } from "./pipeline/cteBuilder"; // Named subquery builders
 
 // ─── Subquery helpers ────────────────────────────────────────────
-const {
-  buildScalarSubquery, // Single-value subquery in SELECT
-  buildExistsSubquery, // EXISTS (SELECT 1 FROM ...)
-  buildNotExistsSubquery, // NOT EXISTS (SELECT 1 FROM ...)
-  buildCorrelatedSubquery, // Subquery that references the outer query
-  buildInSelectSubquery, // WHERE col IN (SELECT ...)
-  buildAnyAllSubquery, // WHERE col > ANY/ALL (SELECT ...)
-} = require("./pipeline/subqueryBuilder");
+import { buildScalarSubquery, buildExistsSubquery, buildNotExistsSubquery, buildCorrelatedSubquery, buildInSelectSubquery, buildAnyAllSubquery } from "./pipeline/subqueryBuilder";
 
 // ─── Oracle-specific advanced features ───────────────────────────
-const {
-  buildConnectBy, // Hierarchical queries (tree/graph traversal)
-  buildPivot, // Rotate rows → columns
-  buildUnpivot, // Rotate columns → rows
-} = require("./advanced/oracleAdvanced");
+import { buildConnectBy, buildPivot, buildUnpivot } from "./advanced/oracleAdvanced";
 
 // ─── Performance & DBA utilities ─────────────────────────────────
-const { createPerformance } = require("./advanced/performanceUtils"); // EXPLAIN PLAN, ANALYZE, etc.
+import { createPerformance } from "./advanced/performanceUtils"; // EXPLAIN PLAN, ANALYZE, etc.
 
 // ─── Shared utility functions ────────────────────────────────────
-const {
-  quoteIdentifier, // Wrap names in double-quotes for Oracle safety
-  convertTypes, // Convert Oracle string-numbers to JS numbers
-  rowToDoc, // Alias for convertTypes
-  mergeBinds, // Safely combine two bind objects
-  buildOrderBy, // { col: 1 } → ORDER BY "col" ASC
-  buildProjection, // { col: 1 } → column list for SELECT
-} = require("./utils");
+import { quoteIdentifier, convertTypes, rowToDoc, mergeBinds, buildOrderBy, buildProjection } from "./utils";
 
-module.exports = {
-  // Core
-  createDb,
-  OracleCollection,
-  OracleSchema,
-  OracleDCL,
-  QueryBuilder,
-  Transaction,
-
-  // Parsers
-  parseFilter,
-  parseUpdate,
-
-  // Aggregation
-  buildAggregateSQL,
-  buildWindowExpr,
-
-  // Joins & Set Operations
-  buildJoinSQL,
-  SetResultBuilder,
-
-  // CTEs
-  withCTE,
-  withRecursiveCTE,
-
-  // Subqueries
-  buildScalarSubquery,
-  buildExistsSubquery,
-  buildNotExistsSubquery,
-  buildCorrelatedSubquery,
-  buildInSelectSubquery,
-  buildAnyAllSubquery,
-
-  // Oracle Advanced
-  buildConnectBy,
-  buildPivot,
-  buildUnpivot,
-
-  // Performance
-  createPerformance,
-
-  // Utils
-  quoteIdentifier,
-  convertTypes,
-  rowToDoc,
-  mergeBinds,
-  buildOrderBy,
-  buildProjection,
-};
+export { createDb, OracleCollection, OracleSchema, OracleDCL, QueryBuilder, Transaction, parseFilter, parseUpdate, buildAggregateSQL, buildWindowExpr, buildJoinSQL, SetResultBuilder, withCTE, withRecursiveCTE, buildScalarSubquery, buildExistsSubquery, buildNotExistsSubquery, buildCorrelatedSubquery, buildInSelectSubquery, buildAnyAllSubquery, buildConnectBy, buildPivot, buildUnpivot, createPerformance, quoteIdentifier, convertTypes, rowToDoc, mergeBinds, buildOrderBy, buildProjection };

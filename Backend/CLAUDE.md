@@ -36,7 +36,7 @@ Production-grade Node.js Express API template. Class-based OOP architecture, cle
 
 ```
 Backend/
-├── server.js                          # Entry point (surface root, NOT src/) — HTTP/HTTPS, clustering, scheduler, graceful shutdown
+├── server.ts                          # Entry point (surface root, NOT src/) — HTTP/HTTPS, clustering, scheduler, graceful shutdown
 ├── package.json                       # catherine-backend; engines.bun; build → bun-windows-x64 exe
 ├── .env.example                       # All env vars documented with safe defaults
 ├── sql/                               # 01_schema, 02_seed_demo, 03_alter_admins_notification_columns, 04_platform_tables
@@ -532,7 +532,7 @@ Verbose diagnostic (local dev only)              →  debug
 
 ## Environment Variables
 
-All env vars documented in `.env.example`. **Never import `dotenv` directly in feature files** — only `server.js` and compiled-env bootstrap. **Never hardcode values** that belong in `.env.example`.
+All env vars documented in `.env.example`. **Never import `dotenv` directly in feature files** — only `server.ts` and compiled-env bootstrap. **Never hardcode values** that belong in `.env.example`.
 
 `.env.example` categories (the file is authoritative for order, defaults and comments). There are no product-specific variables (no `BILLING_*`, no per-product DB target switches); a project adds its own category with a safe default and a comment.
 
@@ -707,7 +707,7 @@ throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, HTTP_STATUS.UNAUTHORIZED);
 - Global `ErrorHandlerMiddleware` catches everything — `AppError`, DB errors, unexpected crashes
 - `catchAsync(fn)` wraps async controller methods — missing it crashes process on unhandled rejections
 - **Never** `console.error` raw errors — always `logger.error(...)`
-- Unhandled promise rejections and uncaught exceptions handled in `server.js`
+- Unhandled promise rejections and uncaught exceptions handled in `server.ts`
 
 ```js
 // AppError usage
@@ -728,7 +728,7 @@ land *inside* an existing step's ordering constraint rather than after it.
 
 Before the chain, `TRUST_PROXY` is parsed into `app.set("trust proxy", ...)`. The
 request watchdog is **not** an `app.use` step: it attaches to the HTTP server's
-`request` event in `server.js`.
+`request` event in `server.ts`.
 
 ```js
 // app.js — numbered exactly as the file comments them
@@ -933,7 +933,7 @@ Seed template accounts with `bun run db:seed:template`. Models use explicit proj
 | --- | --- |
 | `winsw/catherine-backend-service.xml` | Service id `catherine-backend`, executable `%BASE%\catherine-backend.exe`, `stoptimeout` 1860 s, preshutdown enabled |
 | `winsw/install-service.ps1` / `uninstall-service.ps1` / `check-shutdown-readiness.ps1` | Install (default ExeName `catherine-backend.exe`), remove, verify |
-| `systemd/catherine-backend.service` | `User=catherine`, `ExecStart=/usr/local/bin/bun server.js`, `TimeoutStopSec=1860` |
+| `systemd/catherine-backend.service` | `User=catherine`, `ExecStart=/usr/local/bin/bun server.ts`, `TimeoutStopSec=1860` |
 | `DEPLOYMENT_RUNBOOK.md`, `DEPLOYMENT_CHECKLIST.md`, `RESTART_VERIFICATION.md` | Operator procedures |
 
 `SHUTDOWN_FORCED_EXIT_MS` (max 1834000) must stay below the service stop timeout.
@@ -1073,7 +1073,7 @@ deliberately; do not inherit a default.
 
 ## Bun Runtime and Compiled Exe
 
-Bun is the runtime, package manager and test runner (`engines.bun`, `packageManager`). `bun server.js` runs the API; `bun run test` runs Vitest under Bun (`bun --bun vitest`). Never `bun test` — that is Bun's own runner and skips Vitest.
+Bun is the runtime, package manager and test runner (`engines.bun`, `packageManager`). `bun server.ts` runs the API; `bun run test` runs Vitest under Bun (`bun --bun vitest`). Never `bun test` — that is Bun's own runner and skips Vitest.
 
 Compile into a standalone Windows executable with `bun build --compile` (`scripts/build.js`):
 
@@ -1095,20 +1095,22 @@ Compiled-exe rules:
 
 ## TypeScript Migration (in progress)
 
-`src/` is `.ts` and Bun runs it directly; `tsc` only type-checks (`noEmit`). `server.js`, `scripts/` and `test/` are still JavaScript.
+`server.ts` and `src/` are `.ts` ES modules (`import`/`export`) and Bun runs them directly; `tsc` only type-checks (`noEmit`). `scripts/` and `test/` are still CommonJS JavaScript and load `src` with `require()`.
 
 ```bash
-bun run typecheck   # tsc -p . — strict, src/**/*.ts
+bun run typecheck   # tsc -p . — strict, server.ts + src/**/*.ts
 bun run lint        # .ts files go through typescript-eslint (eslint.config.js BLOCK 1b)
 ```
 
 Rules while the migration runs:
 
-1. **`// @ts-nocheck` on line 1 marks an unconverted file.** Converting a file means deleting that line and getting `bun run typecheck` clean. `grep -rl @ts-nocheck src` is the remaining work list. Never add it to a converted or new file.
+1. **`// @ts-nocheck` on line 1 marks an unconverted file.** Converting a file means deleting that line and getting `bun run typecheck` clean. `grep -rl @ts-nocheck server.ts src` is the remaining work list. Never add it to a converted or new file.
 2. New files under `src/` are written as typed `.ts` from the start.
 3. `typescript` is pinned to `~6.0`: typescript-eslint needs TypeScript's JS API (`<6.1`), which TypeScript 7 (the native compiler) does not ship. Move to 7 when typescript-eslint supports it.
-4. Two lint rules are relaxed for the migration only (BLOCK 1b): `ban-ts-comment` allows `@ts-nocheck`, and `no-require-imports` is off while `src` is still CommonJS. Restore both when the last file is converted.
-5. A source path in code or docs names the `.ts` file (`src/utils/logger.ts`). The logger skips its own stack frames by matching `logger.[jt]s`; keep that match extension-agnostic.
+4. Two lint rules are relaxed for the migration only (BLOCK 1b): `ban-ts-comment` allows `@ts-nocheck`, and `no-require-imports` is off while lazy in-function `require()` calls remain (cycle breakers and branch-only loads in `server.ts`; Bun allows `require` inside ES modules). Restore both when the last file is converted.
+5. **Imports run before the module body.** Any side effect another module depends on at load time goes in its own side-effect module imported first, never in the importer's body: `server.ts` imports `src/config/bootEnv.ts` (thread pool, `.env`, `TZ`) then `src/config/bootSecrets.ts` (boot guard) before anything else, and `app.ts` imports `src/config/cacheStores.ts` above the routes. No top-level `return` (ESM forbids it; `server.ts`'s worker boot is `bootWorker()` for that reason).
+6. **Export shape.** A CommonJS caller's `require()` of a module with `export default X` returns `{ default: X }`, so scripts and tests write `require("../src/...").default`. A named export cannot be replaced by `vi.spyOn` or by assignment, so anything a test stubs is exported as an object (default export) whose properties can be swapped — see `models/demo/demoStore.ts` and the default export of `config/database.ts`.
+7. A source path in code or docs names the `.ts` file (`src/utils/logger.ts`). The logger skips its own stack frames by matching `logger.[jt]s`; keep that match extension-agnostic.
 
 ---
 

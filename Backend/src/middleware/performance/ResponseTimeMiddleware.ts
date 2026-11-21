@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Response-time tracking middleware.
@@ -13,12 +13,8 @@
  * (including OPTIONS); only the per-route aggregation excludes CORS preflights.
  */
 
-const { logger } = require("../../utils/logger");
-const {
-  captureRouteLabel,
-  resolveRouteLabel,
-  shouldRecordRouteMetrics,
-} = require("../../utils/routeLabel");
+import { logger } from "../../utils/logger";
+import { captureRouteLabel, resolveRouteLabel, shouldRecordRouteMetrics } from "../../utils/routeLabel";
 
 class ResponseTimeMiddleware {
   constructor(options = {}) {
@@ -125,4 +121,4 @@ class ResponseTimeMiddleware {
 }
 
 const defaultResponseTime = new ResponseTimeMiddleware();
-module.exports = { ResponseTimeMiddleware, defaultResponseTime };
+export { ResponseTimeMiddleware, defaultResponseTime };

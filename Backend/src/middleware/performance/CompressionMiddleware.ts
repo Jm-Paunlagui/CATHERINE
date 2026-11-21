@@ -1,12 +1,12 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Gzip compression middleware.
  * Skips responses smaller than 1 KB to avoid overhead.
  */
 
-const compression = require("compression");
+import compression from "compression";
 
 class CompressionMiddleware {
   constructor(options = {}) {
@@ -28,4 +28,4 @@ class CompressionMiddleware {
 }
 
 const defaultCompression = new CompressionMiddleware();
-module.exports = { CompressionMiddleware, defaultCompression };
+export { CompressionMiddleware, defaultCompression };

@@ -26,13 +26,10 @@
  * @license Apache-2.0
  */
 
-"use strict";
 
-const crypto = require("crypto");
-const {
-    parseStoredAdminPassword,
-    isTemporaryExpired,
-} = require("./adminTempPassword");
+
+import crypto from "crypto";
+import { parseStoredAdminPassword, isTemporaryExpired } from "./adminTempPassword";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 1: SYMMETRIC CRYPTO ENGINE (from SymmetricCrypto.js / C# CoreLib)
@@ -1291,18 +1288,18 @@ class Argon2Adapter {
 // SECTION 7: EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-module.exports = { CryptoVault, Argon2Adapter, BCryptAdapter, SymmetricCrypto };
+export { CryptoVault, Argon2Adapter, BCryptAdapter, SymmetricCrypto };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SECTION 8: SELF-TEST SUITE (run: node CryptoVault.js)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /* c8 ignore start -- CLI self-test harness: this block is guarded by
-   `require.main === module` and executes ONLY when the file is run directly via
+   `import.meta.main` and executes ONLY when the file is run directly via
    `node CryptoVault.js`. Under Vitest the module is always imported (never the
    entrypoint), so this region is structurally unreachable by the test runner and
    is excluded from coverage rather than faked. */
-if (require.main === module) {
+if (import.meta.main) {
     /* eslint-disable no-console -- CLI self-test harness: this block runs only under
        `node CryptoVault.js`, where terminal output IS the function. The production
        body of this file stays under no-console. */

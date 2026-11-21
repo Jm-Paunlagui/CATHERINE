@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ISO 4217 currency registry — the single source of truth for
@@ -113,10 +113,4 @@ function getDisplayScale(code) {
     return getCurrency(code).displayScale;
 }
 
-module.exports = {
-    CURRENCIES,
-    CURRENCY_CODES,
-    isValidCurrency,
-    getCurrency,
-    getDisplayScale,
-};
+export { CURRENCIES, CURRENCY_CODES, isValidCurrency, getCurrency, getDisplayScale };

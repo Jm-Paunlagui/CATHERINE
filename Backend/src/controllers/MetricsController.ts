@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview HTTP controller for the /api/v1/metrics resource.
@@ -7,16 +7,13 @@
  * Every async method is wrapped in catchAsync — unhandled rejections route to ErrorHandlerMiddleware.
  */
 
-const { catchAsync } = require("../utils/catchAsync");
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { AppError, NOTIFICATION_ERRORS, HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const {
-  metricsMessages,
-  notificationMessages,
-} = require("../constants/messages");
-const MetricsService = require("../services/MetricsService");
-const AlertNotifierService = require("../services/AlertNotifierService");
+import { catchAsync } from "../utils/catchAsync";
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { AppError, NOTIFICATION_ERRORS, HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import { metricsMessages, notificationMessages } from "../constants/messages";
+import MetricsService from "../services/MetricsService";
+import AlertNotifierService from "../services/AlertNotifierService";
 
 /** Accepted SEVERITY values for the alert-history filter (schema CK_SAL_SEVERITY). */
 const VALID_HISTORY_SEVERITIES = ["WARNING", "CRITICAL", "RESOLVED"];
@@ -221,4 +218,4 @@ class MetricsController {
   });
 }
 
-module.exports = MetricsController;
+export default MetricsController;

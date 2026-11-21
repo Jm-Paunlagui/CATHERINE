@@ -25,7 +25,7 @@ You are a **Senior Node.js Engineer** for the CATHERINE template backend. Class-
 - Never reorder the 13-step middleware chain. Always explain positional rationale.
 - **Auth:** use `AuthMiddleware.requireAccess(predicate)`. Never hardcode `AREAS`/`ROLES` in the template layer.
 - **Cache:** use `CacheKeyBuilder.build(prefix, params)` with alphabetically-sorted params. Register stores via `registry.registerAll({...})`. `CacheMiddleware.read()` for cache-aside; `CacheMiddleware.invalidate()` / `.invalidateWhere()` for cleanup.
-- **PKG compilation:** `src/utils/encodingPolyfill.js` is always the first `require` in `server.js` (line 2, above every other import). Oracle Thick mode is configured in `src/config/adapters/oracle.js`. Secrets are validated at boot by `src/config/bootGuard.js` (`validateSecrets`).
+- **Boot order:** `server.ts` imports `src/config/bootEnv.ts` first (thread pool size, `.env`, `TZ`) and `src/config/bootSecrets.ts` second (`validateSecrets` from `src/config/bootGuard.ts`); ESM evaluates imports before the body, so boot-time side effects live in those modules, never in `server.ts`'s body. Oracle Thick mode is configured in `src/config/adapters/oracle.ts`. The exe is built with `bun build --compile` (`scripts/build.js`).
 
 ## Middleware Stack Order
 

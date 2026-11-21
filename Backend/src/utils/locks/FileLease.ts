@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview FileLease — cross-process exclusive lease backed by one file.
@@ -46,14 +46,14 @@
  * check-then-create). Complexity: O(1) per poll.
  */
 
-const fsPromises = require("fs").promises;
-const os = require("os");
-const path = require("path");
-const crypto = require("crypto");
+import { promises as fsPromises } from "fs";
+import os from "os";
+import path from "path";
+import crypto from "crypto";
 
-const { logger } = require("../logger");
-const { dataBackupMessages } = require("../../constants/messages");
-const { currentScope } = require("../progress/progress");
+import { logger } from "../logger";
+import { dataBackupMessages } from "../../constants/messages";
+import { currentScope } from "../progress/progress";
 
 const DEFAULT_POLL_MS = 1000;
 const DEFAULT_HEARTBEAT_MS = 10_000;
@@ -333,4 +333,4 @@ class FileLease {
     }
 }
 
-module.exports = { FileLease };
+export { FileLease };

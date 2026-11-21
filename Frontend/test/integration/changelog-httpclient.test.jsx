@@ -43,7 +43,7 @@ import AuthMiddleware from "../../src/middleware/authentication/AuthMiddleware.j
 import csrfMiddleware from "../../src/middleware/security/CsrfMiddleware.js";
 import { fail, ok } from "../helpers/fixtures/contract.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 
 /** A zero-domain changelog entry payload — no feature vocabulary. */
 function sampleEntry() {

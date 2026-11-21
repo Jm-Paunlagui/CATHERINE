@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Admin Management HTTP controller.
@@ -9,15 +9,13 @@
  * parameter is the account USERNAME.
  */
 
-const net = require("net");
-const { HTTP_STATUS } = require("../constants");
-const { AppError, ADMIN_ERRORS } = require("../constants/errors");
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { catchAsync } = require("../utils/catchAsync");
-const AdminManagementService = require("../services/AdminManagementService");
-const {
-    defaultSecurityFilter,
-} = require("../middleware/security/SecurityFilterMiddleware");
+import net from "net";
+import { HTTP_STATUS } from "../constants";
+import { AppError, ADMIN_ERRORS } from "../constants/errors";
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { catchAsync } from "../utils/catchAsync";
+import AdminManagementService from "../services/AdminManagementService";
+import { defaultSecurityFilter } from "../middleware/security/SecurityFilterMiddleware";
 
 /**
  * Reads a boolean body flag. `validateRequiredFields` coerces primitives to
@@ -264,4 +262,4 @@ class AdminManagementController {
     });
 }
 
-module.exports = AdminManagementController;
+export default AdminManagementController;

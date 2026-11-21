@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Resilience layer (RetryPolicy / BatchGuard / email
@@ -236,4 +236,4 @@ const resilienceMessages = {
         `[${label}] Email phase budget exhausted — skipping remaining send(s).`,
 };
 
-module.exports = { resilienceMessages };
+export { resilienceMessages };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Oracle-Mongo-Wrapper parser/schema validation messages.
@@ -150,4 +150,4 @@ const oracleMongoWrapperMessages = {
     "[SetResultBuilder] Column counts differ between queries",
 };
 
-module.exports = { oracleMongoWrapperMessages };
+export { oracleMongoWrapperMessages };

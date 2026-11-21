@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Generic SCOPE-keyed SSE poller — a reusable registry of SSE
@@ -74,8 +74,8 @@
  * }} opts
  */
 
-const { sseMessages } = require("../../constants/messages");
-const SseConnectionRegistry = require("./SseConnectionRegistry");
+import { sseMessages } from "../../constants/messages";
+import SseConnectionRegistry from "./SseConnectionRegistry";
 
 /** Default poll cadence. */
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
@@ -359,4 +359,4 @@ class ScopedSsePoller {
     }
 }
 
-module.exports = ScopedSsePoller;
+export default ScopedSsePoller;

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * validateXlsxMagicBytes.js
@@ -23,8 +23,8 @@
  * @module validateXlsxMagicBytes
  */
 
-const { AppError } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
+import { AppError } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
 
 /**
  * ZIP / OOXML magic signature: 50 4B 03 04 (first 4 bytes of a ZIP archive).
@@ -93,4 +93,4 @@ function validateXlsxMagicBytes(req, res, next) {
     next();
 }
 
-module.exports = { validateXlsxMagicBytes };
+export { validateXlsxMagicBytes };

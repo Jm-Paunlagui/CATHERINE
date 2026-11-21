@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Process-level registry of every live SSE `res` across ALL SSE
@@ -21,8 +21,8 @@
  * @author senior-nodejs-engineer
  */
 
-const { logger } = require("../logger");
-const { sseMessages } = require("../../constants/messages");
+import { logger } from "../logger";
+import { sseMessages } from "../../constants/messages";
 
 class SseConnectionRegistry {
     /**
@@ -160,4 +160,4 @@ class SseConnectionRegistry {
     }
 }
 
-module.exports = new SseConnectionRegistry();
+export default new SseConnectionRegistry();

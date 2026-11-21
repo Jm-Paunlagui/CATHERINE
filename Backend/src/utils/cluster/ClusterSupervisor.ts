@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Cluster primary lifecycle: fork, cron-leader election, respawn
@@ -8,7 +8,7 @@
  * critical logs from non-leader workers to the cron leader.
  *
  * Election code (forkWorker / verifyLeaderInvariant / notifyLeaderInvariantBreach)
- * moved here verbatim from server.js; the pure verdict is still
+ * moved here verbatim from server.ts; the pure verdict is still
  * `ClusterRole.electionHealth`.
  *
  * Stop sequence: stop respawning -> IPC SHUTDOWN to every live worker -> wait ->
@@ -26,11 +26,11 @@
  * @author senior-nodejs-engineer
  */
 
-const crypto = require("crypto");
-const { CLUSTER_IPC } = require("../../constants/clusterIpc");
-const { SERVER_RUN_MARKER } = require("../../constants/serverRunMarker");
-const { middlewareMessages } = require("../../constants/messages/middleware.messages");
-const { clusterMessages } = require("../../constants/messages/cluster.messages");
+import crypto from "crypto";
+import { CLUSTER_IPC } from "../../constants/clusterIpc";
+import { SERVER_RUN_MARKER } from "../../constants/serverRunMarker";
+import { middlewareMessages } from "../../constants/messages/middleware.messages";
+import { clusterMessages } from "../../constants/messages/cluster.messages";
 
 class ClusterSupervisor {
     /** Exits within CRASH_LOOP_WINDOW_MS that trip the crash-loop cap. */
@@ -183,7 +183,7 @@ class ClusterSupervisor {
         this._armFailsafe();
     }
 
-    // ── Election (moved verbatim from server.js) ────────────────────────────
+    // ── Election (moved verbatim from server.ts) ────────────────────────────
 
     _forkWorker(isCronLeader) {
         const env = this._clusterRole.cronLeaderEnv(isCronLeader);
@@ -449,4 +449,4 @@ class ClusterSupervisor {
     }
 }
 
-module.exports = { ClusterSupervisor };
+export { ClusterSupervisor };

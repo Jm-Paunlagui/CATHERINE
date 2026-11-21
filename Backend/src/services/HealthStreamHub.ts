@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview HealthStreamHub — pushes the readiness verdict to every open
@@ -38,11 +38,11 @@
  *   and globally so the endpoint cannot be used to exhaust sockets.
  */
 
-const db = require("../config");
-const ReadinessService = require("./ReadinessService");
-const SseConnectionRegistry = require("../utils/sse/SseConnectionRegistry");
-const InFlightTaskRegistry = require("../utils/InFlightTaskRegistry");
-const { logger } = require("../utils/logger");
+import db from "../config";
+import * as ReadinessService from "./ReadinessService";
+import SseConnectionRegistry from "../utils/sse/SseConnectionRegistry";
+import InFlightTaskRegistry from "../utils/InFlightTaskRegistry";
+import { logger } from "../utils/logger";
 
 /**
  * Reads a positive-integer env var, falling back to `fallbackValue`.
@@ -243,8 +243,13 @@ class HealthStreamHub {
     }
 }
 
-module.exports = new HealthStreamHub();
-module.exports.HealthStreamHub = HealthStreamHub;
-module.exports.HEALTH_STREAM_HEARTBEAT_MS = HEALTH_STREAM_HEARTBEAT_MS;
-module.exports.HEALTH_STREAM_RETRY_MS = HEALTH_STREAM_RETRY_MS;
-module.exports.HEALTH_STREAM_MAX_PER_IP = HEALTH_STREAM_MAX_PER_IP;
+const __default = new HealthStreamHub();
+export default __default;
+__default.HealthStreamHub = HealthStreamHub;
+export { HealthStreamHub };
+__default.HEALTH_STREAM_HEARTBEAT_MS = HEALTH_STREAM_HEARTBEAT_MS;
+export { HEALTH_STREAM_HEARTBEAT_MS };
+__default.HEALTH_STREAM_RETRY_MS = HEALTH_STREAM_RETRY_MS;
+export { HEALTH_STREAM_RETRY_MS };
+__default.HEALTH_STREAM_MAX_PER_IP = HEALTH_STREAM_MAX_PER_IP;
+export { HEALTH_STREAM_MAX_PER_IP };

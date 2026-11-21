@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Admin Management routes.
@@ -27,19 +27,13 @@
  * rejects bad input before any business logic executes.
  */
 
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const AdminManagementController = require("../controllers/AdminManagementController");
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
-const {
-    credentialEmailRateLimiter,
-} = require("../middleware/security/RateLimiterMiddleware");
-const {
-    CacheMiddleware,
-    CacheKeyBuilder,
-    registry,
-} = require("../middleware/cache");
+import AdminManagementController from "../controllers/AdminManagementController";
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import { credentialEmailRateLimiter } from "../middleware/security/RateLimiterMiddleware";
+import { CacheMiddleware, CacheKeyBuilder, registry } from "../middleware/cache";
 
 // ── Cache stores ───────────────────────────────────────────────────────────────
 const adminStore = registry.resolve("adminList");
@@ -213,4 +207,4 @@ router.patch(
     AdminManagementController.updatePermissions,
 );
 
-module.exports = router;
+export default router;

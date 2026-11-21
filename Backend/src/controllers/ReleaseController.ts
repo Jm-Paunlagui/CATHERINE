@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ReleaseController
@@ -10,9 +10,9 @@
  * there are no mutating release endpoints.
  */
 
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { catchAsync } = require("../utils/catchAsync");
-const ReleaseService = require("../services/ReleaseService");
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { catchAsync } from "../utils/catchAsync";
+import ReleaseService from "../services/ReleaseService";
 
 class ReleaseController {
     /**
@@ -31,4 +31,4 @@ class ReleaseController {
     });
 }
 
-module.exports = ReleaseController;
+export default ReleaseController;

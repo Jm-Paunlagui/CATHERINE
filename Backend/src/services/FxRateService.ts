@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview FxRateService — resolves an exchange rate as of a date.
@@ -75,10 +75,10 @@
  * adapter itself — wiring one is the copier's decision, and its cost.
  */
 
-const { AppError } = require("../constants/errors");
-const { isValidCurrency } = require("../constants/currencies");
-const { isDemoMode } = require("../config/demoMode");
-const demo = require("../models/demo/demoStore");
+import { AppError } from "../constants/errors";
+import { isValidCurrency } from "../constants/currencies";
+import { isDemoMode } from "../config/demoMode";
+import demo from "../models/demo/demoStore";
 
 // Rates are stored at scale 8 (NUMBER(19,8)) — a rate carries more precision than
 // a posted amount and is never itself a posting.
@@ -242,4 +242,4 @@ class FxRateService {
     }
 }
 
-module.exports = { FxRateService, RATE_SCALE };
+export { FxRateService, RATE_SCALE };

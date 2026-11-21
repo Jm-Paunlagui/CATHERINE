@@ -1,6 +1,6 @@
 "use strict";
 
-const config = require("../../../src/config");
+const config = require("../../../src/config").default;
 const { connections } = require("../../../src/config/database");
 
 /**

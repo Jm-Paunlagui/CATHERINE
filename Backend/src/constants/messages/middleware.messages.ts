@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Security filter, rate limit, IP filter, CSRF log messages.
@@ -47,7 +47,7 @@ const middlewareMessages = {
   GET_BODY_REFUSED: (ip, method, path) =>
     `Security filter: ${method} with a request body refused — ${path} from ${ip}.`,
 
-  // ── Cluster cron-leader election (server.js primary process) ─────────────
+  // ── Cluster cron-leader election (server.ts primary process) ─────────────
   // ClusterRole.isCronLeader fails CLOSED (see src/utils/clusterRole.ts);
   // these are the election-lifecycle templates the primary process uses so a
   // broken election is loud, never silent.
@@ -68,4 +68,4 @@ const middlewareMessages = {
       : ""),
 };
 
-module.exports = { middlewareMessages };
+export { middlewareMessages };

@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview Shared multer limits for every multipart upload route.
@@ -13,4 +13,4 @@ const MULTIPART_FIELD_LIMITS = Object.freeze({
     fieldArrayIndexLimit: 100,
 });
 
-module.exports = Object.freeze({ MULTIPART_FIELD_LIMITS });
+export default Object.freeze({ MULTIPART_FIELD_LIMITS });

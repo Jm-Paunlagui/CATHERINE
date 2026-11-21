@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Idle-limit configuration for the request watchdog.
@@ -186,16 +186,4 @@ function classifyRoute(method, url) {
     return "default";
 }
 
-module.exports = {
-    IDLE_FLOOR_MS,
-    DEFAULT_IDLE_MS,
-    LONG_IDLE_MS,
-    EXEMPT,
-    LONG_RULES,
-    EXEMPT_RULES,
-    DB_CALL_CAP_DEFAULT_MS,
-    resolveIdleLimits,
-    resolveDbCallProgressCap,
-    classifyRoute,
-    normalizePath,
-};
+export { IDLE_FLOOR_MS, DEFAULT_IDLE_MS, LONG_IDLE_MS, EXEMPT, LONG_RULES, EXEMPT_RULES, DB_CALL_CAP_DEFAULT_MS, resolveIdleLimits, resolveDbCallProgressCap, classifyRoute, normalizePath };

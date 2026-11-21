@@ -28,7 +28,7 @@ const {
     sendSuccess,
 } = require("../../../src/constants/responses");
 // OraCode.js exports the map itself (module.exports = ORA_MAP), not a named field.
-const ORA_MAP = require("../../../src/middleware/errorHandling/OraCode");
+const ORA_MAP = require("../../../src/middleware/errorHandling/OraCode").default;
 const {
     NJS_MAP,
     TRANSIENT_STRING_PATTERNS,

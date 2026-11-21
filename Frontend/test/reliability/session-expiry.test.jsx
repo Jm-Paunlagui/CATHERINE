@@ -43,7 +43,7 @@ import csrfMiddleware from "../../src/middleware/security/CsrfMiddleware.js";
 import { useSessionWarning } from "../../src/hooks/useSessionWarning.js";
 import { fail, ok } from "../helpers/fixtures/contract.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 
 /** Registers a GET handler that answers `path` with `status` in the real error envelope. */
 function respondWith(path, status, { type = "AppError" } = {}) {

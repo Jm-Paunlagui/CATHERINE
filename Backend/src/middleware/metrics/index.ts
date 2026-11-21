@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview Barrel export for the metrics middleware subsystem.
@@ -7,7 +7,5 @@
  *   const { metricsStore, defaultMetrics } = require('./middleware/metrics');
  */
 
-module.exports = {
-  ...require("./MetricsStore"),
-  ...require("./MetricsMiddleware"),
-};
+export * from "./MetricsStore";
+export * from "./MetricsMiddleware";

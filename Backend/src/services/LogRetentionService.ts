@@ -1,6 +1,6 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
+
+import { IS_COMPILED, APP_ROOT } from "../utils/runtimePaths";
 
 /**
  * @fileoverview Real, unattended retention sweep for the RFC 5424 file logs
@@ -108,11 +108,11 @@ const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
  *   LogRetentionService.stop();       // graceful shutdown
  */
 
-const fs = require("fs").promises;
-const path = require("path");
+import { promises as fs } from "fs";
+import path from "path";
 
-const { logger } = require("../utils/logger");
-const { logRetentionMessages } = require("../constants/messages");
+import { logger } from "../utils/logger";
+import { logRetentionMessages } from "../constants/messages";
 
 /**
  * Log directory base — MUST match `logger.js`'s `LOG_BASE_DIR` resolution:
@@ -487,5 +487,7 @@ class LogRetentionService {
 }
 
 const instance = new LogRetentionService();
-module.exports = instance;
-module.exports.LogRetentionService = LogRetentionService;
+const __default = instance;
+export default __default;
+__default.LogRetentionService = LogRetentionService;
+export { LogRetentionService };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for the Server Email Notifications feature
@@ -300,4 +300,4 @@ const notificationMessages = {
         "Alert poll tick skipped — the previous tick is still in flight.",
 };
 
-module.exports = { notificationMessages };
+export { notificationMessages };

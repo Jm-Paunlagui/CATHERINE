@@ -16,7 +16,7 @@ Metrics & Alerting is an **in-process observability engine with no external depe
 4. **Records** every transition and email outcome in `T_SERVER_ALERT_LOG(_DEV)`. Live acknowledgements are kept in `T_SERVER_ALERT_ACK(_DEV)`.
 5. **Pushes readiness** to every browser over `GET /api/v1/health/stream` (SSE), so the app-wide server-status banner can react before the user makes a request.
 
-The notifier is **off by default** (`ENABLE_SERVER_NOTIFICATIONS=false`). It runs **only on the cron-leader worker** (`Backend/server.js`, the `IS_CRON_LEADER` gate). Metrics collection, the `/metrics` reads and the health routes run on every worker.
+The notifier is **off by default** (`ENABLE_SERVER_NOTIFICATIONS=false`). It runs **only on the cron-leader worker** (`Backend/server.ts`, the `IS_CRON_LEADER` gate). Metrics collection, the `/metrics` reads and the health routes run on every worker.
 
 ---
 
@@ -310,7 +310,7 @@ All of these are documented in `Backend/.env.example`. The notifier values use `
 - **Cluster:** each worker reports its own pool view.
 - **Browser side:** after 40 s without a frame (2.5× the heartbeat interval plus slack) the browser marks a network failure and reconnects.
 
-### 6.6 Lifecycle (`Backend/server.js`)
+### 6.6 Lifecycle (`Backend/server.ts`)
 
 - **Start:** `AlertNotifierService.start()` runs on the cron leader **before** `db.initializePools()`, so a pool-initialisation failure is already caught by the critical tap.
 - **Shutdown, in order:**
@@ -319,7 +319,7 @@ All of these are documented in `Backend/.env.example`. The notifier values use `
   - `drainAndStop({ persist: false })` sends the final email.
   - `notifyCriticalNow` and `notifyLifecycleNow` are each bounded by `NOTIFY_NOW_TIMEOUT_MS = 5000`.
 - `beginShutdown()` stops the poll before the pools drain, so a database failure during graceful shutdown raises no false `ORACLE_POOL_DOWN`.
-- **Clock check:** once the pools are up, `server.js` calls `verifyDbClockOffset(db)` (`src/utils/dbTimezone.ts`). It reads `EXTRACT(TIMEZONE_HOUR/MINUTE FROM SYSTIMESTAMP)` and logs one WARNING (`DB_CLOCK_OFFSET_MISMATCH`) when the Oracle server's zone differs from `DB_TIMEZONE_OFFSET_MINUTES` or the app process's offset. Every `DEFAULT SYSTIMESTAMP` column (Alert History "Created" included) uses the server's clock. Never throws, never blocks start-up.
+- **Clock check:** once the pools are up, `server.ts` calls `verifyDbClockOffset(db)` (`src/utils/dbTimezone.ts`). It reads `EXTRACT(TIMEZONE_HOUR/MINUTE FROM SYSTIMESTAMP)` and logs one WARNING (`DB_CLOCK_OFFSET_MISMATCH`) when the Oracle server's zone differs from `DB_TIMEZONE_OFFSET_MINUTES` or the app process's offset. Every `DEFAULT SYSTIMESTAMP` column (Alert History "Created" included) uses the server's clock. Never throws, never blocks start-up.
 - The WinSW `stoptimeout` in `Backend/deploy/winsw/catherine-backend-service.xml` (1860 s) is sized to include the time for that forced-exit alert email.
 
 ---

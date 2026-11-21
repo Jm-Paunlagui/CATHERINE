@@ -543,7 +543,7 @@ const ORA_MAP = {
     },
 };
 
-module.exports = ORA_MAP;
+export default ORA_MAP;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // USAGE EXAMPLE (Node.js / Express error-handling middleware):

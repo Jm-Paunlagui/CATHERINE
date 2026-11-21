@@ -8,8 +8,8 @@
  * delays are fast-forwarded with `vi.useFakeTimers()` / `vi.runAllTimersAsync()`.
  */
 
-const SharedTransporter = require("../../../../src/services/email/SharedTransporter");
-const EmailProtectionService = require("../../../../src/services/email/EmailProtectionService");
+const SharedTransporter = require("../../../../src/services/email/SharedTransporter").default;
+const EmailProtectionService = require("../../../../src/services/email/EmailProtectionService").default;
 const { logger } = require("../../../../src/utils/logger");
 const { requestContext } = require("../../../../src/utils/requestContext");
 

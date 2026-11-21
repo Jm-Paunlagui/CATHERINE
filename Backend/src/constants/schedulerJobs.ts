@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview Scheduler job keys tracked by `SchedulerStateService`. Lives in
@@ -17,4 +17,4 @@ const KNOWN_JOBS = Object.freeze([
     "dbBackup",
 ]);
 
-module.exports = { KNOWN_JOBS };
+export { KNOWN_JOBS };

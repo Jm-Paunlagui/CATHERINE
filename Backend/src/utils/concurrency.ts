@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Bounded-concurrency async mapper.
@@ -64,4 +64,4 @@ async function mapWithConcurrency(items, limit, fn) {
     return results;
 }
 
-module.exports = { mapWithConcurrency };
+export { mapWithConcurrency };

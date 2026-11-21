@@ -1,8 +1,9 @@
-"use strict";
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
-const express = require("express");
-const { defaultCsrf } = require("../middleware/security/CsrfMiddleware");
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
+
+import express from "express";
+import { defaultCsrf } from "../middleware/security/CsrfMiddleware";
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
 
 const router = express.Router();
 
@@ -42,4 +43,4 @@ router.post(
  */
 router.get("/status", defaultCsrf.statusHandler);
 
-module.exports = router;
+export default router;

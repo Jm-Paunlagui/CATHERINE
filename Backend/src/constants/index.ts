@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview App-wide constants
@@ -52,8 +52,6 @@ const HTTP_STATUS = {
     ORIGIN_UNREACHABLE: 523, // reserved — Cloudflare-style edge failure
 };
 
-module.exports = {
-    HTTP_STATUS,
-    ...require("./errors"),
-    ...require("./responses"),
-};
+export * from "./errors";
+export * from "./responses";
+export { HTTP_STATUS };

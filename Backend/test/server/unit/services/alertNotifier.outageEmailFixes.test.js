@@ -12,11 +12,11 @@
  *   OF-4  The retry wait is bounded: a hung ack read never holds the DOWN email.
  */
 
-const { AlertNotifierService } = require("../../../../src/services/AlertNotifierService");
-const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService");
-const ServerAlertLogModel = require("../../../../src/models/serverAlertLog.model");
-const ServerAlertAckModel = require("../../../../src/models/serverAlertAck.model");
-const MetricsService = require("../../../../src/services/MetricsService");
+const { AlertNotifierService } = require("../../../../src/services/AlertNotifierService").default;
+const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService").default;
+const ServerAlertLogModel = require("../../../../src/models/serverAlertLog.model").default;
+const ServerAlertAckModel = require("../../../../src/models/serverAlertAck.model").default;
+const MetricsService = require("../../../../src/services/MetricsService").default;
 
 const CRIT = "server-critical-notification";
 const DOWN_ALERT = { rule: "ORACLE_POOL_DOWN", severity: "critical", pool: "appDb", description: "Oracle pool \"appDb\" is DOWN" };

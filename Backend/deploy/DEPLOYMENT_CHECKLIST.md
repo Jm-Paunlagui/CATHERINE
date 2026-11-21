@@ -11,7 +11,7 @@ schema and functional checks to sections B and D.
 ## A. Before you deploy
 
 - [ ] **A1 — `.env` is present on the host and is the production one.**
-      The backend reads `.env` and only `.env`. `server.js` and `src/config/database.ts` both
+      The backend reads `.env` and only `.env`. `server.ts` and `src/config/database.ts` both
       hardcode that name — nothing loads `.env.production`, which is a *reference copy* you deploy
       **as** `.env`. (Vite auto-loads `.env.production` for the frontend; the backend does not. Same
       filename, different rule.)

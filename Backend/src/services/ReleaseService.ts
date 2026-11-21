@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ReleaseService
@@ -25,7 +25,7 @@
  * store, where a new cycle must be opened first.
  */
 
-const ChangelogModel = require("../models/changelog.model");
+import ChangelogModel from "../models/changelog.model";
 
 // ── Stage ladder ──────────────────────────────────────────────────────────────
 
@@ -242,4 +242,4 @@ class ReleaseService {
     }
 }
 
-module.exports = ReleaseService;
+export default ReleaseService;

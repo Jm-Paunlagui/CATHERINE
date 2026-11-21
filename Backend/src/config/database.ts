@@ -1,7 +1,7 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
 
-// Environment variables are loaded once at process startup by server.js (and by
+
+// Environment variables are loaded once at process startup by server.ts (and by
 // each standalone script in scripts/, which call dotenv.config before requiring
 // this module). Config files MUST NOT call dotenv themselves — re-loading .env on
 // every require re-injects values the caller deliberately unset (e.g. unit tests
@@ -144,13 +144,9 @@ for (const p of READINESS_GATING_POOLS) {
   }
 }
 
-module.exports = {
-    connections,
-    getConnectionConfig,
-    getConnectionNames,
-    POOL_NAMES,
-    READINESS_GATING_POOLS,
-    // isDevelopment,
-    buildSimpleConnectString,
-    buildTNSConnectString,
-};
+// Default object as well as named exports: the Oracle adapter destructures
+// getConnectionConfig from it at load, so test/server/helpers/freshOracleAdapter.js
+// can swap the function on this plain object for a fresh adapter copy.
+// A named-export binding cannot be reassigned from outside the module.
+export default { connections, getConnectionConfig, getConnectionNames, POOL_NAMES, READINESS_GATING_POOLS, buildSimpleConnectString, buildTNSConnectString };
+export { connections, getConnectionConfig, getConnectionNames, POOL_NAMES, READINESS_GATING_POOLS, buildSimpleConnectString, buildTNSConnectString };

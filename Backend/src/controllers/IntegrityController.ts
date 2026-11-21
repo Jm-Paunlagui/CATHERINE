@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Integrity Center HTTP controller.
@@ -15,10 +15,10 @@
  *   POST /api/v1/integrity/:table/rescan   (same query as body/query — re-sweeps)
  */
 
-const { HTTP_STATUS, AppError, INTEGRITY_ERRORS } = require("../constants");
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { catchAsync } = require("../utils/catchAsync");
-const IntegrityService = require("../services/IntegrityService");
+import { HTTP_STATUS, AppError, INTEGRITY_ERRORS } from "../constants";
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { catchAsync } from "../utils/catchAsync";
+import IntegrityService from "../services/IntegrityService";
 
 /** Query keys that are never scope filters. */
 const NON_FILTER_KEYS = new Set(["from", "to", "page", "limit", "mode", "table"]);
@@ -188,4 +188,4 @@ class IntegrityController {
     });
 }
 
-module.exports = IntegrityController;
+export default IntegrityController;

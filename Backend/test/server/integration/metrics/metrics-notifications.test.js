@@ -28,15 +28,15 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app");
+const app = require("../../../../src/app").default;
 const { signToken } = require("../../helpers/auth");
-const AlertNotifierService = require("../../../../src/services/AlertNotifierService");
+const AlertNotifierService = require("../../../../src/services/AlertNotifierService").default;
 const {
     defaultRateLimiter,
 } = require("../../../../src/middleware/security/RateLimiterMiddleware");
 const {
     notificationTestLimiter,
-} = require("../../../../src/routes/metrics.route");
+} = require("../../../../src/routes/metrics.route").default;
 
 // ── Rate-limit isolation ──────────────────────────────────────────────────────
 // The shared in-process defaultRateLimiter accumulates across the whole suite
@@ -609,7 +609,7 @@ describe("DELETE /api/v1/metrics/alerts/ack", function () {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("GET /api/v1/metrics/alerts — ack-state decoration", function () {
-    const MetricsService = require("../../../../src/services/MetricsService");
+    const MetricsService = require("../../../../src/services/MetricsService").default;
 
     afterEach(function () {
         vi.restoreAllMocks();

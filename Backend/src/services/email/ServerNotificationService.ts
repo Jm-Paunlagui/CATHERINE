@@ -1,8 +1,8 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { appPath } = require("../../utils/runtimePaths");
 
-const { formatUtcStamp } = require("../../utils/formatUtcStamp");
+import { appPath } from "../../utils/runtimePaths";
+
+import { formatUtcStamp } from "../../utils/formatUtcStamp";
 
 /**
  * @fileoverview Server Email Notifications — the sender.
@@ -61,18 +61,18 @@ const { formatUtcStamp } = require("../../utils/formatUtcStamp");
  * plus a new template file.
  */
 
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
+import fs from "fs";
+import path from "path";
+import os from "os";
 
-const { logger } = require("../../utils/logger");
-const { dbTimezoneOffsetMinutes } = require("../../utils/dbTimezone");
-const { notificationMessages } = require("../../constants/messages");
-const { snowflake } = require("../../utils/snowflake");
-const { metricsStore } = require("../../middleware/metrics");
-const { maskEmail } = require("../../utils/logRedaction");
-const SharedTransporter = require("./SharedTransporter");
-const RecipientResolver = require("./RecipientResolver");
+import { logger } from "../../utils/logger";
+import { dbTimezoneOffsetMinutes } from "../../utils/dbTimezone";
+import { notificationMessages } from "../../constants/messages";
+import { snowflake } from "../../utils/snowflake";
+import { metricsStore } from "../../middleware/metrics";
+import { maskEmail } from "../../utils/logRedaction";
+import SharedTransporter from "./SharedTransporter";
+import RecipientResolver from "./RecipientResolver";
 
 /**
  * The four supported notification channels. Each key is also the template
@@ -564,8 +564,13 @@ class ServerNotificationService {
 }
 
 const instance = new ServerNotificationService();
-module.exports = instance;
-module.exports.ServerNotificationService = ServerNotificationService;
-module.exports.CHANNELS = CHANNELS;
-module.exports.DETAILS_NOTE = DETAILS_NOTE;
-module.exports.maskEmail = maskEmail;
+const __default = instance;
+export default __default;
+__default.ServerNotificationService = ServerNotificationService;
+export { ServerNotificationService };
+__default.CHANNELS = CHANNELS;
+export { CHANNELS };
+__default.DETAILS_NOTE = DETAILS_NOTE;
+export { DETAILS_NOTE };
+__default.maskEmail = maskEmail;
+export { maskEmail };

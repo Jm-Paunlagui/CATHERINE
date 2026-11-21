@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -34,7 +34,7 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
+import { quoteIdentifier } from "../utils";
 
 /**
  * Build a JOIN SQL fragment from a $lookup specification.
@@ -117,4 +117,4 @@ function _resolveJoinType(type) {
   }
 }
 
-module.exports = { buildJoinSQL };
+export { buildJoinSQL };

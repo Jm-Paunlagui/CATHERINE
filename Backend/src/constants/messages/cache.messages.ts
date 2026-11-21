@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Cache subsystem log message templates.
@@ -117,4 +117,4 @@ const cacheMessages = {
         `Cache cluster-sync relay installed on primary — worker invalidations will be broadcast to all siblings.`,
 };
 
-module.exports = { cacheMessages };
+export { cacheMessages };

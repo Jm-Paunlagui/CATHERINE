@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ProgressScope — "is this unit of work still making progress?"
@@ -209,4 +209,4 @@ class ProgressScope {
     }
 }
 
-module.exports = { ProgressScope };
+export { ProgressScope };

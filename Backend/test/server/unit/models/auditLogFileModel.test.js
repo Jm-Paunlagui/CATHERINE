@@ -10,7 +10,7 @@
 
 const path = require("path");
 const fs = require("fs").promises;
-const AuditLogFileModel = require("../../../../src/models/audit.log.file.model");
+const AuditLogFileModel = require("../../../../src/models/audit.log.file.model").default;
 
 const RECORD = {
     REQUEST_ID: "req_file1",

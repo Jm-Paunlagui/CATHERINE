@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -71,8 +71,8 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
-const { parseFilter } = require("../parsers/filterParser");
+import { quoteIdentifier } from "../utils";
+import { parseFilter } from "../parsers/filterParser";
 
 /**
  * Create a per-call counter for unique bind variable names.
@@ -799,4 +799,4 @@ function _buildBucket(bucket, source, counter) {
   };
 }
 
-module.exports = { buildAggregateSQL };
+export { buildAggregateSQL };

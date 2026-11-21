@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Hand-authored source of truth for the Runtime page
@@ -10,7 +10,7 @@
  * Plain data, validated by `src/utils/systemMap.ts` (same builder as
  * `architectureModel.js`). The builder is meant to reject the map
  * when a `Backend/...` path here no longer exists or a flow step has
- * no edge. Bump MAP_VERIFIED_AT when re-checking against `server.js` and
+ * no edge. Bump MAP_VERIFIED_AT when re-checking against `server.ts` and
  * CLAUDE.md "Resilience & Graceful Shutdown".
  */
 
@@ -21,7 +21,7 @@ const S = (f) => `${API}src/services/${f}`;
 const M = (f) => `${API}src/models/${f}`;
 const U = (f) => `${API}src/utils/${f}`;
 const MW = (f) => `${API}src/middleware/${f}`;
-const SERVER = `${API}server.js`;
+const SERVER = `${API}server.ts`;
 
 const layers = [
     { id: "trigger", label: "Triggers", color: "#f59e0b", description: "What sets the server in motion: the Windows service manager, OS signals, the clock, HTTP clients and faults." },
@@ -50,14 +50,14 @@ const nodes = [
     // ── Triggers ─────────────────────────────────────────────────────────────
     { id: "trg.winsw", layer: "trigger", label: "WinSW service", sub: "start · stop · restart", description: "Runs backend.exe as a Windows service. Restarts it on a non-zero exit (onfailure restart). <stoptimeout> 1860 s must stay above the forced-exit failsafe; <preshutdown> gives a host reboot 5 min (WinSW v3 only).", files: [`${API}deploy/winsw/catherine-backend-service.xml`, `${API}deploy/winsw/README.md`] },
     { id: "trg.signal", layer: "trigger", label: "OS signals", sub: "SIGTERM · SIGINT · SIGBREAK", description: "A stop request. On Windows Ctrl+C maps to SIGINT and Ctrl+Break to SIGBREAK (SIGTERM never fires there), so all three start the same graceful shutdown. A second signal is ignored.", files: [SERVER] },
-    { id: "trg.clock", layer: "trigger", label: "Clock", sub: "cron · sweeps · exact timers", description: "node-cron 06:00 (process local time = APP_TZ (default Asia/Manila), pinned at the top of server.js — node-cron has no timezone option here, PKG ships small-icu), cron-independent 15-min setInterval sweeps a cron tick can silently never fire under PKG), and exact-time timers armed by the schedulers.", files: [SERVER] },
+    { id: "trg.clock", layer: "trigger", label: "Clock", sub: "cron · sweeps · exact timers", description: "node-cron 06:00 (process local time = APP_TZ (default Asia/Manila), pinned at the top of server.ts — node-cron has no timezone option here, PKG ships small-icu), cron-independent 15-min setInterval sweeps a cron tick can silently never fire under PKG), and exact-time timers armed by the schedulers.", files: [SERVER] },
     { id: "trg.http", layer: "trigger", label: "HTTP clients", sub: "browser · SSE · probes", description: "Every inbound request and held-open SSE stream; also the WinSW / load-balancer health probes.", files: [`${API}src/app.ts`] },
     { id: "trg.fault", layer: "trigger", label: "Faults", sub: "uncaught · unhandled · EADDRINUSE", description: "An uncaught exception, an unhandled promise rejection, or a listen error such as a port already in use.", files: [SERVER] },
 
     // ── Processes ────────────────────────────────────────────────────────────
     { id: "proc.boot", layer: "process", label: "Boot sequence", sub: "dotenv · bootGuard", description: ".env resolved beside the exe (runtimePaths), TZ pinned, then validateSecrets (production: weak/placeholder secrets, DEMO_MODE=true, unset CORS_ORIGINS, invalid MONEY_* config → BOOT GUARD banner, exit 1). A missing HTTPS PFX is a [FATAL] line + exit 1. The port is never bound in any of these.", files: [SERVER, `${API}src/config/bootGuard.ts`, U("runtimePaths.js")] },
     { id: "proc.primary", layer: "process", label: "Cluster primary", sub: "ClusterSupervisor", description: "ENABLE_CLUSTERING=true only. Supervises — no pools, no HTTP. Forks NUM_WORKERS, respawns with backoff 1→30 s, elects one cron leader, trips a crash-loop cap (5 exits / 60 s), stops leaderless clusters with exit 1, forwards stop signals over IPC.", files: [U("cluster/ClusterSupervisor.js"), U("clusterRole.js"), `${API}src/constants/clusterIpc.ts`] },
-    { id: "proc.worker", layer: "process", label: "HTTP worker", sub: "server.js → app.js", description: "Initialises the Oracle pools (then reloads the session families ended within the access-token lifetime, so a restart does not revive a signed-out token), serves app.js through the 13-step middleware chain, and installs the server-level request listeners (watchdog, in-flight tracker). In single-process mode it is the only process and always the cron leader. Request intake: Brotli bodies 415; a gzip body with extra bytes after the compressed data no longer crashes it (body-parser 2.4.0); multipart field-name index max 100 on every upload route (multer); client address from proxy-addr 2.0.8 with trust proxy from TRUST_PROXY (deployed as off or a hop count, never a subnet) and compression 1.8.2.", files: [U("consoleManager.js"), SERVER, `${API}src/app.ts`, `${API}src/config/database.ts`] },
+    { id: "proc.worker", layer: "process", label: "HTTP worker", sub: "server.ts → app.js", description: "Initialises the Oracle pools (then reloads the session families ended within the access-token lifetime, so a restart does not revive a signed-out token), serves app.js through the 13-step middleware chain, and installs the server-level request listeners (watchdog, in-flight tracker). In single-process mode it is the only process and always the cron leader. Request intake: Brotli bodies 415; a gzip body with extra bytes after the compressed data no longer crashes it (body-parser 2.4.0); multipart field-name index max 100 on every upload route (multer); client address from proxy-addr 2.0.8 with trust proxy from TRUST_PROXY (deployed as off or a hop count, never a subnet) and compression 1.8.2.", files: [U("consoleManager.js"), SERVER, `${API}src/app.ts`, `${API}src/config/database.ts`] },
     { id: "proc.leader", layer: "process", label: "Cron leader", sub: "CRON_LEADER=true", description: "The one worker that runs scheduled work: AlertNotifier (started before pool init so a pool-init failure is caught), log retention and the DB-backup scheduler. On its death the replacement inherits leadership.", files: [U("clusterRole.js"), SERVER] },
     { id: "proc.rpc", layer: "process", label: "Shared state (RPC)", sub: "ClusterRpcHub · PrimaryStateServices", description: "Primary-owned state workers query over validated IPC: rate-limit counters, login-lockout counters, ended session families (access-token revocation), security-filter strikes and blocks, scheduler state, merged metrics, recipient-cache invalidation. Single-process mode registers no IPC listener at all.", files: [U("cluster/workerRpcWiring.js"), U("cluster/ClusterRpcHub.js"), U("cluster/ClusterRpcClient.js"), U("cluster/PrimaryStateServices.js"), U("cluster/ipcSchemas.js")] },
 
@@ -214,7 +214,7 @@ const E = [
 // Flow steps: [from, to, action, detail]. `ref` = server-simulation stage(s).
 const flows = [
     {
-        id: "boot", name: "Boot and readiness", category: "Boot", ref: "server.js",
+        id: "boot", name: "Boot and readiness", category: "Boot", ref: "server.ts",
         summary: "From service start to a serving process — and the four ways boot refuses to start.",
         steps: [
             ["trg.winsw", "proc.boot", "Service starts backend.exe", ".env is resolved beside the exe (runtimePaths), wherever the service started it."],
@@ -228,7 +228,7 @@ const flows = [
         ],
     },
     {
-        id: "leader-schedules", name: "Leader arms the schedulers", category: "Scheduling", ref: "server.js",
+        id: "leader-schedules", name: "Leader arms the schedulers", category: "Scheduling", ref: "server.ts",
         summary: "Exactly one process owns scheduled work. What it starts, and why each runs on its own timer.",
         steps: [
             ["proc.primary", "proc.leader", "Elect the cron leader", "Clustered: CRON_LEADER=true on one worker ('Cron leader elected …'). Single-process: the only process."],
@@ -238,7 +238,7 @@ const flows = [
         ],
     },
     {
-        id: "scheduled-backup", name: "Scheduled backup with watchdog", category: "Backup", ref: "server.js",
+        id: "scheduled-backup", name: "Scheduled backup with watchdog", category: "Backup", ref: "server.ts",
         summary: "A backup that hangs is cancelled and publishes nothing; a healthy one writes exactly one archive.",
         steps: [
             ["trg.clock", "sch.backup", "Backup due", "Exact timer (backup event + 15 min), 15-min sweep, or boot catch-up. Idempotent when nothing is due."],
@@ -252,7 +252,7 @@ const flows = [
         ],
     },
     {
-        id: "db-outage", name: "Database outage", category: "Resilience", ref: "server.js",
+        id: "db-outage", name: "Database outage", category: "Resilience", ref: "server.ts",
         summary: "Pool-init failure, health checks, the circuit breaker and load-shedding, and the alerts they raise.",
         steps: [
             ["proc.worker", "res.pools", "Pool init fails", "'Failed to initialize pool …' (critical) per pool; '3/3 pool(s) failed' warning. The server keeps running."],
@@ -266,7 +266,7 @@ const flows = [
         ],
     },
     {
-        id: "critical-storm", name: "Critical alert storm", category: "Alerting", ref: "server.js",
+        id: "critical-storm", name: "Critical alert storm", category: "Alerting", ref: "server.ts",
         summary: "A burst of critical events becomes one email; an hourly ceiling caps the rest; emergencies always get through.",
         steps: [
             ["obs.logger", "obs.notifier", "Critical events arrive", "Buffered for CRITICAL_DIGEST_WINDOW_MS (30 s)."],
@@ -278,7 +278,7 @@ const flows = [
         ],
     },
     {
-        id: "crash", name: "Crash and restart", category: "Shutdown & crash", ref: "server.js",
+        id: "crash", name: "Crash and restart", category: "Shutdown & crash", ref: "server.ts",
         summary: "An uncaught exception or unhandled rejection: EMERGENCY email (≤ 5 s), in-progress requests get at most 10 s, then drain/flush/close and exit 1, so the service manager restarts it.",
         steps: [
             ["trg.fault", "lc.crash", "Uncaught exception / unhandled rejection", "'[FATAL] …' on stderr."],
@@ -293,7 +293,7 @@ const flows = [
         ],
     },
     {
-        id: "graceful-stop", name: "Graceful stop", category: "Shutdown & crash", ref: "server.js",
+        id: "graceful-stop", name: "Graceful stop", category: "Shutdown & crash", ref: "server.ts",
         summary: "New requests refused at once; requests that keep making progress may finish (up to 30 min); idle ones are cut; exit 0.",
         steps: [
             ["trg.winsw", "trg.signal", "Service stop", "Or Ctrl+C / SIGTERM; a second signal is ignored (one banner)."],
@@ -315,7 +315,7 @@ const flows = [
         ],
     },
     {
-        id: "failsafe", name: "Shutdown failsafe", category: "Shutdown & crash", ref: "server.js",
+        id: "failsafe", name: "Shutdown failsafe", category: "Shutdown & crash", ref: "server.ts",
         summary: "When teardown itself hangs, the failsafe ends the process, mails it, and exits 1.",
         steps: [
             ["trg.signal", "lc.shutdown", "Stop requested", ""],
@@ -327,7 +327,7 @@ const flows = [
         ],
     },
     {
-        id: "request-watchdog", name: "Request watchdog", category: "Resilience", ref: "server.js",
+        id: "request-watchdog", name: "Request watchdog", category: "Resilience", ref: "server.ts",
         summary: "A request is cut only when it stops making progress — slow-but-busy work (a 20-min bulk import) is never timed out.",
         steps: [
             ["trg.http", "proc.worker", "Request arrives", ""],
@@ -341,7 +341,7 @@ const flows = [
         ],
     },
     {
-        id: "abuse-limits", name: "Rate limit and security filter", category: "Resilience", ref: "server.js",
+        id: "abuse-limits", name: "Rate limit and security filter", category: "Resilience", ref: "server.ts",
         summary: "Scanners get blocked, floods get 429 with Retry-After, health probes stay exempt.",
         steps: [
             ["trg.http", "proc.worker", "Request", ""],
@@ -355,7 +355,7 @@ const flows = [
         ],
     },
     {
-        id: "logging", name: "Logging under pressure", category: "Alerting", ref: "server.js",
+        id: "logging", name: "Logging under pressure", category: "Alerting", ref: "server.ts",
         summary: "Personal data never reaches a log file in clear text; an overflowing log queue drops the oldest entries and says so.",
         steps: [
             ["proc.worker", "obs.logger", "App writes a log line", "Including request query strings."],
@@ -366,7 +366,7 @@ const flows = [
         ],
     },
     {
-        id: "cluster-lifecycle", name: "Cluster lifecycle", category: "Cluster", ref: "server.js",
+        id: "cluster-lifecycle", name: "Cluster lifecycle", category: "Cluster", ref: "server.ts",
         summary: "Leader election and replacement, crash-loop and leaderless stops, and a clustered graceful stop.",
         steps: [
             ["proc.boot", "proc.primary", "ENABLE_CLUSTERING=true", "The primary supervises only — no pools, no HTTP."],
@@ -381,7 +381,7 @@ const flows = [
         ],
     },
     {
-        id: "cluster-shared-state", name: "Cluster shared state", category: "Cluster", ref: "server.js",
+        id: "cluster-shared-state", name: "Cluster shared state", category: "Cluster", ref: "server.ts",
         summary: "State that must be cluster-wide lives on the primary; workers ask over validated IPC.",
         steps: [
             ["proc.worker", "proc.rpc", "Worker asks the primary", "Every message validated by ipcSchemas; the sender is the cluster worker object, never a payload field."],
@@ -392,7 +392,7 @@ const flows = [
         ],
     },
     {
-        id: "ended-session", name: "Ended session across the cluster", category: "Cluster", ref: "server.js",
+        id: "ended-session", name: "Ended session across the cluster", category: "Cluster", ref: "server.ts",
         summary: "Signing out (or a password change/reset, or Access Control revoking access) ends the access token on every worker at once, not when it expires.",
         steps: [
             ["trg.http", "proc.worker", "Sign-out", "POST /auth/logout: the session family is recorded in this worker's in-memory set BEFORE the DB write, and its live SSE streams are closed."],
@@ -401,7 +401,7 @@ const flows = [
         ],
     },
     {
-        id: "compressed-bodies", name: "Compressed request bodies", category: "Resilience", ref: "server.js",
+        id: "compressed-bodies", name: "Compressed request bodies", category: "Resilience", ref: "server.ts",
         summary: "A Brotli-compressed request body is refused with 415 before body-parser hands it to zlib (Node.js CVE-2026-111497); gzip is still accepted.",
         steps: [
             ["trg.http", "proc.worker", "POST with Content-Encoding: br", "Any spelling of the header, including the pre-auth login route."],
@@ -410,7 +410,7 @@ const flows = [
         ],
     },
     {
-        id: "multipart-index", name: "Multipart field-name index", category: "Resilience", ref: "server.js",
+        id: "multipart-index", name: "Multipart field-name index", category: "Resilience", ref: "server.ts",
         summary: "An upload whose text field name carries an array index above 100 is refused with 400 at once (multer fieldArrayIndexLimit via constants/multipart.js on every upload route).",
         steps: [
             ["trg.http", "proc.worker", "Multipart POST with field a[4294967294] and a[x]", "Signed-in upload route, valid CSRF pair."],
@@ -419,7 +419,7 @@ const flows = [
         ],
     },
     {
-        id: "readiness-cause", name: "Readiness: server vs database", category: "Resilience", ref: "server.js",
+        id: "readiness-cause", name: "Readiness: server vs database", category: "Resilience", ref: "server.ts",
         summary: "The UI tells 'the server is down' apart from 'the database is down' from GET /health/ready alone; a down database is not a down server.",
         steps: [
             ["trg.http", "proc.worker", "GET /health/ready", "The UI's reachability probe; never retried or reported by the HttpClient."],
@@ -431,7 +431,7 @@ const flows = [
         ],
     },
     {
-        id: "readiness-push", name: "Readiness push stream", category: "Resilience", ref: "server.js",
+        id: "readiness-push", name: "Readiness push stream", category: "Resilience", ref: "server.ts",
         summary: "Every open page keeps GET /health/stream (SSE) open, so the banner shows a server or database outage with no user action and says Back online only when every pool answers and every breaker is closed.",
         steps: [
             ["trg.http", "proc.worker", "GET /health/stream", "Unauthenticated, no compression; retry: 3000; at most HEALTH_STREAM_MAX_PER_IP per address (429 beyond)."],
@@ -442,7 +442,7 @@ const flows = [
         ],
     },
     {
-        id: "sign-in-lockout", name: "Sign-in lockout", category: "Resilience", ref: "server.js",
+        id: "sign-in-lockout", name: "Sign-in lockout", category: "Resilience", ref: "server.ts",
         summary: "Wrong sign-ins lock that user out after LOGIN_MAX_ATTEMPTS (default 3) failures; other users from the same address are not affected; clustered, the counters live on the primary.",
         steps: [
             ["trg.http", "proc.worker", "POST /auth/login (wrong password)", "401 each time; the failure is recorded."],
@@ -513,4 +513,4 @@ const META = {
     ],
 };
 
-module.exports = { MAP_VERIFIED_AT, META, LAYOUT, layers, edgeKinds, nodes, E, flows };
+export { MAP_VERIFIED_AT, META, LAYOUT, layers, edgeKinds, nodes, E, flows };

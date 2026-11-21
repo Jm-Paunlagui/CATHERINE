@@ -1,10 +1,10 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
 
-const { HTTP_STATUS, AppError, AUTH_ERRORS } = require("../constants");
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { catchAsync } = require("../utils/catchAsync");
-const AuthService = require("../services/AuthService");
+
+import { HTTP_STATUS, AppError, AUTH_ERRORS } from "../constants";
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { catchAsync } from "../utils/catchAsync";
+import AuthService from "../services/AuthService";
 
 class AuthController {
     /**
@@ -149,4 +149,4 @@ class AuthController {
     });
 }
 
-module.exports = AuthController;
+export default AuthController;

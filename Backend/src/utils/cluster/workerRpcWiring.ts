@@ -1,18 +1,18 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Registers the worker-side RPC handlers and broadcast-topic
  * listeners on a `ClusterRpcClient`. Called once from the cluster-worker block
- * of `server.js`. Stateless wiring, so a function.
+ * of `server.ts`. Stateless wiring, so a function.
  *
  * @author senior-nodejs-engineer
  */
 
-const { CLUSTER_TOPICS, CLUSTER_RPC_METHODS } = require("../../constants/clusterIpc");
+import { CLUSTER_TOPICS, CLUSTER_RPC_METHODS } from "../../constants/clusterIpc";
 
 /**
- * Heavy modules are required lazily inside the function: `server.js` requires
+ * Heavy modules are required lazily inside the function: `server.ts` requires
  * this file in the primary too, and the primary must not load services.
  *
  * @param {object} deps
@@ -28,7 +28,7 @@ function wireWorkerRpc({ client, isLeader }) {
 
     // ── Alert state, acks and status live on the cron leader only ───────────
     if (isLeader) {
-        const AlertNotifierService = require("../../services/AlertNotifierService");
+        const AlertNotifierService = require("../../services/AlertNotifierService").default;
         client.handle(CLUSTER_RPC_METHODS.ALERTS_ACK, ({ alertKey, ackedBy, note }) =>
             AlertNotifierService._acknowledgeLocal(alertKey, ackedBy, note),
         );
@@ -38,7 +38,7 @@ function wireWorkerRpc({ client, isLeader }) {
     }
 
     // ── Recipient cache (an Access Control toggle on any worker) ────────────
-    const RecipientResolver = require("../../services/email/RecipientResolver");
+    const RecipientResolver = require("../../services/email/RecipientResolver").default;
     client.onTopic(CLUSTER_TOPICS.RECIPIENTS_INVALIDATE, () => RecipientResolver.applyRemoteInvalidate());
 
     // ── Security filter (primary decides blocks, workers mirror them) ───────
@@ -48,14 +48,14 @@ function wireWorkerRpc({ client, isLeader }) {
     client.onTopic(CLUSTER_TOPICS.SF_SYNC, ({ blocks }) => defaultSecurityFilter.applySync(blocks));
 
     // ── Ended sessions (access-token revocation) ────────────────
-    const AccessRevocationService = require("../../services/AccessRevocationService");
+    const AccessRevocationService = require("../../services/AccessRevocationService").default;
     client.onTopic(CLUSTER_TOPICS.AUTH_REVOKED, ({ entries }) => AccessRevocationService.applyRemote(entries));
     client.onTopic(CLUSTER_TOPICS.AUTH_SYNC, ({ entries }) => AccessRevocationService.applyRemote(entries));
 
     // ── Scheduler state (leader broadcasts, everyone mirrors) ───────────────
-    const SchedulerStateService = require("../../services/SchedulerStateService");
+    const SchedulerStateService = require("../../services/SchedulerStateService").default;
     client.onTopic(CLUSTER_TOPICS.SCHED_STATE, ({ job, outcome }) => SchedulerStateService.applyRemote(job, outcome));
     client.onTopic(CLUSTER_TOPICS.SCHED_SYNC, ({ entries }) => SchedulerStateService.applySync(entries));
 }
 
-module.exports = { wireWorkerRpc };
+export { wireWorkerRpc };

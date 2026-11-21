@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Guarded-batch runner — the Data Protection layer.
@@ -58,11 +58,11 @@
  *   res.status(status).json(sendSuccess(..., report, status));
  */
 
-const { mapWithConcurrency } = require("../concurrency");
-const { logger } = require("../logger");
-const { resilienceMessages } = require("../../constants/messages");
-const { RetryPolicy } = require("./RetryPolicy");
-const { currentScope } = require("../progress/progress");
+import { mapWithConcurrency } from "../concurrency";
+import { logger } from "../logger";
+import { resilienceMessages } from "../../constants/messages";
+import { RetryPolicy } from "./RetryPolicy";
+import { currentScope } from "../progress/progress";
 
 class BatchGuard {
     /**
@@ -276,4 +276,4 @@ class BatchGuard {
     }
 }
 
-module.exports = { BatchGuard };
+export { BatchGuard };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ClusterCacheSync — cross-worker cache invalidation over the
@@ -21,7 +21,7 @@
  *   2. broadcast() sends { ch, store, op, arg } to the primary process via
  *      process.send(). No-op when clustering is off (process.send undefined
  *      or not a worker) — zero overhead in single-process mode.
- *   3. The primary (initPrimary(), wired in server.js) relays the message to
+ *   3. The primary (initPrimary(), wired in server.ts) relays the message to
  *      every OTHER worker.
  *   4. Each worker (initWorker(), wired in app.js) applies the operation to
  *      its local store with the `_applyingRemote` re-entrancy guard set, so
@@ -40,9 +40,9 @@
  * fills its own cache from its own reads. Only staleness is dangerous.
  */
 
-const cluster = require("cluster");
-const { logger } = require("../../utils/logger");
-const { cacheMessages } = require("../../constants/messages");
+import cluster from "cluster";
+import { logger } from "../../utils/logger";
+import { cacheMessages } from "../../constants/messages";
 
 /** IPC envelope discriminator — namespaced to avoid colliding with other IPC users. */
 const CHANNEL = "app:cache-sync";
@@ -175,7 +175,7 @@ class ClusterCacheSync {
 
     /**
      * Primary-side wiring: relays every cache-sync message from one worker to
-     * all OTHER workers. Call once in the primary branch of server.js.
+     * all OTHER workers. Call once in the primary branch of server.ts.
      *
      * @returns {void}
      */
@@ -197,4 +197,4 @@ class ClusterCacheSync {
     }
 }
 
-module.exports = { ClusterCacheSync };
+export { ClusterCacheSync };

@@ -1,12 +1,12 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview HTTP security headers middleware.
  * Wraps helmet in a class for consistent architecture.
  */
 
-const helmet = require("helmet");
+import helmet from "helmet";
 
 class HelmetMiddleware {
   constructor(options = {}) {
@@ -53,4 +53,4 @@ class HelmetMiddleware {
 }
 
 const defaultHelmet = new HelmetMiddleware();
-module.exports = { HelmetMiddleware, defaultHelmet };
+export { HelmetMiddleware, defaultHelmet };

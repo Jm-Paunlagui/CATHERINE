@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview IPC command names exchanged between the cluster primary and
@@ -138,13 +138,4 @@ const CLUSTER_RPC_LIMITS = Object.freeze({
 /** Error codes that make a worker boot failure fatal for the whole cluster. */
 const BOOT_FATAL_ERROR_CODES = Object.freeze(["EADDRINUSE", "EACCES"]);
 
-module.exports = {
-    CLUSTER_IPC,
-    BOOT_FATAL_ERROR_CODES,
-    CLUSTER_RPC_TARGETS,
-    CLUSTER_RPC_METHODS,
-    CLUSTER_TOPICS,
-    CLUSTER_RPC_ERROR_CODES,
-    CLUSTER_RPC_TIMEOUTS,
-    CLUSTER_RPC_LIMITS,
-};
+export { CLUSTER_IPC, BOOT_FATAL_ERROR_CODES, CLUSTER_RPC_TARGETS, CLUSTER_RPC_METHODS, CLUSTER_TOPICS, CLUSTER_RPC_ERROR_CODES, CLUSTER_RPC_TIMEOUTS, CLUSTER_RPC_LIMITS };

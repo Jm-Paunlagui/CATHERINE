@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview Constants for the server run marker - the small JSON
@@ -40,4 +40,4 @@ const SERVER_RUN_MARKER = Object.freeze({
     }),
 });
 
-module.exports = { SERVER_RUN_MARKER };
+export { SERVER_RUN_MARKER };

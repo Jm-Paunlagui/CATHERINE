@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Oracle pool / driver log messages.
@@ -86,4 +86,4 @@ const oracleMessages = {
     `Missing config fields for "${name}": ${missing}`,
 };
 
-module.exports = { oracleMessages };
+export { oracleMessages };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Temporary admin passwords — generation and the stored-hash marker.
@@ -26,7 +26,7 @@
  * boundary cases) never depend on wall time.
  */
 
-const crypto = require("crypto");
+import crypto from "crypto";
 
 /** A temporary password lives 72 hours. */
 const TEMP_PASSWORD_TTL_MS = 72 * 60 * 60 * 1000;
@@ -166,13 +166,4 @@ function temporaryExpiryIso(stored) {
     return parsed.temporary && parsed.expiresAt != null ? new Date(parsed.expiresAt).toISOString() : null;
 }
 
-module.exports = {
-    TEMP_PASSWORD_TTL_MS,
-    STORED_PASSWORD_MAX_BYTES,
-    ALPHABET,
-    generateTemporaryPassword,
-    wrapTemporaryHash,
-    parseStoredAdminPassword,
-    isTemporaryExpired,
-    temporaryExpiryIso,
-};
+export { TEMP_PASSWORD_TTL_MS, STORED_PASSWORD_MAX_BYTES, ALPHABET, generateTemporaryPassword, wrapTemporaryHash, parseStoredAdminPassword, isTemporaryExpired, temporaryExpiryIso };

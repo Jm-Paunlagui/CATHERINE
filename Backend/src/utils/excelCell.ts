@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Normalises an ExcelJS `cell.value` to a plain primitive.
@@ -50,4 +50,4 @@ function normalizeCellValue(v, depth = 0) {
     return null;
 }
 
-module.exports = { normalizeCellValue };
+export { normalizeCellValue };

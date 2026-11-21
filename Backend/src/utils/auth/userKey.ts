@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Canonical key for a login identifier.
@@ -35,4 +35,4 @@ function canonicalUserKey(userId) {
     return raw;
 }
 
-module.exports = { canonicalUserKey, DECIMAL_NUMERAL };
+export { canonicalUserKey, DECIMAL_NUMERAL };

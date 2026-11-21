@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -24,10 +24,8 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
-const {
-    oracleMongoWrapperMessages: MSG,
-} = require("../../../constants/messages");
+import { quoteIdentifier } from "../utils";
+import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 const PRIVILEGE_ERROR_CODES = [1031, 942, 1917, 1919];
 
 /**
@@ -101,4 +99,4 @@ class OracleDCL {
     }
 }
 
-module.exports = { OracleDCL };
+export { OracleDCL };

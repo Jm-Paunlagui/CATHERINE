@@ -16,7 +16,7 @@
  *   3. Set DB_TYPE=<engine> in .env
  */
 
-"use strict";
+
 
 function _loadAdapter(engine) {
   switch (engine.toLowerCase()) {
@@ -45,7 +45,7 @@ function createAdapter(engine) {
 
 const _default = createAdapter();
 
-module.exports = {
+export default {
   ..._default,
   createAdapter,
   ...require("./database"),

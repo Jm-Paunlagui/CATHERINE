@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for the shared upload-outcome ledger
@@ -39,4 +39,4 @@ const uploadMessages = {
         `[UploadOutcome:${feature}] row "${key}" bucketed twice — first as "${first}", again as "${second}".`,
 };
 
-module.exports = { uploadMessages };
+export { uploadMessages };

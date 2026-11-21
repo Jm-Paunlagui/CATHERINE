@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Keyed fingerprint of an alert finding.
@@ -16,7 +16,7 @@
  * Complexity: O(n log n) in the member count (one sort).
  */
 
-const crypto = require("crypto");
+import crypto from "crypto";
 
 /** HKDF info string - distinct from every other derived key in the app. */
 const KEY_INFO = "app-alert-signature-v1";
@@ -53,4 +53,4 @@ function computeAlertSignature(kind, members) {
         .digest("hex");
 }
 
-module.exports = { computeAlertSignature };
+export { computeAlertSignature };

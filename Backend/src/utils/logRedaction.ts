@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log-line pseudonymisation and email masking.
@@ -52,7 +52,7 @@
  *   this module performs no custom cryptography.
  */
 
-const crypto = require("crypto");
+import crypto from "crypto";
 
 /**
  * One global, case-insensitive scan per string. Alternation order matters:
@@ -132,7 +132,7 @@ let _cachedKey = null;
  * Derives (once) and returns the HMAC key used for pseudonymisation.
  *
  * Lazy: the logger singleton is constructed the moment `bootGuard` requires
- * it (`server.js`), so deriving at module load could race dotenv. Unset
+ * it (`server.ts`), so deriving at module load could race dotenv. Unset
  * secret falls back to a fixed dev string and does NOT warn — production is
  * already dead without `DATA_SIGNING_SECRET` (boot-guarded), and a warning
  * here would fire on every test run.
@@ -155,7 +155,7 @@ function getKey() {
  * keyed by the HKDF-derived secret. One-way: there is no inverse. Same
  * `(klass, value)` pair always produces the same token, in this process and
  * every other process sharing `DATA_SIGNING_SECRET` — required because
- * `server.js` forks workers that append to the same log file, so one GID
+ * `server.ts` forks workers that append to the same log file, so one GID
  * cannot be allowed to render two different tokens depending which worker
  * logged it.
  *
@@ -502,12 +502,4 @@ function searchCandidates(needle) {
     return candidates;
 }
 
-module.exports = {
-    scrubString,
-    scrubValue,
-    scrubMeta,
-    pseudonymize,
-    searchCandidates,
-    maskEmail,
-    IDENTIFIER_RE,
-};
+export { scrubString, scrubValue, scrubMeta, pseudonymize, searchCandidates, maskEmail, IDENTIFIER_RE };

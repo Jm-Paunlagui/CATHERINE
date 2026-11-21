@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Prevent HTTP redirects on API routes.
@@ -7,7 +7,7 @@
  * predictable for SPA / mobile clients.
  */
 
-const { getStatusTitle } = require("../../constants/responses");
+import { getStatusTitle } from "../../constants/responses";
 
 class PreventRedirectsMiddleware {
   constructor() {
@@ -56,4 +56,4 @@ class PreventRedirectsMiddleware {
 }
 
 const defaultPreventRedirects = new PreventRedirectsMiddleware();
-module.exports = { PreventRedirectsMiddleware, defaultPreventRedirects };
+export { PreventRedirectsMiddleware, defaultPreventRedirects };

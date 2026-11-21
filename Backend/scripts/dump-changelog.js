@@ -14,7 +14,7 @@ const dotenv = require("dotenv");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-const ChangelogModel = require("../src/models/changelog.model");
+const ChangelogModel = require("../src/models/changelog.model").default;
 
 // listAll() returns newest-first; reverse to oldest-first to match SEED_ENTRIES order.
 const entries = ChangelogModel.listAll().slice().reverse();

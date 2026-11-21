@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview IdleWatchdog — one timer that sweeps registered ProgressScopes.
@@ -27,9 +27,9 @@
  * O(active scopes).
  */
 
-const { logger } = require("../logger");
-const { watchdogMessages } = require("../../constants/messages");
-const { resolveDbCallProgressCap } = require("../../constants/requestWatchdog");
+import { logger } from "../logger";
+import { watchdogMessages } from "../../constants/messages";
+import { resolveDbCallProgressCap } from "../../constants/requestWatchdog";
 
 /** Default sweep period. */
 const SWEEP_MS = 5000;
@@ -162,7 +162,7 @@ class IdleWatchdog {
     }
 }
 
-/** Process-wide watchdog. Started in server.js (`defaultIdleWatchdog.start()`). */
+/** Process-wide watchdog. Started in server.ts (`defaultIdleWatchdog.start()`). */
 const defaultIdleWatchdog = new IdleWatchdog();
 
-module.exports = { IdleWatchdog, defaultIdleWatchdog, SWEEP_MS, STALL_FACTOR };
+export { IdleWatchdog, defaultIdleWatchdog, SWEEP_MS, STALL_FACTOR };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Sliding Window Counter - the rate-limit math, extracted
@@ -14,7 +14,7 @@
  * @author senior-nodejs-engineer
  */
 
-const NodeCache = require("node-cache");
+import NodeCache from "node-cache";
 
 /**
  * @class SlidingWindowCounter
@@ -167,4 +167,4 @@ class SlidingWindowCounter {
     }
 }
 
-module.exports = { SlidingWindowCounter };
+export { SlidingWindowCounter };

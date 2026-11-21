@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Counts the HTTP requests a server is still answering, so a
@@ -174,4 +174,4 @@ class HttpInFlightTracker {
     }
 }
 
-module.exports = HttpInFlightTracker;
+export default HttpInFlightTracker;

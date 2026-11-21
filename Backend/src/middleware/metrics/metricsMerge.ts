@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Merges the per-worker `MetricsStore` snapshots of a cluster into
@@ -25,7 +25,7 @@
  * @author senior-nodejs-engineer
  */
 
-const { computeRates } = require("./MetricsStore");
+import { computeRates } from "./MetricsStore";
 
 /** Probabilities at which each worker's sorted durations are sampled. */
 const QUANTILE_GRID = Object.freeze([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.96, 0.97, 0.98, 0.99, 0.995, 1]);
@@ -486,4 +486,4 @@ function mergeMetricsSnapshots(parts, { missing = [], expected } = {}) {
     };
 }
 
-module.exports = { QUANTILE_GRID, buildQuantileSketch, percentileFromSketches, mergeMetricsSnapshots };
+export { QUANTILE_GRID, buildQuantileSketch, percentileFromSketches, mergeMetricsSnapshots };

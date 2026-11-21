@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Primary-side owner of the cluster shared state: rate-limit
@@ -13,19 +13,15 @@
  * @author senior-nodejs-engineer
  */
 
-const {
-    CLUSTER_RPC_METHODS,
-    CLUSTER_TOPICS,
-    CLUSTER_RPC_LIMITS,
-} = require("../../constants/clusterIpc");
-const { clusterMessages } = require("../../constants/messages/cluster.messages");
-const { SlidingWindowCounter } = require("../../middleware/security/SlidingWindowCounter");
-const { SuspiciousIpTracker } = require("../../middleware/security/SuspiciousIpTracker");
-const { LoginLockoutPolicy } = require("../../middleware/authentication/LoginLockoutPolicy");
-const { LoginLockoutState } = require("../../middleware/authentication/LoginLockoutState");
-const { middlewareMessages } = require("../../constants/messages/middleware.messages");
-const { RevokedSessionSet } = require("../auth/RevokedSessionSet");
-const { ACCESS_REVOCATION_LIMITS } = require("../../constants/authTokens");
+import { CLUSTER_RPC_METHODS, CLUSTER_TOPICS, CLUSTER_RPC_LIMITS } from "../../constants/clusterIpc";
+import { clusterMessages } from "../../constants/messages/cluster.messages";
+import { SlidingWindowCounter } from "../../middleware/security/SlidingWindowCounter";
+import { SuspiciousIpTracker } from "../../middleware/security/SuspiciousIpTracker";
+import { LoginLockoutPolicy } from "../../middleware/authentication/LoginLockoutPolicy";
+import { LoginLockoutState } from "../../middleware/authentication/LoginLockoutState";
+import { middlewareMessages } from "../../constants/messages/middleware.messages";
+import { RevokedSessionSet } from "../auth/RevokedSessionSet";
+import { ACCESS_REVOCATION_LIMITS } from "../../constants/authTokens";
 
 const M = CLUSTER_RPC_METHODS;
 const TOPIC = CLUSTER_TOPICS;
@@ -207,4 +203,4 @@ class PrimaryStateServices {
     }
 }
 
-module.exports = { PrimaryStateServices };
+export { PrimaryStateServices };

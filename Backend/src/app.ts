@@ -1,7 +1,7 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
 
-const express = require("express");
+
+import express from "express";
 const app = express();
 
 // ─── Trust proxy (H1) ─────────────────────────────────────────────────────────
@@ -28,94 +28,42 @@ if (trustProxy && trustProxy !== "false") {
 }
 
 // ─── Security middleware ──────────────────────────────────────────────────────
-const { defaultHelmet } = require("./middleware/security/HelmetMiddleware");
-const { defaultCors } = require("./middleware/security/CorsMiddleware");
-const {
-    defaultSecurityFilter,
-} = require("./middleware/security/SecurityFilterMiddleware");
-const { defaultIpFilter } = require("./middleware/security/IpFilterMiddleware");
-const {
-    defaultPreventRedirects,
-} = require("./middleware/security/PreventRedirectsMiddleware");
-const {
-    defaultRateLimiter,
-} = require("./middleware/security/RateLimiterMiddleware");
+import { defaultHelmet } from "./middleware/security/HelmetMiddleware";
+import { defaultCors } from "./middleware/security/CorsMiddleware";
+import { defaultSecurityFilter } from "./middleware/security/SecurityFilterMiddleware";
+import { defaultIpFilter } from "./middleware/security/IpFilterMiddleware";
+import { defaultPreventRedirects } from "./middleware/security/PreventRedirectsMiddleware";
+import { defaultRateLimiter } from "./middleware/security/RateLimiterMiddleware";
 
 // ─── Traceability middleware ──────────────────────────────────────────────────
-const {
-    defaultTraceability,
-} = require("./middleware/traceability/TraceabilityMiddleware");
-const {
-    defaultAuditLog,
-} = require("./middleware/traceability/AuditLogMiddleware");
-const {
-    defaultShutdownGate,
-} = require("./middleware/security/ShutdownGateMiddleware");
+import { defaultTraceability } from "./middleware/traceability/TraceabilityMiddleware";
+import { defaultAuditLog } from "./middleware/traceability/AuditLogMiddleware";
+import { defaultShutdownGate } from "./middleware/security/ShutdownGateMiddleware";
 
 // ─── Performance middleware ───────────────────────────────────────────────────
-const {
-    defaultCompression,
-} = require("./middleware/performance/CompressionMiddleware");
-const {
-    defaultResponseTime,
-} = require("./middleware/performance/ResponseTimeMiddleware");
+import { defaultCompression } from "./middleware/performance/CompressionMiddleware";
+import { defaultResponseTime } from "./middleware/performance/ResponseTimeMiddleware";
 
 // ─── Metrics middleware ───────────────────────────────────────────────────────
-const { defaultMetrics } = require("./middleware/metrics");
+import { defaultMetrics } from "./middleware/metrics";
 
 // ─── Parsing middleware ───────────────────────────────────────────────────────
-const {
-    defaultBodyParser,
-} = require("./middleware/parsing/BodyParserMiddleware");
-const {
-    defaultCookieParser,
-} = require("./middleware/parsing/CookieParserMiddleware");
+import { defaultBodyParser } from "./middleware/parsing/BodyParserMiddleware";
+import { defaultCookieParser } from "./middleware/parsing/CookieParserMiddleware";
 
 // ─── CSRF protection ──────────────────────────────────────────────────────────
-const { defaultCsrf } = require("./middleware/security/CsrfMiddleware");
+import { defaultCsrf } from "./middleware/security/CsrfMiddleware";
 
 // ─── Error handling ───────────────────────────────────────────────────────────
-const {
-    defaultErrorHandler,
-} = require("./middleware/errorHandling/ErrorHandlerMiddleware");
+import { defaultErrorHandler } from "./middleware/errorHandling/ErrorHandlerMiddleware";
 
 // ─── Cache stores ─────────────────────────────────────────────────────────────
-const { registry, ClusterCacheSync } = require("./middleware/cache");
-registry.registerAll({
-    // ── Admin roster ──────────────────────────────────────────────────────────────
-    // Small dataset (<100 admins). Queried by admin list. Mutates only on admin
-    // CRUD. maxKeys=50 is a hard ceiling.
-    adminList: { ttl: 600, checkPeriod: 120, maxKeys: 50 },
-
-    // ── Audit log ─────────────────────────────────────────────────────────────────
-    // Logs grow continuously; 120s TTL prevents serving stale security telemetry
-    // while reducing Oracle pressure for admin polling. maxKeys=200 covers
-    // concurrent admin sessions browsing the list, stats, and per-requestId views.
-    auditLog: { ttl: 120, checkPeriod: 30, maxKeys: 200 },
-
-    // ── Auth profile (/auth/me) ───────────────────────────────────────────────────
-    // Per-user profile cache. /me fires on every page focus; 30s staleness is
-    // harmless since role/active changes take effect on next refresh.
-    authProfile: { ttl: 30, checkPeriod: 15, maxKeys: 10000 },
-
-    // ── Integrity Center (SUPER_ADMIN only) ───────────────────────────────────
-    // Caches per-(table, scope) tamper-sweep results; the Re-scan button
-    // invalidates the exact key on demand.
-    integrity: { ttl: 180, checkPeriod: 60, maxKeys: 500 },
-
-    // ── Add project-specific cache stores below ───────────────────────────────────
-    // Example:
-    // myFeature: { ttl: 300, checkPeriod: 60, maxKeys: 200 },
-});
-
-// Cross-worker cache invalidation (ENABLE_CLUSTERING=true): apply sibling
-// workers' invalidations to this worker's stores so no worker serves stale
-// data after a write. No-op in single-process mode. Must run AFTER
-// registerAll so every relayed store name resolves.
-ClusterCacheSync.initWorker(registry);
+// Side-effect import: registers every store. ESM evaluates imports in source
+// order before this module's body, so it must sit above the routes import.
+import "./config/cacheStores";
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-const routes = require("./routes");
+import routes from "./routes";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MIDDLEWARE STACK (order matters — do not reorder)
@@ -230,4 +178,4 @@ app.use(defaultErrorHandler.notFoundHandler.bind(defaultErrorHandler));
 // Global error handler
 app.use(defaultErrorHandler.handle.bind(defaultErrorHandler));
 
-module.exports = app;
+export default app;

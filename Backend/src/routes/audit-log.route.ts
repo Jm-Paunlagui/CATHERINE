@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Audit Log routes.
@@ -54,12 +54,12 @@
  * requestId param values.
  */
 
-const express = require("express");
+import express from "express";
 const router  = express.Router();
 
-const AuthMiddleware     = require("../middleware/authentication/AuthMiddleware");
-const AuditLogController = require("../controllers/AuditLogController");
-const { CacheMiddleware, CacheKeyBuilder, registry } = require("../middleware/cache");
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import AuditLogController from "../controllers/AuditLogController";
+import { CacheMiddleware, CacheKeyBuilder, registry } from "../middleware/cache";
 
 // ── Cache store ───────────────────────────────────────────────────────────────
 const auditStore = registry.resolve("auditLog");
@@ -268,4 +268,4 @@ router.delete(
   AuditLogController.deleteRange,
 );
 
-module.exports = router;
+export default router;

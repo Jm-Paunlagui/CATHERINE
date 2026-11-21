@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Suspicious-IP strike/block bookkeeping, extracted unchanged
@@ -13,8 +13,8 @@
  * @author senior-nodejs-engineer
  */
 
-const { logger } = require("../../utils/logger");
-const { middlewareMessages } = require("../../constants/messages/middleware.messages");
+import { logger } from "../../utils/logger";
+import { middlewareMessages } from "../../constants/messages/middleware.messages";
 
 const DEFAULT_THRESHOLD = 10;
 const DEFAULT_BLOCK_MS = 60 * 60 * 1000;
@@ -174,4 +174,4 @@ class SuspiciousIpTracker {
     }
 }
 
-module.exports = { SuspiciousIpTracker };
+export { SuspiciousIpTracker };

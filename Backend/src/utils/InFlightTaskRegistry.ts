@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Process-level registry of detached ("fire-and-forget")
@@ -22,8 +22,8 @@
  * @author senior-nodejs-engineer
  */
 
-const { logger } = require("./logger");
-const { inFlightMessages } = require("../constants/messages");
+import { logger } from "./logger";
+import { inFlightMessages } from "../constants/messages";
 
 let nextId = 1;
 
@@ -159,4 +159,4 @@ class InFlightTaskRegistry {
     }
 }
 
-module.exports = new InFlightTaskRegistry();
+export default new InFlightTaskRegistry();

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Security filter middleware.
@@ -24,19 +24,17 @@
  * `rejectBodyOnBodylessMethods` constructor option.
  */
 
-const { logger } = require("../../utils/logger");
-const { getStatusTitle } = require("../../constants/responses");
-const {
-    middlewareMessages,
-} = require("../../constants/messages/middleware.messages");
-const { snowflake } = require("../../utils/snowflake");
-const { requestContext } = require("../../utils/requestContext");
-const { SuspiciousIpTracker } = require("./SuspiciousIpTracker");
-const { clusterRpc } = require("../../utils/cluster/ClusterRpcClient");
-const { isIp } = require("../../utils/cluster/ipcSchemas");
-const { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS } = require("../../constants/clusterIpc");
-const { clusterMessages } = require("../../constants/messages/cluster.messages");
-const { REQUEST_ERRORS } = require("../../constants/errors");
+import { logger } from "../../utils/logger";
+import { getStatusTitle } from "../../constants/responses";
+import { middlewareMessages } from "../../constants/messages/middleware.messages";
+import { snowflake } from "../../utils/snowflake";
+import { requestContext } from "../../utils/requestContext";
+import { SuspiciousIpTracker } from "./SuspiciousIpTracker";
+import { clusterRpc } from "../../utils/cluster/ClusterRpcClient";
+import { isIp } from "../../utils/cluster/ipcSchemas";
+import { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS } from "../../constants/clusterIpc";
+import { clusterMessages } from "../../constants/messages/cluster.messages";
+import { REQUEST_ERRORS } from "../../constants/errors";
 
 /** Methods that must never carry a request body (CVE-2026-123864 guard). Module-private. */
 const BODYLESS_METHODS = Object.freeze(new Set(["GET", "HEAD"]));
@@ -470,4 +468,4 @@ class SecurityFilterMiddleware {
 }
 
 const defaultSecurityFilter = new SecurityFilterMiddleware();
-module.exports = { SecurityFilterMiddleware, defaultSecurityFilter };
+export { SecurityFilterMiddleware, defaultSecurityFilter };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Generic Server-Sent Events (SSE) poller log message
@@ -93,4 +93,4 @@ const sseMessages = {
         `SSE graceful shutdown — sent 'shutdown' event to ${count} live stream(s).`,
 };
 
-module.exports = { sseMessages };
+export { sseMessages };

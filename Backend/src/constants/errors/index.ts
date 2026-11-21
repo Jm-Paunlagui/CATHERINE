@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview App-wide error messages, codes, types, and AppError class.
@@ -414,21 +414,4 @@ const CLUSTER_ERRORS = {
         "The alert service is briefly unavailable. Please try again in a moment.",
 };
 
-module.exports = {
-    AppError,
-    CLUSTER_ERRORS,
-    AUTH_ERRORS,
-    STREAM_ERRORS,
-    VALIDATION_ERRORS,
-    GENERAL_ERRORS,
-    ADMIN_ERRORS,
-    AUDIT_LOG_ERRORS,
-    METRICS_ERRORS,
-    CHANGELOG_ERRORS,
-    DEV_DOCS_ERRORS,
-    ARCHITECTURE_ERRORS,
-    INTEGRITY_ERRORS,
-    NOTIFICATION_ERRORS,
-    PURGE_ERRORS,
-    REQUEST_ERRORS,
-};
+export { AppError, CLUSTER_ERRORS, AUTH_ERRORS, STREAM_ERRORS, VALIDATION_ERRORS, GENERAL_ERRORS, ADMIN_ERRORS, AUDIT_LOG_ERRORS, METRICS_ERRORS, CHANGELOG_ERRORS, DEV_DOCS_ERRORS, ARCHITECTURE_ERRORS, INTEGRITY_ERRORS, NOTIFICATION_ERRORS, PURGE_ERRORS, REQUEST_ERRORS };

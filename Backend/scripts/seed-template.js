@@ -29,7 +29,7 @@ const {
     OracleCollection,
 } = require("../src/utils/oracle-mongo-wrapper");
 const { isDemoMode } = require("../src/config/demoMode");
-const AdminModel = require("../src/models/admin.model");
+const AdminModel = require("../src/models/admin.model").default;
 
 const DEMO_PASSWORD = "Demo@123";
 

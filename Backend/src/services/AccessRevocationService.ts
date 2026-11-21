@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Access-token revocation.
@@ -29,15 +29,15 @@
  * @author senior-nodejs-engineer
  */
 
-const { logger } = require("../utils/logger");
-const { authMessages } = require("../constants/messages");
-const { ACCESS_REVOCATION_LIMITS, FAMILY_ID_RE } = require("../constants/authTokens");
-const { CLUSTER_RPC_METHODS } = require("../constants/clusterIpc");
-const { accessTokenTtl } = require("../utils/auth/tokenClaims");
-const { revokedSessions } = require("../utils/auth/RevokedSessionSet");
-const { clusterRpc } = require("../utils/cluster/ClusterRpcClient");
-const AuthRefreshTokenModel = require("../models/auth.refresh.token.model");
-const SseConnectionRegistry = require("../utils/sse/SseConnectionRegistry");
+import { logger } from "../utils/logger";
+import { authMessages } from "../constants/messages";
+import { ACCESS_REVOCATION_LIMITS, FAMILY_ID_RE } from "../constants/authTokens";
+import { CLUSTER_RPC_METHODS } from "../constants/clusterIpc";
+import { accessTokenTtl } from "../utils/auth/tokenClaims";
+import { revokedSessions } from "../utils/auth/RevokedSessionSet";
+import { clusterRpc } from "../utils/cluster/ClusterRpcClient";
+import AuthRefreshTokenModel from "../models/auth.refresh.token.model";
+import SseConnectionRegistry from "../utils/sse/SseConnectionRegistry";
 
 let warnedUnparseableTtl = false;
 
@@ -157,4 +157,4 @@ class AccessRevocationService {
     }
 }
 
-module.exports = AccessRevocationService;
+export default AccessRevocationService;

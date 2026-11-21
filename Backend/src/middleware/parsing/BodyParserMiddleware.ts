@@ -1,12 +1,12 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Body parsing middleware — JSON + URL-encoded, plus the empty-body default.
  * Limits payload size to prevent abuse.
  */
 
-const bodyParser = require("body-parser");
+import bodyParser from "body-parser";
 
 /**
  * Wraps a body-parser handler so a `Content-Encoding: br` body is refused with
@@ -68,4 +68,4 @@ class BodyParserMiddleware {
 }
 
 const defaultBodyParser = new BodyParserMiddleware();
-module.exports = { BodyParserMiddleware, defaultBodyParser };
+export { BodyParserMiddleware, defaultBodyParser };

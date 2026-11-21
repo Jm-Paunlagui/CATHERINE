@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview `Money` — an EXACT decimal value type over a `BigInt`
@@ -51,7 +51,7 @@
  * and must NOT be passed through `toStorage`.
  */
 
-const { AppError } = require("../constants/errors");
+import { AppError } from "../constants/errors";
 
 /** Fixed STORAGE scale for a posted money amount — `NUMBER(19,4)`. */
 const STORAGE_SCALE = 4;
@@ -549,8 +549,4 @@ class Money {
     }
 }
 
-module.exports = {
-    Money,
-    STORAGE_SCALE,
-    MAX_INTEGER_DIGITS,
-};
+export { Money, STORAGE_SCALE, MAX_INTEGER_DIGITS };

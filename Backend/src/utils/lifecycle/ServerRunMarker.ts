@@ -1,6 +1,6 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { APP_ROOT } = require("../runtimePaths");
+
+import { APP_ROOT } from "../runtimePaths";
 
 /**
  * @fileoverview ServerRunMarker - the cron-leader process keeps a tiny
@@ -43,11 +43,11 @@ const { APP_ROOT } = require("../runtimePaths");
  * ACL), CWE-22 (path comes from config/override, never from a request).
  */
 
-const nodeFs = require("fs");
-const os = require("os");
-const path = require("path");
-const { SERVER_RUN_MARKER } = require("../../constants/serverRunMarker");
-const { serverMessages } = require("../../constants/messages/server.messages");
+import nodeFs from "fs";
+import os from "os";
+import path from "path";
+import { SERVER_RUN_MARKER } from "../../constants/serverRunMarker";
+import { serverMessages } from "../../constants/messages/server.messages";
 
 const { STATES, VERDICTS, STOP_REASONS } = SERVER_RUN_MARKER;
 const RENAME_FALLBACK_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
@@ -620,7 +620,11 @@ class ServerRunMarker {
     }
 }
 
-module.exports = ServerRunMarker;
-module.exports.resolveMarkerPath = resolveMarkerPath;
-module.exports.pendingKey = pendingKey;
-module.exports.pendingList = pendingList;
+const __default = ServerRunMarker;
+export default __default;
+__default.resolveMarkerPath = resolveMarkerPath;
+export { resolveMarkerPath };
+__default.pendingKey = pendingKey;
+export { pendingKey };
+__default.pendingList = pendingList;
+export { pendingList };

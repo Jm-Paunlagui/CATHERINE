@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview T_AUTH_REFRESH_TOKEN_DEV data access (DDL in
@@ -25,9 +25,9 @@
  * connection is opened.
  */
 
-const { createDb } = require("../utils/oracle-mongo-wrapper");
-const { isDemoMode } = require("../config/demoMode");
-const demo = require("./demo/demoStore");
+import { createDb } from "../utils/oracle-mongo-wrapper";
+import { isDemoMode } from "../config/demoMode";
+import demo from "./demo/demoStore";
 
 const _db = createDb("appDb");
 
@@ -306,4 +306,4 @@ class AuthRefreshTokenModel {
     }
 }
 
-module.exports = AuthRefreshTokenModel;
+export default AuthRefreshTokenModel;

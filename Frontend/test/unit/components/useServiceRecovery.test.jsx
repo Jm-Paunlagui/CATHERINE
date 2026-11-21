@@ -13,7 +13,7 @@ import { CHECK_COOLDOWN_MS } from "../../../src/components/shared/serverStatus/u
 import { SERVER_DANGER_AFTER_MS, SERVER_RECOVERED_MS, SERVER_STATUS_KIND as K, _resetServerStatusForTests, getServerEpisode, getServerStatusSnapshot, reportServerStatus, subscribeServerStatus } from "../../../src/utils/serverStatus.js";
 import { fail } from "../../helpers/fixtures/contract.js";
 import { apiUrl } from "../../helpers/msw/api.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const down = (retryAfter = 1) => new HttpResponse("<html>x</html>", { status: 503, headers: { "content-type": "text/html", "retry-after": String(retryAfter) } });

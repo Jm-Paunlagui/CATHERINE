@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Canonical row-outcome ledger for every bulk / Excel upload save
@@ -49,8 +49,8 @@
  *   return ledger.build({ archived });
  */
 
-const { logger } = require("./logger");
-const { uploadMessages } = require("../constants/messages");
+import { logger } from "./logger";
+import { uploadMessages } from "../constants/messages";
 
 // ─── Vocabulary ───────────────────────────────────────────────────────────────
 
@@ -429,12 +429,4 @@ class UploadOutcome {
     }
 }
 
-module.exports = {
-    UploadOutcome,
-    UploadOutcomeBuilder,
-    OUTCOME,
-    SKIP_REASON,
-    FAIL_REASON,
-    PENDING_REASON,
-    BUCKET_ORDER,
-};
+export { UploadOutcome, UploadOutcomeBuilder, OUTCOME, SKIP_REASON, FAIL_REASON, PENDING_REASON, BUCKET_ORDER };

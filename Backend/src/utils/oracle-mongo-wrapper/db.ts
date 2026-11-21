@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -30,8 +30,8 @@
  * ============================================================================
  */
 
-const config = require("../../config");
-const { oracleMongoWrapperMessages: MSG } = require("../../constants/messages");
+import config from "../../config";
+import { oracleMongoWrapperMessages as MSG } from "../../constants/messages";
 
 /**
  * Creates a db interface bound to a named database connection pool.
@@ -127,4 +127,4 @@ function createDb(connectionName = "appDb") {
   };
 }
 
-module.exports = { createDb };
+export { createDb };

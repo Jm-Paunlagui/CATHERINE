@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Data Purge & Restore log message templates.
@@ -101,4 +101,4 @@ const dataPurgeMessages = {
         `DataPurgeModel.streamAllTables() read-only transaction hit ORA-01555 snapshot too old across ${tables.length} table(s) [${tables.join(", ")}] — caller must fall back to the per-table streamTable() path and mark the backup manifest readConsistent:false. Oracle: ${oracleMessage}`,
 };
 
-module.exports = { dataPurgeMessages };
+export { dataPurgeMessages };

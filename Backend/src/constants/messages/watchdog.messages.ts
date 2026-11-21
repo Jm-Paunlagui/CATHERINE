@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for the progress / request watchdog
@@ -73,4 +73,4 @@ const watchdogMessages = {
     },
 };
 
-module.exports = { watchdogMessages };
+export { watchdogMessages };

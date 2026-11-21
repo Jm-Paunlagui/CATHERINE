@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Scheduled DB Backup + Encrypted Email Delivery log message
@@ -11,7 +11,7 @@
  * `BackupStoreService`'s filesystem/index/materialise/prune machinery, and
  * `BackupScheduleService`'s date-gated detector — the
  * "is a backup due, and for which event" orchestration that
- * `server.js`'s cron-leader-only scheduler wiring calls. Used ONLY in
+ * `server.ts`'s cron-leader-only scheduler wiring calls. Used ONLY in
  * `logger.*` calls — never thrown or sent to clients (throw strings live in
  * `constants/errors/index.js`'s `PURGE_ERRORS`, response strings in
  * `constants/responses/index.js`).
@@ -202,4 +202,4 @@ const dataBackupMessages = {
         `Stale backup lease ${name} taken over — previous holder pid ${pid ?? "unknown"} on ${hostname ?? "unknown"} was dead or made no progress.`,
 };
 
-module.exports = { dataBackupMessages };
+export { dataBackupMessages };

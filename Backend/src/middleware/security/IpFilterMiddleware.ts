@@ -1,13 +1,13 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview CIDR-aware IP allowlist middleware.
  * Restricts access to trusted IP addresses or CIDR ranges.
  */
 
-const { logger } = require("../../utils/logger");
-const { getStatusTitle } = require("../../constants/responses");
+import { logger } from "../../utils/logger";
+import { getStatusTitle } from "../../constants/responses";
 
 class IpFilterMiddleware {
   constructor(options = {}) {
@@ -73,4 +73,4 @@ class IpFilterMiddleware {
 }
 
 const defaultIpFilter = new IpFilterMiddleware();
-module.exports = { IpFilterMiddleware, defaultIpFilter };
+export { IpFilterMiddleware, defaultIpFilter };

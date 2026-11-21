@@ -19,9 +19,9 @@ const {
     OracleCollection,
     Transaction,
 } = require("../../../../src/utils/oracle-mongo-wrapper");
-const config = require("../../../../src/config");
-const AdminModel = require("../../../../src/models/admin.model");
-const demo = require("../../../../src/models/demo/demoStore");
+const config = require("../../../../src/config").default;
+const AdminModel = require("../../../../src/models/admin.model").default;
+const demo = require("../../../../src/models/demo/demoStore").default;
 const { ADMIN_ERRORS } = require("../../../../src/constants/errors");
 
 const ORIGINAL_DEMO_MODE = process.env.DEMO_MODE;

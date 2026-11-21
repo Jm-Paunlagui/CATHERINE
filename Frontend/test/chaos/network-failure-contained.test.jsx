@@ -39,7 +39,7 @@ import { ErrorBoundary } from "../../src/components/feedback/ErrorBoundary.jsx";
 import clientLogger from "../../src/utils/clientLogger.js";
 import httpClient from "../../src/middleware/HttpClient.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 import { renderWithProviders } from "../helpers/renderWithProviders.jsx";
 
 const GENERIC_TITLE = "Something went wrong";

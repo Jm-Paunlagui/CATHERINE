@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Backup delete vote model.
@@ -29,9 +29,9 @@
  *   const votes = await BackupVoteModel.findVotesByArchive("bk_2026...");
  */
 
-const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
-const { isDemoMode } = require("../config/demoMode");
-const demo = require("./demo/demoStore");
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
+import { isDemoMode } from "../config/demoMode";
+import demo from "./demo/demoStore";
 
 /** Table name (template `_DEV` convention; DDL in sql/01_schema.sql section 8). */
 const TABLE = "T_SERVER_BACKUP_DELETE_VOTE_DEV";
@@ -186,4 +186,4 @@ class BackupVoteModel {
     }
 }
 
-module.exports = BackupVoteModel;
+export default BackupVoteModel;

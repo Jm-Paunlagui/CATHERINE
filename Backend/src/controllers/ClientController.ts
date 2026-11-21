@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview HTTP controller for the /api/v1/client resource.
@@ -9,9 +9,9 @@
  * rejections route to ErrorHandlerMiddleware.
  */
 
-const { catchAsync } = require("../utils/catchAsync");
-const { sendSuccess, RESPONSE_MESSAGES, HTTP_STATUS } = require("../constants");
-const ClientService = require("../services/ClientService");
+import { catchAsync } from "../utils/catchAsync";
+import { sendSuccess, RESPONSE_MESSAGES, HTTP_STATUS } from "../constants";
+import ClientService from "../services/ClientService";
 
 class ClientController {
     /**
@@ -40,4 +40,4 @@ class ClientController {
     });
 }
 
-module.exports = ClientController;
+export default ClientController;

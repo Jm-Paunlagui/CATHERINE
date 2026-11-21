@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * WHAT THIS FILE DOES
@@ -27,7 +27,7 @@
  * filter KEYS are mapped through each table's fixed `filters` dict (allow-list).
  */
 
-const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
 
 const _db = createDb("appDb");
 
@@ -326,5 +326,7 @@ class IntegrityModel {
     }
 }
 
-module.exports = IntegrityModel;
-module.exports.TABLE_REGISTRY = TABLE_REGISTRY;
+const __default = IntegrityModel;
+export default __default;
+__default.TABLE_REGISTRY = TABLE_REGISTRY;
+export { TABLE_REGISTRY };

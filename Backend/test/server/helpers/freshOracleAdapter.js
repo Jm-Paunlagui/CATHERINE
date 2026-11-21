@@ -62,7 +62,7 @@ function loadFreshAdapter({ createPool } = {}) {
     // Ensure the shared copy (and database.js) are loaded first, so the entry we
     // stash below is the singleton everyone else holds.
     require(ADAPTER_PATH);
-    const database = require(DATABASE_PATH);
+    const database = require(DATABASE_PATH).default;
     const oracledb = require("oracledb");
 
     const prevCreatePool = oracledb.createPool;

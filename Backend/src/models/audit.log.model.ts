@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview AuditLogModel — per-request audit trail.
@@ -25,10 +25,10 @@
  * connection is opened. In normal mode the model uses the `appDb` connection.
  */
 
-const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
-const { isDemoMode } = require("../config/demoMode");
-const demo = require("./demo/demoStore");
-const AuditLogFileModel = require("./audit.log.file.model");
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
+import { isDemoMode } from "../config/demoMode";
+import demo from "./demo/demoStore";
+import AuditLogFileModel from "./audit.log.file.model";
 
 /** @returns {string} Resolved audit table name (env override or NODE_ENV default). */
 function resolveTableName() {
@@ -309,5 +309,7 @@ class AuditLogModel {
     }
 }
 
-module.exports = AuditLogModel;
-module.exports._resetStorageForTests = _resetStorageForTests;
+const __default = AuditLogModel;
+export default __default;
+__default._resetStorageForTests = _resetStorageForTests;
+export { _resetStorageForTests };

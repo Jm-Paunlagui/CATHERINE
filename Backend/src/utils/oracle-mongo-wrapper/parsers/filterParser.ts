@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -61,10 +61,8 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
-const {
-  oracleMongoWrapperMessages: MSG,
-} = require("../../../constants/messages");
+import { quoteIdentifier } from "../utils";
+import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 /**
  * Oracle's hard cap on expressions inside a single IN (...) list (ORA-01795).
@@ -632,4 +630,4 @@ function parseFilter(filter, tableAlias, _counter) {
   return { whereClause, binds };
 }
 
-module.exports = { parseFilter, resetBindCounter };
+export { parseFilter, resetBindCounter };

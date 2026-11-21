@@ -1,12 +1,12 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
 
-const { logger } = require("../utils/logger");
-const { serverMessages } = require("../constants/messages");
 
-const { KNOWN_JOBS } = require("../constants/schedulerJobs");
-const { clusterRpc } = require("../utils/cluster/ClusterRpcClient");
-const { CLUSTER_RPC_METHODS } = require("../constants/clusterIpc");
+import { logger } from "../utils/logger";
+import { serverMessages } from "../constants/messages";
+
+import { KNOWN_JOBS } from "../constants/schedulerJobs";
+import { clusterRpc } from "../utils/cluster/ClusterRpcClient";
+import { CLUSTER_RPC_METHODS } from "../constants/clusterIpc";
 
 /**
  * @class SchedulerStateService
@@ -132,4 +132,4 @@ class SchedulerStateService {
     }
 }
 
-module.exports = SchedulerStateService;
+export default SchedulerStateService;

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 const auditLogMessages = {
   INSERT_FAILED: (requestId, err) =>
@@ -84,4 +84,4 @@ const auditLogMessages = {
     `System log tail poller hit ${max} consecutive errors with ${size} client(s) — stopping and notifying all.`,
 };
 
-module.exports = { auditLogMessages };
+export { auditLogMessages };

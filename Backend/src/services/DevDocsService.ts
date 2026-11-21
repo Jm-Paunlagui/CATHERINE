@@ -1,6 +1,6 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { APP_ROOT, appPath } = require("../utils/runtimePaths");
+
+import { APP_ROOT, appPath } from "../utils/runtimePaths";
 
 /**
  * DevDocsService — reads the `dev-docs` corpus for the in-app viewer.
@@ -37,15 +37,15 @@ const { APP_ROOT, appPath } = require("../utils/runtimePaths");
  * with a TTL and rebuilt lazily.
  */
 
-const fsp = require("node:fs/promises");
-const path = require("node:path");
-const { execFile } = require("node:child_process");
-const { promisify } = require("node:util");
+import fsp from "node:fs/promises";
+import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
-const { AppError, DEV_DOCS_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const devDocsMessages = require("../constants/messages/devdocs.messages");
+import { AppError, DEV_DOCS_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import devDocsMessages from "../constants/messages/devdocs.messages";
 
 const execFileAsync = promisify(execFile);
 
@@ -591,15 +591,21 @@ class DevDocsService {
     }
 }
 
-module.exports = DevDocsService;
-module.exports.CORPUS_ROOT = CORPUS_ROOT;
-module.exports.SEARCH_RESULT_CAP = SEARCH_RESULT_CAP;
-module.exports.MIN_QUERY_LENGTH = MIN_QUERY_LENGTH;
+const __default = DevDocsService;
+export default __default;
+__default.CORPUS_ROOT = CORPUS_ROOT;
+export { CORPUS_ROOT };
+__default.SEARCH_RESULT_CAP = SEARCH_RESULT_CAP;
+export { SEARCH_RESULT_CAP };
+__default.MIN_QUERY_LENGTH = MIN_QUERY_LENGTH;
+export { MIN_QUERY_LENGTH };
 // Exported for the freshness-coverage test, which asserts every section the
 // corpus has is mapped and every mapped path still exists on disk. Both are
 // silent failures otherwise: an unmapped section reads UNKNOWN forever, and a
 // renamed service leaves a path whose `git log` still resolves from history
 // while no longer tracking the file the doc describes.
-module.exports.SECTION_SOURCE_MAP = SECTION_SOURCE_MAP;
+__default.SECTION_SOURCE_MAP = SECTION_SOURCE_MAP;
+export { SECTION_SOURCE_MAP };
 // Exported for scripts/build-devdocs-freshness.js, the snapshot's only writer.
-module.exports.FRESHNESS_SNAPSHOT_PATH = FRESHNESS_SNAPSHOT_PATH;
+__default.FRESHNESS_SNAPSHOT_PATH = FRESHNESS_SNAPSHOT_PATH;
+export { FRESHNESS_SNAPSHOT_PATH };

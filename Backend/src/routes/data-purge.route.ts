@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Data Purge & Restore routes (SUPER_ADMIN only).
@@ -44,21 +44,18 @@
  * malformed input is rejected before any business logic.
  */
 
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const multer = require("multer");
-const { MULTIPART_FIELD_LIMITS } = require("../constants/multipart");
+import multer from "multer";
+import __multipart from "../constants/multipart";
+const { MULTIPART_FIELD_LIMITS } = __multipart;
 
-const DataPurgeController = require("../controllers/DataPurgeController");
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
-const {
-    RateLimiterMiddleware,
-} = require("../middleware/security/RateLimiterMiddleware");
-const { AppError, PURGE_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const {
-    TraceabilityMiddleware,
-} = require("../middleware/traceability/TraceabilityMiddleware");
+import DataPurgeController from "../controllers/DataPurgeController";
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import { RateLimiterMiddleware } from "../middleware/security/RateLimiterMiddleware";
+import { AppError, PURGE_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { TraceabilityMiddleware } from "../middleware/traceability/TraceabilityMiddleware";
 
 // ── Access predicate ──────────────────────────────────────────────────────────
 
@@ -272,4 +269,4 @@ router.delete(
     DataPurgeController.cancelDeleteRequest,
 );
 
-module.exports = router;
+export default router;

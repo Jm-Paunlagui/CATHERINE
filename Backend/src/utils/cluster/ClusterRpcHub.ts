@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Primary-side router of the cluster shared-state IPC protocol.
@@ -24,16 +24,9 @@
  * @author senior-nodejs-engineer
  */
 
-const {
-    CLUSTER_IPC,
-    CLUSTER_RPC_TARGETS,
-    CLUSTER_RPC_METHODS,
-    CLUSTER_RPC_ERROR_CODES,
-    CLUSTER_RPC_TIMEOUTS,
-    CLUSTER_RPC_LIMITS,
-} = require("../../constants/clusterIpc");
-const { clusterMessages } = require("../../constants/messages/cluster.messages");
-const { validateRequest, validateNotify, validateArgs, isPlainObject } = require("./ipcSchemas");
+import { CLUSTER_IPC, CLUSTER_RPC_TARGETS, CLUSTER_RPC_METHODS, CLUSTER_RPC_ERROR_CODES, CLUSTER_RPC_TIMEOUTS, CLUSTER_RPC_LIMITS } from "../../constants/clusterIpc";
+import { clusterMessages } from "../../constants/messages/cluster.messages";
+import { validateRequest, validateNotify, validateArgs, isPlainObject } from "./ipcSchemas";
 
 const M = CLUSTER_RPC_METHODS;
 const T = CLUSTER_RPC_TARGETS;
@@ -488,4 +481,4 @@ class ClusterRpcHub {
     }
 }
 
-module.exports = { ClusterRpcHub, buildError, METHOD_TARGET };
+export { ClusterRpcHub, buildError, METHOD_TARGET };

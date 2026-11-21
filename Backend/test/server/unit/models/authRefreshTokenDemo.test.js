@@ -7,9 +7,9 @@
  * connection.
  */
 
-const config = require("../../../../src/config");
-const AuthRefreshTokenModel = require("../../../../src/models/auth.refresh.token.model");
-const demo = require("../../../../src/models/demo/demoStore");
+const config = require("../../../../src/config").default;
+const AuthRefreshTokenModel = require("../../../../src/models/auth.refresh.token.model").default;
+const demo = require("../../../../src/models/demo/demoStore").default;
 
 const ORIGINAL_DEMO_MODE = process.env.DEMO_MODE;
 const HOUR = 3_600_000;

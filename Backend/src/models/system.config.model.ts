@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * WHAT THIS FILE DOES
@@ -44,9 +44,9 @@
  * interpolation.
  */
 
-const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
-const { isDemoMode } = require("../config/demoMode");
-const demo = require("./demo/demoStore");
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
+import { isDemoMode } from "../config/demoMode";
+import demo from "./demo/demoStore";
 
 /**
  * Physical table (template `_DEV` convention; DDL in sql/01_schema.sql
@@ -141,4 +141,4 @@ class SystemConfigModel {
     }
 }
 
-module.exports = SystemConfigModel;
+export default SystemConfigModel;

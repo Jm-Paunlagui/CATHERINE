@@ -30,7 +30,7 @@ import { http, HttpResponse } from "msw";
 import AuthMiddleware from "../../src/middleware/authentication/AuthMiddleware.js";
 import { ok } from "./fixtures/contract.js";
 import { apiUrl } from "./msw/api.js";
-import { server } from "./msw/server.js";
+import { server } from "./msw/server.ts";
 
 /** Role → userLevel, mirroring `AuthService._roleToUserLevel()`. */
 function userLevelFor(role) {

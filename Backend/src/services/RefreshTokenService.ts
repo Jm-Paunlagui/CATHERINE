@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Refresh-token lifecycle: persist, rotate, revoke, purge.
@@ -27,16 +27,16 @@
  * Complexity: O(1) per call (indexed lookups); purge is bounded by BATCH_LIMIT.
  */
 
-const { AppError, AUTH_ERRORS } = require("../constants/errors");
-const { logger } = require("../utils/logger");
-const { authMessages } = require("../constants/messages");
-const { REFRESH_REVOKE_REASONS, REFRESH_PURGE } = require("../constants/authTokens");
-const { hashJti } = require("../utils/auth/tokenClaims");
-const { canonicalUserKey } = require("../utils/auth/userKey");
-const { refreshTokenRegistry } = require("../utils/auth/RefreshTokenRegistry");
-const AuthRefreshTokenModel = require("../models/auth.refresh.token.model");
-const AccessRevocationService = require("./AccessRevocationService");
-const { RetryPolicy } = require("../utils/resilience");
+import { AppError, AUTH_ERRORS } from "../constants/errors";
+import { logger } from "../utils/logger";
+import { authMessages } from "../constants/messages";
+import { REFRESH_REVOKE_REASONS, REFRESH_PURGE } from "../constants/authTokens";
+import { hashJti } from "../utils/auth/tokenClaims";
+import { canonicalUserKey } from "../utils/auth/userKey";
+import { refreshTokenRegistry } from "../utils/auth/RefreshTokenRegistry";
+import AuthRefreshTokenModel from "../models/auth.refresh.token.model";
+import AccessRevocationService from "./AccessRevocationService";
+import { RetryPolicy } from "../utils/resilience";
 
 const fidPrefix = (fid) => String(fid ?? "").slice(0, 8);
 
@@ -194,4 +194,4 @@ class RefreshTokenService {
     }
 }
 
-module.exports = RefreshTokenService;
+export default RefreshTokenService;

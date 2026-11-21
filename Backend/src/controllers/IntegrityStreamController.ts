@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Integrity Center SSE live-tail controller.
@@ -21,18 +21,15 @@
  * poller catches/contains its own failures.
  */
 
-const { logger } = require("../utils/logger");
-const { integrityMessages } = require("../constants/messages");
-const IntegrityModel = require("../models/integrity.model");
-const IntegrityService = require("../services/IntegrityService");
-const IntegrityController = require("./IntegrityController");
-const SseConnectionRegistry = require("../utils/sse/SseConnectionRegistry");
-const { HTTP_STATUS } = require("../constants");
-const {
-    AUTH_ERRORS,
-    STREAM_ERRORS,
-} = require("../constants/errors");
-const { sendSsePreflightError } = require("../utils/sse/ssePreflight");
+import { logger } from "../utils/logger";
+import { integrityMessages } from "../constants/messages";
+import IntegrityModel from "../models/integrity.model";
+import IntegrityService from "../services/IntegrityService";
+import IntegrityController from "./IntegrityController";
+import SseConnectionRegistry from "../utils/sse/SseConnectionRegistry";
+import { HTTP_STATUS } from "../constants";
+import { AUTH_ERRORS, STREAM_ERRORS } from "../constants/errors";
+import { sendSsePreflightError } from "../utils/sse/ssePreflight";
 
 /** SSE poll interval (ms). */
 const POLL_INTERVAL_MS = 5_000;
@@ -271,4 +268,4 @@ class IntegrityStreamController {
     };
 }
 
-module.exports = IntegrityStreamController;
+export default IntegrityStreamController;

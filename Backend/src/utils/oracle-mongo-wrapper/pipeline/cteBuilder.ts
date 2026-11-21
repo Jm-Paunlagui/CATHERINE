@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -46,10 +46,8 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
-const {
-  oracleMongoWrapperMessages: MSG,
-} = require("../../../constants/messages");
+import { quoteIdentifier } from "../utils";
+import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 /**
  * Create a regular CTE from named QueryBuilder instances.
@@ -376,4 +374,4 @@ function _resolveJoinType(type) {
   }
 }
 
-module.exports = { withCTE, withRecursiveCTE };
+export { withCTE, withRecursiveCTE };

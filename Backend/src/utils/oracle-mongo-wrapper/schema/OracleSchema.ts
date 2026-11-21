@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -41,10 +41,8 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
-const {
-  oracleMongoWrapperMessages: MSG,
-} = require("../../../constants/messages");
+import { quoteIdentifier } from "../utils";
+import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 /**
  * Oracle DDL (Data Definition Language) manager.
@@ -397,4 +395,4 @@ class OracleSchema {
   }
 }
 
-module.exports = { OracleSchema };
+export { OracleSchema };

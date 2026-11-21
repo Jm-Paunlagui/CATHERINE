@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview `makeSignedFields` — a factory that produces ONE canonical
@@ -42,7 +42,7 @@
  * and verifier share that one canonicaliser because they share this one builder.
  */
 
-const { Money } = require("../money");
+import { Money } from "../money";
 
 /**
  * Canonicalises a single money field to its exact scale-4 storage string, so a
@@ -143,8 +143,4 @@ function makeSignedFields({ domain, fields, moneyFields = [] }) {
     return { domain, project, sign, verify };
 }
 
-module.exports = {
-    makeSignedFields,
-    canonicalMoney,
-    canonicalPlain,
-};
+export { makeSignedFields, canonicalMoney, canonicalPlain };

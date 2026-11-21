@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -31,8 +31,8 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
-const { parseFilter } = require("../parsers/filterParser");
+import { quoteIdentifier } from "../utils";
+import { parseFilter } from "../parsers/filterParser";
 
 /**
  * Build a CONNECT BY hierarchical query.
@@ -223,4 +223,4 @@ function _getNameColumn(spec) {
   return "NAME";
 }
 
-module.exports = { buildConnectBy, buildPivot, buildUnpivot };
+export { buildConnectBy, buildPivot, buildUnpivot };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -32,7 +32,7 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
+import { quoteIdentifier } from "../utils";
 
 /**
  * Build a scalar subquery for use in SELECT projections.
@@ -187,11 +187,4 @@ function buildAnyAllSubquery(spec, comparison = "ANY") {
   return `${comparison} (SELECT ${quoteIdentifier(field)} FROM ${quoteIdentifier(collection)})`;
 }
 
-module.exports = {
-  buildScalarSubquery,
-  buildExistsSubquery,
-  buildNotExistsSubquery,
-  buildCorrelatedSubquery,
-  buildInSelectSubquery,
-  buildAnyAllSubquery,
-};
+export { buildScalarSubquery, buildExistsSubquery, buildNotExistsSubquery, buildCorrelatedSubquery, buildInSelectSubquery, buildAnyAllSubquery };

@@ -40,7 +40,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ErrorBoundary } from "../../src/components/feedback/ErrorBoundary.jsx";
 import { ok } from "../helpers/fixtures/contract.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 import { renderWithProviders } from "../helpers/renderWithProviders.jsx";
 
 const GENERIC_TITLE = "Something went wrong";

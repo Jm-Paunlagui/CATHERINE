@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview CacheKeyBuilder — Fluent, deterministic cache key construction.
@@ -32,7 +32,7 @@
  *   const key = builder.build();
  */
 
-const crypto = require("crypto");
+import crypto from "crypto";
 
 /** Keys longer than this are hashed automatically. */
 const MAX_KEY_LENGTH = 200;
@@ -165,4 +165,4 @@ class CacheKeyBuilder {
   }
 }
 
-module.exports = { CacheKeyBuilder };
+export { CacheKeyBuilder };

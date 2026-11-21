@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview CacheStore — Single named cache instance backed by NodeCache.
@@ -12,11 +12,11 @@
  * CacheRegistry.register() instead.
  */
 
-const NodeCache = require("node-cache");
-const { logger } = require("../../utils/logger");
-const { cacheMessages } = require("../../constants/messages/cache.messages");
-const { SingleFlight } = require("./SingleFlight");
-const { ClusterCacheSync } = require("./ClusterCacheSync");
+import NodeCache from "node-cache";
+import { logger } from "../../utils/logger";
+import { cacheMessages } from "../../constants/messages/cache.messages";
+import { SingleFlight } from "./SingleFlight";
+import { ClusterCacheSync } from "./ClusterCacheSync";
 
 class CacheStore {
   /**
@@ -268,4 +268,4 @@ class CacheStore {
   }
 }
 
-module.exports = { CacheStore };
+export { CacheStore };

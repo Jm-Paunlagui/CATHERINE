@@ -1,22 +1,23 @@
-"use strict";
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
-const express = require("express");
+
+import express from "express";
 const router = express.Router();
 
 // ─── Route modules ────────────────────────────────────────────────────────────
 
-const healthRoutes = require("./health.route");
-const csrfRoutes = require("./csrf.route");
-const authRoutes = require("./auth.route");
-const adminManagementRoutes = require("./admin-management.route");
-const auditLogRoutes           = require("./audit-log.route");
-const metricsRoutes            = require("./metrics.route");
-const clientRoutes             = require("./client.route");
-const changelogRoutes          = require("./changelog.route");
-const devDocsRoutes            = require("./dev-docs.route");
-const architectureRoutes       = require("./architecture.route");
-const integrityRoutes          = require("./integrity.route");
-const dataPurgeRoutes          = require("./data-purge.route");
+import healthRoutes from "./health.route";
+import csrfRoutes from "./csrf.route";
+import authRoutes from "./auth.route";
+import adminManagementRoutes from "./admin-management.route";
+import auditLogRoutes from "./audit-log.route";
+import metricsRoutes from "./metrics.route";
+import clientRoutes from "./client.route";
+import changelogRoutes from "./changelog.route";
+import devDocsRoutes from "./dev-docs.route";
+import architectureRoutes from "./architecture.route";
+import integrityRoutes from "./integrity.route";
+import dataPurgeRoutes from "./data-purge.route";
 
 // ─── Mount routes ─────────────────────────────────────────────────────────────
 
@@ -65,4 +66,4 @@ router.use("/integrity", integrityRoutes);
 // Data Purge & Restore (SUPER_ADMIN only — bulk group/table purge with mandatory pre-purge backup)
 router.use("/data-purge", dataPurgeRoutes);
 
-module.exports = router;
+export default router;

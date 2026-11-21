@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Pure helpers for the critical-log relay: a non-leader worker's
@@ -17,7 +17,7 @@
  * @author senior-nodejs-engineer
  */
 
-const { CLUSTER_IPC } = require("../../constants/clusterIpc");
+import { CLUSTER_IPC } from "../../constants/clusterIpc";
 
 /** Max characters kept of a relayed message. */
 const RELAY_MESSAGE_MAX = 4000;
@@ -95,4 +95,4 @@ function subscribeCriticalRelay(logger, proc) {
     });
 }
 
-module.exports = { buildRelayMessage, subscribeCriticalRelay, sanitizeMeta, RELAY_MESSAGE_MAX, RELAY_META_MAX };
+export { buildRelayMessage, subscribeCriticalRelay, sanitizeMeta, RELAY_MESSAGE_MAX, RELAY_META_MAX };

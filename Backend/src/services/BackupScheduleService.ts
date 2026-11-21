@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Scheduled DB Backup — event-driven detector + orchestration.
@@ -19,7 +19,7 @@
  *
  * HOW IT WORKS
  * ------------
- * `triggerScheduledBackup(label)` (called by `server.js`'s cron-leader-only
+ * `triggerScheduledBackup(label)` (called by `server.ts`'s cron-leader-only
  * wiring from exact-time timers, a boot catch-up and an interval sweep):
  *   1. `{ skipped: "disabled" }` when `DB_BACKUP_ENABLED === "false"`.
  *   2. `{ skipped: "already-running" }` on the in-process `_backupRunning`
@@ -57,10 +57,10 @@
  *   // result -> { skipped: false, due: 1, ran: [...], failed: [], pruned: [...] }
  */
 
-const { logger } = require("../utils/logger");
-const { dataBackupMessages } = require("../constants/messages");
-const BackupStoreService = require("./BackupStoreService");
-const { getAllTableNames } = require("../constants/purgeTables");
+import { logger } from "../utils/logger";
+import { dataBackupMessages } from "../constants/messages";
+import BackupStoreService from "./BackupStoreService";
+import { getAllTableNames } from "../constants/purgeTables";
 
 /** Default catch-up look-back window (hours) when `DB_BACKUP_CATCHUP_WINDOW_HOURS` is unset. */
 const DEFAULT_CATCHUP_WINDOW_HOURS = 72;
@@ -73,7 +73,7 @@ const DEFAULT_LOCKOUT_WINDOW_MS = 60_000;
 
 /**
  * Default delay (ms) after a schedule event before its exact-time timer fires
- * when `DB_BACKUP_EVENT_DELAY_MS` is unset — MUST mirror `server.js`'s
+ * when `DB_BACKUP_EVENT_DELAY_MS` is unset — MUST mirror `server.ts`'s
  * `_scheduleDbBackup()` default (both read the same env var).
  */
 const DEFAULT_EVENT_DELAY_MS = 900_000;
@@ -112,7 +112,7 @@ class BackupScheduleService {
 
     /**
      * Registers the schedule a project backs up on. Call once at boot, before
-     * `server.js` arms its backup timers.
+     * `server.ts` arms its backup timers.
      *
      * @param {BackupEventSource} source
      * @returns {void}
@@ -126,7 +126,7 @@ class BackupScheduleService {
     }
 
     /**
-     * Future schedule events, soonest first — what `server.js` arms its
+     * Future schedule events, soonest first — what `server.ts` arms its
      * exact-time timers from.
      *
      * @param {number} [horizonMs]
@@ -284,7 +284,7 @@ class BackupScheduleService {
     /**
      * Ms until the SOONEST upcoming scheduled backup FIRES — the soonest
      * upcoming event offset by `DB_BACKUP_EVENT_DELAY_MS` (the same source and
-     * offset `server.js`'s timers use). Fails OPEN on a lookup error (null):
+     * offset `server.ts`'s timers use). Fails OPEN on a lookup error (null):
      * this window is ergonomics, never the reason a legitimate action fails.
      *
      * @param {number} [lookaheadMs] - horizon override (tests)
@@ -353,4 +353,4 @@ class BackupScheduleService {
     }
 }
 
-module.exports = BackupScheduleService;
+export default BackupScheduleService;

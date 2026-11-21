@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -37,10 +37,8 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
-const {
-  oracleMongoWrapperMessages: MSG,
-} = require("../../../constants/messages");
+import { quoteIdentifier } from "../utils";
+import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 /**
  * Oracle error codes that indicate missing privileges or inaccessible objects.
@@ -282,4 +280,4 @@ function createPerformance(db) {
   };
 }
 
-module.exports = { createPerformance };
+export { createPerformance };

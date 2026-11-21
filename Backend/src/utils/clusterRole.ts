@@ -1,12 +1,12 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ClusterRole — pure decision helpers for cluster process roles.
  *
  * WHAT THIS FILE DOES
  * -------------------
- * Encapsulates the cron-leader election decisions server.js makes when
+ * Encapsulates the cron-leader election decisions server.ts makes when
  * clustering is on, as side-effect-free functions so they can be
  * unit-tested without forking real worker processes:
  *
@@ -16,19 +16,19 @@
  *   - electionHealth()  — given the CRON_LEADER env currently stamped on
  *                         every LIVE worker, classifies whether the cluster
  *                         has exactly one leader (healthy) or zero / more
- *                         than one (critical). Pure — server.js decides what
+ *                         than one (critical). Pure — server.ts decides what
  *                         to DO with the verdict (logger.crit).
  *
  * WHY A SEPARATE MODULE
  * ---------------------
  * Exactly ONE process must run the cron jobs. In single-process mode that is
  * the process itself; in cluster mode it is the one elected leader worker.
- * server.js cannot be unit-tested directly because requiring it boots an
+ * server.ts cannot be unit-tested directly because requiring it boots an
  * HTTP listener, opens DB pools, and (with ENABLE_CLUSTERING=true) forks
  * real OS processes — so the decision logic lives here instead, provable in
  * isolation. All functions are pure: same inputs → same output, no I/O, no
  * globals. Election MECHANICS (the fork loop, the worker-exit handler,
- * calling logger.crit) stay in server.js; only the DECISIONS live here.
+ * calling logger.crit) stay in server.ts; only the DECISIONS live here.
  *
  * FAIL CLOSED
  * -----------
@@ -40,7 +40,7 @@
  * notification, writes a file) is NOT safe to run N times — so N workers all
  * "failing open to leader" because no env was stamped would perform that
  * mutation N times, not once. A missed cron tick is recoverable (the boot
- * catch-up sweep + the cron-independent interval sweep in server.js retry
+ * catch-up sweep + the cron-independent interval sweep in server.ts retry
  * it); a duplicated state-mutating tick is not.
  *
  * isCronLeader() therefore fails CLOSED: a cluster worker is leader ONLY
@@ -49,7 +49,7 @@
  *
  * Fail-closed alone would trade a duplication risk for a silent-starvation
  * risk (if the primary ever fails to stamp a leader, NO worker runs the
- * scheduled jobs, silently). That risk is closed on the server.js side, not
+ * scheduled jobs, silently). That risk is closed on the server.ts side, not
  * here: the primary verifies — via electionHealth() below — that exactly
  * one live worker is stamped leader at every fork and every worker exit,
  * and logs CRITICAL the instant that invariant breaks, and re-elects a
@@ -65,7 +65,7 @@
  *
  * HOW TO USE
  * ----------
- * In server.js, when forking workers:
+ * In server.ts, when forking workers:
  *
  *   const { ClusterRole } = require("./src/utils/clusterRole");
  *
@@ -95,7 +95,7 @@ class ClusterRole {
      *   - Cluster worker: leader ONLY when its CRON_LEADER env is the exact
      *     string "true". The primary stamps exactly one live worker "true"
      *     at fork (and re-stamps a replacement the instant that worker
-     *     dies — see server.js) and every other worker "false". A missing,
+     *     dies — see server.ts) and every other worker "false". A missing,
      *     empty, or malformed env is NOT leader.
      *
      * @param {object}  [opts]
@@ -124,7 +124,7 @@ class ClusterRole {
      * env value currently stamped on every LIVE worker. Pure: takes a
      * snapshot array, returns a verdict — never reads `cluster`, never logs.
      *
-     * server.js calls this after the initial fork loop and after every
+     * server.ts calls this after the initial fork loop and after every
      * worker-exit re-election, and maps a "critical" severity onto
      * `logger.crit(...)`. This is what turns "the primary never stamped a
      * leader" or "two workers both ended up stamped leader" from a silent
@@ -157,4 +157,4 @@ class ClusterRole {
     }
 }
 
-module.exports = { ClusterRole, CRON_LEADER_TRUE, CRON_LEADER_FALSE };
+export { ClusterRole, CRON_LEADER_TRUE, CRON_LEADER_FALSE };

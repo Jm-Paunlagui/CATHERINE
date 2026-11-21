@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * Dev-docs routes — the in-app developer documentation viewer.
@@ -36,11 +36,11 @@
  * cached manifest and a single document read is one file.
  */
 
-const express = require("express");
+import express from "express";
 
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
-const DevDocsController = require("../controllers/DevDocsController");
-const { RateLimiterMiddleware } = require("../middleware/security/RateLimiterMiddleware");
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import DevDocsController from "../controllers/DevDocsController";
+import { RateLimiterMiddleware } from "../middleware/security/RateLimiterMiddleware";
 
 const router = express.Router();
 
@@ -87,4 +87,4 @@ router.get("/search", searchLimiter.handle, DevDocsController.search);
 // filesystem call. See DevDocsService.
 router.get("/doc/:section/:name", DevDocsController.getDoc);
 
-module.exports = router;
+export default router;

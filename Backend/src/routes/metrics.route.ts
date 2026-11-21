@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Routes for the /api/v1/metrics resource.
@@ -21,14 +21,12 @@
  * send and is SUPER_ADMIN-only.
  */
 
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const MetricsController = require("../controllers/MetricsController");
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
-const {
-    RateLimiterMiddleware,
-} = require("../middleware/security/RateLimiterMiddleware");
+import MetricsController from "../controllers/MetricsController";
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import { RateLimiterMiddleware } from "../middleware/security/RateLimiterMiddleware";
 
 // Dedicated stricter limiter for the unauthenticated frontend ingestion endpoint
 const frontendIngestLimiter = new RateLimiterMiddleware({
@@ -135,9 +133,12 @@ router.delete(
     MetricsController.unacknowledgeAlert,
 );
 
-module.exports = router;
+const __default = router;
+export default __default;
 // Exposed for tests: limiters are module-level state that persists across a
 // full test run, so suites must be able to reset them for deterministic results
 // (same per-route rate-limiter pattern used by other mutating routes).
-module.exports.frontendIngestLimiter = frontendIngestLimiter;
-module.exports.notificationTestLimiter = notificationTestLimiter;
+__default.frontendIngestLimiter = frontendIngestLimiter;
+export { frontendIngestLimiter };
+__default.notificationTestLimiter = notificationTestLimiter;
+export { notificationTestLimiter };

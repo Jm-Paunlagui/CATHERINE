@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview In-memory set of ended session families.
@@ -25,7 +25,7 @@
  * @author senior-nodejs-engineer
  */
 
-const { ACCESS_REVOCATION_LIMITS } = require("../../constants/authTokens");
+import { ACCESS_REVOCATION_LIMITS } from "../../constants/authTokens";
 
 const SWEEP_MIN_GAP_MS = 1000;
 
@@ -142,4 +142,4 @@ class RevokedSessionSet {
 /** Process-wide instance used by AccessRevocationService and AuthMiddleware. */
 const revokedSessions = new RevokedSessionSet();
 
-module.exports = { RevokedSessionSet, revokedSessions };
+export { RevokedSessionSet, revokedSessions };

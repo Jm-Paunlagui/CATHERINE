@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Row-level tamper detection (ROW_HASH verification).
@@ -15,9 +15,9 @@
  * appear in the Integrity Center).
  */
 
-const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const { logger } = require("../utils/logger");
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import { logger } from "../utils/logger";
 
 /** Pool the scan helpers read from. */
 const _db = createDb("appDb");
@@ -131,4 +131,4 @@ class TamperDetectionService {
     }
 }
 
-module.exports = TamperDetectionService;
+export default TamperDetectionService;

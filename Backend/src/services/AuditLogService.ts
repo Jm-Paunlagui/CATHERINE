@@ -1,18 +1,18 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
 
-const fs = require("fs").promises;
-const path = require("path");
+import { IS_COMPILED, APP_ROOT } from "../utils/runtimePaths";
 
-const { logger } = require("../utils/logger");
-const { requestContext } = require("../utils/requestContext");
-const { runDetached } = require("../utils/progress/progress");
-const { AppError, AUDIT_LOG_ERRORS } = require("../constants/errors");
-const { auditLogMessages } = require("../constants/messages");
-const AuditLogModel = require("../models/audit.log.model");
-const { DATETIME_COL_WIDTH, setDateTimeCell } = require("../utils/excelFormat");
-const { searchCandidates } = require("../utils/logRedaction");
+import { promises as fs } from "fs";
+import path from "path";
+
+import { logger } from "../utils/logger";
+import { requestContext } from "../utils/requestContext";
+import { runDetached } from "../utils/progress/progress";
+import { AppError, AUDIT_LOG_ERRORS } from "../constants/errors";
+import { auditLogMessages } from "../constants/messages";
+import AuditLogModel from "../models/audit.log.model";
+import { DATETIME_COL_WIDTH, setDateTimeCell } from "../utils/excelFormat";
+import { searchCandidates } from "../utils/logRedaction";
 
 /**
  * Log directory base — MUST match logger.js's LOG_BASE_DIR resolution: in
@@ -206,7 +206,7 @@ class AuditLogService {
     /**
      * Flushes all buffered audit records in one executeMany batch. Never throws.
      * Called automatically by insertAsync (size/interval triggers) and by
-     * server.js during graceful shutdown (`{ final: true }`).
+     * server.ts during graceful shutdown (`{ final: true }`).
      *
      * Single-flight: a call while a flush is running returns that flush
      * (`final` waits for it, then flushes whatever is left once).
@@ -1396,4 +1396,4 @@ class AuditLogService {
     }
 }
 
-module.exports = AuditLogService;
+export default AuditLogService;

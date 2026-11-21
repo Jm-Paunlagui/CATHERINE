@@ -1,7 +1,7 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
 
-const { formatUtcStamp } = require("../utils/formatUtcStamp");
+
+import { formatUtcStamp } from "../utils/formatUtcStamp";
 
 /**
  * @fileoverview Server Email Notifications — state machine, poller, and
@@ -14,7 +14,7 @@ const { formatUtcStamp } = require("../utils/formatUtcStamp");
  *
  *   1. METRICS POLL (dependencies / red-metrics / system channels) — a plain
  *      `setInterval` (never node-cron — PKG builds have silently missed cron
- *      ticks before; see the 15-min sweep precedent in `server.js`) calls
+ *      ticks before; see the 15-min sweep precedent in `server.ts`) calls
  *      `MetricsService.evaluateAlerts()` every `ALERT_POLL_INTERVAL_MS` and
  *      diffs the result against the last known state per alert identity
  *      (`rule + (route ?? pool ?? "global")`). Emails fire only on state
@@ -59,7 +59,7 @@ const { formatUtcStamp } = require("../utils/formatUtcStamp");
  * never re-email it via the critical channel too.
  *
  * CLUSTER GUARD — this class is cluster-agnostic by design; the caller
- * (`server.js`) only calls `start()` on the elected cron-leader worker
+ * (`server.ts`) only calls `start()` on the elected cron-leader worker
  * (the `ClusterRole` gate every scheduled job uses), so exactly one worker polls and
  * subscribes to the tap in a clustered deployment.
  *
@@ -68,28 +68,28 @@ const { formatUtcStamp } = require("../utils/formatUtcStamp");
  *   const AlertNotifierService = require("./AlertNotifierService");
  *   AlertNotifierService.start();     // BEFORE pools init, cron-leader only
  *   // ...
- *   // graceful shutdown (server.js / TeardownSequence.js):
+ *   // graceful shutdown (server.ts / TeardownSequence.js):
  *   AlertNotifierService.beginShutdown();               // stop poll + retention, tap stays live
  *   await AlertNotifierService.flushForShutdown();      // phase 1: buffered criticals' rows saved only (emailed in phase 2)
  *   await AlertNotifierService.drainAndStop({ timeoutMs, persist: false }); // phase 2: final, email only
  *   // stop() is the HARD stop (tests, boot failure): buffered criticals are discarded.
  */
 
-const v8 = require("v8");
-const { logger } = require("../utils/logger");
-const { dbTimezoneOffsetMinutes } = require("../utils/dbTimezone");
-const { notificationMessages } = require("../constants/messages");
-const { AppError, NOTIFICATION_ERRORS, CLUSTER_ERRORS } = require("../constants/errors");
-const { clusterRpc, ClusterRpcClient } = require("../utils/cluster/ClusterRpcClient");
-const { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS } = require("../constants/clusterIpc");
-const { metricsStore } = require("../middleware/metrics");
-const MetricsService = require("./MetricsService");
-const ServerNotificationService = require("./email/ServerNotificationService");
+import v8 from "v8";
+import { logger } from "../utils/logger";
+import { dbTimezoneOffsetMinutes } from "../utils/dbTimezone";
+import { notificationMessages } from "../constants/messages";
+import { AppError, NOTIFICATION_ERRORS, CLUSTER_ERRORS } from "../constants/errors";
+import { clusterRpc, ClusterRpcClient } from "../utils/cluster/ClusterRpcClient";
+import { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS } from "../constants/clusterIpc";
+import { metricsStore } from "../middleware/metrics";
+import MetricsService from "./MetricsService";
+import ServerNotificationService from "./email/ServerNotificationService";
 const { DETAILS_NOTE } = ServerNotificationService;
-const ServerAlertLogModel = require("../models/serverAlertLog.model");
-const ServerAlertAckModel = require("../models/serverAlertAck.model");
-const AdminModel = require("../models/admin.model");
-const InFlightTaskRegistry = require("../utils/InFlightTaskRegistry");
+import ServerAlertLogModel from "../models/serverAlertLog.model";
+import ServerAlertAckModel from "../models/serverAlertAck.model";
+import AdminModel from "../models/admin.model";
+import InFlightTaskRegistry from "../utils/InFlightTaskRegistry";
 
 /**
  * Static rule → channel mapping. A rule with no entry here falls back to
@@ -114,7 +114,7 @@ const RULE_CHANNEL_MAP = Object.freeze({
 const FALLBACK_CHANNEL = "server-system-notification";
 
 /**
- * Best-effort timeout for `notifyCriticalNow()` (server.js process-crash
+ * Best-effort timeout for `notifyCriticalNow()` (server.ts process-crash
  * handlers) and `notifyLifecycleNow()` (shutdown alert emails), where we
  * cannot block exit indefinitely waiting on SMTP. Not env-configurable — deliberately out of scope of the documented
  * env var list.
@@ -159,7 +159,7 @@ const MAX_STACK_CHARS = 2000;
 
 /**
  * Retention-purge sweep check interval — mirrors the 15-min PKG-resilience
- * sweep precedent in server.js (plain setInterval, never node-cron, R6).
+ * sweep precedent in server.ts (plain setInterval, never node-cron, R6).
  */
 const RETENTION_SWEEP_CHECK_MS = 15 * 60 * 1000;
 
@@ -263,7 +263,7 @@ class AlertNotifierService {
 
         // Phase 4 — hydrate the ack Map from SERVER_ALERT_ACK. Fire-and-forget
         // (never awaited here) so a slow/not-yet-initialized Oracle pool can
-        // never delay tap subscription above — server.js deliberately starts
+        // never delay tap subscription above — server.ts deliberately starts
         // this service BEFORE db.initializePools() so the critical tap is
         // live before a pool-init failure. Tests call _hydrateAcks() directly
         // for deterministic, awaited assertions instead of racing this call.
@@ -1330,7 +1330,7 @@ class AlertNotifierService {
 
     /**
      * Best-effort, immediate (non-buffered) critical notification for
-     * `server.js` process-crash handlers (`unhandledRejection` /
+     * `server.ts` process-crash handlers (`unhandledRejection` /
      * `uncaughtException`) — the process may be about to exit, so this
      * bypasses the normal digest-window buffering and races the send
      * against a short timeout rather than risking a hung shutdown.
@@ -1556,7 +1556,7 @@ class AlertNotifierService {
 
     /**
      * Arms the daily retention-purge sweep. Mirrors the plain-`setInterval`,
-     * once-per-day-check pattern of server.js's PKG-resilience sweeps (never node-cron, R6) — a
+     * once-per-day-check pattern of server.ts's PKG-resilience sweeps (never node-cron, R6) — a
      * self-contained sweep here rather than hooking into that unrelated job
      * keeps the two concerns independently testable and avoids running a
      * purge when server email notifications are disabled.
@@ -2238,5 +2238,7 @@ class AlertNotifierService {
 }
 
 const instance = new AlertNotifierService();
-module.exports = instance;
-module.exports.AlertNotifierService = AlertNotifierService;
+const __default = instance;
+export default __default;
+__default.AlertNotifierService = AlertNotifierService;
+export { AlertNotifierService };

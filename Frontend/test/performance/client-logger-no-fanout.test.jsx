@@ -32,7 +32,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import clientLogger from "../../src/utils/clientLogger.js";
 import { ok } from "../helpers/fixtures/contract.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 
 let errSpy;
 

@@ -12,7 +12,7 @@
  *
  * Steps:
  *   1. scripts/build-devdocs-freshness.js writes src/generated/devDocsFreshness.json.
- *   2. `bun build --compile --sourcemap=inline` bundles server.js + node_modules into the executable.
+ *   2. `bun build --compile --sourcemap=inline` bundles server.ts + node_modules into the executable.
  *   3. Stages, beside the exe, every file the server reads through APP_ROOT
  *      (src/utils/runtimePaths.ts): email templates and the freshness snapshot.
  *      `bun build --compile` bakes the BUILD machine's absolute __dirname into the binary,
@@ -122,7 +122,7 @@ function main() {
     fs.rmSync(DIST, { recursive: true, force: true });
     fs.mkdirSync(DIST, { recursive: true });
 
-    const compileArgs = ["build", "--compile", "--sourcemap=inline", "server.js", "--outfile", path.join("dist", exeName)];
+    const compileArgs = ["build", "--compile", "--sourcemap=inline", "server.ts", "--outfile", path.join("dist", exeName)];
     if (!host) compileArgs.push(`--target=${args.target}`);
     run(process.execPath, compileArgs);
     // The map is already embedded (inline); Bun still writes a copy beside the exe. Don't ship it twice.

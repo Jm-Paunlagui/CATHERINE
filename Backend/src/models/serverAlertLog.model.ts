@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ServerAlertLogModel — alert / notification history.
@@ -59,9 +59,9 @@
  *   );
  */
 
-const { createDb } = require("../utils/oracle-mongo-wrapper");
-const { isDemoMode } = require("../config/demoMode");
-const { normalizeText } = require("../utils/textNormalize");
+import { createDb } from "../utils/oracle-mongo-wrapper";
+import { isDemoMode } from "../config/demoMode";
+import { normalizeText } from "../utils/textNormalize";
 
 /** @returns {string} Resolved table name (env override or NODE_ENV default). */
 function resolveTableName() {
@@ -372,5 +372,7 @@ class ServerAlertLogModel {
     }
 }
 
-module.exports = ServerAlertLogModel;
-module.exports.resolveTableName = resolveTableName;
+const __default = ServerAlertLogModel;
+export default __default;
+__default.resolveTableName = resolveTableName;
+export { resolveTableName };

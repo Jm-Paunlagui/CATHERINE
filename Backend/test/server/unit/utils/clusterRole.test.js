@@ -4,7 +4,7 @@
  * @fileoverview Unit tests for ClusterRole — the pure cron-leader decision.
  * Exactly one process must run the scheduled jobs; these prove the rule for
  * single-process, leader-worker, non-leader-worker, and the fail-CLOSED
- * contract, plus the pure election-health classification server.js uses to
+ * contract, plus the pure election-health classification server.ts uses to
  * decide when to log CRITICAL.
  */
 
@@ -88,7 +88,7 @@ describe("ClusterRole.isCronLeader", function () {
     });
 
     it("exactly one of N forked workers is the leader (election invariant)", function () {
-        // Mirror server.js: worker 0 forked as leader, rest as non-leaders.
+        // Mirror server.ts: worker 0 forked as leader, rest as non-leaders.
         const envs = Array.from({ length: 8 }, (_, i) =>
             ClusterRole.cronLeaderEnv(i === 0),
         );

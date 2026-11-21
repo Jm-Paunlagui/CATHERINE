@@ -1,6 +1,6 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { APP_ROOT } = require("../utils/runtimePaths");
+
+import { APP_ROOT } from "../utils/runtimePaths";
 
 /**
  * ChangelogModel
@@ -32,15 +32,13 @@ const { APP_ROOT } = require("../utils/runtimePaths");
  *   bun scripts/seed-changelog.js
  */
 
-const crypto = require("crypto");
-const fs = require("fs");
-const path = require("path");
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
-const { logger } = require("../utils/logger");
-const {
-    changelogMessages,
-} = require("../constants/messages/changelog.messages");
-const { AppError, CHANGELOG_ERRORS } = require("../constants/errors");
+import { logger } from "../utils/logger";
+import { changelogMessages } from "../constants/messages/changelog.messages";
+import { AppError, CHANGELOG_ERRORS } from "../constants/errors";
 
 // Resolve data/ from APP_ROOT so the encrypted store lives next to the
 // compiled exe at runtime (see utils/runtimePaths.js).
@@ -439,4 +437,4 @@ class ChangelogModel {
     }
 }
 
-module.exports = ChangelogModel;
+export default ChangelogModel;

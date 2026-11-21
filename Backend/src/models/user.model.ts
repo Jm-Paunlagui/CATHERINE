@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview UserModel — standalone regular-user accounts (T_USERS_DEV).
@@ -12,9 +12,9 @@
  * connection is opened (the OracleCollection is lazily created only when needed).
  */
 
-const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
-const { isDemoMode } = require("../config/demoMode");
-const demo = require("./demo/demoStore");
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
+import { isDemoMode } from "../config/demoMode";
+import demo from "./demo/demoStore";
 
 const PROJECTION = {
     ID: 1,
@@ -159,4 +159,4 @@ class UserModel {
     }
 }
 
-module.exports = UserModel;
+export default UserModel;

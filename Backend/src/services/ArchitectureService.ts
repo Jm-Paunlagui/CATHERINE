@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ArchitectureService — serves the Support system maps
@@ -24,12 +24,12 @@
  * only copy served.
  */
 
-const { AppError, ARCHITECTURE_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const architectureMessages = require("../constants/messages/architecture.messages");
+import { AppError, ARCHITECTURE_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import architectureMessages from "../constants/messages/architecture.messages";
 // Module object, not a destructured function, so tests can spy on the build.
-const systemMap = require("../utils/systemMap");
+import * as systemMap from "../utils/systemMap";
 
 /** Map name → model. The names are hardcoded here and at the route; never caller input. */
 const MODELS = Object.freeze({
@@ -74,5 +74,8 @@ class ArchitectureService {
     }
 }
 
-module.exports = ArchitectureService;
-module.exports.MAP_NAMES = Object.keys(MODELS);
+const __default = ArchitectureService;
+export default __default;
+const __export_MAP_NAMES = Object.keys(MODELS);
+__default.MAP_NAMES = __export_MAP_NAMES;
+export { __export_MAP_NAMES as MAP_NAMES };

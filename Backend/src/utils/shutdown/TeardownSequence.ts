@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview The graceful-shutdown teardown ORDER, as two injectable
@@ -40,7 +40,7 @@
  * @author senior-nodejs-engineer
  */
 
-const { serverMessages } = require("../../constants/messages/server.messages");
+import { serverMessages } from "../../constants/messages/server.messages";
 
 /** Cadence of the "still waiting" notice during a long request grace. */
 const SHUTDOWN_WAIT_NOTICE_MS = 60_000;
@@ -65,7 +65,7 @@ const SHUTDOWN_WAIT_NOTICE_MS = 60_000;
  * @param {number} p.notifyDrainMs
  * @param {number} p.pendingTasks - InFlightTaskRegistry.size() at signal time
  * @param {number} p.minGraceMs
- * @param {number} [p.maxGraceMs=Infinity] - Hard cap on the request grace (server.js uses 30 min)
+ * @param {number} [p.maxGraceMs=Infinity] - Hard cap on the request grace (server.ts uses 30 min)
  * @returns {{phaseBudgetMs: number, requestGraceMs: number, drainReservedMs: number}}
  */
 function computeShutdownBudget({
@@ -438,12 +438,4 @@ function finalNotifyBudgetMs({ failsafeFireAt, now, reserveMs }) {
     return Math.max(0, failsafeFireAt - now - reserveMs);
 }
 
-module.exports = {
-    computeCrashFailsafeMs,
-    finalNotifyBudgetMs,
-    preCloseTeardown,
-    postCloseTeardown,
-    computeShutdownBudget,
-    remainingDrainMs,
-    SHUTDOWN_WAIT_NOTICE_MS,
-};
+export { computeCrashFailsafeMs, finalNotifyBudgetMs, preCloseTeardown, postCloseTeardown, computeShutdownBudget, remainingDrainMs, SHUTDOWN_WAIT_NOTICE_MS };

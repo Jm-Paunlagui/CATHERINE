@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview SingleFlight — in-flight call coalescing (anti-stampede).
@@ -65,4 +65,4 @@ class SingleFlight {
   }
 }
 
-module.exports = { SingleFlight };
+export { SingleFlight };

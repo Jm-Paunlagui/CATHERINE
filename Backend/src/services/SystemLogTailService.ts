@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview SystemLogTailService — live-tail poller backing
@@ -55,12 +55,12 @@
  *   systemLogTail.removeConnection("user-42");
  */
 
-const fs = require("fs").promises;
-const path = require("path");
+import { promises as fs } from "fs";
+import path from "path";
 
-const { logger } = require("../utils/logger");
-const { auditLogMessages } = require("../constants/messages");
-const AuditLogService = require("./AuditLogService");
+import { logger } from "../utils/logger";
+import { auditLogMessages } from "../constants/messages";
+import AuditLogService from "./AuditLogService";
 
 /** Max parsed rows delivered to one connection in a single tick — the rest are reported via `dropped`. */
 const MAX_ROWS_PER_TICK = 200;
@@ -414,5 +414,7 @@ class SystemLogTailService {
 }
 
 const instance = new SystemLogTailService();
-module.exports = instance;
-module.exports.SystemLogTailService = SystemLogTailService;
+const __default = instance;
+export default __default;
+__default.SystemLogTailService = SystemLogTailService;
+export { SystemLogTailService };

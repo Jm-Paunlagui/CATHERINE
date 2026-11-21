@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Server-side log templates for the Support system maps —
@@ -36,4 +36,4 @@ const architectureMessages = {
         `System map "${name}" could not be built (src/constants/${name}Model.ts): ${reason}`,
 };
 
-module.exports = architectureMessages;
+export default architectureMessages;

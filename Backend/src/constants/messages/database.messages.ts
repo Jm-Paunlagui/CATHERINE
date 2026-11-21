@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview General database operation log messages.
@@ -35,4 +35,4 @@ function fmtOffset(min) {
   return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
 }
 
-module.exports = { databaseMessages };
+export { databaseMessages };

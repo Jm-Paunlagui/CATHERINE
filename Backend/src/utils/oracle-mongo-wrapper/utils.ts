@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -20,7 +20,7 @@
  * ============================================================================
  */
 
-const { oracleMongoWrapperMessages: MSG } = require("../../constants/messages");
+import { oracleMongoWrapperMessages as MSG } from "../../constants/messages";
 
 // ─── quoteIdentifier ────────────────────────────────────────────
 /**
@@ -248,11 +248,4 @@ function buildProjection(projection) {
   };
 }
 
-module.exports = {
-  quoteIdentifier,
-  convertTypes,
-  rowToDoc,
-  mergeBinds,
-  buildOrderBy,
-  buildProjection,
-};
+export { quoteIdentifier, convertTypes, rowToDoc, mergeBinds, buildOrderBy, buildProjection };

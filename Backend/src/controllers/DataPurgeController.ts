@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Data Purge, Backup & Restore HTTP controller (SUPER_ADMIN only).
@@ -25,14 +25,14 @@
  *   DELETE /api/v1/data-purge/backups/:id/delete-request — cancelDeleteRequest
  */
 
-const { HTTP_STATUS } = require("../constants");
-const { AppError, PURGE_ERRORS } = require("../constants/errors");
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { logger } = require("../utils/logger");
-const { dataBackupMessages } = require("../constants/messages");
-const { catchAsync } = require("../utils/catchAsync");
-const DataPurgeService = require("../services/DataPurgeService");
-const DataRestoreService = require("../services/DataRestoreService");
+import { HTTP_STATUS } from "../constants";
+import { AppError, PURGE_ERRORS } from "../constants/errors";
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { logger } from "../utils/logger";
+import { dataBackupMessages } from "../constants/messages";
+import { catchAsync } from "../utils/catchAsync";
+import DataPurgeService from "../services/DataPurgeService";
+import DataRestoreService from "../services/DataRestoreService";
 
 /**
  * Numeric id of the authenticated admin (JWT `id` claim) — what backup
@@ -266,7 +266,7 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static listBackups = catchAsync(async (_req, res) => {
-        const BackupStoreService = require("../services/BackupStoreService");
+        const BackupStoreService = require("../services/BackupStoreService").default;
         const archives = await BackupStoreService.listArchives();
 
         // Derive aggregate disk usage from the index entries.
@@ -294,7 +294,7 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static runManualBackup = catchAsync(async (req, res) => {
-        const BackupStoreService = require("../services/BackupStoreService");
+        const BackupStoreService = require("../services/BackupStoreService").default;
         const { getAllTableNames } = require("../constants/purgeTables");
         const adminId = _callerAdminId(req);
 
@@ -341,7 +341,7 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static downloadBackup = catchAsync(async (req, res) => {
-        const BackupStoreService = require("../services/BackupStoreService");
+        const BackupStoreService = require("../services/BackupStoreService").default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id;
 
@@ -370,7 +370,7 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static verifyBackup = catchAsync(async (req, res) => {
-        const BackupStoreService = require("../services/BackupStoreService");
+        const BackupStoreService = require("../services/BackupStoreService").default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id;
 
@@ -402,8 +402,8 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static requestDeleteBackup = catchAsync(async (req, res) => {
-        const BackupStoreService = require("../services/BackupStoreService");
-        const BackupVoteModel = require("../models/backup-vote.model");
+        const BackupStoreService = require("../services/BackupStoreService").default;
+        const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id;
 
@@ -480,8 +480,8 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static voteDeleteBackup = catchAsync(async (req, res) => {
-        const BackupStoreService = require("../services/BackupStoreService");
-        const BackupVoteModel = require("../models/backup-vote.model");
+        const BackupStoreService = require("../services/BackupStoreService").default;
+        const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id;
 
@@ -571,8 +571,8 @@ class DataPurgeController {
      * @param {import('express').Response} res
      */
     static cancelDeleteRequest = catchAsync(async (req, res) => {
-        const BackupStoreService = require("../services/BackupStoreService");
-        const BackupVoteModel = require("../models/backup-vote.model");
+        const BackupStoreService = require("../services/BackupStoreService").default;
+        const BackupVoteModel = require("../models/backup-vote.model").default;
         const adminId = _callerAdminId(req);
         const archiveId = req.params.id;
 
@@ -603,4 +603,4 @@ class DataPurgeController {
     });
 }
 
-module.exports = DataPurgeController;
+export default DataPurgeController;

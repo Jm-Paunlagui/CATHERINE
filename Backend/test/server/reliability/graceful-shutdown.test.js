@@ -3,7 +3,7 @@
 /**
  * @fileoverview Graceful-shutdown tests.
  *
- * Tests 1–3 spawn a lightweight HTTP child process (not the full server.js,
+ * Tests 1–3 spawn a lightweight HTTP child process (not the full server.ts,
  * which requires Oracle pools) and verify:
  *   1. Shutdown signal → clean exit (code 0)
  *   2. In-flight requests complete before the process exits
@@ -145,7 +145,7 @@ server.listen(0, "127.0.0.1", () => {
 
     // ── Test 0 (existing) ────────────────────────────────────────────────
     it("app module exports a valid Express app", function () {
-        const app = require("../../../src/app");
+        const app = require("../../../src/app").default;
         expect(app).toBeInstanceOf(Function);
         expect(app).toHaveProperty("use");
         expect(app).toHaveProperty("get");

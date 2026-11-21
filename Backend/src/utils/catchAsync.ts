@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * Wraps an async controller function so rejected promises
@@ -26,4 +26,4 @@ function catchAsync(fn) {
     };
 }
 
-module.exports = { catchAsync };
+export { catchAsync };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Integrity Center business logic.
@@ -17,11 +17,11 @@
  * IntegrityModel caps any single sweep.
  */
 
-const { AppError, INTEGRITY_ERRORS, HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const { integrityMessages } = require("../constants/messages");
-const { CacheKeyBuilder, registry } = require("../middleware/cache");
-const IntegrityModel = require("../models/integrity.model");
+import { AppError, INTEGRITY_ERRORS, HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import { integrityMessages } from "../constants/messages";
+import { CacheKeyBuilder, registry } from "../middleware/cache";
+import IntegrityModel from "../models/integrity.model";
 
 const _store = registry.resolve("integrity");
 
@@ -303,4 +303,4 @@ class IntegrityService {
     }
 }
 
-module.exports = IntegrityService;
+export default IntegrityService;

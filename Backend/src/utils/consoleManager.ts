@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-const { logger } = require("./logger");
+import { logger } from "./logger";
 
 class ConsoleManager {
     constructor() {
@@ -208,7 +208,4 @@ class ConsoleManager {
 // Create singleton instance
 const consoleManager = new ConsoleManager();
 
-module.exports = {
-    consoleManager,
-    ConsoleManager,
-};
+export { consoleManager, ConsoleManager };

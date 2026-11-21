@@ -1,9 +1,9 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for process-level server lifecycle
- * events in `server.js` and `src/utils/shutdown/*` — shutdown budget,
+ * events in `server.ts` and `src/utils/shutdown/*` — shutdown budget,
  * request grace and exit codes.
  */
 
@@ -88,4 +88,4 @@ const serverMessages = {
     "DEMO_MODE=true — Oracle pools not opened; models use the in-memory demo store and DB-backed jobs are not scheduled.",
 };
 
-module.exports = { serverMessages };
+export { serverMessages };

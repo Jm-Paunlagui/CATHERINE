@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ReadinessService — the ONE readiness rule, shared by
@@ -28,9 +28,9 @@
  * returned `error` is a static string.
  */
 
-const db = require("../config");
-const { POOL_NAMES, READINESS_GATING_POOLS } = require("../config/database");
-const { logger } = require("../utils/logger");
+import db from "../config";
+import { POOL_NAMES, READINESS_GATING_POOLS } from "../config/database";
+import { logger } from "../utils/logger";
 
 /**
  * Reads a positive-integer env var, falling back to `fallbackValue`.
@@ -150,9 +150,4 @@ function evaluate() {
     return _inFlight;
 }
 
-module.exports = {
-    evaluate,
-    probePool,
-    HEALTH_PROBE_TIMEOUT_MS,
-    _isSaturationError,
-};
+export { evaluate, probePool, HEALTH_PROBE_TIMEOUT_MS, _isSaturationError };

@@ -1,24 +1,20 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Sliding Window Counter rate limiter middleware.
  * O(1) memory per key, ~0.003% error rate, IETF RateLimit-* headers.
  */
 
-const { SlidingWindowCounter } = require("./SlidingWindowCounter");
-const { clusterRpc } = require("../../utils/cluster/ClusterRpcClient");
-const { validateArgs } = require("../../utils/cluster/ipcSchemas");
-const {
-  CLUSTER_RPC_METHODS,
-  CLUSTER_RPC_TIMEOUTS,
-  CLUSTER_RPC_LIMITS,
-} = require("../../constants/clusterIpc");
-const { clusterMessages } = require("../../constants/messages/cluster.messages");
-const { middlewareMessages } = require("../../constants/messages/middleware.messages");
-const { RATE_LIMIT_COUNT_MODES } = require("../../constants/authRateLimits");
-const { getStatusTitle } = require("../../constants/responses");
-const { logger } = require("../../utils/logger");
+import { SlidingWindowCounter } from "./SlidingWindowCounter";
+import { clusterRpc } from "../../utils/cluster/ClusterRpcClient";
+import { validateArgs } from "../../utils/cluster/ipcSchemas";
+import { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS, CLUSTER_RPC_LIMITS } from "../../constants/clusterIpc";
+import { clusterMessages } from "../../constants/messages/cluster.messages";
+import { middlewareMessages } from "../../constants/messages/middleware.messages";
+import { RATE_LIMIT_COUNT_MODES } from "../../constants/authRateLimits";
+import { getStatusTitle } from "../../constants/responses";
+import { logger } from "../../utils/logger";
 
 /**
  * Health-probe paths that bypass rate limiting.
@@ -446,11 +442,4 @@ class RateLimiterGroup {
   }
 }
 
-module.exports = {
-  RateLimiterMiddleware,
-  RateLimiterGroup,
-  defaultRateLimiter,
-  burstRateLimiter,
-  perRouteRateLimiter,
-  credentialEmailRateLimiter,
-};
+export { RateLimiterMiddleware, RateLimiterGroup, defaultRateLimiter, burstRateLimiter, perRouteRateLimiter, credentialEmailRateLimiter };

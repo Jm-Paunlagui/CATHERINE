@@ -528,7 +528,7 @@ cp .env.example .env`}</CodeBlock>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <EnvRow name="bun run start" purpose="Start the API (bun server.js)." />
+                                                    <EnvRow name="bun run start" purpose="Start the API (bun server.ts)." />
                                                     <EnvRow name="bun run test" purpose="Run the full test suite." />
                                                     <EnvRow name="bun run test:unit" purpose="Unit tests only." />
                                                     <EnvRow name="bun run db:seed:template" purpose="Seed demo admin + user accounts (Argon2id)." />

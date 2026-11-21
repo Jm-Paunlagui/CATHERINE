@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Per-user login lockout with configurable fixed/incremental mode.
@@ -44,19 +44,15 @@
  *   await loginLockout.recordSuccessAsync(userId);
  */
 
-const { CacheStore } = require("../cache");
-const { logger } = require("../../utils/logger");
-const { authMessages } = require("../../constants/messages");
-const { clusterMessages } = require("../../constants/messages/cluster.messages");
-const { canonicalUserKey } = require("../../utils/auth/userKey");
-const { clusterRpc } = require("../../utils/cluster/ClusterRpcClient");
-const { validateArgs } = require("../../utils/cluster/ipcSchemas");
-const {
-  CLUSTER_RPC_METHODS,
-  CLUSTER_RPC_TIMEOUTS,
-  CLUSTER_RPC_LIMITS,
-} = require("../../constants/clusterIpc");
-const { LoginLockoutPolicy } = require("./LoginLockoutPolicy");
+import { CacheStore } from "../cache";
+import { logger } from "../../utils/logger";
+import { authMessages } from "../../constants/messages";
+import { clusterMessages } from "../../constants/messages/cluster.messages";
+import { canonicalUserKey } from "../../utils/auth/userKey";
+import { clusterRpc } from "../../utils/cluster/ClusterRpcClient";
+import { validateArgs } from "../../utils/cluster/ipcSchemas";
+import { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS, CLUSTER_RPC_LIMITS } from "../../constants/clusterIpc";
+import { LoginLockoutPolicy } from "./LoginLockoutPolicy";
 
 /**
  * Canonical store key for a login identifier. Kept as an alias of
@@ -285,4 +281,4 @@ class LoginLockoutMiddleware {
 
 const loginLockout = new LoginLockoutMiddleware();
 
-module.exports = { LoginLockoutMiddleware, loginLockout, lockoutKey };
+export { LoginLockoutMiddleware, loginLockout, lockoutKey };

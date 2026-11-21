@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview AuthService — standalone username/password authentication with
@@ -22,35 +22,23 @@
  *   accessCookieOptions, refreshCookieOptions, COOKIE_NAMES
  */
 
-const jwt = require("jsonwebtoken");
-const { randomUUID, timingSafeEqual } = require("crypto");
-const { AppError, AUTH_ERRORS, ADMIN_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const { authMessages, adminMessages } = require("../constants/messages");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const {
-    parseStoredAdminPassword,
-    isTemporaryExpired,
-} = require("../utils/encryption/adminTempPassword");
-const AdminModel = require("../models/admin.model");
-const UserModel = require("../models/user.model");
-const {
-    loginLockout,
-} = require("../middleware/authentication/LoginLockoutMiddleware");
-const { registry, CacheKeyBuilder } = require("../middleware/cache");
-const {
-    COOKIE_NAMES,
-    TOKEN_TYPES,
-    TOKEN_ISSUER,
-    TOKEN_AUDIENCES,
-    REFRESH_REVOKE_REASONS,
-    ACCESS_TOKEN_DEFAULT_EXPIRES_IN,
-} = require("../constants/authTokens");
-const { hashJti, credentialEpoch, parseDuration } = require("../utils/auth/tokenClaims");
-const { canonicalUserKey } = require("../utils/auth/userKey");
-const { refreshTokenRegistry } = require("../utils/auth/RefreshTokenRegistry");
-const RefreshTokenService = require("./RefreshTokenService");
+import jwt from "jsonwebtoken";
+import { randomUUID, timingSafeEqual } from "crypto";
+import { AppError, AUTH_ERRORS, ADMIN_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import { authMessages, adminMessages } from "../constants/messages";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import { parseStoredAdminPassword, isTemporaryExpired } from "../utils/encryption/adminTempPassword";
+import AdminModel from "../models/admin.model";
+import UserModel from "../models/user.model";
+import { loginLockout } from "../middleware/authentication/LoginLockoutMiddleware";
+import { registry, CacheKeyBuilder } from "../middleware/cache";
+import { COOKIE_NAMES, TOKEN_TYPES, TOKEN_ISSUER, TOKEN_AUDIENCES, REFRESH_REVOKE_REASONS, ACCESS_TOKEN_DEFAULT_EXPIRES_IN } from "../constants/authTokens";
+import { hashJti, credentialEpoch, parseDuration } from "../utils/auth/tokenClaims";
+import { canonicalUserKey } from "../utils/auth/userKey";
+import { refreshTokenRegistry } from "../utils/auth/RefreshTokenRegistry";
+import RefreshTokenService from "./RefreshTokenService";
 
 /** Which table authenticated the session — carried as the refresh token's `rs` claim. */
 const ROLE_SOURCES = Object.freeze({ ADMIN: "admin", USER: "user" });
@@ -956,4 +944,4 @@ class AuthService {
     }
 }
 
-module.exports = AuthService;
+export default AuthService;

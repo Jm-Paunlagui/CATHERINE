@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview AdminModel — standalone privileged accounts (T_ADMINS_DEV) with RBAC.
@@ -14,17 +14,13 @@
  * connection is opened.
  */
 
-const {
-    createDb,
-    OracleCollection,
-    Transaction,
-} = require("../utils/oracle-mongo-wrapper");
-const { isDemoMode } = require("../config/demoMode");
-const { AppError, ADMIN_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { adminMessages } = require("../constants/messages");
-const { logger } = require("../utils/logger");
-const demo = require("./demo/demoStore");
+import { createDb, OracleCollection, Transaction } from "../utils/oracle-mongo-wrapper";
+import { isDemoMode } from "../config/demoMode";
+import { AppError, ADMIN_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { adminMessages } from "../constants/messages";
+import { logger } from "../utils/logger";
+import demo from "./demo/demoStore";
 
 /** Physical table. */
 const TABLE = "T_ADMINS_DEV";
@@ -619,4 +615,4 @@ AdminModel.buildSignedFields = buildSignedFields;
 AdminModel.SERVER_NOTIFY_FLAG_COLUMNS = SERVER_NOTIFY_FLAG_COLUMNS;
 AdminModel.SEARCH_MAX_LIMIT = SEARCH_MAX_LIMIT;
 
-module.exports = AdminModel;
+export default AdminModel;

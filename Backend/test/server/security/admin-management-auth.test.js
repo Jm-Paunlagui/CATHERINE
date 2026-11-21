@@ -16,9 +16,9 @@
 
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
-const app = require("../../../src/app");
+const app = require("../../../src/app").default;
 const { signToken } = require("../helpers/auth");
-const AdminManagementService = require("../../../src/services/AdminManagementService");
+const AdminManagementService = require("../../../src/services/AdminManagementService").default;
 
 // ── Stubs — prevent real DB calls ─────────────────────────────────────────────
 

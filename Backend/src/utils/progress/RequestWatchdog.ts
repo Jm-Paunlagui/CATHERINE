@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview RequestWatchdog — cuts HTTP requests that stop making progress.
@@ -39,21 +39,17 @@
  * Class: holds a WeakMap + wraps the server + owns a shutdown hook.
  */
 
-const { logger } = require("../logger");
-const { AppError, REQUEST_ERRORS } = require("../../constants/errors");
-const { sendError } = require("../../constants/responses");
-const { HTTP_STATUS } = require("../../constants");
-const { watchdogMessages } = require("../../constants/messages");
-const {
-    EXEMPT,
-    resolveIdleLimits,
-    classifyRoute,
-} = require("../../constants/requestWatchdog");
-const { metricsStore } = require("../../middleware/metrics/MetricsStore");
-const { buildRouteLabel } = require("../routeLabel");
-const { ProgressScope } = require("./ProgressScope");
-const { defaultIdleWatchdog } = require("./IdleWatchdog");
-const { defaultBurstDetector } = require("./WatchdogBurstDetector");
+import { logger } from "../logger";
+import { AppError, REQUEST_ERRORS } from "../../constants/errors";
+import { sendError } from "../../constants/responses";
+import { HTTP_STATUS } from "../../constants";
+import { watchdogMessages } from "../../constants/messages";
+import { EXEMPT, resolveIdleLimits, classifyRoute } from "../../constants/requestWatchdog";
+import { metricsStore } from "../../middleware/metrics/MetricsStore";
+import { buildRouteLabel } from "../routeLabel";
+import { ProgressScope } from "./ProgressScope";
+import { defaultIdleWatchdog } from "./IdleWatchdog";
+import { defaultBurstDetector } from "./WatchdogBurstDetector";
 
 /**
  * Label for a request with no route template (stalled before routing): the
@@ -290,4 +286,4 @@ class RequestWatchdog {
     }
 }
 
-module.exports = { RequestWatchdog };
+export { RequestWatchdog };

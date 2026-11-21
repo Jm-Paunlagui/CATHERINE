@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ArchitectureController
@@ -17,11 +17,11 @@
  * re-checks the role.
  */
 
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { catchAsync } = require("../utils/catchAsync");
-const ArchitectureService = require("../services/ArchitectureService");
-const architectureMessages = require("../constants/messages/architecture.messages");
-const { logger } = require("../utils/logger");
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { catchAsync } from "../utils/catchAsync";
+import ArchitectureService from "../services/ArchitectureService";
+import architectureMessages from "../constants/messages/architecture.messages";
+import { logger } from "../utils/logger";
 
 /**
  * @private
@@ -59,4 +59,4 @@ class ArchitectureController {
     static getRuntimeMap = _serve("runtime", RESPONSE_MESSAGES.RUNTIME_MAP_FETCHED);
 }
 
-module.exports = ArchitectureController;
+export default ArchitectureController;

@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview Limits for the auth-route rate limiters (shared-PC sign-in
@@ -35,4 +35,4 @@ const RATE_LIMIT_COUNT_MODES = Object.freeze({
     FAILURES: "failures",
 });
 
-module.exports = { AUTH_RATE_LIMITS, RATE_LIMIT_COUNT_MODES };
+export { AUTH_RATE_LIMITS, RATE_LIMIT_COUNT_MODES };

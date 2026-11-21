@@ -9,12 +9,12 @@
  * alert-log / ack models, MetricsService, clusterRpc) is stubbed.
  */
 
-const { AlertNotifierService } = require("../../../../src/services/AlertNotifierService");
-const MetricsService = require("../../../../src/services/MetricsService");
-const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService");
-const ServerAlertLogModel = require("../../../../src/models/serverAlertLog.model");
-const ServerAlertAckModel = require("../../../../src/models/serverAlertAck.model");
-const AdminModel = require("../../../../src/models/admin.model");
+const { AlertNotifierService } = require("../../../../src/services/AlertNotifierService").default;
+const MetricsService = require("../../../../src/services/MetricsService").default;
+const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService").default;
+const ServerAlertLogModel = require("../../../../src/models/serverAlertLog.model").default;
+const ServerAlertAckModel = require("../../../../src/models/serverAlertAck.model").default;
+const AdminModel = require("../../../../src/models/admin.model").default;
 const { logger } = require("../../../../src/utils/logger");
 const { NOTIFICATION_ERRORS, AppError } = require("../../../../src/constants/errors");
 

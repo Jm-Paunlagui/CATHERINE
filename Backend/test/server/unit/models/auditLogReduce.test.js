@@ -9,7 +9,7 @@
  * (the previous five-separate-query approach could produce Success+Redirect>Total).
  */
 
-const AuditLogModel = require("../../../../src/models/audit.log.model");
+const AuditLogModel = require("../../../../src/models/audit.log.model").default;
 
 describe("AuditLogModel._reduceCategoryGroups", function () {
     it("returns all-zero buckets for an empty/undefined result", function () {

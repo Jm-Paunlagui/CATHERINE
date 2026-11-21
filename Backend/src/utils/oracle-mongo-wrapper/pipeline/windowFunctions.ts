@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -38,7 +38,7 @@
  * ============================================================================
  */
 
-const { quoteIdentifier } = require("../utils");
+import { quoteIdentifier } from "../utils";
 
 /**
  * Build a window/analytic function expression.
@@ -116,4 +116,4 @@ function buildWindowExpr(spec) {
   }
 }
 
-module.exports = { buildWindowExpr };
+export { buildWindowExpr };

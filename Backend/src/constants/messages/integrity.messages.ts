@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for the Integrity Center feature.
@@ -55,4 +55,4 @@ const integrityMessages = {
         `T_SYSTEM_CONFIG key "${key}" changed from "${previous}" to "${next}" by ${updatedBy}.`,
 };
 
-module.exports = { integrityMessages };
+export { integrityMessages };

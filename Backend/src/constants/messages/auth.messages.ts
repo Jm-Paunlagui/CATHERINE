@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Authentication / authorization log messages.
@@ -110,4 +110,4 @@ const authMessages = {
         `Failed login for USER ${userId} not counted - account is already locked.`,
 };
 
-module.exports = { authMessages };
+export { authMessages };

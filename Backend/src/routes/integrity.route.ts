@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Integrity Center routes (SUPER_ADMIN only).
@@ -28,12 +28,12 @@
  * "tables" as a :table value.
  */
 
-const express = require("express");
+import express from "express";
 
 const router = express.Router();
-const IntegrityController = require("../controllers/IntegrityController");
-const IntegrityStreamController = require("../controllers/IntegrityStreamController");
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
+import IntegrityController from "../controllers/IntegrityController";
+import IntegrityStreamController from "../controllers/IntegrityStreamController";
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
 
 // ── Access predicate: SUPER_ADMIN only ────────────────────────────────────────
 const requireSuperAdmin = AuthMiddleware.requireAccess(
@@ -72,4 +72,4 @@ router.get("/:table/export", IntegrityController.exportRows);
 // POST /api/v1/integrity/:table/rescan — invalidate + re-sweep (CSRF required).
 router.post("/:table/rescan", IntegrityController.rescan);
 
-module.exports = router;
+export default router;

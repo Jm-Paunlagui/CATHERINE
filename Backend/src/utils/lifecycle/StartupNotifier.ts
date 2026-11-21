@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview The two boot emails, built here and sent through
@@ -22,13 +22,13 @@
  * Security: CWE-209 (no stack traces / env values in mail), CWE-532.
  */
 
-const os = require("os");
-const { dbTimezoneOffsetMinutes } = require("../dbTimezone");
-const { SERVER_RUN_MARKER } = require("../../constants/serverRunMarker");
-const { serverMessages } = require("../../constants/messages/server.messages");
+import os from "os";
+import { dbTimezoneOffsetMinutes } from "../dbTimezone";
+import { SERVER_RUN_MARKER } from "../../constants/serverRunMarker";
+import { serverMessages } from "../../constants/messages/server.messages";
 
 const { VERDICTS, STATES, STOP_REASONS } = SERVER_RUN_MARKER;
-const { pendingKey, pendingList } = require("./ServerRunMarker");
+import { pendingKey, pendingList } from "./ServerRunMarker";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**
@@ -339,5 +339,7 @@ class StartupNotifier {
     }
 }
 
-module.exports = StartupNotifier;
-module.exports.isReportedSend = isReportedSend;
+const __default = StartupNotifier;
+export default __default;
+__default.isReportedSend = isReportedSend;
+export { isReportedSend };

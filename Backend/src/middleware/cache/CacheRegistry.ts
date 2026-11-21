@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview CacheRegistry — Central registry for all named CacheStore instances.
@@ -28,8 +28,8 @@
  *   const user = await sessions.getOrSet(`user:${id}`, () => UserService.findById(id));
  */
 
-const { CacheStore } = require("./CacheStore");
-const { logger } = require("../../utils/logger");
+import { CacheStore } from "./CacheStore";
+import { logger } from "../../utils/logger";
 
 class CacheRegistry {
   constructor() {
@@ -172,4 +172,4 @@ class CacheRegistry {
 // Singleton — the whole app shares one registry.
 const registry = new CacheRegistry();
 
-module.exports = { CacheRegistry, registry };
+export { CacheRegistry, registry };

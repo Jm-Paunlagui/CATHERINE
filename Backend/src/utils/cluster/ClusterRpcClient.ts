@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Worker-side endpoint of the cluster shared-state IPC protocol.
@@ -10,7 +10,7 @@
  * gathers); `onTopic()` registers a broadcast listener.
  *
  * Inactive by default: `init()` is only called from the cluster-worker branch of
- * `server.js`, so single-process mode registers NO `process.on("message")`
+ * `server.ts`, so single-process mode registers NO `process.on("message")`
  * listener and never calls `process.send` (`clusterRpc.active === false`).
  *
  * Security: CWE-20 (inbound topics/calls validated by `ipcSchemas`),
@@ -23,18 +23,11 @@
  * @author senior-nodejs-engineer
  */
 
-const cluster = require("cluster");
-const {
-    CLUSTER_IPC,
-    CLUSTER_RPC_METHODS,
-    CLUSTER_RPC_TARGETS,
-    CLUSTER_RPC_ERROR_CODES,
-    CLUSTER_RPC_TIMEOUTS,
-    CLUSTER_RPC_LIMITS,
-} = require("../../constants/clusterIpc");
-const { AppError } = require("../../constants/errors");
-const { HTTP_STATUS } = require("../../constants");
-const { validateArgs, validateResult, validateTopic, isPlainObject } = require("./ipcSchemas");
+import cluster from "cluster";
+import { CLUSTER_IPC, CLUSTER_RPC_METHODS, CLUSTER_RPC_TARGETS, CLUSTER_RPC_ERROR_CODES, CLUSTER_RPC_TIMEOUTS, CLUSTER_RPC_LIMITS } from "../../constants/clusterIpc";
+import { AppError } from "../../constants/errors";
+import { HTTP_STATUS } from "../../constants";
+import { validateArgs, validateResult, validateTopic, isPlainObject } from "./ipcSchemas";
 
 const METHOD_SET = new Set(Object.values(CLUSTER_RPC_METHODS));
 const E = CLUSTER_RPC_ERROR_CODES;
@@ -317,4 +310,4 @@ class ClusterRpcClient {
 
 const clusterRpc = new ClusterRpcClient();
 
-module.exports = { ClusterRpcClient, ClusterRpcError, clusterRpc };
+export { ClusterRpcClient, ClusterRpcError, clusterRpc };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview API response helpers and success message strings.
@@ -221,10 +221,4 @@ const RESPONSE_MESSAGES = {
     BACKUP_VOTE_STATUS_FETCHED: "Vote status fetched successfully.",
 };
 
-module.exports = {
-    sendSuccess,
-    sendError,
-    RESPONSE_MESSAGES,
-    HTTP_STATUS_TITLES,
-    getStatusTitle,
-};
+export { sendSuccess, sendError, RESPONSE_MESSAGES, HTTP_STATUS_TITLES, getStatusTitle };

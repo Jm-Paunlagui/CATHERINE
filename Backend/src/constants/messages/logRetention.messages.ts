@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log file retention sweep messages (`LogRetentionService`).
@@ -27,4 +27,4 @@ const logRetentionMessages = {
     `Log retention sweep failed unexpectedly: ${errMsg}.`,
 };
 
-module.exports = { logRetentionMessages };
+export { logRetentionMessages };

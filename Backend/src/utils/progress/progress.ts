@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Stateless helpers over the ambient ProgressScope.
@@ -12,11 +12,11 @@
  * Functions (not a class): pure wrappers, no state of their own.
  */
 
-const { requestContext } = require("../requestContext");
-const { AppError, REQUEST_ERRORS } = require("../../constants/errors");
-const { HTTP_STATUS } = require("../../constants");
-const { ProgressScope } = require("./ProgressScope");
-const { defaultIdleWatchdog } = require("./IdleWatchdog");
+import { requestContext } from "../requestContext";
+import { AppError, REQUEST_ERRORS } from "../../constants/errors";
+import { HTTP_STATUS } from "../../constants";
+import { ProgressScope } from "./ProgressScope";
+import { defaultIdleWatchdog } from "./IdleWatchdog";
 
 /**
  * @returns {ProgressScope|undefined} The scope of the current async context.
@@ -137,11 +137,4 @@ async function runGuarded({ label, idleLimitMs, onStall }, fn) {
     }
 }
 
-module.exports = {
-    currentScope,
-    touch,
-    throwIfAborted,
-    runInScope,
-    runDetached,
-    runGuarded,
-};
+export { currentScope, touch, throwIfAborted, runInScope, runDetached, runGuarded };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -195,9 +195,4 @@ function findUnencodable(value) {
     return bad;
 }
 
-module.exports = {
-    normalizeText,
-    findUnencodable,
-    isLatin9Encodable,
-    FOLD_MAP,
-};
+export { normalizeText, findUnencodable, isLatin9Encodable, FOLD_MAP };

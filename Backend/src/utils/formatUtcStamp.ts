@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * formatUtcStamp — "Nov 3, 2026, 2:32 PM" style date-time text, identical on every JS engine.
@@ -31,4 +31,4 @@ function formatUtcStamp(date, { seconds = false } = {}) {
     return `${p.month} ${p.day}, ${p.year}, ${time} ${p.dayPeriod}`;
 }
 
-module.exports = { formatUtcStamp };
+export { formatUtcStamp };

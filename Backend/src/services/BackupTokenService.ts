@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Backup token issuance + verification + single-use
@@ -72,11 +72,11 @@
  *   }
  */
 
-const crypto = require("crypto");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const BackupTokenModel = require("../models/backup-token.model");
-const { logger } = require("../utils/logger");
-const { dataBackupMessages } = require("../constants/messages");
+import crypto from "crypto";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import BackupTokenModel from "../models/backup-token.model";
+import { logger } from "../utils/logger";
+import { dataBackupMessages } from "../constants/messages";
 
 /** Default TTL (minutes) when BACKUP_TOKEN_TTL_MINUTES is unset — mirrors .env.example. */
 const DEFAULT_TTL_MINUTES = 30;
@@ -269,4 +269,4 @@ class BackupTokenService {
     }
 }
 
-module.exports = BackupTokenService;
+export default BackupTokenService;

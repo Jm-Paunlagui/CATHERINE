@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Signed key/value application configuration (`T_SYSTEM_CONFIG`).
@@ -22,12 +22,12 @@
  * verified via TamperDetectionService before its value is trusted.
  */
 
-const SystemConfigModel = require("../models/system.config.model");
-const TamperDetectionService = require("./TamperDetectionService");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const { AppError, HTTP_STATUS, VALIDATION_ERRORS } = require("../constants");
-const { integrityMessages } = require("../constants/messages");
-const { logger } = require("../utils/logger");
+import SystemConfigModel from "../models/system.config.model";
+import TamperDetectionService from "./TamperDetectionService";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import { AppError, HTTP_STATUS, VALIDATION_ERRORS } from "../constants";
+import { integrityMessages } from "../constants/messages";
+import { logger } from "../utils/logger";
 
 /**
  * Registered config keys: `{ [key]: { values: string[], defaultValue: string } }`.
@@ -171,4 +171,4 @@ class SystemConfigService {
     }
 }
 
-module.exports = SystemConfigService;
+export default SystemConfigService;

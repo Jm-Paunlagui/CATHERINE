@@ -1,17 +1,13 @@
-"use strict";
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
-const express = require("express");
+
+import express from "express";
 const router = express.Router();
 
-const AuthController = require("../controllers/AuthControllers");
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
-const { CacheMiddleware, registry } = require("../middleware/cache");
-const {
-  loginIpLimiter,
-  loginUserLimiter,
-  refreshRateLimiter,
-  changePasswordRateLimiter,
-} = require("../middleware/security/authRateLimiters");
+import AuthController from "../controllers/AuthControllers";
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import { CacheMiddleware, registry } from "../middleware/cache";
+import { loginIpLimiter, loginUserLimiter, refreshRateLimiter, changePasswordRateLimiter } from "../middleware/security/authRateLimiters";
 
 // ── Public endpoints (no auth required) ──────────────────────────────────────
 
@@ -59,4 +55,4 @@ router.patch(
   AuthController.changePassword,
 );
 
-module.exports = router;
+export default router;

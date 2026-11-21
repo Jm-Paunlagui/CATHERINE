@@ -20,14 +20,14 @@
  *   OG5  SERVER_ALERT_LOG rows queued during the outage are written once on recovery (gap 5)
  */
 
-const { AlertNotifierService } = require("../../../../src/services/AlertNotifierService");
-const SharedTransporter = require("../../../../src/services/email/SharedTransporter");
-const RecipientResolver = require("../../../../src/services/email/RecipientResolver");
-const MetricsService = require("../../../../src/services/MetricsService");
-const AdminModel = require("../../../../src/models/admin.model");
-const ServerAlertLogModel = require("../../../../src/models/serverAlertLog.model");
-const ServerAlertAckModel = require("../../../../src/models/serverAlertAck.model");
-const StartupNotifier = require("../../../../src/utils/lifecycle/StartupNotifier");
+const { AlertNotifierService } = require("../../../../src/services/AlertNotifierService").default;
+const SharedTransporter = require("../../../../src/services/email/SharedTransporter").default;
+const RecipientResolver = require("../../../../src/services/email/RecipientResolver").default;
+const MetricsService = require("../../../../src/services/MetricsService").default;
+const AdminModel = require("../../../../src/models/admin.model").default;
+const ServerAlertLogModel = require("../../../../src/models/serverAlertLog.model").default;
+const ServerAlertAckModel = require("../../../../src/models/serverAlertAck.model").default;
+const StartupNotifier = require("../../../../src/utils/lifecycle/StartupNotifier").default;
 const { MetricsStore } = require("../../../../src/middleware/metrics");
 const { SERVER_RUN_MARKER } = require("../../../../src/constants/serverRunMarker");
 const { logger } = require("../../../../src/utils/logger");
@@ -174,7 +174,7 @@ describe("OG2 â€” cold boot with the DB already down (gap 2)", function () 
         const mail = sent.find((m) => m.subject.includes("Server started on"));
         expect(mail).toBeDefined();
         expect(String(mail.to)).toBe("ops@example.com");
-        // server.js sends it after BOOT_ANNOUNCE_MAX_WAIT_MS at the latest when the pools hang.
+        // server.ts sends it after BOOT_ANNOUNCE_MAX_WAIT_MS at the latest when the pools hang.
         expect(SERVER_RUN_MARKER.BOOT_ANNOUNCE_MAX_WAIT_MS).toBeLessThanOrEqual(10_000);
     });
 });

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview In-memory data source backing DEMO_MODE.
@@ -19,7 +19,7 @@
  * except for building the in-memory audit array.
  */
 
-const { CryptoVault } = require("../../utils/encryption/CryptoVault");
+import { CryptoVault } from "../../utils/encryption/CryptoVault";
 
 const DEMO_PASSWORD = "Demo@123";
 
@@ -364,20 +364,7 @@ function systemConfig() {
     return _systemConfig;
 }
 
-module.exports = {
-    DEMO_PASSWORD,
-    accounts,
-    refreshTokens,
-    backupTokensConsumed,
-    backupVotes,
-    nextBackupVoteId,
-    systemConfig,
-    auditLogs,
-    auditInsert,
-    fxRates,
-    fxRateInsert,
-    ledger,
-    ledgerInsert,
-    reverseEntry,
-    match,
-};
+// One stateful object, not named exports: tests stub its methods with
+// vi.spyOn, which cannot replace an ES module namespace binding.
+const demoStore = { DEMO_PASSWORD, accounts, refreshTokens, backupTokensConsumed, backupVotes, nextBackupVoteId, systemConfig, auditLogs, auditInsert, fxRates, fxRateInsert, ledger, ledgerInsert, reverseEntry, match };
+export default demoStore;

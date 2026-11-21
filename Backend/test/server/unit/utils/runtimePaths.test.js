@@ -12,8 +12,8 @@ describe("runtimePaths", function () {
     });
 
     it("does not treat a source run as compiled", function () {
-        expect(isBunCompiledMain("/srv/app/Backend/server.js")).toBe(false);
-        expect(isBunCompiledMain("C:\\apps\\Backend\\server.js")).toBe(false);
+        expect(isBunCompiledMain("/srv/app/Backend/server.ts")).toBe(false);
+        expect(isBunCompiledMain("C:\\apps\\Backend\\server.ts")).toBe(false);
         expect(isBunCompiledMain(undefined)).toBe(false);
         expect(IS_COMPILED).toBe(false);
     });

@@ -300,7 +300,7 @@ function catchAsync(fn) {
 }
 ```
 
-The `Promise.resolve(...).catch(next)` handles a rejected async function. The surrounding `try/catch` handles a *synchronous* throw before the first `await` — which `Promise.resolve` would not catch, because the exception escapes before a promise exists. Without the wrapper an unhandled rejection escapes Express entirely and, under the `server.js` process handlers, takes the process with it.
+The `Promise.resolve(...).catch(next)` handles a rejected async function. The surrounding `try/catch` handles a *synchronous* throw before the first `await` — which `Promise.resolve` would not catch, because the exception escapes before a promise exists. Without the wrapper an unhandled rejection escapes Express entirely and, under the `server.ts` process handlers, takes the process with it.
 
 ### 4.3 The response helpers
 

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ONE money/date presentation layer for every ExcelJS workbook
@@ -275,20 +275,4 @@ function exportCurrencyBasis({ currencyCode, baseCurrency, asOf } = {}) {
     return `Currency: ${currencyCode} — converted from ${baseCurrency} at rates as of ${when}`;
 }
 
-module.exports = {
-    MONEY_FMT,
-    makeMoneyFmt,
-    moneyFmtFor,
-    exportCurrencyBasis,
-    DATETIME_FMT,
-    DATE_FMT,
-    DATETIME_COL_WIDTH,
-    toExcelDate,
-    setDateTimeCell,
-    setDateCell,
-    setMoneyCell,
-    formatMoneyText,
-    formatDateTimeText,
-    normalizeRowDates,
-    addNormalizedRow,
-};
+export { MONEY_FMT, makeMoneyFmt, moneyFmtFor, exportCurrencyBasis, DATETIME_FMT, DATE_FMT, DATETIME_COL_WIDTH, toExcelDate, setDateTimeCell, setDateCell, setMoneyCell, formatMoneyText, formatDateTimeText, normalizeRowDates, addNormalizedRow };

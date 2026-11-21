@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Network-aware CORS middleware.
@@ -18,8 +18,8 @@
  * explicit allow-list via CORS_ORIGINS instead of trusting network topology.
  */
 
-const cors = require("cors");
-const { logger } = require("../../utils/logger");
+import cors from "cors";
+import { logger } from "../../utils/logger";
 
 /**
  * Returns dynamic origin patterns allowed based on current environment.
@@ -181,4 +181,4 @@ class CorsMiddleware {
 }
 
 const defaultCors = new CorsMiddleware();
-module.exports = { CorsMiddleware, defaultCors };
+export { CorsMiddleware, defaultCors };

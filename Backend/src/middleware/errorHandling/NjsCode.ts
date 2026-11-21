@@ -94,4 +94,4 @@ const TRANSIENT_STRING_PATTERNS = [
 /** Error type stamped on the NJS-076 load-shed 429 (see NJS_MAP). */
 const POOL_OVERLOADED_TYPE = "PoolOverloadedError";
 
-module.exports = { NJS_MAP, TRANSIENT_STRING_PATTERNS, POOL_OVERLOADED_TYPE };
+export { NJS_MAP, TRANSIENT_STRING_PATTERNS, POOL_OVERLOADED_TYPE };

@@ -29,9 +29,9 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app");
+const app = require("../../../../src/app").default;
 const { signToken } = require("../../helpers/auth");
-const AdminManagementService = require("../../../../src/services/AdminManagementService");
+const AdminManagementService = require("../../../../src/services/AdminManagementService").default;
 const { registry } = require("../../../../src/middleware/cache");
 const {
     credentialEmailRateLimiter,

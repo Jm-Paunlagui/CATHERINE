@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Data Purge & Restore — Oracle data access layer.
@@ -65,15 +65,11 @@
  *   existsByKey(table, keyColumn, keyValue) — ENTITY-kind restore pre-flight existence check
  */
 
-const db = require("../config");
-const {
-    createDb,
-    OracleCollection,
-    Transaction,
-} = require("../utils/oracle-mongo-wrapper");
-const { getEntry, getDeleteOrder } = require("../constants/purgeTables");
-const { logger } = require("../utils/logger");
-const { dataPurgeMessages } = require("../constants/messages");
+import db from "../config";
+import { createDb, OracleCollection, Transaction } from "../utils/oracle-mongo-wrapper";
+import { getEntry, getDeleteOrder } from "../constants/purgeTables";
+import { logger } from "../utils/logger";
+import { dataPurgeMessages } from "../constants/messages";
 
 // Explicit "appDb" argument — see file header. NEVER change this to a bare
 // createDb() or to a variable/parameter-derived pool name.
@@ -761,4 +757,4 @@ class DataPurgeModel {
     }
 }
 
-module.exports = DataPurgeModel;
+export default DataPurgeModel;

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Pure helpers over JWT claims.
@@ -15,13 +15,8 @@
  * @author senior-nodejs-engineer
  */
 
-const crypto = require("crypto");
-const {
-    TOKEN_TYPES,
-    TOKEN_ISSUER,
-    TOKEN_AUDIENCES,
-    ACCESS_TOKEN_DEFAULT_EXPIRES_IN,
-} = require("../../constants/authTokens");
+import crypto from "crypto";
+import { TOKEN_TYPES, TOKEN_ISSUER, TOKEN_AUDIENCES, ACCESS_TOKEN_DEFAULT_EXPIRES_IN } from "../../constants/authTokens";
 
 const DURATION_MS = Object.freeze({ s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 });
 
@@ -119,4 +114,4 @@ function accessTokenTtl(raw = process.env.JWT_EXPIRES_IN) {
     }
 }
 
-module.exports = { classifyAccessClaims, hashJti, credentialEpoch, parseDuration, accessTokenTtl };
+export { classifyAccessClaims, hashJti, credentialEpoch, parseDuration, accessTokenTtl };

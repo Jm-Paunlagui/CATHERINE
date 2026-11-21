@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for `InFlightTaskRegistry`
@@ -49,4 +49,4 @@ const inFlightMessages = {
         `TASK_DRAIN_ABANDONED — ${abandoned} in-flight task(s) still running after the ${budgetMs}ms drain budget: ${labels.join(", ")}.`,
 };
 
-module.exports = { inFlightMessages };
+export { inFlightMessages };

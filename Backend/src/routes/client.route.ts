@@ -1,4 +1,5 @@
-"use strict";
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
+
 
 /**
  * @fileoverview Routes for the /api/v1/client resource.
@@ -13,12 +14,12 @@
  * `clientLogger.js` still surfaces them locally.
  */
 
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
-const ClientController = require("../controllers/ClientController");
-const { RateLimiterMiddleware } = require("../middleware/security/RateLimiterMiddleware");
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import ClientController from "../controllers/ClientController";
+import { RateLimiterMiddleware } from "../middleware/security/RateLimiterMiddleware";
 
 // Any authenticated user may report their own ErrorBoundary triggers.
 router.post(
@@ -46,4 +47,4 @@ router.post(
     ClientController.logHelpMiss,
 );
 
-module.exports = router;
+export default router;

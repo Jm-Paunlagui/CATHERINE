@@ -25,7 +25,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fail, ok } from "../../helpers/fixtures/contract.js";
 import { apiUrl } from "../../helpers/msw/api.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 import httpClient from "../../../src/middleware/HttpClient.js";
 import csrfMiddleware from "../../../src/middleware/security/CsrfMiddleware.js";
 import { consumeErrorPagePayload, resetErrorPagePayloadCache } from "../../../src/utils/storage.js";

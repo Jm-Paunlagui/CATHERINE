@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * System-map routes — Support → Architecture and Support → Runtime.
@@ -20,10 +20,10 @@
  * No rate limiter beyond the global one: the response is an in-memory object.
  */
 
-const express = require("express");
+import express from "express";
 
-const AuthMiddleware = require("../middleware/authentication/AuthMiddleware");
-const ArchitectureController = require("../controllers/ArchitectureController");
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import ArchitectureController from "../controllers/ArchitectureController";
 
 const router = express.Router();
 
@@ -38,4 +38,4 @@ router.use(requireSuperAdmin);
 router.get("/", ArchitectureController.getMap);
 router.get("/runtime", ArchitectureController.getRuntimeMap);
 
-module.exports = router;
+export default router;

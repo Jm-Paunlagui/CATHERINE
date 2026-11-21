@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview CSRF protection middleware using double-submit cookie pattern.
@@ -7,10 +7,10 @@
  * forced token rotation, and multiple token sources.
  */
 
-const { doubleCsrf } = require("csrf-csrf");
-const { logger } = require("../../utils/logger");
-const { middlewareMessages } = require("../../constants/messages");
-const { getStatusTitle } = require("../../constants/responses");
+import { doubleCsrf } from "csrf-csrf";
+import { logger } from "../../utils/logger";
+import { middlewareMessages } from "../../constants/messages";
+import { getStatusTitle } from "../../constants/responses";
 
 const TOKEN_TTL_MS = 5 * 60 * 1000;
 const TOKEN_SIZE = 64;
@@ -280,4 +280,4 @@ class CsrfMiddleware {
 }
 
 const defaultCsrf = new CsrfMiddleware();
-module.exports = { CsrfMiddleware, defaultCsrf };
+export { CsrfMiddleware, defaultCsrf };

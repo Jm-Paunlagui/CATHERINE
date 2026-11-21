@@ -1,6 +1,6 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
-const { appPath } = require("../../utils/runtimePaths");
+
+import { appPath } from "../../utils/runtimePaths";
 
 /**
  * @fileoverview Singleton SMTP transporter shared by every email service.
@@ -32,7 +32,7 @@ const { appPath } = require("../../utils/runtimePaths");
  *      can time out on a queued message that the relay would have accepted.
  *   2. The pool holds SMTP sockets open, which keeps the Node event loop
  *      alive. `closeTransporter()` MUST run during graceful shutdown; wire it
- *      into `server.js`'s shutdown path.
+ *      into `server.ts`'s shutdown path.
  *
  * Set `EMAIL_POOL=false` to restore the historical behavior: a fresh SMTP
  * connection per `sendMail()`, no pacing, no sockets held (nodemailer ignores
@@ -114,11 +114,11 @@ const { appPath } = require("../../utils/runtimePaths");
  * explicit SMTP timeouts so a hung server cannot tie up a send indefinitely.
  */
 
-const fs = require("fs");
-const path = require("path");
-const nodemailer = require("nodemailer");
-const { logger } = require("../../utils/logger");
-const { touch } = require("../../utils/progress/progress");
+import fs from "fs";
+import path from "path";
+import * as nodemailer from "nodemailer";
+import { logger } from "../../utils/logger";
+import { touch } from "../../utils/progress/progress";
 
 /** Marks a transporter whose sendMail is already wrapped (never stack). */
 const kInstrumented = Symbol.for("app.progress.smtp");
@@ -307,9 +307,9 @@ class SharedTransporter {
      * TLS stack trusts the SMTP server's certificate chain (fixes "unable
      * to get local issuer certificate" for internal CAs).
      *
-     * Resolution mirrors the PFX_FILENAME pattern in server.js:
+     * Resolution mirrors the PFX_FILENAME pattern in server.ts:
      *   - compiled exe → certs/ sits next to the executable (APP_ROOT)
-     *   - normal Node → certs/ sits next to server.js (project root)
+     *   - normal Node → certs/ sits next to server.ts (project root)
      *
      * When `SMTP_CA_FILE` is unset, returns `undefined` so nodemailer
      * falls back to the system default CA bundle.
@@ -320,7 +320,7 @@ class SharedTransporter {
         const caFilename = process.env.SMTP_CA_FILE;
         if (!caFilename) return undefined;
 
-        // Resolve certs/ the same way server.js resolves PFX_FILENAME (APP_ROOT).
+        // Resolve certs/ the same way server.ts resolves PFX_FILENAME (APP_ROOT).
         const certDir = appPath("certs");
         const caPath = path.join(certDir, caFilename);
 
@@ -361,5 +361,7 @@ class SharedTransporter {
     }
 }
 
-module.exports = new SharedTransporter();
-module.exports.SharedTransporter = SharedTransporter;
+const __default = new SharedTransporter();
+export default __default;
+__default.SharedTransporter = SharedTransporter;
+export { SharedTransporter };

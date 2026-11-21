@@ -13,7 +13,7 @@
 
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
-const app = require("../../../../src/app");
+const app = require("../../../../src/app").default;
 const { signToken } = require("../../helpers/auth");
 const { HTTP_STATUS } = require("../../../../src/constants");
 

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Data Purge & Restore — archive restore engine.
@@ -89,30 +89,25 @@
  *   });
  */
 
-const crypto = require("crypto");
-const JSZip = require("jszip");
+import crypto from "crypto";
+import JSZip from "jszip";
 
-const { AppError, PURGE_ERRORS } = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const { dataPurgeMessages } = require("../constants/messages");
-const {
-    NEVER_PURGE,
-    PURGE_POOL,
-    getEntry,
-    getRestoreOrder,
-} = require("../constants/purgeTables");
-const DataPurgeModel = require("../models/data-purge.model");
-const DataPurgeService = require("./DataPurgeService");
+import { AppError, PURGE_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import { dataPurgeMessages } from "../constants/messages";
+import { NEVER_PURGE, PURGE_POOL, getEntry, getRestoreOrder } from "../constants/purgeTables";
+import DataPurgeModel from "../models/data-purge.model";
+import DataPurgeService from "./DataPurgeService";
 // Required for BackupArchiveService.SCHEMA_VERSION ONLY — restore's
 // schemaVersion check reads the SAME literal the backup side stamped into
 // manifest.json, never a second hardcoded "v6" that could drift.
-const BackupArchiveService = require("./BackupArchiveService");
-const AuditLogModel = require("../models/audit.log.model");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const TamperDetectionService = require("./TamperDetectionService");
-const { createDb, Transaction } = require("../utils/oracle-mongo-wrapper");
-const { registry } = require("../middleware/cache");
+import BackupArchiveService from "./BackupArchiveService";
+import AuditLogModel from "../models/audit.log.model";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import TamperDetectionService from "./TamperDetectionService";
+import { createDb, Transaction } from "../utils/oracle-mongo-wrapper";
+import { registry } from "../middleware/cache";
 
 // Explicit PURGE_POOL — NEVER a bare createDb() or a pool name derived from a
 // request/parameter. The restore is a LONG-HOLD multi-table write, so like the
@@ -1128,4 +1123,4 @@ class DataRestoreService {
     }
 }
 
-module.exports = DataRestoreService;
+export default DataRestoreService;

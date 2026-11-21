@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Admin Management log message templates.
@@ -82,4 +82,4 @@ const adminMessages = {
     `Admin action rejected — ADMIN_ID: ${adminId} is the last active SUPER_ADMIN.`,
 };
 
-module.exports = { adminMessages };
+export { adminMessages };

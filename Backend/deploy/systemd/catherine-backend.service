@@ -21,22 +21,22 @@ Type=simple
 # EDIT: the account that owns the checkout (never root).
 User=catherine
 Group=catherine
-# EDIT: the Backend checkout. server.js loads .env from here, and the
+# EDIT: the Backend checkout. server.ts loads .env from here, and the
 # restart marker lives in <this>/data/server-run.json (never delete it).
 WorkingDirectory=/opt/catherine-backend
 # EDIT: the bun binary (the version in package.json "packageManager").
 # `bun build --compile --target=bun-linux-x64` output works too: ExecStart=/opt/catherine-backend/catherine-backend
-ExecStart=/usr/local/bin/bun server.js
+ExecStart=/usr/local/bin/bun server.ts
 Environment=NODE_ENV=production
 
 # Crash supervision, same as WinSW <onfailure action="restart" delay="10 sec"/>:
-# server.js exits 1 on a crash, so on-failure restarts it; a clean stop (0) is
+# server.ts exits 1 on a crash, so on-failure restarts it; a clean stop (0) is
 # left stopped. The start limit is in [Unit] (systemd ignores it here).
 Restart=on-failure
 RestartSec=10
 
 # -- Stopping ----------------------------------------------------------------
-# SIGTERM goes to the MAIN process only (KillMode=mixed). server.js runs its
+# SIGTERM goes to the MAIN process only (KillMode=mixed). server.ts runs its
 # graceful shutdown on it: new requests are refused at once, requests already
 # in progress may finish while they keep making progress (cap 30 min), then
 # pools close and the audit buffer flushes. With ENABLE_CLUSTERING=true the
@@ -45,7 +45,7 @@ RestartSec=10
 # gets SIGKILL.
 KillSignal=SIGTERM
 KillMode=mixed
-# Must exceed server.js FORCED_EXIT_MS (1834 s) + CLUSTER_SHUTDOWN_MARGIN_MS
+# Must exceed server.ts FORCED_EXIT_MS (1834 s) + CLUSTER_SHUTDOWN_MARGIN_MS
 # (10 s) + the forced-exit email (<= 5.5 s) = 1849.5 s, like WinSW
 # <stoptimeout>. systemd's default is 90 s, which would SIGKILL a long import
 # or export mid-write. A stop with nothing in flight still exits in about a

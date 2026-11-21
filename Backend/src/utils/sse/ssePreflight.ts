@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ssePreflight.js — the ONE way an SSE route refuses a request before the
@@ -28,7 +28,7 @@
  * stream. After the upgrade, report failures as an SSE `event: error` frame.
  */
 
-const { sendError } = require("../../constants/responses");
+import { sendError } from "../../constants/responses";
 
 /**
  * Sends a pre-upgrade SSE refusal using the SAME envelope as every other error
@@ -72,4 +72,4 @@ function sendSseNotStreamable(res, reason) {
     res.status(200).json({ streamable: false, reason });
 }
 
-module.exports = { sendSsePreflightError, sendSseNotStreamable };
+export { sendSsePreflightError, sendSseNotStreamable };

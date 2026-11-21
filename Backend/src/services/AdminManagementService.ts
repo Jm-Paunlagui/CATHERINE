@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Admin Management (Access Control) business logic.
@@ -31,30 +31,21 @@
  * `username` / `firstName` / `lastName`.
  */
 
-const {
-    AppError,
-    ADMIN_ERRORS,
-    VALIDATION_ERRORS,
-} = require("../constants/errors");
-const { HTTP_STATUS } = require("../constants");
-const { logger } = require("../utils/logger");
-const { adminMessages } = require("../constants/messages");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const RefreshTokenService = require("./RefreshTokenService");
-const { REFRESH_REVOKE_REASONS, SESSION_END_CAUSES } = require("../constants/authTokens");
-const AdminModel = require("../models/admin.model");
-const UserModel = require("../models/user.model");
-const { registry, CacheKeyBuilder } = require("../middleware/cache");
-const BackupArchiveService = require("./BackupArchiveService");
-const BackupTokenService = require("./BackupTokenService");
-const AdminAccessEmailService = require("./AdminAccessEmailService");
-const { maskAddress, credentialAddressOf } = require("../utils/emailAddress");
-const {
-    TEMP_PASSWORD_TTL_MS,
-    generateTemporaryPassword,
-    wrapTemporaryHash,
-    temporaryExpiryIso,
-} = require("../utils/encryption/adminTempPassword");
+import { AppError, ADMIN_ERRORS, VALIDATION_ERRORS } from "../constants/errors";
+import { HTTP_STATUS } from "../constants";
+import { logger } from "../utils/logger";
+import { adminMessages } from "../constants/messages";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import RefreshTokenService from "./RefreshTokenService";
+import { REFRESH_REVOKE_REASONS, SESSION_END_CAUSES } from "../constants/authTokens";
+import AdminModel from "../models/admin.model";
+import UserModel from "../models/user.model";
+import { registry, CacheKeyBuilder } from "../middleware/cache";
+import BackupArchiveService from "./BackupArchiveService";
+import BackupTokenService from "./BackupTokenService";
+import AdminAccessEmailService from "./AdminAccessEmailService";
+import { maskAddress, credentialAddressOf } from "../utils/emailAddress";
+import { TEMP_PASSWORD_TTL_MS, generateTemporaryPassword, wrapTemporaryHash, temporaryExpiryIso } from "../utils/encryption/adminTempPassword";
 
 /** Canonical ROLE values (schema CK_T_ADMINS_DEV_ROLE). */
 const VALID_ROLES = ["SUPER_ADMIN", "ADMIN", "USER"];
@@ -963,7 +954,7 @@ class AdminManagementService {
      * @private
      */
     static _invalidateRecipientCache() {
-        const ServerNotificationService = require("./email/ServerNotificationService");
+        const ServerNotificationService = require("./email/ServerNotificationService").default;
         ServerNotificationService.invalidateRecipientCache();
     }
 
@@ -1026,4 +1017,4 @@ class AdminManagementService {
     }
 }
 
-module.exports = AdminManagementService;
+export default AdminManagementService;

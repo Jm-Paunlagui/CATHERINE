@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Budgeted, self-healing email dispatch — the Email Protection
@@ -96,11 +96,11 @@
  * | FAILED     | Both tiers exhausted, or no usable fallback was available. |
  */
 
-const { RetryPolicy } = require("../../utils/resilience");
-const { logger } = require("../../utils/logger");
-const { resilienceMessages } = require("../../constants/messages");
-const SharedTransporter = require("./SharedTransporter");
-const { maskEmail } = require("./ServerNotificationService");
+import { RetryPolicy } from "../../utils/resilience";
+import { logger } from "../../utils/logger";
+import { resilienceMessages } from "../../constants/messages";
+import SharedTransporter from "./SharedTransporter";
+import { maskEmail } from "./ServerNotificationService";
 
 /** Result status constants — exposed so callers never hardcode magic strings. */
 const STATUS = Object.freeze({
@@ -443,4 +443,4 @@ class EmailProtectionService {
 const instance = new EmailProtectionService();
 instance.STATUS = STATUS;
 instance.EmailProtectionService = EmailProtectionService;
-module.exports = instance;
+export default instance;

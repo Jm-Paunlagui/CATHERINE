@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview ServerAlertAckModel — currently acknowledged alerts.
@@ -53,8 +53,8 @@
  *   await ServerAlertAckModel.remove("HIGH_LATENCY::POST /api/v1/auth/login");
  */
 
-const { createDb, OracleCollection } = require("../utils/oracle-mongo-wrapper");
-const { isDemoMode } = require("../config/demoMode");
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
+import { isDemoMode } from "../config/demoMode";
 
 /** @returns {string} Resolved table name (env override or NODE_ENV default). */
 function resolveTableName() {
@@ -148,5 +148,7 @@ class ServerAlertAckModel {
     }
 }
 
-module.exports = ServerAlertAckModel;
-module.exports.resolveTableName = resolveTableName;
+const __default = ServerAlertAckModel;
+export default __default;
+__default.resolveTableName = resolveTableName;
+export { resolveTableName };

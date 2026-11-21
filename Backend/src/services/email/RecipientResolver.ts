@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Server Email Notifications — Phase 2 recipient cache.
@@ -48,10 +48,10 @@
  *   RecipientResolver.invalidate();
  */
 
-const { logger } = require("../../utils/logger");
-const { notificationMessages } = require("../../constants/messages");
-const { clusterRpc } = require("../../utils/cluster/ClusterRpcClient");
-const { CLUSTER_RPC_METHODS } = require("../../constants/clusterIpc");
+import { logger } from "../../utils/logger";
+import { notificationMessages } from "../../constants/messages";
+import { clusterRpc } from "../../utils/cluster/ClusterRpcClient";
+import { CLUSTER_RPC_METHODS } from "../../constants/clusterIpc";
 
 class RecipientResolver {
     constructor() {
@@ -104,7 +104,7 @@ class RecipientResolver {
      */
     _poolsHealthy() {
         try {
-            const db = require("../../config");
+            const db = require("../../config").default;
             if (typeof db.isPoolHealthy !== "function") return true;
             return db.isPoolHealthy("appDb");
         } catch {
@@ -199,7 +199,7 @@ class RecipientResolver {
         // Lazy require — avoids a load-order cycle with admin.model.js pulling
         // in the DB config before it is ready, and keeps this file requirable
         // standalone in unit tests.
-        const AdminModel = require("../../models/admin.model");
+        const AdminModel = require("../../models/admin.model").default;
 
         try {
             const channels = Object.keys(AdminModel.SERVER_NOTIFY_FLAG_COLUMNS);
@@ -233,5 +233,7 @@ class RecipientResolver {
 /** Longest a send waits on a recipient refresh before using the cached list. */
 RecipientResolver.REFRESH_WAIT_MS = 2000;
 
-module.exports = new RecipientResolver();
-module.exports.RecipientResolver = RecipientResolver;
+const __default = new RecipientResolver();
+export default __default;
+__default.RecipientResolver = RecipientResolver;
+export { RecipientResolver };

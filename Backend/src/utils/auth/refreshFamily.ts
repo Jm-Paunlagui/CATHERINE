@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Reads the session-family id (`fid`) out of a refresh token for
@@ -11,8 +11,8 @@
  * @author senior-nodejs-engineer
  */
 
-const jwt = require("jsonwebtoken");
-const { TOKEN_TYPES, TOKEN_ISSUER, TOKEN_AUDIENCES } = require("../../constants/authTokens");
+import jwt from "jsonwebtoken";
+import { TOKEN_TYPES, TOKEN_ISSUER, TOKEN_AUDIENCES } from "../../constants/authTokens";
 
 const FID_LENGTH = 36;
 
@@ -37,4 +37,4 @@ function refreshFamilyOf(token) {
     }
 }
 
-module.exports = { refreshFamilyOf };
+export { refreshFamilyOf };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Pure validator/assembler for the Support system maps —
@@ -105,4 +105,4 @@ function buildSystemMap(src) {
     };
 }
 
-module.exports = { buildSystemMap };
+export { buildSystemMap };

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Recipient-address helpers shared by every feature that emails
@@ -80,4 +80,4 @@ function credentialAddressOf(row) {
     return singleAddress(row.EMAIL ?? row.email ?? null);
 }
 
-module.exports = { singleAddress, maskAddress, credentialAddressOf };
+export { singleAddress, maskAddress, credentialAddressOf };

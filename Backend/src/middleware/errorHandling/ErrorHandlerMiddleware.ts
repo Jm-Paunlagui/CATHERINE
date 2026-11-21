@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Centralized error handling middleware.
@@ -10,10 +10,10 @@
  * or stack traces to clients in production.
  */
 
-const { logger } = require("../../utils/logger");
-const ORA_MAP = require("./OraCode");
-const { NJS_MAP, TRANSIENT_STRING_PATTERNS, POOL_OVERLOADED_TYPE } = require("./NjsCode");
-const { getStatusTitle } = require("../../constants/responses");
+import { logger } from "../../utils/logger";
+import ORA_MAP from "./OraCode";
+import { NJS_MAP, TRANSIENT_STRING_PATTERNS, POOL_OVERLOADED_TYPE } from "./NjsCode";
+import { getStatusTitle } from "../../constants/responses";
 
 /** AppError type of the shutdown-drain 503 (ShutdownGateMiddleware). */
 const SHUTTING_DOWN_TYPE = "ServerShuttingDown";
@@ -389,4 +389,4 @@ class ErrorHandlerMiddleware {
 }
 
 const defaultErrorHandler = new ErrorHandlerMiddleware();
-module.exports = { ErrorHandlerMiddleware, defaultErrorHandler };
+export { ErrorHandlerMiddleware, defaultErrorHandler };

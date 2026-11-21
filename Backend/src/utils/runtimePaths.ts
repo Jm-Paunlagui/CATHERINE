@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Where the backend's on-disk files live, in source runs and in the compiled exe.
@@ -12,13 +12,13 @@
  *
  *   - compiled exe → the directory holding the exe; the build stages `src/utils/email-templates`,
  *     `src/assets`, `src/generated` and the native addons beside it (scripts/build.js)
- *   - `bun server.js` / tests → the Backend folder (this file is Backend/src/utils/runtimePaths.ts)
+ *   - `bun server.ts` / tests → the Backend folder (this file is Backend/src/utils/runtimePaths.ts)
  *
  * Detection: a compiled Bun binary reports its entry point inside Bun's embedded filesystem —
  * `/$bunfs/root/...` on POSIX, `B:\~BUN\root\...` on Windows.
  */
 
-const path = require("path");
+import path from "path";
 
 /** True when `main` is an entry point inside a compiled Bun executable's embedded filesystem. */
 function isBunCompiledMain(main) {
@@ -34,4 +34,4 @@ function appPath(...segments) {
     return path.join(APP_ROOT, ...segments);
 }
 
-module.exports = { IS_COMPILED, APP_ROOT, appPath, isBunCompiledMain };
+export { IS_COMPILED, APP_ROOT, appPath, isBunCompiledMain };

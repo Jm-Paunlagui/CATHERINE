@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -78,13 +78,11 @@
  * ============================================================================
  */
 
-const { quoteIdentifier, mergeBinds } = require("../utils");
-const { parseFilter } = require("../parsers/filterParser");
-const { parseUpdate } = require("../parsers/updateParser");
-const { QueryBuilder } = require("./QueryBuilder");
-const {
-    oracleMongoWrapperMessages: MSG,
-} = require("../../../constants/messages");
+import { quoteIdentifier, mergeBinds } from "../utils";
+import { parseFilter } from "../parsers/filterParser";
+import { parseUpdate } from "../parsers/updateParser";
+import { QueryBuilder } from "./QueryBuilder";
+import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 /**
  * Deep-clone an object/array while preserving Date instances.
@@ -2201,4 +2199,4 @@ function _buildJoinOn(onSpec, targetTable) {
         .join(" AND ");
 }
 
-module.exports = { OracleCollection };
+export { OracleCollection };

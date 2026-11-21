@@ -28,7 +28,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { reportHelpMiss, __resetHelpTelemetry } from "../../../src/features/support/help/helpTelemetry.js";
 import csrfMiddleware from "../../../src/middleware/security/CsrfMiddleware.js";
 import { apiUrl } from "../../helpers/msw/api.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 
 /** Capture every help-miss body MSW sees; default handler returns 200. */
 let received;

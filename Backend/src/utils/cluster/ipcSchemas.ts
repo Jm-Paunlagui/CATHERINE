@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Pure validators for the cluster shared-state IPC protocol.
@@ -17,15 +17,9 @@
  * @author senior-nodejs-engineer
  */
 
-const {
-    CLUSTER_IPC,
-    CLUSTER_RPC_TARGETS,
-    CLUSTER_RPC_METHODS,
-    CLUSTER_TOPICS,
-    CLUSTER_RPC_LIMITS: L,
-} = require("../../constants/clusterIpc");
-const { KNOWN_JOBS } = require("../../constants/schedulerJobs");
-const { ACCESS_REVOCATION_LIMITS: AR, FAMILY_ID_RE } = require("../../constants/authTokens");
+import { CLUSTER_IPC, CLUSTER_RPC_TARGETS, CLUSTER_RPC_METHODS, CLUSTER_TOPICS, CLUSTER_RPC_LIMITS as L } from "../../constants/clusterIpc";
+import { KNOWN_JOBS } from "../../constants/schedulerJobs";
+import { ACCESS_REVOCATION_LIMITS as AR, FAMILY_ID_RE } from "../../constants/authTokens";
 
 const METHOD_SET = new Set(Object.values(CLUSTER_RPC_METHODS));
 const TARGET_SET = new Set(Object.values(CLUSTER_RPC_TARGETS));
@@ -377,15 +371,4 @@ function validateTopic(topic, payload, now = Date.now()) {
     }
 }
 
-module.exports = {
-    isPlainObject,
-    isBoundedString,
-    isFiniteInRange,
-    isIntInRange,
-    isIp,
-    validateRequest,
-    validateNotify,
-    validateArgs,
-    validateResult,
-    validateTopic,
-};
+export { isPlainObject, isBoundedString, isFiniteInRange, isIntInRange, isIp, validateRequest, validateNotify, validateArgs, validateResult, validateTopic };

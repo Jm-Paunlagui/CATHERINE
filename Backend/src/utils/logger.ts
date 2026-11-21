@@ -9,12 +9,12 @@
  * Levels follow RFC 5424 (eight levels: emergency/alert/critical/error/warning/notice/info/debug).
  */
 
-const fs = require("fs").promises;
-const path = require("path");
-const { IS_COMPILED, APP_ROOT } = require("./runtimePaths");
-const os = require("os");
-const { requestContext } = require("./requestContext");
-const { scrubValue, scrubMeta } = require("./logRedaction");
+import { promises as fs } from "fs";
+import path from "path";
+import { IS_COMPILED, APP_ROOT } from "./runtimePaths";
+import os from "os";
+import { requestContext } from "./requestContext";
+import { scrubValue, scrubMeta } from "./logRedaction";
 
 /**
  * Backpressure-loss report emitted when the write queue overflows.
@@ -837,7 +837,7 @@ class Logger {
      *
      * `log()` is fire-and-forget by design — it pushes onto `writeQueue` and
      * returns without awaiting the `fs.appendFile`. That is right for the hot
-     * request path and wrong at process exit: `server.js`'s `gracefulShutdown`
+     * request path and wrong at process exit: `server.ts`'s `gracefulShutdown`
      * logs "All resources cleaned up." and then calls `process.exit(0)` on the
      * next tick, which tears the process down before the queue drains. The
      * shutdown banner — the exact line `deploy/winsw/README.md` tells operators
@@ -1186,4 +1186,4 @@ class Logger {
 
 const logger = new Logger();
 
-module.exports = { Logger, logger };
+export { Logger, logger };

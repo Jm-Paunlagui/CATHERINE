@@ -15,8 +15,8 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app");
-const db = require("../../../../src/config");
+const app = require("../../../../src/app").default;
+const db = require("../../../../src/config").default;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GET /api/v1/health/live

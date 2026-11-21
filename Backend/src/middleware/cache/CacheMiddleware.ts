@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview CacheMiddleware — Express middleware factory for request-level caching.
@@ -41,9 +41,9 @@
  *   );
  */
 
-const { logger } = require("../../utils/logger");
-const { cacheMessages } = require("../../constants/messages/cache.messages");
-const { currentScope } = require("../../utils/progress/progress");
+import { logger } from "../../utils/logger";
+import { cacheMessages } from "../../constants/messages/cache.messages";
+import { currentScope } from "../../utils/progress/progress";
 
 class CacheMiddleware {
   // ─── Read-through (cache-aside) ───────────────────────────────────────────
@@ -398,4 +398,4 @@ class CacheMiddleware {
   }
 }
 
-module.exports = { CacheMiddleware };
+export { CacheMiddleware };

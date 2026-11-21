@@ -24,7 +24,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const DevDocsService = require("../src/services/DevDocsService");
+const DevDocsService = require("../src/services/DevDocsService").default;
 const { SECTION_SOURCE_MAP, FRESHNESS_SNAPSHOT_PATH } = DevDocsService;
 
 /** Map -> plain object with sorted keys, so rebuilds diff cleanly. */

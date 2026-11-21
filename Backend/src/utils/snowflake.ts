@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Zero-dependency Snowflake ID generator for request tracing.
@@ -49,8 +49,8 @@
  * @module utils/snowflake
  */
 
-const crypto = require("crypto");
-const os = require("os");
+import crypto from "crypto";
+import os from "os";
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
@@ -279,4 +279,4 @@ class Snowflake {
  */
 const snowflake = new Snowflake();
 
-module.exports = { Snowflake, snowflake };
+export { Snowflake, snowflake };

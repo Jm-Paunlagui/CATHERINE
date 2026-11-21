@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Canonical route-label builder shared by all observability middleware.
@@ -252,10 +252,4 @@ function shouldRecordRouteMetrics(req) {
   return true;
 }
 
-module.exports = {
-  buildRouteLabel,
-  captureRouteLabel,
-  resolveRouteLabel,
-  shouldRecordRouteMetrics,
-  UNMATCHED_ROUTE_LABEL,
-};
+export { buildRouteLabel, captureRouteLabel, resolveRouteLabel, shouldRecordRouteMetrics, UNMATCHED_ROUTE_LABEL };

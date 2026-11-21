@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for client-side error reports.
@@ -32,4 +32,4 @@ const clientMessages = {
         `Help search miss (${surface}): "${query}" returned no results`,
 };
 
-module.exports = { clientMessages };
+export { clientMessages };

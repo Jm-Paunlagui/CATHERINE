@@ -79,7 +79,7 @@ export finishes. The log shows a "still waiting for N in-flight request(s)"
 notice every minute during the wait.
 
 The value must exceed `FORCED_EXIT_MS_DEFAULT` + `CLUSTER_SHUTDOWN_MARGIN_MS` +
-5.5 s in `server.js` (1 834 s + 10 s + 5.5 s = 1 849.5 s < 1 860 s; see the
+5.5 s in `server.ts` (1 834 s + 10 s + 5.5 s = 1 849.5 s < 1 860 s; see the
 THE INVARIANTS comment block above those constants). An already-installed
 service keeps its old window: **re-run `install-service.ps1`** after changing
 `<stoptimeout>`, or Windows will force-kill the service at the old timeout

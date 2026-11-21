@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview Re-exports all message namespaces.
@@ -13,29 +13,27 @@
  * sensitive.
  */
 
-module.exports = {
-  ...require("./oracle.messages"),
-  ...require("./oracleWrapper.messages"),
-  ...require("./auth.messages"),
-  ...require("./middleware.messages"),
-  ...require("./database.messages"),
-  ...require("./admin.messages"),
-  ...require("./auditLog.messages"),
-  ...require("./metrics.messages"),
-  ...require("./notification.messages"),
-  ...require("./client.messages"),
-  ...require("./cache.messages"),
-  ...require("./changelog.messages"),
-  ...require("./integrity.messages"),
-  ...require("./resilience.messages"),
-  ...require("./upload.messages"),
-  ...require("./dataPurge.messages"),
-  ...require("./dataBackup.messages"),
-  ...require("./backupEmail.messages"),
-  ...require("./sse.messages"),
-  ...require("./logRetention.messages"),
-  ...require("./inFlight.messages"),
-  ...require("./server.messages"),
-  ...require("./watchdog.messages"),
-  ...require("./cluster.messages"),
-};
+export * from "./oracle.messages";
+export * from "./oracleWrapper.messages";
+export * from "./auth.messages";
+export * from "./middleware.messages";
+export * from "./database.messages";
+export * from "./admin.messages";
+export * from "./auditLog.messages";
+export * from "./metrics.messages";
+export * from "./notification.messages";
+export * from "./client.messages";
+export * from "./cache.messages";
+export * from "./changelog.messages";
+export * from "./integrity.messages";
+export * from "./resilience.messages";
+export * from "./upload.messages";
+export * from "./dataPurge.messages";
+export * from "./dataBackup.messages";
+export * from "./backupEmail.messages";
+export * from "./sse.messages";
+export * from "./logRetention.messages";
+export * from "./inFlight.messages";
+export * from "./server.messages";
+export * from "./watchdog.messages";
+export * from "./cluster.messages";

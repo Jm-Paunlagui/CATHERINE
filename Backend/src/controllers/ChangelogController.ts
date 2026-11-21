@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ChangelogController
@@ -8,10 +8,10 @@
  * No business logic — delegates entirely to ChangelogService.
  */
 
-const { HTTP_STATUS }                      = require("../constants");
-const { sendSuccess, RESPONSE_MESSAGES } = require("../constants/responses");
-const { catchAsync }                      = require("../utils/catchAsync");
-const ChangelogService                    = require("../services/ChangelogService");
+import { HTTP_STATUS } from "../constants";
+import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
+import { catchAsync } from "../utils/catchAsync";
+import ChangelogService from "../services/ChangelogService";
 
 class ChangelogController {
     /**
@@ -83,4 +83,4 @@ class ChangelogController {
     });
 }
 
-module.exports = ChangelogController;
+export default ChangelogController;

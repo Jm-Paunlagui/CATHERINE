@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Express middleware that records per-request RED metrics into MetricsStore.
@@ -29,12 +29,8 @@
  *   app.use(defaultMetrics.handle.bind(defaultMetrics)); // position 5a in app.js
  */
 
-const { metricsStore: defaultStore } = require("./MetricsStore");
-const {
-    captureRouteLabel,
-    resolveRouteLabel,
-    shouldRecordRouteMetrics,
-} = require("../../utils/routeLabel");
+import { metricsStore as defaultStore } from "./MetricsStore";
+import { captureRouteLabel, resolveRouteLabel, shouldRecordRouteMetrics } from "../../utils/routeLabel";
 
 class MetricsMiddleware {
     /**
@@ -102,4 +98,4 @@ class MetricsMiddleware {
 
 const defaultMetrics = new MetricsMiddleware();
 
-module.exports = { MetricsMiddleware, defaultMetrics };
+export { MetricsMiddleware, defaultMetrics };

@@ -15,9 +15,9 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app");
+const app = require("../../../../src/app").default;
 const { signToken } = require("../../helpers/auth");
-const AuthService = require("../../../../src/services/auth.service");
+const AuthService = require("../../../../src/services/auth.service").default;
 const { authRateLimiters: authRateLimiter } = require("../../../../src/middleware/security/authRateLimiters");
 
 // ── Token factories ────────────────────────────────────────────────────────────

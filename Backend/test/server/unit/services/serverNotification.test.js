@@ -21,10 +21,10 @@
  * is invalidated in beforeEach so no state leaks between tests in this file.
  */
 
-const SharedTransporter = require("../../../../src/services/email/SharedTransporter");
-const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService");
-const RecipientResolver = require("../../../../src/services/email/RecipientResolver");
-const AdminModel = require("../../../../src/models/admin.model");
+const SharedTransporter = require("../../../../src/services/email/SharedTransporter").default;
+const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService").default;
+const RecipientResolver = require("../../../../src/services/email/RecipientResolver").default;
+const AdminModel = require("../../../../src/models/admin.model").default;
 const { metricsStore } = require("../../../../src/middleware/metrics");
 const { logger } = require("../../../../src/utils/logger");
 

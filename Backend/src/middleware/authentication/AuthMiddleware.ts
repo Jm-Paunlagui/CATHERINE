@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Authentication & Authorization Middleware
@@ -9,18 +9,14 @@
  * logic inline at the route level via requireAccess(predicate).
  */
 
-const jwt = require("jsonwebtoken");
-const {
-    AppError,
-    AUTH_ERRORS,
-    VALIDATION_ERRORS,
-} = require("../../constants/errors");
-const { logger } = require("../../utils/logger");
-const { authMessages } = require("../../constants/messages");
-const AuthService = require("../../services/auth.service");
-const { CryptoVault } = require("../../utils/encryption/CryptoVault");
-const { classifyAccessClaims } = require("../../utils/auth/tokenClaims");
-const AccessRevocationService = require("../../services/AccessRevocationService");
+import jwt from "jsonwebtoken";
+import { AppError, AUTH_ERRORS, VALIDATION_ERRORS } from "../../constants/errors";
+import { logger } from "../../utils/logger";
+import { authMessages } from "../../constants/messages";
+import AuthService from "../../services/auth.service";
+import { CryptoVault } from "../../utils/encryption/CryptoVault";
+import { classifyAccessClaims } from "../../utils/auth/tokenClaims";
+import AccessRevocationService from "../../services/AccessRevocationService";
 
 class AuthMiddleware {
     /**
@@ -701,4 +697,4 @@ class AuthMiddleware {
     }
 }
 
-module.exports = AuthMiddleware;
+export default AuthMiddleware;

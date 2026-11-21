@@ -1,4 +1,4 @@
-"use strict";
+
 
 /**
  * @fileoverview Single source of truth for DEMO_MODE detection.
@@ -19,4 +19,4 @@ function isDemoMode() {
     return String(process.env.DEMO_MODE).toLowerCase() === "true";
 }
 
-module.exports = { isDemoMode };
+export { isDemoMode };

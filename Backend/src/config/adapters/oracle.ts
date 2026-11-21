@@ -19,20 +19,22 @@
  * them from there, never from a doc comment.
  */
 
-"use strict";
-const { IS_COMPILED, appPath } = require("../../utils/runtimePaths");
 
-const fs = require("fs");
-const path = require("path");
-const { EventEmitter } = require("events");
-const { getConnectionConfig, getConnectionNames } = require("../database");
-const { logger } = require("../../utils/logger");
-const { oracleMessages } = require("../../constants/messages");
-const { RetryPolicy } = require("../../utils/resilience/RetryPolicy");
-const { currentScope } = require("../../utils/progress/progress");
+import { IS_COMPILED, appPath } from "../../utils/runtimePaths";
+
+import fs from "fs";
+import path from "path";
+import { EventEmitter } from "events";
+import database from "../database";
+// Captured at load, not per call: freshOracleAdapter.js relies on it (see database.ts).
+const { getConnectionConfig, getConnectionNames } = database;
+import { logger } from "../../utils/logger";
+import { oracleMessages } from "../../constants/messages";
+import { RetryPolicy } from "../../utils/resilience/RetryPolicy";
+import { currentScope } from "../../utils/progress/progress";
 // Leaf-level metrics store (depends only on perf_hooks/v8/os) — cycle-safe to
 // require here so the health poll can feed live pool saturation to the dashboard.
-const { metricsStore } = require("../../middleware/metrics/MetricsStore");
+import { metricsStore } from "../../middleware/metrics/MetricsStore";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 1 — Oracle client environment  (was: oracleEnvironment.js)
@@ -1184,7 +1186,7 @@ async function closeAll() {
     logger.notice(oracleMessages.ALL_POOLS_CLOSED);
 }
 
-// Signal / exception handlers are in server.js — not duplicated here.
+// Signal / exception handlers are in server.ts — not duplicated here.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 4 — Internal utilities
@@ -1217,67 +1219,26 @@ function _timeout(ms, msg) {
 // SECTION 5 — Exports
 // ─────────────────────────────────────────────────────────────────────────────
 
-module.exports = {
-    // Core
-    toDriverConnectTimeoutSec,
-    POOL_DEFAULTS,
-    withConnection,
-    withTransaction,
-    withBatchConnection,
-
-    // Pool management
-    initializePools,
-    closeAll,
-    getPoolStats,
-    isPoolHealthy: (name) => healthMonitor.isHealthy(name),
-    getHealthMetrics: () => healthMonitor.getMetrics(),
-
-    /**
-     * TEST-ONLY seam: force a pool's health flag so the circuit-breaker path in
-     * withConnection can be exercised deterministically without waiting for real
-     * ping failures. Inert in every non-test environment — throws if invoked
-     * outside NODE_ENV==="test" so it can never be relied on in production.
-     * @param {string} name - Connection/pool name.
-     * @param {boolean} healthy - Desired health flag.
-     */
-    __setPoolHealthForTest: (name, healthy) => {
+const __export_isPoolHealthy = (name) => healthMonitor.isHealthy(name);
+const __export_getHealthMetrics = () => healthMonitor.getMetrics();
+const __export___setPoolHealthForTest = (name, healthy) => {
         if (process.env.NODE_ENV !== "test") {
             throw new Error(
                 "__setPoolHealthForTest is a test-only seam and must not be called outside NODE_ENV=test.",
             );
         }
         healthMonitor._setHealthy(name, Boolean(healthy));
-    },
-
-    /** Pool breaker state changes: `onPoolHealthChange(fn)` -> unsubscribe. fn gets `{ name, healthy }`. */
-    onPoolHealthChange: (fn) => {
+    };
+const __export_onPoolHealthChange = (fn) => {
         healthMonitor.on("change", fn);
         return () => healthMonitor.off("change", fn);
-    },
-    /** True when every monitored pool's breaker is closed. */
-    allPoolsHealthy: () => healthMonitor.allHealthy(),
-    /** Closes `name`'s breaker after a successful bypass-breaker readiness probe. */
-    recordProbeSuccess: (name) => healthMonitor.recordProbeSuccess(name),
-    /** Checks `name` soon, outside the regular cadence (debounced). */
-    nudgePoolHealth: (name) => healthMonitor.nudge(name),
-    /** Every health check result: `onPoolHealthCheck(fn)` -> unsubscribe. fn gets `{ name, ok }`. */
-    onPoolHealthCheck: (fn) => {
+    };
+const __export_allPoolsHealthy = () => healthMonitor.allHealthy();
+const __export_recordProbeSuccess = (name) => healthMonitor.recordProbeSuccess(name);
+const __export_nudgePoolHealth = (name) => healthMonitor.nudge(name);
+const __export_onPoolHealthCheck = (fn) => {
         healthMonitor.on("check", fn);
         return () => healthMonitor.off("check", fn);
-    },
-    /** Faster health checks while a readiness stream is open. */
-    setPoolHealthWatched: (watched) => healthMonitor.setWatched(watched),
-
-    // Environment helpers
-    validateOracleClient,
-    setupOracleEnvironment,
-
-    // Raw driver & constants
-    oracledb,
-    OUT_FORMAT_OBJECT,
-    SYSDBA_PRIVILEGE,
-    EXECUTE_OPTIONS,
-
-    // Exported for unit testing — the money-safe read fence (scale > 0 → STRING).
-    moneySafeFetchTypeHandler,
-};
+    };
+const __export_setPoolHealthWatched = (watched) => healthMonitor.setWatched(watched);
+export { toDriverConnectTimeoutSec, POOL_DEFAULTS, withConnection, withTransaction, withBatchConnection, initializePools, closeAll, getPoolStats, __export_isPoolHealthy as isPoolHealthy, __export_getHealthMetrics as getHealthMetrics, __export___setPoolHealthForTest as __setPoolHealthForTest, __export_onPoolHealthChange as onPoolHealthChange, __export_allPoolsHealthy as allPoolsHealthy, __export_recordProbeSuccess as recordProbeSuccess, __export_nudgePoolHealth as nudgePoolHealth, __export_onPoolHealthCheck as onPoolHealthCheck, __export_setPoolHealthWatched as setPoolHealthWatched, validateOracleClient, setupOracleEnvironment, oracledb, OUT_FORMAT_OBJECT, SYSDBA_PRIVILEGE, EXECUTE_OPTIONS, moneySafeFetchTypeHandler };

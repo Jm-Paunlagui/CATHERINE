@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * Changelog routes
@@ -18,12 +18,12 @@
  *   drafts and saves via POST /api/v1/changelog (single write path).
  */
 
-const express = require("express");
+import express from "express";
 
-const AuthMiddleware        = require("../middleware/authentication/AuthMiddleware");
-const ChangelogController   = require("../controllers/ChangelogController");
-const ReleaseController     = require("../controllers/ReleaseController");
-const { RateLimiterMiddleware } = require("../middleware/security/RateLimiterMiddleware");
+import AuthMiddleware from "../middleware/authentication/AuthMiddleware";
+import ChangelogController from "../controllers/ChangelogController";
+import ReleaseController from "../controllers/ReleaseController";
+import { RateLimiterMiddleware } from "../middleware/security/RateLimiterMiddleware";
 
 const router = express.Router();
 
@@ -98,4 +98,4 @@ router.delete(
     ChangelogController.delete,
 );
 
-module.exports = router;
+export default router;

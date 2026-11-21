@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Data Purge & Restore table registry.
@@ -264,16 +264,4 @@ function getRestoreOrder(tableNames) {
     }
 })();
 
-module.exports = {
-    PURGE_POOL,
-    NEVER_PURGE,
-    IMMUTABLE_TIMESTAMP_COLUMNS,
-    PURGE_GROUP_KEYS,
-    GROUP_CLOSURE_HINTS,
-    PURGE_TABLES,
-    getEntry,
-    getTablesByGroup,
-    getAllTableNames,
-    getDeleteOrder,
-    getRestoreOrder,
-};
+export { PURGE_POOL, NEVER_PURGE, IMMUTABLE_TIMESTAMP_COLUMNS, PURGE_GROUP_KEYS, GROUP_CLOSURE_HINTS, PURGE_TABLES, getEntry, getTablesByGroup, getAllTableNames, getDeleteOrder, getRestoreOrder };

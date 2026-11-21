@@ -19,7 +19,7 @@ import { BadRequest, InvalidToken, LoginTimeOut, PageNotFound, ServiceUnavailabl
 import { fail } from "../../helpers/fixtures/contract.js";
 import { POOL_SECRETS, dbDownBody } from "../../helpers/fixtures/healthBodies.js";
 import { apiUrl } from "../../helpers/msw/api.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 import { renderWithProviders } from "../../helpers/renderWithProviders.jsx";
 
 const T = SERVICE_STATUS_TEST_IDS;

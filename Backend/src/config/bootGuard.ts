@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Fail-fast boot guard — validates security-critical environment
@@ -12,15 +12,15 @@
  * violations are logged as warnings.
  *
  * HOW IT WORKS
- * Called from server.js after dotenv.config() but before app/db require.
+ * Called from server.ts after dotenv.config() but before app/db require.
  * Each rule specifies: env var name, minimum length, and a list of known
  * placeholder values that must be replaced.
  *
  * @module bootGuard
  */
 
-const { logger } = require("../utils/logger");
-const { isValidCurrency, CURRENCY_CODES } = require("../constants/currencies");
+import { logger } from "../utils/logger";
+import { isValidCurrency, CURRENCY_CODES } from "../constants/currencies";
 
 // ─── Known placeholder values (shipped in .env.example) ───────────────────────
 
@@ -280,4 +280,4 @@ function validateSecrets() {
     }
 }
 
-module.exports = { validateSecrets, validateSecretRules, validateMoneyConfig };
+export { validateSecrets, validateSecretRules, validateMoneyConfig };

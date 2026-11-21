@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ChangelogService
@@ -8,12 +8,8 @@
  * All validation lives here; controllers stay thin.
  */
 
-const {
-    AppError,
-    CHANGELOG_ERRORS,
-    VALIDATION_ERRORS,
-} = require("../constants/errors");
-const ChangelogModel = require("../models/changelog.model");
+import { AppError, CHANGELOG_ERRORS, VALIDATION_ERRORS } from "../constants/errors";
+import ChangelogModel from "../models/changelog.model";
 
 const VALID_TYPES = [
     "breaking",
@@ -208,4 +204,4 @@ class ChangelogService {
     }
 }
 
-module.exports = ChangelogService;
+export default ChangelogService;

@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * ============================================================================
@@ -66,11 +66,9 @@
  * ============================================================================
  */
 
-const { quoteIdentifier, buildOrderBy, buildProjection } = require("../utils");
-const { parseFilter } = require("../parsers/filterParser");
-const {
-    oracleMongoWrapperMessages: MSG,
-} = require("../../../constants/messages");
+import { quoteIdentifier, buildOrderBy, buildProjection } from "../utils";
+import { parseFilter } from "../parsers/filterParser";
+import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 class QueryBuilder {
     /**
@@ -577,4 +575,4 @@ class QueryBuilder {
     }
 }
 
-module.exports = { QueryBuilder };
+export { QueryBuilder };

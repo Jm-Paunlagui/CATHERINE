@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Per-process refresh-token registry.
@@ -24,7 +24,7 @@
  * @author senior-nodejs-engineer
  */
 
-const { REFRESH_REGISTRY_LIMITS } = require("../../constants/authTokens");
+import { REFRESH_REGISTRY_LIMITS } from "../../constants/authTokens";
 
 const SWEEP_MIN_GAP_MS = 1000;
 const DEFAULT_MARKER_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -235,4 +235,4 @@ class RefreshTokenRegistry {
 
 const refreshTokenRegistry = new RefreshTokenRegistry();
 
-module.exports = { RefreshTokenRegistry, refreshTokenRegistry };
+export { RefreshTokenRegistry, refreshTokenRegistry };

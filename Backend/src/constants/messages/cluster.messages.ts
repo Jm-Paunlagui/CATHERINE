@@ -1,10 +1,10 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Log message templates for the cluster primary
  * (`src/utils/cluster/ClusterSupervisor.ts`) and the worker IPC handlers in
- * server.js. Used ONLY in logger.* calls.
+ * server.ts. Used ONLY in logger.* calls.
  *
  * ⚠ `messages/index.js` spreads every namespace into ONE flat object — every
  * key here MUST carry the `CLUSTER_` prefix.
@@ -79,4 +79,4 @@ const clusterMessages = {
         "CLUSTER_PRIMARY_DISCONNECT — IPC channel to the primary closed; shutting down this worker gracefully.",
 };
 
-module.exports = { clusterMessages };
+export { clusterMessages };

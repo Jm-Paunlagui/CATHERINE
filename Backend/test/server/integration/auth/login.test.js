@@ -12,8 +12,8 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app");
-const AuthService = require("../../../../src/services/auth.service");
+const app = require("../../../../src/app").default;
+const AuthService = require("../../../../src/services/auth.service").default;
 const { AppError, AUTH_ERRORS } = require("../../../../src/constants/errors");
 const { HTTP_STATUS } = require("../../../../src/constants");
 const { authRateLimiters: authRateLimiter } = require("../../../../src/middleware/security/authRateLimiters");

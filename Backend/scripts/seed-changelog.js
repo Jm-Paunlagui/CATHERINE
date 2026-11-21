@@ -35,7 +35,7 @@
 const dotenv = require("dotenv");
 dotenv.config({ path: ".env" });
 
-const ChangelogModel = require("../src/models/changelog.model");
+const ChangelogModel = require("../src/models/changelog.model").default;
 
 // ─── Seed entries (oldest → newest) ──────────────────────────────────────────
 // Each displayDate is the "logical workday" after applying the Sat→Fri / Sun→Mon

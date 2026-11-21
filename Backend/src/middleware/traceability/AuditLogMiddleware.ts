@@ -1,9 +1,9 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
 
-const AuditLogService = require("../../services/AuditLogService");
-const { resolveRouteLabel } = require("../../utils/routeLabel");
-const os = require("os");
+
+import AuditLogService from "../../services/AuditLogService";
+import { resolveRouteLabel } from "../../utils/routeLabel";
+import os from "os";
 
 // Sensitive query-param fragments (CWE-200 / CWE-532 — sensitive data
 // persisted to the audit-log PARAMS column, which renders in the FE Trace
@@ -342,4 +342,4 @@ class AuditLogMiddleware {
 }
 
 const defaultAuditLog = new AuditLogMiddleware();
-module.exports = { AuditLogMiddleware, defaultAuditLog };
+export { AuditLogMiddleware, defaultAuditLog };

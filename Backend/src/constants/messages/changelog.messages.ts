@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Logger message templates for the Changelog module.
@@ -24,4 +24,4 @@ const changelogMessages = {
     STORE_INITIALIZED: () => "Changelog data store initialised with seed data.",
 };
 
-module.exports = { changelogMessages };
+export { changelogMessages };

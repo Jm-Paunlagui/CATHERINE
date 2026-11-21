@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Server-side log templates for the dev-docs viewer.
@@ -98,4 +98,4 @@ const devDocsMessages = {
         `Dev-docs freshness unavailable — no git history and no build snapshot at ${snapshotPath}. Documents will show "Age unknown".`,
 };
 
-module.exports = devDocsMessages;
+export default devDocsMessages;

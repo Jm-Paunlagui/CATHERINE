@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Primary-side, cluster-wide login-lockout store.
@@ -22,7 +22,7 @@
  * @author senior-nodejs-engineer
  */
 
-const { LoginLockoutPolicy } = require("./LoginLockoutPolicy");
+import { LoginLockoutPolicy } from "./LoginLockoutPolicy";
 
 const ENTRY_TTL_MS = 24 * 60 * 60 * 1000;
 const SWEEP_MIN_GAP_MS = 1000;
@@ -144,4 +144,4 @@ class LoginLockoutState {
     }
 }
 
-module.exports = { LoginLockoutState };
+export { LoginLockoutState };

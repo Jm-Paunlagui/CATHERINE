@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Data Purge & Restore — backup archive builder.
@@ -123,22 +123,23 @@
  *   done here.
  */
 
-const crypto = require("crypto");
-const { PassThrough } = require("stream");
-const archiver = require("archiver");
-const ExcelJS = require("exceljs");
+import crypto from "crypto";
+import { PassThrough } from "stream";
+import archiver from "archiver";
+import ExcelJS from "exceljs";
 
-const { logger } = require("../utils/logger");
-const { touch } = require("../utils/progress/progress");
-const { dataPurgeMessages, dataBackupMessages } = require("../constants/messages");
-const { getEntry } = require("../constants/purgeTables");
-const DataPurgeModel = require("../models/data-purge.model");
-const DataPurgeService = require("./DataPurgeService");
-const BackupTokenService = require("./BackupTokenService");
-const { CryptoVault } = require("../utils/encryption/CryptoVault");
-const { addNormalizedRow } = require("../utils/excelFormat");
+import { logger } from "../utils/logger";
+import { touch } from "../utils/progress/progress";
+import { dataPurgeMessages, dataBackupMessages } from "../constants/messages";
+import { getEntry } from "../constants/purgeTables";
+import DataPurgeModel from "../models/data-purge.model";
+import DataPurgeService from "./DataPurgeService";
+import BackupTokenService from "./BackupTokenService";
+import { CryptoVault } from "../utils/encryption/CryptoVault";
+import { addNormalizedRow } from "../utils/excelFormat";
 // Resolved at runtime relative to this file.
-const { version: APP_VERSION } = require("../../package.json");
+import __package_json from "../../package.json";
+const { version: APP_VERSION } = __package_json;
 
 /** Schema baseline this feature was built against — plan header, and echoed into every manifest for restore-time compatibility checks (a later phase). */
 const SCHEMA_VERSION = "v6";
@@ -978,11 +979,13 @@ class BackupArchiveService {
     }
 }
 
-module.exports = BackupArchiveService;
+const __default = BackupArchiveService;
+export default __default;
 // SCHEMA_VERSION is exported (not just used internally) so DataRestoreService's
 // manifest.schemaVersion check reads the SAME literal the backup side stamped
 // into manifest.json — never a second hardcoded "v6" that could drift.
-module.exports.SCHEMA_VERSION = SCHEMA_VERSION;
+__default.SCHEMA_VERSION = SCHEMA_VERSION;
+export { SCHEMA_VERSION };
 // The tables an Access Control revoke-backup covers — exported so
 // AdminManagementService builds its tableFilters from this SAME list (never a
 // second hardcoded copy) and so `_verifyRevokeBackupToken` recomputes
@@ -992,12 +995,15 @@ module.exports.SCHEMA_VERSION = SCHEMA_VERSION;
 //
 // ⚠ Changing this list changes `computeEntityScopeHash`'s input — every
 // backup token issued before the change stops validating.
-module.exports.ADMIN_REVOKE_BACKUP_TABLES = Object.freeze([
+const __export_ADMIN_REVOKE_BACKUP_TABLES = Object.freeze([
     "T_ADMINS_DEV",
     "T_AUDIT_LOGS_DEV",
     "T_SERVER_ALERT_ACK_DEV",
 ]);
+__default.ADMIN_REVOKE_BACKUP_TABLES = __export_ADMIN_REVOKE_BACKUP_TABLES;
+export { __export_ADMIN_REVOKE_BACKUP_TABLES as ADMIN_REVOKE_BACKUP_TABLES };
 // The only 3 valid `manifest.trigger` values — exported so
 // `BackupStoreService` validates against this SAME list rather than a second
 // hardcoded copy that could drift.
-module.exports.BACKUP_TRIGGERS = BACKUP_TRIGGERS;
+__default.BACKUP_TRIGGERS = BACKUP_TRIGGERS;
+export { BACKUP_TRIGGERS };

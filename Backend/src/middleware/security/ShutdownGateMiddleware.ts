@@ -1,5 +1,5 @@
 // @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
-"use strict";
+
 
 /**
  * @fileoverview Shutdown gate - refuses new work while the process drains.
@@ -19,11 +19,12 @@
  * this answer into its "server is restarting" banner.
  */
 
-const { AppError, GENERAL_ERRORS } = require("../../constants/errors");
-const InFlightTaskRegistry = require("../../utils/InFlightTaskRegistry");
+import { AppError, GENERAL_ERRORS } from "../../constants/errors";
+import InFlightTaskRegistry from "../../utils/InFlightTaskRegistry";
 
 /** Seconds a client should wait before retrying while the server drains. */
-const { SHUTDOWN_RETRY_AFTER_SEC } = require("../../constants/shutdownGate");
+import __shutdownGate from "../../constants/shutdownGate";
+const { SHUTDOWN_RETRY_AFTER_SEC } = __shutdownGate;
 const HEALTH_PATH_RE = /^\/api\/v\d+\/health(\/|$)/;
 
 class ShutdownGateMiddleware {
@@ -59,4 +60,4 @@ class ShutdownGateMiddleware {
 
 const defaultShutdownGate = new ShutdownGateMiddleware();
 
-module.exports = { ShutdownGateMiddleware, defaultShutdownGate, SHUTDOWN_RETRY_AFTER_SEC };
+export { ShutdownGateMiddleware, defaultShutdownGate, SHUTDOWN_RETRY_AFTER_SEC };
