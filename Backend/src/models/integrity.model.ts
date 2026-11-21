@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -80,7 +79,7 @@ export interface TableConfig {
 //       numericFilters: ["customer"],
 //       live: true,
 //   },
-const TABLE_REGISTRY = Object.freeze({});
+const TABLE_REGISTRY: Readonly<Record<string, TableConfig>> = Object.freeze({});
 
 /** Hard ceiling on rows a single tamper sweep will scan (safety vs. runaway). */
 const DEFAULT_SWEEP_CAP = 200_000;
@@ -136,11 +135,12 @@ class IntegrityModel {
         const entries = await Promise.all(
             Object.entries(cfg.enums).map(async ([fk, def]) => {
                 const source = def.source ?? cfg.table;
-                if (def.label) {
+                const labelCol = def.label; // a const so the closures below keep the narrowing
+                if (labelCol) {
                     // Labeled list from a small lookup table.
                     const rows = await _col(source)
                         .find({})
-                        .project({ [def.column]: 1, [def.label]: 1 })
+                        .project({ [def.column]: 1, [labelCol]: 1 })
                         .sort({ [def.column]: 1 })
                         .limit(1000)
                         .toArray();
@@ -148,7 +148,7 @@ class IntegrityModel {
                         .filter((r: any) => r[def.column] != null)
                         .map((r: any) => ({
                             value: String(r[def.column]),
-                            label: r[def.label] ? `#${r[def.column]} · ${r[def.label]}` : `#${r[def.column]}`,
+                            label: r[labelCol] ? `#${r[def.column]} · ${r[labelCol]}` : `#${r[def.column]}`,
                         }));
                     return [fk, opts];
                 }
@@ -222,18 +222,18 @@ class IntegrityModel {
         const cap = Math.max(batch, Number(opts.cap) || DEFAULT_SWEEP_CAP);
         const baseMatch = IntegrityModel._buildMatch(cfg, filters);
 
-        const tampered = [];
+        const tampered: Record<string, unknown>[] = [];
         let rowsScanned = 0;
-        let cursor = null; // last PK seen (descending keyset)
+        let cursor: number | null = null; // last PK seen (descending keyset)
         let truncated = false;
 
         // Loop: WHERE <scope> [AND pk < :cursor] ORDER BY pk DESC LIMIT batch.
         while (true) {
-            const match = cursor == null
+            const match: Record<string, unknown> = cursor == null
                 ? baseMatch
                 : { ...baseMatch, [cfg.pk]: { $lt: cursor } };
 
-            const rows = await _col(cfg.table)
+            const rows: Record<string, unknown>[] = await _col(cfg.table)
                 .find(match)
                 .project(cfg.project)
                 .sort({ [cfg.pk]: -1 })

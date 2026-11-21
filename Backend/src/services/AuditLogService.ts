@@ -542,7 +542,7 @@ class AuditLogService {
      * @param {string} dateStr    - ISO date string YYYY-MM-DD (the day to search).
      * @returns {Promise<{ requestId: string, lines: string[] }>}
      */
-    static async getRequestLogs(requestId: string, dateStr: string): Promise<{ requestId: string; lines: string[]; }> {
+    static async getRequestLogs(requestId: string, dateStr: string | undefined): Promise<{ requestId: string; lines: string[]; }> {
         // Accepts both Snowflake format (0078812966528-0448-0000) and legacy (req_UvNZUayhzL)
         if (
             !requestId ||
@@ -940,7 +940,7 @@ class AuditLogService {
      * @returns {Promise<Buffer>} Excel file as a Buffer.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async exportToExcel({ fromDate, toDate }: { fromDate: string; toDate: string }): Promise<Buffer> {
+    static async exportToExcel({ fromDate, toDate }: { fromDate?: string; toDate?: string }): Promise<Buffer> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }
@@ -1056,7 +1056,7 @@ class AuditLogService {
      * @throws {AppError} 400 when requestId or dateStr format is invalid.
      * @throws {AppError} 404 when no audit record is found for the requestId.
      */
-    static async exportTraceExcel(requestId: string, dateStr: string): Promise<Buffer> {
+    static async exportTraceExcel(requestId: string, dateStr: string | undefined): Promise<Buffer> {
         // Accepts both Snowflake format (0078812966528-0448-0000) and legacy (req_UvNZUayhzL)
         if (
             !requestId ||
@@ -1180,7 +1180,7 @@ class AuditLogService {
      * @returns {Promise<Buffer>} ZIP buffer.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async exportToZip({ fromDate, toDate }: { fromDate: string; toDate: string }): Promise<Buffer> {
+    static async exportToZip({ fromDate, toDate }: { fromDate?: string; toDate?: string }): Promise<Buffer> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }
@@ -1287,7 +1287,7 @@ class AuditLogService {
      *          could not be removed.
      * @throws {AppError} 400 when either date is missing or range is invalid.
      */
-    static async deleteRange({ fromDate, toDate }: { fromDate: string; toDate: string }): Promise<{ deletedRows: number; deletedDays: number; failedDays: string[]; }> {
+    static async deleteRange({ fromDate, toDate }: { fromDate?: string; toDate?: string }): Promise<{ deletedRows: number; deletedDays: number; failedDays: string[]; }> {
         if (!fromDate || !toDate) {
             throw new AppError(AUDIT_LOG_ERRORS.INVALID_DATE_RANGE, 400);
         }

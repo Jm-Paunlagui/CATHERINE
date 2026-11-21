@@ -1,7 +1,7 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 import type { Request, Response } from "express";
+import { queryString } from "../utils/http/queryString";
 import { catchAsync } from "../utils/catchAsync";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { AUDIT_LOG_ERRORS } from "../constants/errors";
@@ -114,7 +114,7 @@ const _safeSend = (res: import('express').Response, eventName: string, payload: 
  *
  * @returns {{ red: object, totals: object, system: object, rates: object }|null}
  */
-const _buildMetricsPayload = async (): { red: Record<string, any>; totals: Record<string, any>; system: Record<string, any>; rates: Record<string, any>; } | null => {
+const _buildMetricsPayload = async (): Promise<{ red: Record<string, any>; totals: Record<string, any>; system: Record<string, any>; rates: Record<string, any>; } | null> => {
     try {
         const snap = await MetricsService.getClusterSnapshot();
         const t = snap.totals;
@@ -250,7 +250,14 @@ const _stopAuditPoller = () => {
 
 class AuditLogController {
   static getList = catchAsync(async (req: Request, res: Response) => {
-    const { page = 1, pageSize = 20, fromDate, toDate, method, statusCategory, endpoint, search } = req.query;
+    const page = queryString(req.query.page) ?? "1";
+    const pageSize = queryString(req.query.pageSize) ?? "20";
+    const fromDate = queryString(req.query.fromDate);
+    const toDate = queryString(req.query.toDate);
+    const method = queryString(req.query.method);
+    const statusCategory = queryString(req.query.statusCategory);
+    const endpoint = queryString(req.query.endpoint);
+    const search = queryString(req.query.search);
     const data = await AuditLogService.getList({
       page:     parseInt(page, 10)     || 1,
       pageSize: parseInt(pageSize, 10) || 20,
@@ -265,14 +272,15 @@ class AuditLogController {
   });
 
   static getStats = catchAsync(async (req: Request, res: Response) => {
-    const { fromDate, toDate } = req.query;
+    const fromDate = queryString(req.query.fromDate);
+    const toDate = queryString(req.query.toDate);
     const data = await AuditLogService.getStats({ fromDate, toDate });
     res.json(sendSuccess(RESPONSE_MESSAGES.AUDIT_LOG_STATS_FETCHED, data));
   });
 
   static getRequestLogs = catchAsync(async (req: Request, res: Response) => {
     const requestId = req.params.requestId as string; // a named :param is one string
-    const { date }      = req.query;
+    const date = queryString(req.query.date);
     const data = await AuditLogService.getRequestLogs(requestId, date);
     res.json(sendSuccess(RESPONSE_MESSAGES.AUDIT_LOG_TRACE_FETCHED, data));
   });
@@ -287,7 +295,7 @@ class AuditLogController {
    */
   static exportTraceExcel = catchAsync(async (req: Request, res: Response) => {
     const requestId = req.params.requestId as string; // a named :param is one string
-    const { date }      = req.query;
+    const date = queryString(req.query.date);
     const buffer = await AuditLogService.exportTraceExcel(requestId, date);
     const safeId = requestId.replace(/[^A-Za-z0-9_-]/g, '');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -303,7 +311,8 @@ class AuditLogController {
    * @param {import('express').Response} res
    */
   static exportExcel = catchAsync(async (req: Request, res: Response) => {
-    const { fromDate, toDate } = req.query;
+    const fromDate = queryString(req.query.fromDate);
+    const toDate = queryString(req.query.toDate);
     const buffer = await AuditLogService.exportToExcel({ fromDate, toDate });
     const safeFrom = String(fromDate).replace(/[^0-9-]/g, '');
     const safeTo = String(toDate).replace(/[^0-9-]/g, '');
@@ -320,7 +329,8 @@ class AuditLogController {
    * @param {import('express').Response} res
    */
   static exportLogs = catchAsync(async (req: Request, res: Response) => {
-    const { fromDate, toDate } = req.query;
+    const fromDate = queryString(req.query.fromDate);
+    const toDate = queryString(req.query.toDate);
     const buffer = await AuditLogService.exportToZip({ fromDate, toDate });
     const safeFrom = String(fromDate).replace(/[^0-9-]/g, '');
     const safeTo = String(toDate).replace(/[^0-9-]/g, '');
@@ -336,7 +346,8 @@ class AuditLogController {
    * @param {import('express').Response} res
    */
   static deleteRange = catchAsync(async (req: Request, res: Response) => {
-    const { fromDate, toDate } = req.query;
+    const fromDate = queryString(req.query.fromDate);
+    const toDate = queryString(req.query.toDate);
     const result = await AuditLogService.deleteRange({ fromDate, toDate });
     res.json(sendSuccess(RESPONSE_MESSAGES.AUDIT_LOG_DELETED, result));
   });
@@ -429,7 +440,12 @@ class AuditLogController {
    * literal "system-logs" segment is never captured as a requestId.
    */
   static getSystemLogs = catchAsync(async (req: Request, res: Response) => {
-    const { date, maxPriority, level, page = 1, pageSize = 50, search } = req.query;
+    const date = queryString(req.query.date);
+    const maxPriority = queryString(req.query.maxPriority);
+    const level = queryString(req.query.level);
+    const page = queryString(req.query.page) ?? "1";
+    const pageSize = queryString(req.query.pageSize) ?? "50";
+    const search = queryString(req.query.search);
     const data = await AuditLogService.getSystemLogs({
       date,
       maxPriority: maxPriority !== undefined ? parseInt(maxPriority, 10) : undefined,
@@ -481,7 +497,7 @@ class AuditLogController {
       return;
     }
 
-    const rawMaxPriority = parseInt(req.query.maxPriority, 10);
+    const rawMaxPriority = parseInt(queryString(req.query.maxPriority) ?? "", 10);
     const maxPriority = Number.isInteger(rawMaxPriority) && rawMaxPriority >= 0 && rawMaxPriority <= 7
       ? rawMaxPriority
       : 5;
@@ -492,7 +508,7 @@ class AuditLogController {
     // paths never disagree on what a valid level is.
     let level = null;
     if (req.query.level != null && req.query.level !== '') {
-      const normalizedLevel = AuditLogService.SYSTEM_LOG_LEVEL_NAMES[String(req.query.level).toLowerCase()];
+      const normalizedLevel = (AuditLogService.SYSTEM_LOG_LEVEL_NAMES as Record<string, string>)[String(req.query.level).toLowerCase()];
       if (!normalizedLevel) {
         res.status(400).json({ status: 'error', code: 400, message: AUDIT_LOG_ERRORS.SYSTEM_LOG_INVALID_LEVEL, error: { type: 'ValidationError' } });
         return;
