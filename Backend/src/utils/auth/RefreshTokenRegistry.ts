@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -108,7 +107,7 @@ class RefreshTokenRegistry {
      * @returns {"ok"|"reused"|"revoked"|"unknown"}
      *   `reused` also marks the whole family revoked.
      */
-    consume(jtiHash: string, replacedByHash: string | null, nowMs: number = this.#now(), familyId: string = undefined): "ok" | "reused" | "revoked" | "unknown" {
+    consume(jtiHash: string, replacedByHash: string | null, nowMs: number = this.#now(), familyId?: string): "ok" | "reused" | "revoked" | "unknown" {
         const entry = this.#entries.get(jtiHash);
         const fid = entry?.familyId ?? familyId;
         if (fid !== undefined && this.#families.get(fid)?.revoked) return "revoked";

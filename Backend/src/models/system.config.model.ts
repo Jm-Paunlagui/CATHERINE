@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -59,6 +58,17 @@ const TABLE = "T_SYSTEM_CONFIG_DEV";
 const _db = createDb("appDb");
 const _config = new OracleCollection(TABLE, _db);
 
+/** One T_SYSTEM_CONFIG row. */
+export interface SystemConfigRow {
+    CONFIG_KEY: string;
+    CONFIG_VALUE: string | null;
+    VALUE_TYPE: string;
+    DESCRIPTION: string | null;
+    UPDATED_BY: string | null;
+    UPDATED_AT: Date;
+    ROW_HASH: string | null;
+}
+
 class SystemConfigModel {
     /**
      * Returns one T_SYSTEM_CONFIG row by its CONFIG_KEY primary key, or null
@@ -75,20 +85,12 @@ class SystemConfigModel {
      *   ROW_HASH: string|null,
      * }|null>}
      */
-    static async findByKey(key: string): Promise<{
-        CONFIG_KEY: string;
-        CONFIG_VALUE: string | null;
-        VALUE_TYPE: string;
-        DESCRIPTION: string | null;
-        UPDATED_BY: string | null;
-        UPDATED_AT: Date;
-        ROW_HASH: string | null;
-    } | null> {
+    static async findByKey(key: string): Promise<SystemConfigRow | null> {
         if (isDemoMode()) {
             const row = demo.systemConfig().get(String(key));
-            return row ? { ...row } : null;
+            return row ? ({ ...row } as SystemConfigRow) : null;
         }
-        return _config.find({ CONFIG_KEY: String(key) }).next();
+        return _config.find({ CONFIG_KEY: String(key) }).next<SystemConfigRow>();
     }
 
     /**
@@ -117,7 +119,7 @@ class SystemConfigModel {
         updatedBy,
         rowHash,
     }: { key: string; value: string; valueType?: "STRING" | "BOOLEAN" | "NUMBER"; description?: string; updatedBy: string | number; rowHash: string; }): Promise<string> {
-        const setFields = {
+        const setFields: Partial<SystemConfigRow> = {
             CONFIG_VALUE: value,
             VALUE_TYPE: valueType,
             UPDATED_BY: updatedBy != null ? String(updatedBy) : null,

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { appPath } from "../../utils/runtimePaths";
 
@@ -117,10 +116,15 @@ function escapeHtml(value: string | number | null | undefined): string {
         .replace(/'/g, "&#x27;");
 }
 
+/** One row of the server-critical digest. */
+type CriticalDigestRow = { level: string; module?: string; message: string; requestId?: string | null; time: string; }
+/** One row of a metric-alert digest. */
+type MetricDigestRow = { rule: string; scope?: string; description: string; severity: string; }
+
 class ServerNotificationService {
     declare DETAILS_NOTE: Readonly<{ ALERT_TAB: "Full details are in the server logs and the Logging & Observability alert tab."; LOGS_ONLY: "Full details are in the server logs."; }>;
     declare ServerNotificationService: typeof ServerNotificationService;
-    declare _recentSends: never[];
+    declare _recentSends: any[];
     declare _assetsDir: string;
     declare _templateDir: string;
     declare _transporter: import("nodemailer").Transporter<import("nodemailer").SentMessageInfo, import("nodemailer").TransportOptions>;
@@ -256,7 +260,7 @@ class ServerNotificationService {
      * @param {string}  [payload.firedAt]        - Pre-formatted local timestamp; computed when omitted
      * @returns {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string, recipientCount?: number }>}
      */
-    async sendChannelDigest(channel: string, payload: { severity: string; headline: string; summary: string; rows?: Array<Record<string, any>>; throttleNote?: string; detailsNote?: string; kv?: Record<string, any>; notificationId?: string; firedAt?: string; } = {}): Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number; }> {
+    async sendChannelDigest(channel: string, payload: { severity: string; headline: string; summary: string; rows?: Array<CriticalDigestRow | MetricDigestRow>; throttleNote?: string; detailsNote?: string; kv?: Record<string, any>; notificationId?: string; firedAt?: string; }): Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number; }> {
         const {
             severity,
             headline,
@@ -489,12 +493,12 @@ class ServerNotificationService {
      * @param {boolean} isLast - Whether this is the last row (adds a bottom divider)
      * @returns {string}
      */
-    _buildRow(channel: string, row: Record<string, any>, isLast: boolean): string {
+    _buildRow(channel: string, row: CriticalDigestRow | MetricDigestRow, isLast: boolean): string {
         // The critical channel also carries metric-rule rows (ORACLE_POOL_DOWN
         // and its RESOLVED); dispatch on row shape like _buildPlainText does.
-        return channel === "server-critical-notification" && row.level
-            ? this._buildCriticalRow(row, isLast)
-            : this._buildMetricRow(row, isLast);
+        return channel === "server-critical-notification" && "level" in row && row.level
+            ? this._buildCriticalRow(row as CriticalDigestRow, isLast)
+            : this._buildMetricRow(row as MetricDigestRow, isLast);
     }
 
     /**
@@ -503,7 +507,7 @@ class ServerNotificationService {
      * @param {boolean} isLast
      * @returns {string}
      */
-    _buildCriticalRow({ level, module, message, requestId, time }: { level: string; module?: string; message: string; requestId?: string | null; time: string; }, isLast: boolean): string {
+    _buildCriticalRow({ level, module, message, requestId, time }: CriticalDigestRow, isLast: boolean): string {
         const borderBottom = isLast ? "border-bottom:1px solid #f0f0f0;" : "";
         const sub = requestId
             ? `${escapeHtml(message)} &middot; ${escapeHtml(requestId)}`
@@ -526,7 +530,7 @@ class ServerNotificationService {
      * @param {boolean} isLast
      * @returns {string}
      */
-    _buildMetricRow({ rule, scope, description, severity }: { rule: string; scope?: string; description: string; severity: string; }, isLast: boolean): string {
+    _buildMetricRow({ rule, scope, description, severity }: MetricDigestRow, isLast: boolean): string {
         const borderBottom = isLast ? "border-bottom:1px solid #f0f0f0;" : "";
         const label =
             scope && scope !== "global"

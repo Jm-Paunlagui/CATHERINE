@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -85,7 +84,7 @@ class SseConnectionRegistry {
     endFamilies(familyIds: Iterable<string>): number {
         const fids = new Set(familyIds);
         if (fids.size === 0 || this.#connections.size === 0) return 0;
-        const hits = [...this.#connections.entries()].filter(([res]) => fids.has(res?.req?.user?.fid));
+        const hits = [...this.#connections.entries()].filter(([res]) => fids.has(res?.req?.user?.fid as string));
         for (const [res, onShutdown] of hits) {
             this.#connections.delete(res);
             SseConnectionRegistry.#endOne(res, onShutdown, "session-ended", "session_ended");

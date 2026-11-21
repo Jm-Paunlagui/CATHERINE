@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -116,7 +115,7 @@ function _clamp(raw: string | undefined, fallback: number, min: number, max: num
  */
 function resolveIdleLimits(env: NodeJS.ProcessEnv = process.env): { defaultMs: number; longMs: number; warnings: Array<{ name: string; raw: string; applied: number; }>; } {
     const warnings: any[] = [];
-    const specs = [
+    const specs: Array<[string, number, number]> = [
         ["REQUEST_IDLE_TIMEOUT_MS", DEFAULT_IDLE_MS, DEFAULT_IDLE_MAX_MS],
         ["REQUEST_IDLE_TIMEOUT_LONG_MS", LONG_IDLE_MS, LONG_IDLE_MAX_MS],
     ];

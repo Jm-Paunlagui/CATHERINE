@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -45,11 +44,20 @@ const _votes = new OracleCollection(TABLE, _db);
  * @param {(row: object) => boolean} [pred]
  * @returns {object[]}
  */
-function demoVotes(pred: (row: Record<string, any>) => boolean = () => true): Record<string, any>[] {
-    return demo
-        .backupVotes()
+function demoVotes(pred: (row: BackupVoteRow) => boolean = () => true): BackupVoteRow[] {
+    return (demo.backupVotes() as BackupVoteRow[])
         .filter(pred)
-        .sort((a, b) => a.VOTED_AT - b.VOTED_AT || a.VOTE_ID - b.VOTE_ID);
+        .sort((a, b) => a.VOTED_AT.getTime() - b.VOTED_AT.getTime() || a.VOTE_ID - b.VOTE_ID);
+}
+
+/** One T_BACKUP_VOTES row. */
+export interface BackupVoteRow {
+    VOTE_ID: number;
+    ARCHIVE_ID: string;
+    REQUESTED_BY: number;
+    VOTED_BY: number;
+    /** Oracle DATE (and the demo store) both yield a JS Date. */
+    VOTED_AT: Date;
 }
 
 class BackupVoteModel {
@@ -57,9 +65,9 @@ class BackupVoteModel {
      * Returns all votes for a specific archive, sorted by vote time.
      *
      * @param {string} archiveId
-     * @returns {Promise<Array<{ VOTE_ID: number, ARCHIVE_ID: string, REQUESTED_BY: number, VOTED_BY: number, VOTED_AT: string }>>}
+     * @returns {Promise<Array<{ VOTE_ID: number, ARCHIVE_ID: string, REQUESTED_BY: number, VOTED_BY: number, VOTED_AT: Date }>>}
      */
-    static async findVotesByArchive(archiveId: string): Promise<Array<{ VOTE_ID: number; ARCHIVE_ID: string; REQUESTED_BY: number; VOTED_BY: number; VOTED_AT: string; }>> {
+    static async findVotesByArchive(archiveId: string): Promise<Array<BackupVoteRow>> {
         if (isDemoMode()) return demoVotes((r) => r.ARCHIVE_ID === archiveId);
         return _votes
             .find({ ARCHIVE_ID: archiveId })

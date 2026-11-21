@@ -72,9 +72,9 @@ const connections = {
     //    Skipped entirely when DEMO_MODE=true (no Oracle pool is opened).
     appDb: {
         ...appDbCredentials,
-        poolMin: parseInt(process.env.APP_POOL_MIN, 10) || 5,
-        poolMax: parseInt(process.env.APP_POOL_MAX, 10) || 20,
-        queueMax: parseInt(process.env.APP_QUEUE_MAX, 10) || 40,
+        poolMin: parseInt(process.env.APP_POOL_MIN ?? "", 10) || 5,
+        poolMax: parseInt(process.env.APP_POOL_MAX ?? "", 10) || 20,
+        queueMax: parseInt(process.env.APP_QUEUE_MAX ?? "", 10) || 40,
         poolTimeout: nonNegativeInt(process.env.APP_POOL_TIMEOUT, 30),
     },
 
@@ -82,12 +82,12 @@ const connections = {
     //    backup, purge, restore) so it cannot starve interactive traffic.
     appDbBulk: {
         ...appDbCredentials,
-        poolMin: parseInt(process.env.APP_BULK_POOL_MIN, 10) || 1,
-        poolMax: parseInt(process.env.APP_BULK_POOL_MAX, 10) || 6,
-        queueMax: parseInt(process.env.APP_BULK_QUEUE_MAX, 10) || 24,
-        queueTimeout: parseInt(process.env.APP_BULK_QUEUE_TIMEOUT, 10) || 30000,
+        poolMin: parseInt(process.env.APP_BULK_POOL_MIN ?? "", 10) || 1,
+        poolMax: parseInt(process.env.APP_BULK_POOL_MAX ?? "", 10) || 6,
+        queueMax: parseInt(process.env.APP_BULK_QUEUE_MAX ?? "", 10) || 24,
+        queueTimeout: parseInt(process.env.APP_BULK_QUEUE_TIMEOUT ?? "", 10) || 30000,
         // ms (app acquire race); converted to whole seconds for the driver in adapters/oracle.js.
-        connectTimeout: parseInt(process.env.APP_BULK_CONNECT_TIMEOUT, 10) || 20000,
+        connectTimeout: parseInt(process.env.APP_BULK_CONNECT_TIMEOUT ?? "", 10) || 20000,
     },
 
     // ── Add new connections below ──────────────────────────────────────────

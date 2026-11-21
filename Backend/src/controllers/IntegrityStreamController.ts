@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -100,7 +99,7 @@ async function _sharedPollTick() {
 
     try {
         for (const [, sub] of _subs) {
-            const delta = await IntegrityService.getLiveDelta(sub.key, sub.filters, sub.cursor, DELTA_CAP);
+            const delta = await IntegrityService.getLiveDelta(sub.key, sub.filters, sub.cursor ?? 0, DELTA_CAP);
 
             if (delta.newCount > 0) {
                 sub.cursor = delta.maxPk;

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -65,10 +64,10 @@ class MetricsMiddleware {
         // a finish-time read collapses every router's "/" to "GET /" and every
         // "/verify" to "POST /verify". res.end fires for success AND error responses.
         const originalEnd = res.end;
-        res.end = function patchedEnd(...args) {
+        res.end = function patchedEnd(this: unknown, ...args: any[]) {
             captureRouteLabel(req);
-            return originalEnd.apply(this, args);
-        };
+            return (originalEnd as (...a: any[]) => unknown).apply(this, args);
+        } as typeof res.end;
 
         res.on("finish", () => {
             try {

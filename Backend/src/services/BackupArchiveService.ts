@@ -883,7 +883,7 @@ class BackupArchiveService {
      * @private
      */
     static async _buildReadableWorkbook(tables: string[], rowCounts: Record<string, number>): Promise<Buffer> {
-        const rowCap = parseInt(process.env.BACKUP_XLSX_ROW_CAP, 10) || DEFAULT_XLSX_ROW_CAP;
+        const rowCap = parseInt(process.env.BACKUP_XLSX_ROW_CAP ?? "", 10) || DEFAULT_XLSX_ROW_CAP;
 
         const workbook = new ExcelJS.Workbook();
         workbook.creator = `${process.env.APP_NAME || "CATHERINE"} System`;
@@ -947,7 +947,7 @@ class BackupArchiveService {
      * @private
      */
     static async _buildReadableWorkbookFromRows(tables: string[], rowsByTable: Record<string, Record<string, any>[]>): Promise<Buffer> {
-        const rowCap = parseInt(process.env.BACKUP_XLSX_ROW_CAP, 10) || DEFAULT_XLSX_ROW_CAP;
+        const rowCap = parseInt(process.env.BACKUP_XLSX_ROW_CAP ?? "", 10) || DEFAULT_XLSX_ROW_CAP;
 
         const workbook = new ExcelJS.Workbook();
         workbook.creator = `${process.env.APP_NAME || "CATHERINE"} System`;

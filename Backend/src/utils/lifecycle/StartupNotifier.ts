@@ -189,7 +189,7 @@ class StartupNotifier {
         );
     }
 
-    #uncleanPayload(previous: any, current: any, { late = false } = {}) {
+    #uncleanPayload(previous: any, current: any, { late = false }: Record<string, any> = {}) {
         const p = previous ?? {};
         const lastAlive = p.lastHeartbeatAt;
         // A late report (email failed at the time) cannot know when that run came back;
@@ -238,7 +238,7 @@ class StartupNotifier {
         };
     }
 
-    #leaderLostPayload(previous: any, current: any, { late = false } = {}) {
+    #leaderLostPayload(previous: any, current: any, { late = false }: Record<string, any> = {}) {
         const p = previous ?? {};
         return {
             severity: "WARNING",

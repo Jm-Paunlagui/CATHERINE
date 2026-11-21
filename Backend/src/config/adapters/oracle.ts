@@ -286,7 +286,7 @@ class PoolHealthMonitor extends EventEmitter {
     declare _nudges: Map<any, any>;
     declare _inFlight: Set<unknown>;
     declare _stopped: boolean;
-    declare _timer: null;
+    declare _timer: any;
     declare _watched: boolean;
     declare _watchedIntervalMs: number;
     declare _recoveryIntervalMs: number;

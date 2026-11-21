@@ -11,7 +11,7 @@ import helmet from "helmet";
 
 class HelmetMiddleware {
   declare _helmet: (req: import("http").IncomingMessage, res: import("http").ServerResponse, next: (err?: unknown) => void) => void;
-  constructor(options = {}) {
+  constructor(options: Record<string, any> = {}) {
     this._helmet = helmet({
       contentSecurityPolicy: options.contentSecurityPolicy ?? {
         directives: {

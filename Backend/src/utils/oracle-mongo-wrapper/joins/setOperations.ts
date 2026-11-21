@@ -48,9 +48,9 @@ import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
  *   to prevent collisions with the first query's binds.
  */
 class SetResultBuilder {
-  declare _skipVal: null;
-  declare _limitVal: null;
-  declare _sort: null;
+  declare _skipVal: any;
+  declare _limitVal: any;
+  declare _sort: any;
   declare _operator: string;
   declare _qb2: QueryBuilder;
   declare _qb1: QueryBuilder;

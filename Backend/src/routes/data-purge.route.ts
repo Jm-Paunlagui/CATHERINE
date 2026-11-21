@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -73,7 +72,7 @@ const executeRateLimiter = new RateLimiterMiddleware({
     /* c8 ignore next -- both the env-parsed value and the `|| 5` default are
        load-time config, evaluated exactly once when this module is first
        required; a test cannot exercise the other arm after load. */
-    max: parseInt(process.env.PURGE_RATE_LIMIT_MAX, 10) || 5,
+    max: parseInt(process.env.PURGE_RATE_LIMIT_MAX ?? "", 10) || 5,
     windowMs: 900000, // 15 minutes
     label: "RateLimit:data-purge-execute",
 });
@@ -87,7 +86,7 @@ const restoreUpload = multer({
            env-parsed value is resolved once at require time and is not
            togglable within a running test process. */
         fileSize:
-            (parseInt(process.env.BACKUP_UPLOAD_MAX_MB, 10) || 100) *
+            (parseInt(process.env.BACKUP_UPLOAD_MAX_MB ?? "", 10) || 100) *
             1024 *
             1024,
     },

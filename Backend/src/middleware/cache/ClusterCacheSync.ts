@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -59,7 +58,7 @@ class ClusterCacheSync {
     static _cluster = cluster;
 
     /** Injectable sender (defaults to process.send when available). */
-    static _send = (msg: any) => process.send(msg);
+    static _send = (msg: any) => process.send!(msg); // only called when isWorker (process.send exists)
 
     /**
      * Injectable IPC-availability predicate (substituted in unit tests).
@@ -97,7 +96,7 @@ class ClusterCacheSync {
      * @param {string|string[]} [arg] - Keys (del) or pattern (delByPattern)
      * @returns {void}
      */
-    static broadcast(storeName: string, op: 'del' | 'delByPattern' | 'flush', arg: string | string[]): void {
+    static broadcast(storeName: string, op: 'del' | 'delByPattern' | 'flush', arg?: string | string[]): void {
         if (!ClusterCacheSync.isWorker) return;
         if (ClusterCacheSync._applyingRemote) return;
         try {
@@ -166,7 +165,7 @@ class ClusterCacheSync {
      */
     static initWorker(registry: import('./CacheRegistry').CacheRegistry): boolean {
         if (!ClusterCacheSync.isWorker) return false;
-        process.on("message", (msg) =>
+        process.on("message", (msg: any) =>
             ClusterCacheSync.applyRemote(registry, msg),
         );
         logger.notice(cacheMessages.CACHE_CLUSTER_SYNC_WORKER_READY());
@@ -184,7 +183,7 @@ class ClusterCacheSync {
         c.on("message", (worker, msg) => {
             if (!msg || msg.ch !== CHANNEL) return;
             for (const id of Object.keys(c.workers ?? {})) {
-                const w = c.workers[id];
+                const w = c.workers?.[id];
                 if (!w || w.id === worker.id) continue;
                 try {
                     w.send(msg);

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -48,7 +47,7 @@ class RefreshTokenService {
      * @param {object} record - `refreshRecord` returned by AuthService._issueTokens
      * @returns {Promise<void>}
      */
-    static async persistIssued(record: Record<string, any>): Promise<void> {
+    static async persistIssued(record: Parameters<typeof AuthRefreshTokenModel.insert>[0]): Promise<void> {
         await AuthRefreshTokenModel.insert(record);
     }
 

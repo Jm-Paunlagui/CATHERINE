@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -53,7 +52,7 @@ class RateLimiterMiddleware {
   declare _keyBy: any;
   declare _windowMs: any;
   declare _max: any;
-  constructor(options = {}) {
+  constructor(options: Record<string, any> = {}) {
     this._max =
       options.max ?? parseInt(process.env.RATE_LIMIT_MAX || "100", 10);
     this._windowMs =
@@ -303,7 +302,7 @@ class RateLimiterMiddleware {
   _getKey(req: any) {
     if (typeof this._keyBy === "function") return this._keyBy(req);
     return (
-      RateLimiterMiddleware.keyGenerators[this._keyBy] ??
+      RateLimiterMiddleware.keyGenerators[this._keyBy as keyof typeof RateLimiterMiddleware.keyGenerators] ??
       RateLimiterMiddleware.keyGenerators.ip
     )(req);
   }

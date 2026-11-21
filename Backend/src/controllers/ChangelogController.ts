@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -68,7 +67,7 @@ class ChangelogController {
      * @type {import("express").RequestHandler}
      */
     static update: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
-        const entry = ChangelogService.update(req.params.id, req.body);
+        const entry = ChangelogService.update(req.params.id as string, req.body);
         res.json(sendSuccess(RESPONSE_MESSAGES.CHANGELOG_ENTRY_UPDATED, entry));
     });
 
@@ -79,7 +78,7 @@ class ChangelogController {
      * @type {import("express").RequestHandler}
      */
     static delete: import("express").RequestHandler = catchAsync(async (req: Request, res: Response) => {
-        ChangelogService.delete(req.params.id);
+        ChangelogService.delete(req.params.id as string);
         res.json(sendSuccess(RESPONSE_MESSAGES.CHANGELOG_ENTRY_DELETED, null));
     });
 }

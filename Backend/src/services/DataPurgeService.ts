@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -314,7 +313,7 @@ class DataPurgeService {
             ...requestedGroups,
             ...requestedTables.map((t) => getEntry(t).group),
         ]);
-        const autoIncludedGroups = new Set();
+        const autoIncludedGroups = new Set<string>();
         for (const table of resolved) {
             const group = getEntry(table).group;
             if (!explicitlyTouchedGroups.has(group))

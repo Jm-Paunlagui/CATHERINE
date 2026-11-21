@@ -11,7 +11,7 @@ import compression from "compression";
 
 class CompressionMiddleware {
   declare _compression: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
-  constructor(options = {}) {
+  constructor(options: Record<string, any> = {}) {
     this._compression = compression({
       level: options.level ?? 6,
       threshold: options.threshold ?? 1024,

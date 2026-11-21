@@ -524,7 +524,7 @@ function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, bind
  *   // → { whereClause: 'WHERE "status" = :where_status_0 AND ("age" >= :where_age_1 OR "vip" = :where_vip_2)',
  *   //     binds: { where_status_0: "active", where_age_1: 18, where_vip_2: true } }
  */
-function parseFilter(filter: Record<string, any>, tableAlias: string, _counter: Record<string, any>): { whereClause: string; binds: Record<string, any>; } {
+function parseFilter(filter: Record<string, any>, tableAlias?: string, _counter?: Record<string, any>): { whereClause: string; binds: Record<string, any>; } {
   if (
     !filter ||
     typeof filter !== "object" ||

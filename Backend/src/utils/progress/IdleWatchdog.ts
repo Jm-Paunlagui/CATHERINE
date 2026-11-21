@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -37,8 +36,8 @@ const SWEEP_MS = 5000;
 const STALL_FACTOR = 3;
 
 class IdleWatchdog {
-    declare _lastSweepAt: null;
-    declare _timer: null;
+    declare _lastSweepAt: any;
+    declare _timer: any;
     declare _entries: Map<any, any>;
     declare _now: () => number;
     declare _stallFactor: number;
@@ -80,7 +79,7 @@ class IdleWatchdog {
      * @param {(scope: import("./ProgressScope").ProgressScope) => void} [options.probe] - Called before each enforcement check (RequestWatchdog uses it for socket-I/O progress).
      * @returns {() => void} dispose (idempotent)
      */
-    register(scope: import("./ProgressScope").ProgressScope, onIdle: (scope: import("./ProgressScope").ProgressScope, idleMs: number) => void, { probe = null }: { probe?: (scope: import("./ProgressScope").ProgressScope) => void; } = {}): () => void {
+    register(scope: import("./ProgressScope").ProgressScope, onIdle: (scope: import("./ProgressScope").ProgressScope, idleMs: number) => void, { probe = null }: { probe?: ((scope: import("./ProgressScope").ProgressScope) => void) | null; } = {}): () => void {
         const key: Record<string, any> = {};
         this._entries.set(key, { scope, onIdle, probe, fired: false });
         return () => {

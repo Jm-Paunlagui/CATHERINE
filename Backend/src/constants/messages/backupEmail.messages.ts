@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -55,7 +54,7 @@ const backupEmailMessages = {
      * @returns {string}
      */
     RECIPIENT_LOOKUP_FAILED: (err: Error | string): string =>
-        `Purge backup email recipient lookup failed — falling back to whatever could be resolved: ${err?.message ?? err}`,
+        `Purge backup email recipient lookup failed — falling back to whatever could be resolved: ${(err as Error)?.message ?? err}`,
 
     /**
      * Logged at `info` after a successful SMTP send.
@@ -89,7 +88,7 @@ const backupEmailMessages = {
      * @returns {string}
      */
     DISPATCH_REJECTED: (adminId: number | string, err: Error | string): string =>
-        `Purge backup email dispatch rejected at the fire-and-forget call site (ADMIN_ID ${adminId}) — the purge backup response itself was NOT affected: ${err?.message ?? err}`,
+        `Purge backup email dispatch rejected at the fire-and-forget call site (ADMIN_ID ${adminId}) — the purge backup response itself was NOT affected: ${(err as Error)?.message ?? err}`,
 };
 
 export { backupEmailMessages };

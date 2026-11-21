@@ -111,11 +111,11 @@ function withRecursiveCTE(db: Record<string, any>, cteName: string, def: { ancho
  *   .toArray()      — Execute and return rows
  */
 class CTEResult {
-  declare _skipVal: null;
-  declare _limitVal: null;
-  declare _sort: null;
-  declare _join: null;
-  declare _from: null;
+  declare _skipVal: any;
+  declare _limitVal: any;
+  declare _sort: any;
+  declare _join: any;
+  declare _from: any;
   declare _cteDefs: any;
   declare _db: any;
   constructor(db: any, cteDefs: any) {
@@ -227,9 +227,9 @@ class CTEResult {
  * Terminal method: .toArray()
  */
 class RecursiveCTEResult {
-  declare _skipVal: null;
-  declare _limitVal: null;
-  declare _sort: null;
+  declare _skipVal: any;
+  declare _limitVal: any;
+  declare _sort: any;
   declare _def: any;
   declare _cteName: any;
   declare _db: any;

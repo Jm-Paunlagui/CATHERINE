@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -89,7 +88,7 @@ class AccessRevocationService {
      * @returns {boolean} true when the token's session was ended
      */
     static isRevoked(fid: string | undefined, nowMs: number = Date.now()): boolean {
-        return revokedSessions.has(fid, nowMs);
+        return fid !== undefined && revokedSessions.has(fid, nowMs);
     }
 
     /**
@@ -132,7 +131,7 @@ class AccessRevocationService {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    static #applyLocal(entries: any, { endStreams = true } = {}) {
+    static #applyLocal(entries: any, { endStreams = true }: Record<string, any> = {}) {
         let added = 0;
         for (const { fid, untilMs } of entries) {
             const r = revokedSessions.revoke(fid, untilMs);

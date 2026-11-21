@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -55,7 +54,7 @@ class ShutdownNotifier {
      */
     started({ signal, inFlight, graceMs, pendingTasks, idleLimits }: { signal: string; inFlight: number; graceMs: number; pendingTasks: number; idleLimits?: { defaultMs: number; longMs: number; }; }): Promise<any> {
         if (!this._announce) return Promise.resolve({ sent: false, reason: "not-announcer" });
-        const how = SIGNAL_LABEL[signal] ?? signal;
+        const how = SIGNAL_LABEL[signal as keyof typeof SIGNAL_LABEL] ?? signal;
         const sec = (ms: any) => Math.round(ms / 1000);
         const summary = idleLimits
             ? `A graceful shutdown began (${how}). New requests are refused. ` +

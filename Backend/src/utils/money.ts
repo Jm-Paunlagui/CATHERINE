@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -173,7 +172,7 @@ class Money {
      * an exact multiply by a power of ten; it never rounds.
      * @private
      */
-    static _align(a: any, b: any) {
+    static _align(a: any, b: any): [bigint, bigint, number] {
         if (a.s === b.s) return [a.c, b.c, a.s];
         if (a.s > b.s) return [a.c, b.c * _pow10(a.s - b.s), a.s];
         return [a.c * _pow10(b.s - a.s), b.c, b.s];

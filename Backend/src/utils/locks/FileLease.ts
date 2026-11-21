@@ -61,8 +61,8 @@ const NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 class FileLease {
     declare _lastBeatProgressAt: number;
-    declare _timer: null;
-    declare _token: null;
+    declare _timer: any;
+    declare _token: any;
     declare _heartbeatMs: number;
     declare _pollMs: number;
     declare _scope: import("../progress/ProgressScope").ProgressScope | null;

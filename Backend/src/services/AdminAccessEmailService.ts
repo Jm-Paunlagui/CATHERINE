@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { appPath } from "../utils/runtimePaths";
 
@@ -140,7 +139,7 @@ class AdminAccessEmailService {
      * @returns {Promise<{ address: string, source: 'PROFILE'|'OVERRIDE', hint: string }>}
      * @throws {AppError}
      */
-    static async resolveRecipient(username: string, overrideEmail: any): Promise<{ address: string; source: 'PROFILE' | 'OVERRIDE'; hint: string; }> {
+    static async resolveRecipient(username: string, overrideEmail: any): Promise<{ address: string; source: 'PROFILE' | 'OVERRIDE'; hint: string | null; }> {
         const override = _normaliseOverride(overrideEmail);
 
         let profileAddress;
@@ -269,9 +268,9 @@ class AdminAccessEmailService {
      *
      * @private
      */
-    static _buildVars({ username, role, tempPassword, expiresAt, kind }: any) {
+    static _buildVars({ username, role, tempPassword, expiresAt, kind }: { username: string; role: string; tempPassword: string; expiresAt: number; kind: 'granted' | 'reset' }) {
         const isReset = kind === EMAIL_KIND.RESET;
-        const roleLabel = ROLE_LABELS[role] ?? String(role);
+        const roleLabel = ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? String(role);
         const expiresAtLabel = AdminAccessEmailService._formatLocalTime(expiresAt);
         const signInUrl = AdminAccessEmailService._signInUrl();
 

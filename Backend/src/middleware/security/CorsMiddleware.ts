@@ -78,7 +78,7 @@ class CorsMiddleware {
   declare _cors: (req: cors.CorsRequest, res: { statusCode?: number | undefined; setHeader(key: string, value: string): any; end(): any; }, next: (err?: any) => any) => void;
   declare _dynamicPatterns: RegExp[];
   declare _explicitOrigins: any;
-  constructor(options = {}) {
+  constructor(options: Record<string, any> = {}) {
     this._explicitOrigins =
       options.origins ??
       (process.env.CORS_ORIGINS

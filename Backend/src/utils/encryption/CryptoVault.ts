@@ -80,8 +80,8 @@ const SymmetricCrypto = (() => {
 
     // ─── EncryptTransformer ───
     class EncryptTransformer {
-        declare _key: null;
-        declare _iv: null;
+        declare _key: any;
+        declare _iv: any;
         declare algorithmID: any;
         constructor(algId: any) {
             this.algorithmID = algId;
@@ -116,7 +116,7 @@ const SymmetricCrypto = (() => {
 
     // ─── DecryptTransformer ───
     class DecryptTransformer {
-        declare _iv: null;
+        declare _iv: any;
         declare algorithmID: any;
         constructor(algId: any) {
             this.algorithmID = algId;
@@ -137,8 +137,8 @@ const SymmetricCrypto = (() => {
 
     // ─── Encryptor ───
     class Encryptor {
-        declare _key: null;
-        declare _iv: null;
+        declare _key: any;
+        declare _iv: any;
         declare transformer: EncryptTransformer;
         constructor(algId: any) {
             this.transformer = new EncryptTransformer(algId);
@@ -180,7 +180,7 @@ const SymmetricCrypto = (() => {
 
     // ─── Decryptor ───
     class Decryptor {
-        declare _iv: null;
+        declare _iv: any;
         declare transformer: DecryptTransformer;
         constructor(algId: any) {
             this.transformer = new DecryptTransformer(algId);

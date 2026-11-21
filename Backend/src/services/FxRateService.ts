@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -140,7 +139,7 @@ class FxRateService {
         // correction that opened after `asOf` must not shadow the historical rate.
         const candidates = rows
             .filter((r) => r.CURRENCY_CODE === currencyCode && _inWindow(r, when))
-            .sort((a, b) => new Date(b.EFFECTIVE_FROM) - new Date(a.EFFECTIVE_FROM));
+            .sort((a, b) => new Date(b.EFFECTIVE_FROM).getTime() - new Date(a.EFFECTIVE_FROM).getTime());
 
         const row = candidates[0];
         if (!row) {

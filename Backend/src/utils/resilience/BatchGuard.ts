@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -82,7 +81,7 @@ class BatchGuard {
         concurrency = 16,
         label = "batch",
         retryBudget = Infinity,
-    }: { retryPolicy: import("./RetryPolicy").RetryPolicy; concurrency?: number; label?: string; retryBudget?: number; } = {}) {
+    }: { retryPolicy?: import("./RetryPolicy").RetryPolicy; concurrency?: number; label?: string; retryBudget?: number; } = {}) {
         if (!retryPolicy || typeof retryPolicy.execute !== "function") {
             throw new TypeError(
                 "BatchGuard: retryPolicy must be a RetryPolicy instance (or an object exposing an execute() method).",

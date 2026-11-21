@@ -84,7 +84,7 @@ const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_MAX_POLL_ERRORS = 5;
 
 class ScopedSsePoller {
-    declare _pollInterval: null;
+    declare _pollInterval: any;
     declare _scopes: Map<any, any>;
     declare logger: Record<string, any> | null;
     declare onChange: (scope: Record<string, any>) => void;

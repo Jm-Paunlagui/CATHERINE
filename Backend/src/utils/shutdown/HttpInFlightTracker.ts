@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -32,7 +31,8 @@ class HttpInFlightTracker {
     /** @type {Set<import('http').ServerResponse>} */
     #active: Set<import('http').ServerResponse> = new Set();
     /** @type {WeakMap<import('http').ServerResponse, {req: import('http').IncomingMessage, method: string, path: string, startedAt: number}>} */
-    #meta: WeakMap<import('http').ServerResponse, { req: import('http').IncomingMessage; method: string; path: string; startedAt: number; }> = new WeakMap();
+    /** `route` / `baseUrl` appear once Express has routed the request. */
+    #meta: WeakMap<import('http').ServerResponse, { req: import('http').IncomingMessage & Partial<Pick<import('express').Request, "route" | "baseUrl">>; method: string; path: string; startedAt: number; }> = new WeakMap();
     #shuttingDown = false;
     /** @type {null | (() => void)} */
     #onSettle: null | (() => void) = null;

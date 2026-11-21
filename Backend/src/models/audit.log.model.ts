@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -132,7 +131,7 @@ class AuditLogModel {
     static async findPaginated(filter: any, page: any, pageSize: any) {
         if (isDemoMode()) {
             const all = demo.auditLogs().filter((r) => demo.match(r, filter));
-            all.sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT));
+            all.sort((a, b) => new Date(b.CREATED_AT).getTime() - new Date(a.CREATED_AT).getTime());
             return all.slice((page - 1) * pageSize, page * pageSize);
         }
         if (useFile()) return AuditLogFileModel.findPaginated(filter, page, pageSize);
@@ -292,7 +291,7 @@ class AuditLogModel {
             // Trim guards against CHAR-padded columns ('4xx   ' !== '4xx').
             const cat = (r.STATUS_CATEGORY ?? "").trim();
             if (Object.prototype.hasOwnProperty.call(buckets, cat)) {
-                buckets[cat] += count;
+                buckets[cat as keyof typeof buckets] += count;
             }
         }
 

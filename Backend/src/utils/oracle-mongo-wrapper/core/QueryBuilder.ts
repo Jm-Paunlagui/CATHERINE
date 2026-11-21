@@ -438,7 +438,7 @@ class QueryBuilder {
      * @example
      *   const users = await coll.find({ active: true }).sort({ name: 1 }).toArray();
      */
-    async toArray(): Promise<Array<Record<string, any>>> {
+    async toArray<T = Record<string, any>>(): Promise<T[]> {
         this._terminated = true;
         return this._execute();
     }
@@ -506,7 +506,7 @@ class QueryBuilder {
      * @example
      *   const user = await coll.find({ email: "ana@test.com" }).next();
      */
-    async next(): Promise<Record<string, any> | null> {
+    async next<T = Record<string, any>>(): Promise<T | null> {
         this._terminated = true;
         const original = this._limit;
         this._limit = 1;

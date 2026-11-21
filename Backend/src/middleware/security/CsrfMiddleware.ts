@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -25,7 +24,7 @@ class CsrfMiddleware {
     declare _generateCsrfToken: import("csrf-csrf").CsrfTokenGenerator;
     declare _secret: any;
     declare _isSecure: any;
-  constructor(options = {}) {
+  constructor(options: Record<string, any> = {}) {
     this._isSecure =
       options.forceSecure ??
       (process.env.NODE_ENV === "production" &&
@@ -56,7 +55,7 @@ class CsrfMiddleware {
         maxAge: TOKEN_TTL_MS,
       },
       size: TOKEN_SIZE,
-      getTokenFromRequest: (req: any) =>
+      getCsrfTokenFromRequest: (req: any) =>
         req.headers["x-csrf-token"] ?? req.body?._csrf ?? req.body?.csrfToken,
     });
 

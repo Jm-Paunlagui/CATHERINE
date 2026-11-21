@@ -2,7 +2,7 @@
 import { logger } from "./logger";
 
 class ConsoleManager {
-    declare clearIntervalId: null;
+    declare clearIntervalId: any;
     declare isInitialized: boolean;
     declare lastClearDate: string;
     constructor() {

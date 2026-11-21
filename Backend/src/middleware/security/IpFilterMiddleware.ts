@@ -13,7 +13,7 @@ import { getStatusTitle } from "../../constants/responses";
 class IpFilterMiddleware {
   declare _allowedIps: any;
   declare _enabled: any;
-  constructor(options = {}) {
+  constructor(options: Record<string, any> = {}) {
     this._enabled = options.enabled ?? process.env.ENABLE_IP_FILTER === "true";
     this._allowedIps =
       options.allowedIps ??

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -46,7 +45,7 @@ class AppError extends Error {
         // Seconds a client should wait before retrying (shutdown gate);
         // ErrorHandlerMiddleware turns it into a Retry-After header. Integers 1..3600 only.
         this.retryAfterSec =
-            Number.isInteger(opts.retryAfterSec) && opts.retryAfterSec >= 1 && opts.retryAfterSec <= 3600
+            Number.isInteger(opts.retryAfterSec) && opts.retryAfterSec! >= 1 && opts.retryAfterSec! <= 3600
                 ? opts.retryAfterSec
                 : undefined;
         Error.captureStackTrace(this, this.constructor);

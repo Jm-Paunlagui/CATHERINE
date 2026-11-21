@@ -20,7 +20,7 @@ const architectureMessages = {
      * @param {number} flowCount
      * @returns {string}
      */
-    MAP_SERVED: (name: string, adminId: number | string, nodeCount: number, flowCount: number): string =>
+    MAP_SERVED: (name: string, adminId: number | string | undefined, nodeCount: number, flowCount: number): string =>
         `System map "${name}" served — ADMIN_ID: ${adminId}, nodes: ${nodeCount}, flows: ${flowCount}.`,
 
     /**

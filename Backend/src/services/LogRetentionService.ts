@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { IS_COMPILED, APP_ROOT } from "../utils/runtimePaths";
 
@@ -169,8 +168,8 @@ function _formatBytes(bytes: number): string {
 
 class LogRetentionService {
     declare LogRetentionService: typeof LogRetentionService;
-    declare _lastSweepDay: null;
-    declare _timer: null;
+    declare _lastSweepDay: any;
+    declare _timer: any;
     declare _logBaseDir: string;
     /**
      * @param {object} [opts]
@@ -270,7 +269,7 @@ class LogRetentionService {
      * @returns {Promise<{ removedDays: number, freedBytes: number, failedDays: string[] }>}
      */
     async _runSweep(): Promise<{ removedDays: number; freedBytes: number; failedDays: string[]; }> {
-        const result = { removedDays: 0, freedBytes: 0, failedDays: [] };
+        const result = { removedDays: 0, freedBytes: 0, failedDays: [] as string[] };
         const days = this._retentionDays();
         if (days === 0) return result;
 

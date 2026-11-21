@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -157,7 +156,7 @@ class PrimaryStateServices {
         hub.register(M.LOCKOUT_FAIL, ({ key }: any) => {
             try {
                 const r = this._lockout.fail(key, this._now());
-                if (r.fallback === true) this.#logStoreFull();
+                if ("fallback" in r) this.#logStoreFull();
                 return r;
             } catch {
                 return { fallback: true };

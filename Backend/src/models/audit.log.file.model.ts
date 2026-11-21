@@ -472,7 +472,7 @@ class AuditLogFileModel {
         try {
             const records = await _readAndFilter(filter);
             records.sort(
-                (a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT),
+                (a, b) => new Date(b.CREATED_AT).getTime() - new Date(a.CREATED_AT).getTime(),
             );
             return records.slice((page - 1) * pageSize, page * pageSize);
         } catch (err) {

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -266,7 +265,7 @@ function moneyFmtFor(currencyCode: string): string {
  *   summary). Required when a conversion took place.
  * @returns {string}
  */
-function exportCurrencyBasis({ currencyCode, baseCurrency, asOf }: { currencyCode: string; baseCurrency?: string; asOf?: Date | string; } = {}): string {
+function exportCurrencyBasis({ currencyCode, baseCurrency, asOf }: { currencyCode?: string; baseCurrency?: string; asOf?: Date | string; } = {}): string {
     if (!currencyCode) return "Currency: (unspecified)";
     if (!baseCurrency || baseCurrency === currencyCode) {
         return `Currency: ${currencyCode} (stored, no conversion applied)`;

@@ -477,7 +477,7 @@ class BackupStoreService {
         const index = await BackupStoreService._loadIndex();
         const sorted = index
             .slice()
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         // Enrich with vote status — O(archives * pendingVotes), both small.
         const pendingVotes = await BackupVoteModel.findAllPendingVotes();
@@ -638,7 +638,7 @@ class BackupStoreService {
         if (candidates.length === 0) return null;
         return candidates
             .slice()
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     }
 
     /**
@@ -1267,7 +1267,7 @@ class BackupStoreService {
         const zipCache = new Map([[entry.archiveId, headZip]]);
 
         const rowCap =
-            parseInt(process.env.BACKUP_XLSX_ROW_CAP, 10) ||
+            parseInt(process.env.BACKUP_XLSX_ROW_CAP ?? "", 10) ||
             DEFAULT_XLSX_ROW_CAP;
         const tableNames = Object.keys(entry.tables ?? {});
         const dataBuffers: Record<string, any> = {};
@@ -1483,7 +1483,7 @@ class BackupStoreService {
      */
     static async _buildSummaryWorkbook(tables: string[], rowsByTable: Record<string, Record<string, any>[]>, rowCounts: Record<string, number>): Promise<Buffer> {
         const rowCap =
-            parseInt(process.env.BACKUP_XLSX_ROW_CAP, 10) ||
+            parseInt(process.env.BACKUP_XLSX_ROW_CAP ?? "", 10) ||
             DEFAULT_XLSX_ROW_CAP;
 
         const workbook = new ExcelJS.Workbook();

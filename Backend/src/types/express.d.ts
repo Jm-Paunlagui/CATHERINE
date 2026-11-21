@@ -29,6 +29,8 @@ declare global {
             user?: AuthUser;
             /** TraceabilityMiddleware: the incoming line was already logged. */
             _incomingLogged?: boolean;
+            /** routeLabel.captureRouteLabel: the matched route template, captured before the router unwinds. */
+            _routeLabel?: string;
         }
     }
 }

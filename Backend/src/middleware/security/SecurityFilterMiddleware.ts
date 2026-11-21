@@ -72,7 +72,7 @@ class SecurityFilterMiddleware {
     declare _methodWhitelistedPaths: any;
     declare _injectionPatterns: any;
     declare _maliciousPatterns: any;
-    constructor(options = {}) {
+    constructor(options: Record<string, any> = {}) {
         // ── Path-only patterns (checked against req.path) ─────────────────────
         // Known exploit paths, scanner fingerprints, dangerous file extensions.
         this._maliciousPatterns = options.maliciousPatterns ?? [

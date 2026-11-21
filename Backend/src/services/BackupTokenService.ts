@@ -104,7 +104,7 @@ class BackupTokenService {
     static async issue({ adminId, scopeHash, rowCounts, highWater, ttlMinutes }: { adminId: number | string; scopeHash: string; rowCounts: Record<string, number>; highWater?: Record<string, string>; ttlMinutes?: number; }): Promise<{ token: string; issuedAt: number; expiresAt: number; }> {
         const ttl = Number.isFinite(ttlMinutes)
             ? ttlMinutes
-            : parseInt(process.env.BACKUP_TOKEN_TTL_MINUTES, 10) || DEFAULT_TTL_MINUTES;
+            : parseInt(process.env.BACKUP_TOKEN_TTL_MINUTES ?? "", 10) || DEFAULT_TTL_MINUTES;
 
         const issuedAt = Date.now();
         const expiresAt = issuedAt + ttl * 60 * 1000;
@@ -242,7 +242,7 @@ class BackupTokenService {
      * if (!result.valid) throw new AppError(PURGE_ERRORS.BACKUP_TOKEN_INVALID, HTTP_STATUS.UNAUTHORIZED);
      */
     static async consume(token: string): Promise<{ valid: true; payload: {
-        highWater(tables: string[], highWater: any): unknown; scopeHash: string; rowCounts: Record<string, number>; adminId: number | string; issuedAt: number; expiresAt: number; jti: string; 
+        highWater?: Record<string, string>; scopeHash: string; rowCounts: Record<string, number>; adminId: number | string; issuedAt: number; expiresAt: number; jti: string; 
 }; } |
     { valid: false; reason: "malformed" | "tampered" | "expired" | "replayed"; }> {
         const result = await BackupTokenService.verify(token);

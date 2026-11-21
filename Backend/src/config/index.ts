@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 /**
  * Config entry point — Adapter factory.
  *
@@ -39,7 +38,7 @@ function _loadAdapter(engine: any) {
  * Resolution order: argument → DB_TYPE env var → 'oracle'
  * @param {string} [engine]
  */
-function createAdapter(engine: string) {
+function createAdapter(engine?: string) {
   return _loadAdapter((engine || process.env.DB_TYPE || "oracle").trim());
 }
 

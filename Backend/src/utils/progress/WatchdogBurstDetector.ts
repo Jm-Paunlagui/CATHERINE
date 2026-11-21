@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -44,8 +43,8 @@ const TOP_N = 5;
 
 class WatchdogBurstDetector {
     declare _sinceAlert: number;
-    declare _lastAlertAt: null;
-    declare _entries: never[];
+    declare _lastAlertAt: any;
+    declare _entries: any[];
     declare _emit: (message: string, meta: Record<string, any>) => void;
     declare _now: () => number;
     declare _windowMs: number;
@@ -75,8 +74,8 @@ class WatchdogBurstDetector {
      * @returns {{ burst: number, windowMs: number }}
      */
     static resolveConfig(env: NodeJS.ProcessEnv): { burst: number; windowMs: number; } {
-        const b = Number.parseInt(env?.WATCHDOG_ALERT_BURST, 10);
-        const w = Number.parseInt(env?.WATCHDOG_ALERT_WINDOW_MS, 10);
+        const b = Number.parseInt(env?.WATCHDOG_ALERT_BURST ?? "", 10);
+        const w = Number.parseInt(env?.WATCHDOG_ALERT_WINDOW_MS ?? "", 10);
         return {
             burst: Number.isFinite(b) && b >= 0 ? b : DEFAULT_BURST,
             windowMs:

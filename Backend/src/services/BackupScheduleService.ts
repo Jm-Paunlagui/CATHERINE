@@ -297,7 +297,7 @@ class BackupScheduleService {
      * @returns {Promise<number|null>} null when nothing is scheduled in the horizon
      */
     static async msUntilNextScheduledBackup(lookaheadMs: number): Promise<number | null> {
-        const eventDelayMs = parseInt(process.env.DB_BACKUP_EVENT_DELAY_MS, 10) || DEFAULT_EVENT_DELAY_MS;
+        const eventDelayMs = parseInt(process.env.DB_BACKUP_EVENT_DELAY_MS ?? "", 10) || DEFAULT_EVENT_DELAY_MS;
         const lockoutWindowMs = BackupScheduleService.getLockoutWindowMs();
         // The horizon must clear both the lockout window and the event delay.
         const horizon = lookaheadMs ?? Math.max(lockoutWindowMs + eventDelayMs, 26 * 60 * 60 * 1000);

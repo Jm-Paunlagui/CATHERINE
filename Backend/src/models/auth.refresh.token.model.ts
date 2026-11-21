@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -225,7 +224,7 @@ class AuthRefreshTokenModel {
      */
     static async revokeUser(userKey: string, reason: string, now: Date): Promise<string[]> {
         if (isDemoMode()) {
-            const fids = new Set();
+            const fids = new Set<string>();
             for (const r of demo.refreshTokens()) {
                 if (r.USER_ID === userKey && r.REVOKED_AT === null) {
                     r.REVOKED_AT = now;

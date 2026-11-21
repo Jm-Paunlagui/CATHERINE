@@ -27,12 +27,12 @@
 
 class ProgressScope {
     declare createdAt: any;
-    declare _abortError: null;
+    declare _abortError: any;
     declare _controller: AbortController;
     declare _hooks: Set<unknown>;
     declare _children: Set<unknown>;
     declare _busy: Map<any, any>;
-    declare _followed: null;
+    declare _followed: any;
     declare _lastSource: string;
     declare _ownAt: number;
     declare _now: () => number;

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 import type { NextFunction, Request, Response } from "express";
@@ -199,7 +198,7 @@ function isSensitiveParamKey(key: string): boolean {
 const _serverIp = (() => {
     const ifaces = os.networkInterfaces();
     for (const name of Object.keys(ifaces)) {
-        for (const iface of ifaces[name]) {
+        for (const iface of ifaces[name] ?? []) {
             if (iface.family === "IPv4" && !iface.internal)
                 return iface.address;
         }
@@ -211,7 +210,7 @@ class AuditLogMiddleware {
     declare _excludedPaths: any;
     declare _excludeHealth: any;
     declare _enabled: any;
-    constructor(options = {}) {
+    constructor(options: Record<string, any> = {}) {
         this._enabled =
             options.enabled ?? process.env.AUDIT_LOG_ENABLED !== "false";
         this._excludeHealth =
@@ -243,13 +242,13 @@ class AuditLogMiddleware {
         const startTime = Date.now();
         const originalEnd = res.end.bind(res);
 
-        res.end = (...args) => {
-            const result = originalEnd(...args);
+        res.end = ((...args: any[]) => {
+            const result = (originalEnd as (...a: any[]) => Response)(...args);
             const duration = Date.now() - startTime;
             const record = AuditLogMiddleware._buildRecord(req, res, duration);
             setImmediate(() => AuditLogService.insertAsync(record));
             return result;
-        };
+        }) as typeof res.end;
 
         next();
     }

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -29,9 +28,9 @@ class PreventRedirectsMiddleware {
   handle(req: Request, res: Response, next: NextFunction) {
     const messages = this._redirectStatusMessages;
 
-    res.redirect = function (statusOrUrl, url) {
+    res.redirect = function (statusOrUrl: number | string, url?: string) {
       let status = 302;
-      let redirectUrl = statusOrUrl;
+      let redirectUrl: unknown = statusOrUrl;
 
       if (typeof statusOrUrl === "number") {
         status = statusOrUrl;
@@ -44,14 +43,14 @@ class PreventRedirectsMiddleware {
         status: "error",
         code: status,
         title: getStatusTitle(status),
-        message: messages[status] || "Redirect prevented",
+        message: (messages as Record<number, string>)[status] || "Redirect prevented",
         error: {
           type: "RedirectPrevented",
           details: [{ field: "redirectTo", issue: redirectUrl }],
           hint: "API routes do not support redirects. Use the provided URL directly.",
         },
       });
-    };
+    } as typeof res.redirect;
 
     next();
   }

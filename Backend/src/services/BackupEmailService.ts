@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { appPath } from "../utils/runtimePaths";
 
@@ -352,7 +351,7 @@ class BackupEmailService {
 
         return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
             if (!Object.prototype.hasOwnProperty.call(vars, key)) return match;
-            return _escapeHtml(vars[key]);
+            return _escapeHtml(vars[key as keyof typeof vars]);
         });
     }
 

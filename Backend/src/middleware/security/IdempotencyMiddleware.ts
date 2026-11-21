@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -204,7 +203,7 @@ class IdempotencyMiddleware {
             res.setHeader("Idempotent-Replay", "true");
             res.status(existing.status);
             for (const [h, v] of Object.entries(existing.headers || {})) {
-                res.setHeader(h, v);
+                res.setHeader(h, v as string | number | readonly string[]);
             }
             return res.json(existing.body);
         }

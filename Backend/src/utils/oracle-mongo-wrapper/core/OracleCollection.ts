@@ -193,7 +193,7 @@ class OracleCollection {
      *   const user = await users.findOne({ id: 42 });
      *   if (user) console.log(user.name);
      */
-    async findOne(filter: Record<string, any>, _options: Record<string, any> = {}): Promise<Record<string, any> | null> {
+    async findOne<T = Record<string, any>>(filter: Record<string, any>, _options: Record<string, any> = {}): Promise<T | null> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds } = parseFilter(filter);
             const sql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
@@ -232,7 +232,7 @@ class OracleCollection {
      *     { returnDocument: "after" }
      *   );
      */
-    async findOneAndUpdate(filter: Record<string, any>, update: Record<string, any>, options: Record<string, any> = {}): Promise<Record<string, any> | null> {
+    async findOneAndUpdate<T = Record<string, any>>(filter: Record<string, any>, update: Record<string, any>, options: Record<string, any> = {}): Promise<T | null> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
@@ -414,7 +414,7 @@ class OracleCollection {
      *   const deleted = await users.findOneAndDelete({ id: 42 });
      *   console.log(`Deleted user: ${deleted.name}`);
      */
-    async findOneAndDelete(filter: Record<string, any>): Promise<Record<string, any> | null> {
+    async findOneAndDelete<T = Record<string, any>>(filter: Record<string, any>): Promise<T | null> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds } = parseFilter(filter);
             // Include ROWID so we can delete by exact row address
@@ -471,7 +471,7 @@ class OracleCollection {
      *     { returnDocument: "after" }
      *   );
      */
-    async findOneAndReplace(filter: Record<string, any>, replacement: Record<string, any>, options: Record<string, any> = {}): Promise<Record<string, any> | null> {
+    async findOneAndReplace<T = Record<string, any>>(filter: Record<string, any>, replacement: Record<string, any>, options: Record<string, any> = {}): Promise<T | null> {
         return this._execute(async (conn: any) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;

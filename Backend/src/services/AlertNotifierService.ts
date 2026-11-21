@@ -166,25 +166,25 @@ const RETENTION_SWEEP_CHECK_MS = 15 * 60 * 1000;
 class AlertNotifierService {
     declare AlertNotifierService: typeof AlertNotifierService;
     declare _shutdownFlushed: boolean;
-    declare _ackHydration: null;
+    declare _ackHydration: any;
     declare _acksHydrated: boolean;
     declare _acks: Map<any, any>;
-    declare _lastPurgeDay: null;
-    declare _retentionSweepTimer: null;
+    declare _lastPurgeDay: any;
+    declare _retentionSweepTimer: any;
     declare _pollInFlight: boolean;
-    declare _alertLogFlushing: null;
-    declare _alertLogQueue: never[];
+    declare _alertLogFlushing: any;
+    declare _alertLogQueue: any[];
     declare _criticalSuppressedSinceLastSend: number;
-    declare _criticalSentTimestamps: never[];
-    declare _criticalWindowTimer: null;
+    declare _criticalSentTimestamps: any[];
+    declare _criticalWindowTimer: any;
     declare _criticalOverflowInWindow: number;
-    declare _criticalBuffer: never[];
+    declare _criticalBuffer: any[];
     declare _deliveryWaiters: Map<any, any>;
-    declare _drainPromise: null;
+    declare _drainPromise: any;
     declare _shuttingDown: boolean;
     declare _running: boolean;
-    declare _unsubscribeTap: null;
-    declare _pollTimer: null;
+    declare _unsubscribeTap: any;
+    declare _pollTimer: any;
     declare _alertStates: Map<any, any>;
     constructor() {
         /**

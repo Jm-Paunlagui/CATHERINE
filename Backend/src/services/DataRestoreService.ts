@@ -125,7 +125,7 @@ const DEFAULT_RESTORE_BATCH_SIZE = 500;
  * @private
  */
 function _restoreBatchSize(): number {
-    const n = parseInt(process.env.RESTORE_BATCH_SIZE, 10);
+    const n = parseInt(process.env.RESTORE_BATCH_SIZE ?? "", 10);
     return Number.isInteger(n) && n > 0 ? n : DEFAULT_RESTORE_BATCH_SIZE;
 }
 

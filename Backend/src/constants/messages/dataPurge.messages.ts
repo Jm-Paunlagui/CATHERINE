@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -54,10 +53,10 @@ const dataPurgeMessages = {
         `Purge committed - ADMIN_ID: ${adminId}, scopeHash: ${scopeHash}, ${totalDeleted} row(s) deleted total, ${ms}ms.`,
     /** @param {Error|string} err */
     POST_COMMIT_AUDIT_FAILED: (err: Error | string) =>
-        `Purge post-commit audit write failed (purge itself already committed successfully): ${err?.message ?? err}.`,
+        `Purge post-commit audit write failed (purge itself already committed successfully): ${(err as Error)?.message ?? err}.`,
     /** @param {Error|string} err */
     POST_COMMIT_EMAIL_FAILED: (err: Error | string) =>
-        `Purge post-commit ops alert email failed (purge itself already committed successfully): ${err?.message ?? err}.`,
+        `Purge post-commit ops alert email failed (purge itself already committed successfully): ${(err as Error)?.message ?? err}.`,
     CACHE_FLUSHED: () => "All cache stores flushed after purge commit.",
 
     // ── Restore ───────────────────────────────────────────────────
@@ -93,7 +92,7 @@ const dataPurgeMessages = {
         `Restore committed — ADMIN_ID: ${adminId}, archive scopeHash: ${scopeHash}, ${totalInserted} row(s) inserted total, ${ms}ms.`,
     /** @param {Error|string} err */
     RESTORE_POST_COMMIT_AUDIT_FAILED: (err: Error | string) =>
-        `Restore post-commit audit write failed (restore itself already committed successfully): ${err?.message ?? err}.`,
+        `Restore post-commit audit write failed (restore itself already committed successfully): ${(err as Error)?.message ?? err}.`,
 
     // ── Read-consistent multi-table streaming ──
     /** @param {string[]} tables @param {string} oracleMessage */

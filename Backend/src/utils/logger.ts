@@ -116,7 +116,7 @@ class Logger {
         ],
 
         MAX_SAFESTR_LENGTH: process.env.LOG_MAX_SAFESTR_LENGTH
-            ? parseInt(process.env.LOG_MAX_SAFESTR_LENGTH, 10)
+            ? parseInt(process.env.LOG_MAX_SAFESTR_LENGTH ?? "", 10)
             : Infinity,
 
         DATE_OPTIONS: {
@@ -134,12 +134,12 @@ class Logger {
             hourCycle: "h23",
         },
     };
-    declare _levelSubscribers: never[];
+    declare _levelSubscribers: any[];
     declare machineIdentifier: string;
     declare _droppedCount: number;
     declare _maxQueueLength: number;
     declare isWriting: boolean;
-    declare writeQueue: never[];
+    declare writeQueue: any[];
     declare _maxSafeStrLength: number;
     declare currentLevel: any;
 
@@ -435,7 +435,7 @@ class Logger {
     /**
      * Capture call site information (function, file, line) from stack trace
      */
-    #captureCallSite(meta = {}) {
+    #captureCallSite(meta: Record<string, any> = {}) {
         let displayFn = meta.function || "anonymous";
         let displayFile = meta.file ? this.#shortenPath(meta.file) : "";
         let displayLine = meta.line ? `:${meta.line}` : "";
@@ -530,7 +530,7 @@ class Logger {
     /**
      * Build the plain-text log entry string
      */
-    #formatMessage(level: any, message: any, meta = {}, requestId = null) {
+    #formatMessage(level: any, message: any, meta: Record<string, any> = {}, requestId = null) {
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
         const { displayFn, displayFile, displayLine } =
@@ -558,7 +558,7 @@ class Logger {
     /**
      * Build the colorized console log entry string
      */
-    #formatColorizedMessage(level: any, message: any, meta = {}, requestId = null) {
+    #formatColorizedMessage(level: any, message: any, meta: Record<string, any> = {}, requestId = null) {
         const colors = Logger.CONFIG.COLORS;
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
@@ -673,7 +673,7 @@ class Logger {
     /**
      * Write a formatted log entry to the appropriate file
      */
-    async #writeToFile(level: any, message: any, meta = {}, requestId = null) {
+    async #writeToFile(level: any, message: any, meta: Record<string, any> = {}, requestId = null) {
         const logDir = this.#getLogDirectory();
         try {
             await this.#ensureDirectoryExists(logDir);
@@ -1002,7 +1002,7 @@ class Logger {
         });
     }
 
-    logHandlingRequest(req: any, additionalMeta = {}) {
+    logHandlingRequest(req: any, additionalMeta: Record<string, any> = {}) {
         return this.log("INFO", "Handling Request", {
             method: req.method,
             url: req.originalUrl || req.url,
@@ -1096,7 +1096,7 @@ class Logger {
         });
     }
 
-    performance(operation: any, duration: any, details = {}) {
+    performance(operation: any, duration: any, details: Record<string, any> = {}) {
         const level = duration > 5000 ? "WARNING" : "INFO";
         return this.log(level, "Performance", {
             operation,
@@ -1105,7 +1105,7 @@ class Logger {
         });
     }
 
-    security(event: any, details = {}) {
+    security(event: any, details: Record<string, any> = {}) {
         return this.log("WARNING", "Security Event", {
             event,
             timestamp: new Date().toISOString(),

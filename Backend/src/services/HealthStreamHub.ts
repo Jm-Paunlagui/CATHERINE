@@ -76,10 +76,10 @@ class HealthStreamHub {
     declare HealthStreamHub: typeof HealthStreamHub;
     declare _pending: boolean;
     declare _evaluating: boolean;
-    declare _unsubs: never[];
-    declare _evalTimer: null;
-    declare _heartbeat: null;
-    declare _last: null;
+    declare _unsubs: any[];
+    declare _evalTimer: any;
+    declare _heartbeat: any;
+    declare _last: any;
     declare _perIp: Map<any, any>;
     declare _clients: Map<any, any>;
     constructor() {

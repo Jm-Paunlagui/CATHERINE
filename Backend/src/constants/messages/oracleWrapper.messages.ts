@@ -89,7 +89,7 @@ function describeBinds(binds: Record<string, any> | Array<any> | null | undefine
 
 const oracleMongoWrapperMessages = {
   // ── Error formatter ──────────────────────────────────────────────────────
-  wrapError: (scope: any, err: any, sql: any, binds: any) =>
+  wrapError: (scope: any, err: any, sql: any, binds?: any) =>
     `[${scope}] ${err.message}\nSQL: ${sql}${binds !== undefined ? `\nBinds: ${describeBinds(binds)}` : ""}`,
 
   // ── Privilege / DCL ──────────────────────────────────────────────────────

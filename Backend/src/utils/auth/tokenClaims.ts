@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -95,7 +94,7 @@ function parseDuration(str: string): number {
     if (!match) {
         throw new Error(`Unrecognised duration format: "${str}". Expected e.g. "30m", "8h", "7d".`);
     }
-    return parseInt(match[1], 10) * DURATION_MS[match[2]];
+    return parseInt(match[1], 10) * DURATION_MS[match[2] as keyof typeof DURATION_MS];
 }
 
 /**

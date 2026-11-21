@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -213,7 +212,7 @@ class LoginLockoutMiddleware {
    * @returns {Promise<object|null>}
    * @private
    */
-  async _rpc(method: string, userId: string): Promise<Record<string, any> | null> {
+  async _rpc(method: string, userId: string): Promise<any> { // IPC reply: untyped wire data
     const args = { key: lockoutKey(userId) };
     if (!validateArgs(method, args).ok) {
       this._warnFallback("bad-key");

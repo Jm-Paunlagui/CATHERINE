@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -21,7 +20,7 @@ class ResponseTimeMiddleware {
   declare _metrics: Map<any, any>;
   declare _verySlowThreshold: any;
   declare _slowThreshold: any;
-  constructor(options = {}) {
+  constructor(options: Record<string, any> = {}) {
     this._slowThreshold = options.slowThreshold ?? 1000;
     this._verySlowThreshold = options.verySlowThreshold ?? 3000;
     this._metrics = new Map();
@@ -33,7 +32,7 @@ class ResponseTimeMiddleware {
     const startTime = process.hrtime.bigint();
 
     const originalWriteHead = res.writeHead;
-    res.writeHead = function (statusCode, statusMessage, headers) {
+    res.writeHead = function (this: unknown, statusCode: number, statusMessage?: any, headers?: any) {
       // writeHead runs synchronously while the handler is still on the stack
       // (req.baseUrl + req.route + req.params intact), so capture the precise
       // label here before Express restores baseUrl on stack unwind.
@@ -44,8 +43,8 @@ class ResponseTimeMiddleware {
         );
         res.setHeader("X-Response-Time", `${ms}ms`);
       }
-      return originalWriteHead.call(this, statusCode, statusMessage, headers);
-    };
+      return (originalWriteHead as (...a: any[]) => Response).call(this, statusCode, statusMessage, headers);
+    } as typeof res.writeHead;
 
     res.on("finish", () => {
       // CORS preflights are excluded from per-route metrics — same policy as

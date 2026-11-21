@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -23,10 +22,11 @@ function refuseBrotli(parser: import("express").RequestHandler): import("express
   return (req: Request, res: Response, next: NextFunction) => {
     const encoding = String(req.headers["content-encoding"] ?? "").toLowerCase();
     if (encoding.split(",").some((c) => c.trim() === "br")) {
-      const err = new Error("Unsupported content encoding \"br\".");
-      err.status = 415;
-      err.statusCode = 415;
-      err.type = "encoding.unsupported";
+      const err = Object.assign(new Error("Unsupported content encoding \"br\"."), {
+        status: 415,
+        statusCode: 415,
+        type: "encoding.unsupported",
+      });
       return next(err);
     }
     return parser(req, res, next);
@@ -38,7 +38,7 @@ class BodyParserMiddleware {
   declare _urlencodedParser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
   declare _jsonParser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
   declare _limit: any;
-  constructor(options = {}) {
+  constructor(options: Record<string, any> = {}) {
     this._limit = options.limit ?? process.env.BODY_LIMIT ?? "10mb";
 
     this._jsonParser = refuseBrotli(bodyParser.json({ limit: this._limit }));

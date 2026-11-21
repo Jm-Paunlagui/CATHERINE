@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -133,7 +132,7 @@ router.delete(
     MetricsController.unacknowledgeAlert,
 );
 
-const __default = router;
+const __default: import("express").Router & { frontendIngestLimiter?: unknown; notificationTestLimiter?: unknown } = router;
 export default __default;
 // Exposed for tests: limiters are module-level state that persists across a
 // full test run, so suites must be able to reset them for deterministic results

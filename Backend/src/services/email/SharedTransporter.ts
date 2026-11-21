@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { appPath } from "../../utils/runtimePaths";
 
@@ -121,11 +120,14 @@ import { logger } from "../../utils/logger";
 import { touch } from "../../utils/progress/progress";
 
 /** Marks a transporter whose sendMail is already wrapped (never stack). */
-const kInstrumented = Symbol.for("app.progress.smtp");
+const kInstrumented: unique symbol = Symbol.for("app.progress.smtp");
+
+/** The part of a nodemailer transporter that _instrumentSendMail touches. */
+type InstrumentableTransport = { sendMail?: unknown; [kInstrumented]?: boolean };
 
 class SharedTransporter {
     declare SharedTransporter: typeof SharedTransporter;
-    declare _transporter: null;
+    declare _transporter: any;
     constructor() {
         /** @type {import("nodemailer").Transporter|null} */
         this._transporter = null;
@@ -138,7 +140,7 @@ class SharedTransporter {
      *
      * @returns {import("nodemailer").TransportOptions}
      */
-    _baseConfig(): import("nodemailer").TransportOptions {
+    _baseConfig(): import("nodemailer/lib/smtp-transport").Options {
         return {
             host: process.env.SMTP_HOST || "localhost",
             port: Number(process.env.SMTP_PORT) || 587,
@@ -227,12 +229,12 @@ class SharedTransporter {
      * @param {object} transporter - nodemailer transporter.
      * @returns {object} the same transporter.
      */
-    _instrumentSendMail(transporter: Record<string, any>): Record<string, any> {
-        const original = transporter?.sendMail;
+    _instrumentSendMail<T extends InstrumentableTransport>(transporter: T): T {
+        const original = transporter?.sendMail as ((...args: unknown[]) => unknown) | undefined;
         if (typeof original !== "function" || transporter[kInstrumented]) {
             return transporter;
         }
-        transporter.sendMail = function instrumentedSendMail(...args: any[]) {
+        transporter.sendMail = function instrumentedSendMail(this: unknown, ...args: unknown[]) {
             touch("smtp");
             if (typeof args[args.length - 1] === "function") {
                 return original.apply(this, args);

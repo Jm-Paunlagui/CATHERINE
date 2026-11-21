@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -40,14 +39,14 @@
  * rounded — the exact stored value is still there behind the presentation.
  */
 
-/**
- * @typedef {Object} CurrencyEntry
- * @property {string} code
- * @property {number} displayScale
- * @property {string} symbol
- * @property {string} locale
- * @property {string} name
- */
+/** One registered currency. */
+export interface CurrencyEntry {
+    code: string;
+    displayScale: number;
+    symbol: string;
+    locale: string;
+    name: string;
+}
 
 /**
  * The registry. Extend by adding an entry — never store a symbol, never persist

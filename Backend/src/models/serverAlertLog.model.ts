@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -148,7 +147,7 @@ function buildWhere(filters: { rule?: string; severity?: string; alertKey?: stri
 }
 
 /** Applies the same filters to the DEMO_MODE array. */
-function demoFilter(filters = {}) {
+function demoFilter(filters: Record<string, any> = {}) {
     return _demoRows.filter((r) => {
         if (filters.rule && r.RULE !== filters.rule) return false;
         if (filters.severity && r.SEVERITY !== filters.severity) return false;
@@ -258,7 +257,7 @@ class ServerAlertLogModel {
      * @param {{ page?: number, limit?: number }} [opts]
      * @returns {Promise<{ rows: object[], total: number, page: number, limit: number }>}
      */
-    static async findPage(filters: { rule?: string; severity?: string; from?: Date; to?: Date; } = {}, opts: { page?: number; limit?: number; } = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; }> {
+    static async findPage(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}, opts: { page?: number; limit?: number; } = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; }> {
         const page = Math.max(1, Number(opts.page) || 1);
         const limit = Math.min(
             MAX_PAGE_LIMIT,

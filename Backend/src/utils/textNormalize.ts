@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -137,7 +136,7 @@ const LATIN9_ADDITIONS = new Set(["€", "Š", "š", "Ž", "ž", "Œ", "œ", "Ÿ
 function isLatin9Encodable(ch: string): boolean {
     if (LATIN9_ADDITIONS.has(ch)) return true;
     if (NOT_IN_LATIN9.has(ch)) return false;
-    return ch.codePointAt(0) <= 0xff;
+    return (ch.codePointAt(0) ?? 0) <= 0xff;
 }
 
 /**

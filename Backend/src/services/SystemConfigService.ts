@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -35,7 +34,7 @@ import { logger } from "../utils/logger";
  * Projects register their own keys here, e.g.
  * `FEATURE_MODE: { values: ["MANUAL", "AUTO"], defaultValue: "MANUAL" }`.
  */
-const CONFIG_KEYS = Object.freeze({});
+const CONFIG_KEYS: Readonly<Record<string, { values: string[]; defaultValue: string }>> = Object.freeze({});
 
 class SystemConfigService {
     static CONFIG_KEYS = CONFIG_KEYS;

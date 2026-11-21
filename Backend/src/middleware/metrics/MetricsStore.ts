@@ -247,8 +247,8 @@ class MetricsStore {
   declare _backgroundProbes: boolean;
   declare _prevCpuUsage: NodeJS.CpuUsage;
   declare _prevGcPauseMs: number;
-  declare _gcPauses: never[];
-  declare _heapBaselines: never[];
+  declare _gcPauses: any[];
+  declare _heapBaselines: any[];
   declare _system: {
       cpu: { user: number; system: number; percent: number; }; memory: { heapUsed: number; heapTotal: number; heapSizeLimit: number; rss: number; external: number; arrayBuffers: number; }; eventLoopLag: number; gc: {
           collections: number; // lifetime total across all kinds (back-compat)
@@ -257,8 +257,8 @@ class MetricsStore {
           major: { count: number; pauseMs: number; }; minor: { count: number; pauseMs: number; }; incremental: { count: number; pauseMs: number; }; weakcb: { count: number; pauseMs: number; }; overheadPct: number;
       }; handles: number; requests: number;
   };
-  declare _frontendErrors: never[];
-  declare _frontendVitals: never[];
+  declare _frontendErrors: any[];
+  declare _frontendVitals: any[];
   declare _watchdog: { terminated: number; byRoute: Map<any, any>; };
   declare _notifications: Map<any, any>;
   declare _oraclePoolStats: Map<any, any>;

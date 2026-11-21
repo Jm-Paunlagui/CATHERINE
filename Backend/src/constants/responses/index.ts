@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -54,7 +53,8 @@ const HTTP_STATUS_TITLES = {
  * @returns {string}
  */
 function getStatusTitle(code: number): string {
-    if (HTTP_STATUS_TITLES[code]) return HTTP_STATUS_TITLES[code];
+    const title = (HTTP_STATUS_TITLES as Record<number, string>)[code];
+    if (title) return title;
     if (code >= 500) return "Server Error";
     if (code >= 400) return "Client Error";
     if (code >= 300) return "Redirect";
@@ -70,7 +70,7 @@ function getStatusTitle(code: number): string {
  * @param {number} [code=200]
  * @returns {{ status: string, code: number, message: string, data: * }}
  */
-function sendSuccess(message: string, data: any = null, code: number = 200, requestId = null): { status: string; code: number; message: string; data: any; } {
+function sendSuccess(message: string, data: any = null, code: number = 200, requestId: string | null = null): { status: string; code: number; message: string; requestId: string | null; data: any; } {
     return {
         status: "success",
         code,
@@ -94,7 +94,7 @@ function sendSuccess(message: string, data: any = null, code: number = 200, requ
  * @param {{ type?: string, details?: Array, hint?: string, reasons?: string[], stack?: string }} [opts]
  */
 function sendError(message: string, code: number = 500, opts: {
-    requestId: null; type?: string; details?: Array<any>; hint?: string; reasons?: string[]; stack?: string; 
+    requestId?: string | null; type?: string; details?: Array<any>; hint?: string; reasons?: string[]; stack?: string; 
 } = {}) {
     return {
         status: "error",

@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -57,7 +56,7 @@ class RecipientResolver {
     declare RecipientResolver: typeof RecipientResolver;
     declare static REFRESH_WAIT_MS: any;
     declare _lastRefreshOk: boolean;
-    declare _refreshPromise: null;
+    declare _refreshPromise: any;
     declare _lastRefreshAt: number;
     declare _cache: Map<any, any>;
     constructor() {
@@ -133,7 +132,7 @@ class RecipientResolver {
         let timer;
         const timedOut = await Promise.race([
             this._maybeRefresh().then(() => false),
-            new Promise((resolve) => {
+            new Promise<boolean>((resolve) => {
                 timer = setTimeout(() => resolve(true), waitMs);
                 if (typeof timer.unref === "function") timer.unref();
             }),

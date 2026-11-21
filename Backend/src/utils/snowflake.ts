@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -108,7 +107,7 @@ function _resolveMachineId(): number {
     try {
         const ifaces = os.networkInterfaces();
         for (const name of Object.keys(ifaces)) {
-            for (const iface of ifaces[name]) {
+            for (const iface of ifaces[name] ?? []) {
                 if (iface.family === "IPv4" && !iface.internal) {
                     // FNV-1a 32-bit hash → mod 1024
                     let hash = 0x811c9dc5;

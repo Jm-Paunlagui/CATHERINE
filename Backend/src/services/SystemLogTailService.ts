@@ -73,9 +73,9 @@ class SystemLogTailService {
     declare _ticking: boolean;
     declare _consecutiveErrors: number;
     declare _initializedDir: boolean;
-    declare _currentDir: null;
+    declare _currentDir: any;
     declare _offsets: Map<any, any>;
-    declare _timer: null;
+    declare _timer: any;
     declare _connections: Map<any, any>;
     declare _logBaseDir: string;
     /**

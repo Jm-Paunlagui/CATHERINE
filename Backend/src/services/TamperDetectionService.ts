@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -63,7 +62,7 @@ class TamperDetectionService {
      * const rowHash = await CryptoVault.signRecord("T_SYSTEM_CONFIG", fields);
      */
     static buildSignedFields(domain: string, row: Record<string, any>): Record<string, number | string> {
-        const builder = _FIELD_BUILDERS[domain];
+        const builder = _FIELD_BUILDERS[domain as keyof typeof _FIELD_BUILDERS];
         if (!builder) {
             throw new Error(`TamperDetectionService.buildSignedFields: unknown ROW_HASH domain "${domain}".`);
         }

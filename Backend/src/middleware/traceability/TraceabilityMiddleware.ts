@@ -116,7 +116,7 @@ function deepRedact(value: any, depth: number = 0, seen: WeakSet<Record<string, 
 
 class TraceabilityMiddleware {
     declare _excludedUrls: any;
-    constructor(options = {}) {
+    constructor(options: Record<string, any> = {}) {
         this._excludedUrls = options.excludedUrls ?? [
             ...(process.env.LOG_EXCLUDE_HEALTH === "true" ? ["/health"] : []),
             ...(process.env.LOG_EXCLUDE_URLS

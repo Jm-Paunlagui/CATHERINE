@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -123,7 +122,7 @@ async function runGuarded<T>({ label, idleLimitMs, onStall }: { label: string; i
             );
         });
 
-        const aborted = new Promise((_, reject) => {
+        const aborted = new Promise<never>((_, reject) => {
             offAbort = scope.onAbort(reject);
         });
         const work = Promise.resolve().then(() => runInScope(scope, fn));

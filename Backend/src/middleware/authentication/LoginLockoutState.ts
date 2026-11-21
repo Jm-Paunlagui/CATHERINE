@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -61,7 +60,7 @@ class LoginLockoutState {
         if (!entry) return { locked: false };
         const r = this.#policy.evaluate(entry.state, now);
         if (r.changed) this.#write(key, r.state, now);
-        const out = { locked: r.locked };
+        const out: { locked: boolean; retryAfter?: number; hrReset?: boolean } = { locked: r.locked };
         if (r.retryAfter !== undefined) out.retryAfter = r.retryAfter;
         if (r.hrReset) out.hrReset = true;
         return out;

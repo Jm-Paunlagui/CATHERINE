@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 import { APP_ROOT, appPath } from "../utils/runtimePaths";
 
@@ -322,8 +321,8 @@ class DevDocsService {
     static async _loadFreshnessSnapshot(): Promise<{ docs: Map<string, string>; sources: Map<string, string>; } | null> {
         try {
             const parsed = JSON.parse(await fsp.readFile(FRESHNESS_SNAPSHOT_PATH, "utf8"));
-            const toMap = (obj: any) => new Map(
-                Object.entries(obj ?? {}).filter(([, date]) => typeof date === "string"),
+            const toMap = (obj: unknown) => new Map<string, string>(
+                Object.entries(obj ?? {}).filter((e): e is [string, string] => typeof e[1] === "string"),
             );
             return { docs: toMap(parsed.docs), sources: toMap(parsed.sources) };
         } catch {
@@ -367,11 +366,11 @@ class DevDocsService {
      * @returns {string|null}
      */
     static _sectionSourceDate(section: string, sourceIndex: Map<string, string>): string | null {
-        const sources = SECTION_SOURCE_MAP[section];
+        const sources = SECTION_SOURCE_MAP[section as keyof typeof SECTION_SOURCE_MAP];
         if (!sources?.length) return null;
-        const dates = sources.map((src: any) => sourceIndex.get(src)).filter(Boolean);
+        const dates = sources.map((src: string) => sourceIndex.get(src)).filter((d): d is string => Boolean(d));
         if (!dates.length) return null;
-        return dates.sort().at(-1);
+        return dates.sort().at(-1) ?? null;
     }
 
     /**
