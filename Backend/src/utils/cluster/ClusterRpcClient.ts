@@ -252,7 +252,7 @@ class ClusterRpcClient {
         const text = typeof e.message === "string" ? e.message.slice(0, CLUSTER_RPC_LIMITS.MAX_ERROR_MESSAGE) : "error";
         const a = e.appError;
         const appError =
-            isPlainObject(a) && Number.isInteger(a.statusCode) && typeof a.message === "string"
+            isPlainObject(a) && typeof a.statusCode === "number" && Number.isInteger(a.statusCode) && typeof a.message === "string"
                 ? {
                       statusCode: a.statusCode,
                       message: a.message.slice(0, CLUSTER_RPC_LIMITS.MAX_ERROR_MESSAGE),

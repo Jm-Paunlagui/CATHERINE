@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -21,21 +20,22 @@ import { CLUSTER_IPC, CLUSTER_RPC_TARGETS, CLUSTER_RPC_METHODS, CLUSTER_TOPICS, 
 import { KNOWN_JOBS } from "../../constants/schedulerJobs";
 import { ACCESS_REVOCATION_LIMITS as AR, FAMILY_ID_RE } from "../../constants/authTokens";
 
-const METHOD_SET = new Set(Object.values(CLUSTER_RPC_METHODS));
-const TARGET_SET = new Set(Object.values(CLUSTER_RPC_TARGETS));
-const TOPIC_SET = new Set(Object.values(CLUSTER_TOPICS));
+const METHOD_SET: ReadonlySet<string> = new Set(Object.values(CLUSTER_RPC_METHODS));
+const TARGET_SET: ReadonlySet<string> = new Set(Object.values(CLUSTER_RPC_TARGETS));
+const TOPIC_SET: ReadonlySet<string> = new Set(Object.values(CLUSTER_TOPICS));
 const JOB_SET = new Set(KNOWN_JOBS);
 const IP_RE = /^[0-9A-Fa-f:.]+$/;
 const FORBIDDEN_KEYS = ["__proto__", "constructor", "prototype"];
 
-const ok = (value: any) => ({ ok: true, value });
-const bad = (reason: any) => ({ ok: false, reason });
+/** Validation results: the parsed value, or why the input was refused. */
+const ok = <T>(value: T): { ok: true; value: T } => ({ ok: true, value });
+const bad = (reason: string): { ok: false; reason: string } => ({ ok: false, reason });
 
 /**
  * @param {*} v
  * @returns {boolean} a plain JSON-style object (no exotic prototype, no poisoned own keys)
  */
-function isPlainObject(v: any): boolean {
+function isPlainObject(v: unknown): v is Record<string, unknown> {
     if (v === null || typeof v !== "object" || Array.isArray(v)) return false;
     const proto = Object.getPrototypeOf(v);
     if (proto !== Object.prototype && proto !== null) return false;
@@ -51,7 +51,7 @@ function isPlainObject(v: any): boolean {
  * @param {number} [min=0]
  * @returns {boolean} a string with min <= length <= max
  */
-function isBoundedString(v: any, max: number, min: number = 0): boolean {
+function isBoundedString(v: unknown, max: number, min: number = 0): v is string {
     return typeof v === "string" && v.length >= min && v.length <= max;
 }
 
@@ -61,7 +61,7 @@ function isBoundedString(v: any, max: number, min: number = 0): boolean {
  * @param {number} max
  * @returns {boolean} a finite number within [min, max]
  */
-function isFiniteInRange(v: any, min: number, max: number): boolean {
+function isFiniteInRange(v: unknown, min: number, max: number): v is number {
     return typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
 }
 
@@ -71,7 +71,7 @@ function isFiniteInRange(v: any, min: number, max: number): boolean {
  * @param {number} max
  * @returns {boolean} an integer within [min, max]
  */
-function isIntInRange(v: any, min: number, max: number): boolean {
+function isIntInRange(v: unknown, min: number, max: number): v is number {
     return isFiniteInRange(v, min, max) && Number.isInteger(v);
 }
 
@@ -145,7 +145,12 @@ function revokedEntries(list: any, max: number, now: number): { ok: true; value:
     return ok(out);
 }
 
-const ARG_VALIDATORS = new Map([
+/** A validator for one method's args (or result): the normalised value or a refusal. */
+type Validator = (input: Record<string, unknown>) => { ok: true; value: Record<string, unknown> } | { ok: false; reason: string };
+/** A check on a method's result: true when the caller may trust it. */
+type ResultValidator = (result: unknown) => boolean;
+
+const ARG_VALIDATORS: Map<string, Validator> = new Map<string, Validator>([
     [
         CLUSTER_RPC_METHODS.RL_HIT,
         (a: any) => {
@@ -240,14 +245,14 @@ const ARG_VALIDATORS = new Map([
  * @param {*} args
  * @returns {{ok: true, value: object}|{ok: false, reason: string}}
  */
-function validateArgs(method: string, args: any): { ok: true; value: Record<string, any>; } | { ok: false; reason: string; } {
+function validateArgs(method: string, args: unknown): { ok: true; value: Record<string, unknown>; } | { ok: false; reason: string; } {
     const fn = ARG_VALIDATORS.get(method);
     if (!fn) return bad("bad-method");
     if (!isPlainObject(args)) return bad("bad-args");
     return fn(args);
 }
 
-const RESULT_VALIDATORS = new Map([
+const RESULT_VALIDATORS: Map<string, ResultValidator> = new Map<string, ResultValidator>([
     [
         CLUSTER_RPC_METHODS.RL_HIT,
         (r: any) => {
@@ -341,7 +346,7 @@ function validateTopic(topic: string, payload: any, now: number = Date.now()): {
             return ok({ blocks });
         }
         case CLUSTER_TOPICS.SCHED_STATE: {
-            const v = ARG_VALIDATORS.get(CLUSTER_RPC_METHODS.SCHED_RECORD)(payload);
+            const v = ARG_VALIDATORS.get(CLUSTER_RPC_METHODS.SCHED_RECORD)!(payload);
             return v;
         }
         case CLUSTER_TOPICS.SCHED_SYNC: {
@@ -350,7 +355,7 @@ function validateTopic(topic: string, payload: any, now: number = Date.now()): {
             for (const job of KNOWN_JOBS) {
                 const e = payload.state[job];
                 if (e === null || e === undefined) continue;
-                const v = ARG_VALIDATORS.get(CLUSTER_RPC_METHODS.SCHED_RECORD)({ job, outcome: e });
+                const v = ARG_VALIDATORS.get(CLUSTER_RPC_METHODS.SCHED_RECORD)!({ job, outcome: e });
                 if (!v.ok) return bad("bad-state-entry");
                 entries.push(v.value);
             }

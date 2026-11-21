@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -184,9 +183,14 @@ function latencyThresholdFor(route: string): number {
         : LATENCY_P99_DEFAULT_THRESHOLD_MS;
 }
 
+
+/** Snapshot shapes as MetricsStore.getSnapshot() declares them (merged cluster snapshots share them). */
+type StoreSnapshot = ReturnType<import("../middleware/metrics/MetricsStore").MetricsStore["getSnapshot"]>;
+type RouteMetrics = StoreSnapshot["red"][string];
+type PoolDependency = StoreSnapshot["dependencies"]["oracle"][string];
 class MetricsService {
     /** Shared in-flight/just-finished cluster gather (see getClusterSnapshot). */
-    static #clusterShare = null;
+    static #clusterShare: { at: number; promise: Promise<Record<string, any>> } | null = null;
     static #lastPartialLogAt = -Infinity;
 
     // ========================================
@@ -265,12 +269,12 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot (the controller passes the cluster one)
      * @returns {{ totals: object, topSlowRoutes: Array, alertCount: number, uptime: number }}
      */
-    static getSummary(snapshot: Record<string, any> = null): { totals: Record<string, any>; topSlowRoutes: Array<any>; alertCount: number; uptime: number; } {
+    static getSummary(snapshot: Record<string, any> | null = null): { totals: Record<string, any>; topSlowRoutes: Array<RouteMetrics & { route: string }>; alertCount: number; uptime: number; system: { heapUsedMb: number; heapTotalMb: number; heapLimitMb: number; eventLoopLag: number } } {
         snapshot = snapshot || MetricsService.getSnapshot();
         const alerts = MetricsService.evaluateAlerts(snapshot);
 
         // Top 5 routes by p95 latency descending
-        const topSlowRoutes = Object.entries(snapshot.red)
+        const topSlowRoutes = Object.entries(snapshot.red as Record<string, RouteMetrics>)
             .map(([route, m]) => ({ route, ...m }))
             .sort((a, b) => b.p95 - a.p95)
             .slice(0, 5);
@@ -315,14 +319,14 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
      * @returns {string[]} Alert keys to hold; `"*"` holds every active key not seen this tick
      */
-    static evaluateAlertHolds(snapshot: Record<string, any> = null): string[] {
+    static evaluateAlertHolds(snapshot: Record<string, any> | null = null): string[] {
         const snap = snapshot || MetricsService.getSnapshot();
         const holds = [];
         const win = snap.totals?.window;
         if (!win || win.serviced < ERROR_RATE_MIN_SAMPLES) {
             holds.push("HIGH_ERROR_RATE::global");
         }
-        for (const [route, m] of Object.entries(snap.red ?? {})) {
+        for (const [route, m] of Object.entries((snap.red ?? {}) as Record<string, RouteMetrics>)) {
             const w = m?.window;
             if (
                 w &&
@@ -376,7 +380,7 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
      * @returns {Array<{ rule: string, severity: string, value: number, route?: string, pool?: string }>}
      */
-    static evaluateAlerts(snapshot: Record<string, any> = null): Array<{ rule: string; severity: string; value: number; route?: string; pool?: string; }> {
+    static evaluateAlerts(snapshot: Record<string, any> | null = null): Array<{ rule: string; severity: string; value: number; route?: string; pool?: string; }> {
         const snap = snapshot || MetricsService.getSnapshot();
         const alerts = [];
 
@@ -418,7 +422,7 @@ class MetricsService {
         // Rule 2 — per-route p99 latency spike, read over the last 5 minutes
         // (`window`), never the lifetime ring: a lifetime p99 keeps one slow call
         // as the p99 forever and the alert could never recover.
-        for (const [route, m] of Object.entries(snap.red)) {
+        for (const [route, m] of Object.entries(snap.red as Record<string, RouteMetrics>)) {
             const w = m?.window;
             if (!w || w.count < LATENCY_MIN_SAMPLES) continue;
             // Per-route threshold — a bulk upload/issuance/export is measured
@@ -550,7 +554,7 @@ class MetricsService {
 
         // Rule 7 — Oracle connection-pool saturation (USE method). poolUtilization
         // is null until the adapter's health poll first reports, so guard the type.
-        const oracleDeps = snap.dependencies?.oracle ?? {};
+        const oracleDeps = (snap.dependencies?.oracle ?? {}) as Record<string, PoolDependency>;
         for (const [poolName, dep] of Object.entries(oracleDeps)) {
             const util = dep.poolUtilization;
             if (typeof util !== "number" || util <= POOL_SATURATION_WARNING_THRESHOLD) {

@@ -452,7 +452,7 @@ class ClusterRpcHub {
         if (!isPlainObject(e) || typeof e.message !== "string") return buildError(E.HANDLER_ERROR, "leader handler failed");
         const out = buildError(E.HANDLER_ERROR, e.message);
         const a = e.appError;
-        if (isPlainObject(a) && Number.isInteger(a.statusCode) && typeof a.message === "string") {
+        if (isPlainObject(a) && typeof a.statusCode === "number" && Number.isInteger(a.statusCode) && typeof a.message === "string") {
             out.appError = {
                 statusCode: a.statusCode,
                 message: a.message.slice(0, CLUSTER_RPC_LIMITS.MAX_ERROR_MESSAGE),
