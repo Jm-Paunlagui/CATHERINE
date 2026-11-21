@@ -1,6 +1,6 @@
 {
     "name": "catherine-backend",
-    "version": "1.0.0-dev.52",
+    "version": "1.0.0-dev.53",
     "description": "CATHERINE Template — Production-grade Express 5 + OracleDB backend with JWT auth, RBAC, audit logging, exact-decimal money, and observability.",
     "homepage": "https://github.com/Jm-Paunlagui/NodeExpress-Template#readme",
     "bugs": {
