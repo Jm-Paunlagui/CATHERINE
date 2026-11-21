@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 /**
  * CryptoVault.js
  * Unified password encryption, hashing, and verification module.

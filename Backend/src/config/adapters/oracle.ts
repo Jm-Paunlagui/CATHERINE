@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 /**
  * Oracle Adapter
  * Merges: oracleEnvironment.js + oracleLoader.js + oracleConnectionPool.js

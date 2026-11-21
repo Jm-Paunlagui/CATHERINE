@@ -1,4 +1,5 @@
-﻿"use strict";
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
+"use strict";
 
 /**
  * @fileoverview Response-time tracking middleware.

@@ -1093,10 +1093,29 @@ Compiled-exe rules:
 
 ---
 
+## TypeScript Migration (in progress)
+
+`src/` is `.ts` and Bun runs it directly; `tsc` only type-checks (`noEmit`). `server.js`, `scripts/` and `test/` are still JavaScript.
+
+```bash
+bun run typecheck   # tsc -p . — strict, src/**/*.ts
+bun run lint        # .ts files go through typescript-eslint (eslint.config.js BLOCK 1b)
+```
+
+Rules while the migration runs:
+
+1. **`// @ts-nocheck` on line 1 marks an unconverted file.** Converting a file means deleting that line and getting `bun run typecheck` clean. `grep -rl @ts-nocheck src` is the remaining work list. Never add it to a converted or new file.
+2. New files under `src/` are written as typed `.ts` from the start.
+3. `typescript` is pinned to `~6.0`: typescript-eslint needs TypeScript's JS API (`<6.1`), which TypeScript 7 (the native compiler) does not ship. Move to 7 when typescript-eslint supports it.
+4. Two lint rules are relaxed for the migration only (BLOCK 1b): `ban-ts-comment` allows `@ts-nocheck`, and `no-require-imports` is off while `src` is still CommonJS. Restore both when the last file is converted.
+5. A source path in code or docs names the `.ts` file (`src/utils/logger.ts`). The logger skips its own stack frames by matching `logger.[jt]s`; keep that match extension-agnostic.
+
+---
+
 ## Gotchas
 
 - Always use `catchAsync` around async controller functions — missing it crashes on unhandled rejections
-- `cors()` origin patterns in `CorsMiddleware.js` — add project-specific origins to `CORS_ORIGINS` env var
+- `cors()` origin patterns in `CorsMiddleware.ts` — add project-specific origins to `CORS_ORIGINS` env var
 - Rate limiter per-IP by default — create `new RateLimiterMiddleware({ max: 5 })` for strict routes
 - Cache stores registered once at startup via `registry.registerAll({...})` — resolving unregistered name throws immediately
 - Always build cache keys with `CacheKeyBuilder` — never concatenate strings manually; parameters sorted alphabetically so call-site order never matters

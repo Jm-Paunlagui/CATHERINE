@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 "use strict";
 
 /**
@@ -65,11 +66,10 @@ function buildDynamicPatterns(override) {
   }
 
   // Production — safe loopback only; everything else must be in CORS_ORIGINS
-  logger.notice &&
-    logger.notice(
-      "CORS: running in production mode — broad wildcard patterns disabled. " +
-        "Add explicit origins to CORS_ORIGINS.",
-    );
+  logger.notice?.(
+    "CORS: running in production mode — broad wildcard patterns disabled. " +
+      "Add explicit origins to CORS_ORIGINS.",
+  );
   return safePatterns;
 }
 

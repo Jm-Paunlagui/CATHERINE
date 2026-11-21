@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 "use strict";
 
 /**
@@ -2041,7 +2042,8 @@ class OracleCollection {
      */
     async insertFromQuery(targetTable, queryBuilder, options = {}) {
         return this._execute(async (conn) => {
-            let { sql: selectSql, binds } = queryBuilder._buildSQL();
+            const { sql: builtSql, binds } = queryBuilder._buildSQL();
+            let selectSql = builtSql;
             let colList = "";
 
             if (options.columns && options.columns.length > 0) {

@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 /**
  * @fileoverview Enterprise Logging System with RFC 5424 Syslog Levels and File Rotation
  * @description Comprehensive logging solution with RFC 5424 severity levels, automatic

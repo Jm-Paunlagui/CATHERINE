@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 const { logger } = require("./logger");
 
 // Check if we're running as a compiled executable

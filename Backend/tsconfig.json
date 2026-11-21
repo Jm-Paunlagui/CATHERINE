@@ -1,0 +1,25 @@
+{
+    // Type-check only. Bun runs src/**/*.ts directly and `bun build --compile`
+    // bundles it, so tsc never emits. Run: bun run typecheck
+    "compilerOptions": {
+        "target": "ES2024",
+        "lib": ["ES2024"],
+        "module": "preserve",
+        "moduleResolution": "bundler",
+        // Every file is a module, even CommonJS ones with no import/export.
+        // Without this, files that only require()/module.exports are global
+        // scripts and their top-level consts collide across files.
+        "moduleDetection": "force",
+        "types": ["bun"],
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "noEmit": true,
+        "skipLibCheck": true,
+
+        "strict": true,
+        "noImplicitOverride": true,
+        "noFallthroughCasesInSwitch": true,
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": ["src/**/*.ts"]
+}

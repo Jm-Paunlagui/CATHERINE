@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 "use strict";
 const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
 
@@ -782,7 +783,7 @@ class AuditLogService {
             }
         }
 
-        let ceiling = Number(maxPriority);
+        const ceiling = Number(maxPriority);
         if (!Number.isInteger(ceiling) || ceiling < 0 || ceiling > 7) {
             throw new AppError(AUDIT_LOG_ERRORS.SYSTEM_LOG_INVALID_PRIORITY, 400);
         }

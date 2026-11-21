@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 "use strict";
 
 /**
@@ -379,18 +380,17 @@ class QueryBuilder {
     async _execute() {
         await this._resolveFilterPromises();
         const { sql, binds } = this._buildSQL();
-        const self = this;
 
         const fn = async (conn) => {
             try {
                 const result = await conn.execute(sql, binds, {
-                    outFormat: self.db.oracledb.OUT_FORMAT_OBJECT,
-                    autoCommit: !self._conn,
+                    outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
+                    autoCommit: !this._conn,
                 });
                 let rows = result.rows || [];
 
                 // Handle exclusion projection post-processing
-                const proj = buildProjection(self._projection);
+                const proj = buildProjection(this._projection);
                 if (proj.isExclusion && proj.excludedCols.length > 0) {
                     rows = rows.map((row) => {
                         const doc = { ...row };
@@ -452,13 +452,12 @@ class QueryBuilder {
         this._terminated = true;
         await this._resolveFilterPromises();
         const { sql, binds } = this._buildSQL();
-        const self = this;
-        const proj = buildProjection(self._projection);
+        const proj = buildProjection(this._projection);
 
         const run = (conn) =>
             new Promise((resolve, reject) => {
                 const stream = conn.queryStream(sql, binds, {
-                    outFormat: self.db.oracledb.OUT_FORMAT_OBJECT,
+                    outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 });
                 stream.on("data", (row) => {
                     if (proj.isExclusion && proj.excludedCols.length > 0) {

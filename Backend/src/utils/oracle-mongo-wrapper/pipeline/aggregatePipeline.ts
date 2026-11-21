@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 "use strict";
 
 /**
@@ -713,7 +714,8 @@ function _buildAddFieldsCols(addFields, counter) {
  */
 function _buildLateralSub(lj, prevSource) {
   if (lj.subquery && typeof lj.subquery._buildSQL === "function") {
-    let { sql, binds } = lj.subquery._buildSQL();
+    const { sql: builtSql, binds } = lj.subquery._buildSQL();
+    let sql = builtSql;
     // Post-process: replace bind variables whose values start with "$outer."
     // with direct column references to the outer table (prevSource)
     for (const [key, val] of Object.entries(binds)) {

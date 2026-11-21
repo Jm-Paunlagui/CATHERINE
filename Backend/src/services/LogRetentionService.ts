@@ -1,3 +1,4 @@
+// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 "use strict";
 const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
 

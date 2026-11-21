@@ -1,5 +1,6 @@
 const js = require("@eslint/js");
 const globals = require("globals");
+const tseslint = require("typescript-eslint");
 const { defineConfig, globalIgnores } = require("eslint/config");
 
 module.exports = defineConfig([
@@ -7,9 +8,7 @@ module.exports = defineConfig([
   globalIgnores(["dist", "coverage", "node_modules"]),
 
   // BLOCK 1 — base: all .js/.ts (src + server.js + root configs).
-  // src/ is mid-migration to TypeScript: files are renamed .ts but still plain
-  // CommonJS JS, so espree parses them. Add typescript-eslint before the first
-  // type annotation lands.
+  // BLOCK 1b below layers the TypeScript parser and rules onto the .ts files.
   {
     files: ["**/*.{js,ts}"],
     extends: [js.configs.recommended],
@@ -34,6 +33,34 @@ module.exports = defineConfig([
           ignoreRestSiblings: true,
         },
       ],
+    },
+  },
+
+  // BLOCK 1b — TypeScript (src/**/*.ts). The TS parser replaces espree here and
+  // typescript-eslint's recommended set turns off core rules tsc already covers.
+  // Not type-aware yet (no parserOptions.projectService): most files are still
+  // @ts-nocheck, so type-checked rules would only report `any` noise.
+  {
+    files: ["**/*.ts"],
+    extends: [tseslint.configs.recommended],
+    rules: {
+      // The core rule misreads type-only names; use the TS rule with the same options.
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          varsIgnorePattern: "^[A-Z_]",
+          argsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
+      // MIGRATION: unconverted files carry `// @ts-nocheck` (see tsconfig.json).
+      // Turn this back on (default options) once no file has it.
+      "@typescript-eslint/ban-ts-comment": ["error", { "ts-nocheck": false }],
+      // MIGRATION: src is still CommonJS. Turn on when require() is replaced
+      // by import across src.
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
 
