@@ -76,6 +76,35 @@ interface ProjectionSubquery {
     filter?: Record<string, unknown>;
 }
 
+/** Lock options accepted by {@link QueryBuilder.forUpdate}. */
+type ForUpdateOptions = { of?: string[]; wait?: number; nowait?: boolean; skipLocked?: boolean };
+type ForUpdateMode = boolean | "nowait" | "skip locked" | ForUpdateOptions;
+
+/**
+ * The FOR UPDATE clause for a lock mode. Throws on an unknown mode so a typo
+ * ("no wait") fails loudly instead of silently waiting forever. Column names
+ * in `of` are quoted identifiers; `wait` must be a whole number of seconds.
+ */
+function _forUpdateClause(mode: unknown): string {
+    if (mode === true) return " FOR UPDATE";
+    if (mode === "nowait") return " FOR UPDATE NOWAIT";
+    if (mode === "skip locked") return " FOR UPDATE SKIP LOCKED";
+    if (!mode || typeof mode !== "object" || Array.isArray(mode)) {
+        throw new TypeError(MSG.FOR_UPDATE_INVALID_MODE(mode));
+    }
+    const { of, wait, nowait, skipLocked } = mode as ForUpdateOptions;
+    const waits = [wait !== undefined, nowait === true, skipLocked === true].filter(Boolean).length;
+    const ofOk = of === undefined || (Array.isArray(of) && of.length > 0 && of.every((c) => typeof c === "string" && c !== ""));
+    const waitOk = wait === undefined || (Number.isInteger(wait) && wait >= 0);
+    if (waits > 1 || !ofOk || !waitOk) throw new TypeError(MSG.FOR_UPDATE_INVALID_MODE(mode));
+    let clause = " FOR UPDATE";
+    if (of) clause += ` OF ${of.map((c) => `t0.${quoteIdentifier(c)}`).join(", ")}`;
+    if (wait !== undefined) clause += ` WAIT ${wait}`;
+    else if (nowait) clause += " NOWAIT";
+    else if (skipLocked) clause += " SKIP LOCKED";
+    return clause;
+}
+
 class QueryBuilder {
     declare _terminated: boolean;
     declare _asOf: any;
@@ -191,15 +220,25 @@ class QueryBuilder {
      * Used inside transactions to prevent other sessions from modifying
      * the rows you're reading until you commit/rollback.
      *
-     * @param {boolean|string} mode
-     *   - true         → FOR UPDATE (wait indefinitely for lock)
-     *   - "nowait"     → FOR UPDATE NOWAIT (fail immediately if locked)
+     * Combined with .limit()/.skip() (and .next()/.hasNext(), which set
+     * limit 1), the page is chosen in a ROWID subquery and the outer query
+     * takes the lock: Oracle rejects FETCH FIRST together with FOR UPDATE
+     * (ORA-02014). With "skip locked" a page can then return FEWER rows than
+     * the limit (locked rows inside the page are skipped, not replaced).
+     *
+     * @param {boolean|string|Object} mode
+     *   - true          → FOR UPDATE (wait indefinitely for lock)
+     *   - "nowait"      → FOR UPDATE NOWAIT (fail immediately if locked)
      *   - "skip locked" → FOR UPDATE SKIP LOCKED (skip locked rows)
+     *   - { of?: string[], wait?: number, nowait?: boolean, skipLocked?: boolean }
+     *       of:   lock only these columns' table (FOR UPDATE OF t0."COL", ...)
+     *       wait: seconds to wait before ORA-30006 (FOR UPDATE WAIT n)
+     *       at most one of wait / nowait / skipLocked
      * @returns {QueryBuilder} this (for chaining)
      */
-    forUpdate(mode: boolean | string): QueryBuilder {
+    forUpdate(mode: ForUpdateMode): QueryBuilder {
         this._checkTerminated();
-        this._forUpdate = mode === true ? true : mode;
+        this._forUpdate = mode === false ? null : (_forUpdateClause(mode), mode);
         return this;
     }
 
@@ -311,36 +350,30 @@ class QueryBuilder {
             tableRef = `${quoteIdentifier(this.tableName)} SAMPLE(${pct})${seedStr} t0`;
         }
 
-        let sql = `SELECT ${selectCols} FROM ${tableRef}`;
+        const orderBy = this._sort ? ` ${buildOrderBy(this._sort)}` : "";
+        let paging = "";
+        if (this._skip != null) paging += ` OFFSET ${Number(this._skip)} ROWS`;
+        if (this._limit != null) paging += ` FETCH FIRST ${Number(this._limit)} ROWS ONLY`;
+        const where = whereClause ? ` ${whereClause}` : "";
 
-        if (whereClause) sql += ` ${whereClause}`;
-
-        // ORDER BY
-        if (this._sort) {
-            sql += ` ${buildOrderBy(this._sort)}`;
+        if (!this._forUpdate) {
+            return { sql: `SELECT ${selectCols} FROM ${tableRef}${where}${orderBy}${paging}`, binds };
         }
 
-        // OFFSET
-        if (this._skip != null) {
-            sql += ` OFFSET ${Number(this._skip)} ROWS`;
+        const lock = _forUpdateClause(this._forUpdate);
+        if (!paging) {
+            return { sql: `SELECT ${selectCols} FROM ${tableRef}${where}${orderBy}${lock}`, binds };
         }
 
-        // LIMIT
-        if (this._limit != null) {
-            sql += ` FETCH FIRST ${Number(this._limit)} ROWS ONLY`;
-        }
-
-        // FOR UPDATE
-        if (this._forUpdate) {
-            if (this._forUpdate === "nowait") {
-                sql += " FOR UPDATE NOWAIT";
-            } else if (this._forUpdate === "skip locked") {
-                sql += " FOR UPDATE SKIP LOCKED";
-            } else {
-                sql += " FOR UPDATE";
-            }
-        }
-
+        // Oracle rejects FETCH FIRST / OFFSET together with FOR UPDATE
+        // (ORA-02014): pick the page's ROWIDs in a subquery, lock in the outer
+        // query. The filter is repeated outside so a row changed between the
+        // pick and the lock is re-checked (Oracle re-evaluates the outer
+        // predicate on a locked row it had to wait for). A repeated named
+        // bind resolves to the one value, so `binds` is unchanged.
+        const page = `SELECT t0.ROWID FROM ${tableRef}${where}${orderBy}${paging}`;
+        const outerWhere = whereClause ? `${whereClause} AND` : "WHERE";
+        const sql = `SELECT ${selectCols} FROM ${tableRef} ${outerWhere} t0.ROWID IN (${page})${orderBy}${lock}`;
         return { sql, binds };
     }
 
@@ -558,9 +591,11 @@ class QueryBuilder {
 
         const fn = async (conn: any) => {
             try {
+                // Never commit on a session connection: that would end the
+                // caller's transaction and release its row locks mid-flight.
                 const result = await conn.execute(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
-                    autoCommit: true,
+                    autoCommit: !this._conn,
                 });
                 return Number(result.rows[0].CNT);
             } catch (err) {

@@ -122,6 +122,10 @@ const oracleMongoWrapperMessages = {
     `[updateParser] Unsupported update operator: ${op}`,
   UPDATE_NO_OPERATOR:
     "[updateParser] Update object must contain at least one operator ($set, $inc, etc.).",
+  UPDATE_CURRENT_DATE_INVALID: (field: unknown) =>
+    `[updateParser] $currentDate.${field} must be true, { $type: "date" } or { $type: "timestamp" }.`,
+  FOR_UPDATE_INVALID_MODE: (mode: unknown) =>
+    `[QueryBuilder.forUpdate] Invalid lock mode: ${typeof mode === "string" ? `"${mode}"` : typeof mode}. Use true, "nowait", "skip locked" or { of?: string[], wait?: number, nowait?: boolean, skipLocked?: boolean }.`,
   QUERY_BUILDER_CHAIN_AFTER_TERMINAL:
     "Cannot chain after terminal method has been called.",
   INSERT_MANY_EMPTY:

@@ -31,8 +31,9 @@
  *   │              │ { $min: { score: 50 } } → "score" = LEAST("score", :val)│
  *   │ $max         │ Set to the GREATER of current value and given value     │
  *   │              │ { $max: { score: 100 } } → GREATEST("score", :val)      │
- *   │ $currentDate │ Set a field to the current date/time (SYSDATE)          │
+ *   │ $currentDate │ Set a field to the current date/time                    │
  *   │              │ { $currentDate: { updatedAt: true } } → SYSDATE         │
+ *   │              │ { $type: "timestamp" } → SYSTIMESTAMP (keeps fractions) │
  *   │ $rename      │ NOT SUPPORTED by Oracle — throws an error               │
  *   └──────────────┴──────────────────────────────────────────────────────────┘
  *
@@ -170,8 +171,20 @@ function parseUpdate(update: Record<string, any>): { setClause: string; binds: R
       }
     } else if (op === "$currentDate") {
       hasOp = true;
-      for (const field of Object.keys(fields)) {
-        parts.push(`${quoteIdentifier(field)} = SYSDATE`);
+      // MongoDB semantics: `true` / { $type: "date" } stamp a DATE (SYSDATE,
+      // whole seconds); { $type: "timestamp" } stamps SYSTIMESTAMP so a
+      // TIMESTAMP(n) column keeps its fractional seconds. SYSDATE into a
+      // TIMESTAMP column silently stores .000000.
+      for (const [field, spec] of Object.entries(fields)) {
+        const type =
+          spec === true
+            ? "date"
+            : spec && typeof spec === "object" && "$type" in spec
+              ? (spec as { $type: unknown }).$type
+              : undefined;
+        if (type === "date") parts.push(`${quoteIdentifier(field)} = SYSDATE`);
+        else if (type === "timestamp") parts.push(`${quoteIdentifier(field)} = SYSTIMESTAMP`);
+        else throw new Error(MSG.UPDATE_CURRENT_DATE_INVALID(field));
       }
     } else if (op === "$rename") {
       throw new Error(MSG.UPDATE_RENAME_NOT_SUPPORTED);

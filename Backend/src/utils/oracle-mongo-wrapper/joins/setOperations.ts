@@ -177,9 +177,11 @@ class SetResultBuilder {
 
     const exec = async (connection: any) => {
       try {
+        // On a session connection, committing would end the caller's
+        // transaction (and release its locks); only a pooled conn commits.
         const result = await connection.execute(sql, binds, {
           outFormat: db.oracledb.OUT_FORMAT_OBJECT,
-          autoCommit: true,
+          autoCommit: !conn,
         });
         return result.rows || [];
       } catch (err) {

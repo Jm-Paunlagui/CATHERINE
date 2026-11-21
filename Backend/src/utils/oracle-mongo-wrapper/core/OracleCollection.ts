@@ -195,7 +195,7 @@ class OracleCollection {
     async findOne<T = Record<string, unknown>>(filter: Record<string, unknown>, _options: Record<string, unknown> = {}): Promise<T | null> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
-            const sql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
+            const sql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} FETCH FIRST 1 ROW ONLY`;
             try {
                 const result = await conn.execute(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
@@ -234,7 +234,7 @@ class OracleCollection {
     async findOneAndUpdate<T = Record<string, unknown>>(filter: Record<string, unknown>, update: Record<string, unknown>, options: Record<string, unknown> = {}): Promise<T | null> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
-            const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
+            const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} FETCH FIRST 1 ROW ONLY`;
 
             // Fast path: MERGE-based atomic upsert (saves one round-trip)
             // Applies when: upsert + returnDocument:"after" + simple equality filter
@@ -367,7 +367,7 @@ class OracleCollection {
             // Build update
             const { setClause, binds: updateBinds } = parseUpdate(update);
             const allBinds = mergeBinds(filterBinds, updateBinds);
-            const updateSql = `UPDATE ${quoteIdentifier(this.tableName)} ${setClause} ${whereClause}`;
+            const updateSql = `UPDATE ${quoteIdentifier(this.tableName)} t0 ${setClause} ${whereClause}`;
 
             try {
                 await conn.execute(updateSql, allBinds, {
@@ -389,7 +389,7 @@ class OracleCollection {
                     beforeDoc.ID != null ? { ID: beforeDoc.ID } : filter;
                 const { whereClause: afterWhere, binds: afterBinds } =
                     parseFilter(afterFilter);
-                const afterSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${afterWhere} FETCH FIRST 1 ROW ONLY`;
+                const afterSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${afterWhere} FETCH FIRST 1 ROW ONLY`;
                 const afterResult = await conn.execute(afterSql, afterBinds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 });
@@ -473,7 +473,7 @@ class OracleCollection {
     async findOneAndReplace<T = Record<string, unknown>>(filter: Record<string, unknown>, replacement: Record<string, unknown>, options: Record<string, unknown> = {}): Promise<T | null> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
-            const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
+            const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} FETCH FIRST 1 ROW ONLY`;
 
             const found = await conn.execute(selectSql, filterBinds, {
                 outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
@@ -492,7 +492,7 @@ class OracleCollection {
             });
 
             const allBinds = mergeBinds(filterBinds, replBinds);
-            const updateSql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} ${whereClause}`;
+            const updateSql = `UPDATE ${quoteIdentifier(this.tableName)} t0 SET ${setParts.join(", ")} ${whereClause}`;
 
             try {
                 await conn.execute(updateSql, allBinds, {
@@ -512,7 +512,7 @@ class OracleCollection {
                 const afterFilter =
                     beforeDoc.ID != null ? { ID: beforeDoc.ID } : filter;
                 const { whereClause: aw, binds: ab } = parseFilter(afterFilter);
-                const afterSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${aw} FETCH FIRST 1 ROW ONLY`;
+                const afterSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${aw} FETCH FIRST 1 ROW ONLY`;
                 const afterResult = await conn.execute(afterSql, ab, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 });
@@ -538,7 +538,7 @@ class OracleCollection {
     async countDocuments(filter: Record<string, unknown> = {}): Promise<number> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
-            const sql = `SELECT COUNT(*) AS CNT FROM ${quoteIdentifier(this.tableName)} ${whereClause}`;
+            const sql = `SELECT COUNT(*) AS CNT FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause}`;
             try {
                 const result = await conn.execute(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
@@ -617,7 +617,7 @@ class OracleCollection {
     async distinct(field: string, filter: Record<string, unknown> = {}): Promise<Array<unknown>> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
-            const sql = `SELECT DISTINCT ${quoteIdentifier(field)} FROM ${quoteIdentifier(this.tableName)} ${whereClause}`;
+            const sql = `SELECT DISTINCT ${quoteIdentifier(field)} FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause}`;
             try {
                 const result = await conn.execute(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
@@ -1115,7 +1115,7 @@ class OracleCollection {
             }
 
             const finalBinds = { ...allBinds, ...outBinds };
-            const sql = `UPDATE ${quoteIdentifier(this.tableName)} ${setClause} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} ${whereClause} AND ROWNUM = 1)${returningSql}`;
+            const sql = `UPDATE ${quoteIdentifier(this.tableName)} ${setClause} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} AND ROWNUM = 1)${returningSql}`;
 
             try {
                 const result = await conn.execute(sql, finalBinds, {
@@ -1200,7 +1200,7 @@ class OracleCollection {
             const { setClause, binds: updateBinds } = parseUpdate(update);
             const allBinds = mergeBinds(filterBinds, updateBinds);
 
-            const sql = `UPDATE ${quoteIdentifier(this.tableName)} ${setClause} ${whereClause}`;
+            const sql = `UPDATE ${quoteIdentifier(this.tableName)} t0 ${setClause} ${whereClause}`;
             try {
                 const result = await conn.execute(sql, allBinds, {
                     autoCommit: !this._conn,
@@ -1254,7 +1254,7 @@ class OracleCollection {
             });
 
             const allBinds = mergeBinds(filterBinds, replBinds);
-            const sql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} ${whereClause} AND ROWNUM = 1)`;
+            const sql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} AND ROWNUM = 1)`;
 
             try {
                 const result = await conn.execute(sql, allBinds, {
@@ -1399,7 +1399,7 @@ class OracleCollection {
             }
 
             const allBinds = { ...binds, ...outBinds };
-            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} ${whereClause} AND ROWNUM = 1)${returningSql}`;
+            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} AND ROWNUM = 1)${returningSql}`;
 
             try {
                 const result = await conn.execute(sql, allBinds, {
@@ -1449,7 +1449,7 @@ class OracleCollection {
     async deleteMany(filter: Record<string, unknown>): Promise<{ acknowledged: boolean; deletedCount: number;  }> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
-            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} ${whereClause}`;
+            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause}`;
             try {
                 const result = await conn.execute(sql, binds, {
                     autoCommit: !this._conn,
@@ -1771,8 +1771,12 @@ class OracleCollection {
 
             let whenMatchedDeleteSql = "";
             if (options.whenMatchedDelete) {
+                // "tgt" is the MERGE target alias, so a correlated $exists in
+                // the DELETE WHERE references the target row (the default "t0"
+                // does not exist in a MERGE and fails with ORA-00904).
                 const { whereClause, binds: delBinds } = parseFilter(
                     options.whenMatchedDelete,
+                    "tgt",
                 );
                 Object.assign(srcBinds, delBinds);
                 const delWhere = whereClause.replace(/^WHERE\s+/i, "");
