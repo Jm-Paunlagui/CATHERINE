@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -45,6 +44,7 @@ import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger";
 import { cacheMessages } from "../../constants/messages/cache.messages";
 import { currentScope } from "../../utils/progress/progress";
+import type { ProgressScope } from "../../utils/progress/ProgressScope";
 
 class CacheMiddleware {
   // ─── Read-through (cache-aside) ───────────────────────────────────────────
@@ -59,7 +59,8 @@ class CacheMiddleware {
    *
    * @type {Map<string, Promise<void>>}
    */
-  static _inflight: Map<string, Promise<void>> = new Map();
+  /** In-flight leader per key; its progress scope rides on the promise so followers can follow it. */
+  static _inflight: Map<string, Promise<void> & { scope?: ProgressScope }> = new Map();
 
   /**
    * Returns an Express middleware that:
@@ -182,8 +183,8 @@ class CacheMiddleware {
           // ourselves, becoming the leader below.
         }
 
-        let settle: any;
-        const flight = new Promise((resolve) => {
+        let settle!: () => void; // assigned synchronously by the executor
+        const flight: Promise<void> & { scope?: ProgressScope } = new Promise<void>((resolve) => {
           settle = resolve;
         });
         // The leader's scope rides on the promise object (value stays a

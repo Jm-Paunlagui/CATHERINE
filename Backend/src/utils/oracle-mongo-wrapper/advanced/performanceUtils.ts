@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -37,6 +36,7 @@
  * ============================================================================
  */
 
+import type { QueryBuilder } from "../core/QueryBuilder";
 import { quoteIdentifier } from "../utils";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
@@ -55,9 +55,9 @@ const PRIVILEGE_ERROR_CODES = [1031, 942, 1039, 1219, 12003];
  * @param {string} sql - SQL that was attempted
  * @param {string} requiredPrivilege - Description of the required privilege
  */
-function _wrapPrivilegeError(method: string, err: Error, sql: string, requiredPrivilege: string) {
+function _wrapPrivilegeError(method: string, err: Error & { errorNum?: number; code?: string }, sql: string, requiredPrivilege: string) {
   const code = err.errorNum || err.code;
-  if (PRIVILEGE_ERROR_CODES.includes(code)) {
+  if (typeof code === "number" && PRIVILEGE_ERROR_CODES.includes(code)) {
     throw new Error(
       MSG.INSUFFICIENT_PRIVILEGES(method, requiredPrivilege, err, sql),
     );
@@ -155,7 +155,7 @@ function createPerformance(db: Record<string, any>): Record<string, any> {
      * @param {Object} [options] - refreshMode, refreshOn, buildMode, orReplace
      * @returns {Promise<{ acknowledged: boolean }>}
      */
-    async createMaterializedView(name: string, queryBuilderOrSQL: QueryBuilder | string, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; }> {
+    async createMaterializedView(name: string, queryBuilderOrSQL: QueryBuilder | string, options: { refreshMode?: "fast" | "complete" | "force"; refreshOn?: "commit" | "demand"; buildMode?: "immediate" | "deferred"; orReplace?: boolean } = {}): Promise<{ acknowledged: boolean; }> {
       return db.withConnection(async (conn: any) => {
         let selectSql;
         let binds: Record<string, any> = {};

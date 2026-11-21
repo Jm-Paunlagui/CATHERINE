@@ -191,7 +191,7 @@ class AdminManagementService {
      * @throws {AppError} 403 AuthorizationError
      * @private
      */
-    static _assertCanManage(caller: { username: string; role: string; } | null | undefined, action: 'create' | 'changeRole' | 'resetPassword' | 'resetSignature', { target = null, targetRole = null, newRole = null }: { target?: string | null; targetRole?: string | null; newRole?: string | null; } = {}) {
+    static _assertCanManage(caller: { username: string; role: string | undefined; } | null | undefined, action: 'create' | 'changeRole' | 'resetPassword' | 'resetSignature', { target = null, targetRole = null, newRole = null }: { target?: string | null; targetRole?: string | null; newRole?: string | null; } = {}) {
         const callerRole = caller?.role ?? null;
         if (callerRole === "SUPER_ADMIN") return;
 
@@ -361,7 +361,7 @@ class AdminManagementService {
      * @returns {Promise<object>} `{ username, role, emailDelivered, recipientSource, recipientHint, tempPasswordExpiresAt }`
      * @throws {AppError} 400 | 403 | 409 | 422 | 503
      */
-    static async addAdmin({ username, role, caller, overrideEmail, retainPassword, newPassword, flags }: { username: string; role: string; caller: { username: string; role: string; }; overrideEmail?: string; retainPassword?: any; newPassword?: any; flags?: Record<string, any>; }): Promise<Record<string, any>> {
+    static async addAdmin({ username, role, caller, overrideEmail, retainPassword, newPassword, flags }: { username: string; role: string; caller: { username: string; role: string | undefined; }; overrideEmail?: string; retainPassword?: any; newPassword?: any; flags?: Record<string, any>; }): Promise<Record<string, any>> {
         AdminManagementService._validateRole(role);
 
         if (retainPassword !== undefined || newPassword !== undefined) {
@@ -513,7 +513,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string, role: string }>}
      * @throws {AppError} 400 | 403 | 404 | 409 | 422
      */
-    static async updateAdmin({ username, role, caller, changePassword, newPassword }: { username: string; role: string; caller: { username: string; role: string; }; changePassword?: boolean; newPassword?: any; }): Promise<{ username: string; role: string; }> {
+    static async updateAdmin({ username, role, caller, changePassword, newPassword }: { username: string; role: string; caller: { username: string; role: string | undefined; }; changePassword?: boolean; newPassword?: any; }): Promise<{ username: string; role: string; }> {
         AdminManagementService._validateRole(role);
 
         if (changePassword === true || newPassword !== undefined) {
@@ -572,7 +572,7 @@ class AdminManagementService {
      * @returns {Promise<object>}
      * @throws {AppError} 400 | 403 | 404 | 422 | 503
      */
-    static async resetPassword(username: string, { overrideEmail, caller }: { overrideEmail?: string; caller?: { username: string; role: string; }; } = {}): Promise<Record<string, any>> {
+    static async resetPassword(username: string, { overrideEmail, caller }: { overrideEmail?: string; caller?: { username: string; role: string | undefined; }; } = {}): Promise<Record<string, any>> {
         const existing = await AdminManagementService._fetchAndVerify(username);
 
         AdminManagementService._assertCanManage(caller, "resetPassword", {
@@ -624,7 +624,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string }>}
      * @throws {AppError} 403 | 404
      */
-    static async resetSignature(username: string, { caller }: { caller?: { username: string; role: string; }; } = {}): Promise<{ username: string; }> {
+    static async resetSignature(username: string, { caller }: { caller?: { username: string; role: string | undefined; }; } = {}): Promise<{ username: string; }> {
         AdminManagementService._assertCanManage(caller, "resetSignature", { target: username });
 
         const existing = await AdminModel.findByUsername(username);

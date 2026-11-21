@@ -83,7 +83,7 @@ class CacheStore {
    * @param {number} [ttl]  - Per-entry override in seconds. Omit to use the store default.
    * @returns {boolean}
    */
-  set(key: string, value: any, ttl: number): boolean {
+  set(key: string, value: any, ttl?: number): boolean {
     return ttl !== undefined
       ? this._store.set(key, value, ttl)
       : this._store.set(key, value);
@@ -194,7 +194,7 @@ class CacheStore {
    * @param {number}            [ttl]   - Per-entry TTL override.
    * @returns {Promise<*>}
    */
-  async getOrSet(key: string, loader: () => Promise<any>, ttl: number): Promise<any> {
+  async getOrSet(key: string, loader: () => Promise<any>, ttl?: number): Promise<any> {
     const cached = this.get(key);
     if (cached !== undefined) return cached;
 

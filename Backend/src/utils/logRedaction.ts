@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -170,7 +169,7 @@ function pseudonymize(klass: string, value: string | number): string {
         .update(`${klass}:${value}`)
         .digest("hex")
         .slice(0, 10);
-    return `${TOKEN_PREFIX[klass] || "usr_"}${digest}`;
+    return `${(TOKEN_PREFIX as Record<string, string>)[klass] || "usr_"}${digest}`;
 }
 
 /**
@@ -206,8 +205,11 @@ function replaceTail(match: string, digits: string, klass: string): string {
  * maskEmail("johndoe@example.com"); // "j******@example.com"
  * maskEmail(["a@example.com", "bee@example.com"]); // ["a*@example.com", "b**@example.com"]
  */
+function maskEmail(email: string): string;
+function maskEmail(email: string[]): string[];
+function maskEmail(email: string | string[]): string | string[];
 function maskEmail(email: string | string[]): string | string[] {
-    if (Array.isArray(email)) return email.map(maskEmail);
+    if (Array.isArray(email)) return email.map((e) => maskEmail(e));
     const str = String(email ?? "");
     const at = str.indexOf("@");
     if (at <= 0) return "***";
@@ -229,8 +231,8 @@ function maskEmail(email: string | string[]): string | string[] {
  *   is no match).
  */
 function scrubString(str: string): string {
-    return str.replace(IDENTIFIER_RE, (match, ...rest) => {
-        const groups = rest[rest.length - 1];
+    return str.replace(IDENTIFIER_RE, (match: string, ...rest: unknown[]) => {
+        const groups = rest[rest.length - 1] as Record<string, string | undefined>;
         if (groups.gidList !== undefined) {
             const prefix = match.slice(
                 0,
@@ -279,7 +281,7 @@ const IDENTIFIER_KEYS = Object.freeze({
 
 /** @returns {string|undefined} The hash class for an identifier-named key. */
 function identifierClassOf(key: any): string | undefined {
-    return IDENTIFIER_KEYS[String(key).toLowerCase().replace(/[_-]/g, "")];
+    return (IDENTIFIER_KEYS as Record<string, string>)[String(key).toLowerCase().replace(/[_-]/g, "")];
 }
 
 /**
@@ -287,7 +289,7 @@ function identifierClassOf(key: any): string | undefined {
  * Digit strings and integers only; anything else goes through the normal
  * scrub (arrays element by element).
  */
-function scrubIdentifierValue(value: any, klass: any, state: any, depth: any) {
+function scrubIdentifierValue(value: any, klass: any, state: any, depth: any): unknown {
     if (typeof value === "number" && Number.isInteger(value) && value >= 10) {
         return pseudonymize(klass, String(value));
     }
@@ -355,7 +357,7 @@ function scrubOverBudget(value: any): any {
 function scrubInstance(value: any, state: any, depth: any) {
     const copy = Object.create(Object.getPrototypeOf(value));
     if (value instanceof Error) {
-        for (const key of ["message", "stack"]) {
+        for (const key of ["message", "stack"] as const) {
             if (typeof value[key] === "string") {
                 Object.defineProperty(copy, key, {
                     value: scrubString(value[key]),

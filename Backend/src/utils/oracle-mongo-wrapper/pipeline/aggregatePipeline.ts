@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -264,7 +263,7 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
       case "$facet": {
         // Each facet pipeline is a separate CTE, union all at end
         const facetCtes = [];
-        for (const [facetName, facetPipeline] of Object.entries(stage.$facet)) {
+        for (const [facetName, facetPipeline] of Object.entries(stage.$facet as Record<string, unknown[]>)) {
           const { sql } = buildAggregateSQL(
             prevSource.replace(/"/g, ""),
             facetPipeline,
@@ -399,7 +398,7 @@ function _buildGroup(group: Record<string, any>, source: string, having: Record<
         return quoteIdentifier(set);
       });
       // Collect all unique columns
-      const allCols = new Set();
+      const allCols = new Set<string>();
       idSpec.$groupingSets.forEach((set: any) => {
         if (Array.isArray(set)) set.forEach((c) => allCols.add(c));
         else if (set) allCols.add(set);
@@ -619,7 +618,7 @@ function _buildCondExpr(cond: any, binds: any, counter: any) {
     for (const [field, ops] of Object.entries(cond)) {
       const fref = _fieldRef(field.startsWith("$") ? field : `$${field}`);
       if (typeof ops === "object") {
-        for (const [op, val] of Object.entries(ops)) {
+        for (const [op, val] of Object.entries(ops as Record<string, unknown>)) {
           const bname = counter.next("cond");
           binds[bname] = val;
           const sqlOp =
@@ -675,7 +674,7 @@ function _buildProjectCols(project: any, counter: any) {
         `${quoteIdentifier(spec.substring(1))} AS ${quoteIdentifier(col.toUpperCase())}`,
       );
     } else if (typeof spec === "object") {
-      const expr = _buildAggExpr(spec, binds, counter);
+      const expr = _buildAggExpr(spec as Record<string, unknown>, binds, counter);
       parts.push(`${expr} AS ${quoteIdentifier(col.toUpperCase())}`);
     }
   }
@@ -691,7 +690,7 @@ function _buildAddFieldsCols(addFields: any, counter: any) {
   const parts = [];
   for (const [alias, spec] of Object.entries(addFields)) {
     if (typeof spec === "object") {
-      const expr = _buildAggExpr(spec, binds, counter);
+      const expr = _buildAggExpr(spec as Record<string, unknown>, binds, counter);
       parts.push(`${expr} AS ${quoteIdentifier(alias.toUpperCase())}`);
     } else if (typeof spec === "string" && spec.startsWith("$")) {
       parts.push(
@@ -739,7 +738,7 @@ function _buildLateralSub(lj: any, prevSource: any) {
  */
 function _buildMergeStage(merge: any, source: any) {
   const into = quoteIdentifier(merge.into);
-  const onCols = Object.entries(merge.on)
+  const onCols = Object.entries(merge.on as Record<string, string>)
     .map(([l, r]) => `tgt.${quoteIdentifier(l)} = src.${quoteIdentifier(r)}`)
     .join(" AND ");
   return `MERGE INTO ${into} tgt USING (SELECT * FROM ${source}) src ON (${onCols}) WHEN MATCHED THEN UPDATE SET tgt.updated = SYSDATE WHEN NOT MATCHED THEN INSERT VALUES (src.*)`;
@@ -785,7 +784,7 @@ function _buildBucket(bucket: any, source: any, counter: any) {
   const selectParts = [`${bucketExpr} AS bucket`];
 
   if (output) {
-    for (const [alias, agg] of Object.entries(output)) {
+    for (const [alias, agg] of Object.entries(output as Record<string, Record<string, unknown>>)) {
       const aggSql = _buildAggExpr(agg, binds, counter);
       selectParts.push(`${aggSql} AS ${quoteIdentifier(alias.toUpperCase())}`);
     }

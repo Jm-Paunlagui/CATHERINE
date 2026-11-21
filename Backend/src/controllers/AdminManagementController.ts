@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -12,7 +11,7 @@
 import type { Request, Response } from "express";
 import net from "net";
 import { HTTP_STATUS } from "../constants";
-import { AppError, ADMIN_ERRORS } from "../constants/errors";
+import { AppError, ADMIN_ERRORS, AUTH_ERRORS } from "../constants/errors";
 import { sendSuccess, RESPONSE_MESSAGES } from "../constants/responses";
 import { catchAsync } from "../utils/catchAsync";
 import AdminManagementService from "../services/AdminManagementService";
@@ -45,9 +44,17 @@ const _caller = (req: import('express').Request): { username: string; role: stri
  * Numeric id of the acting admin — what backup tokens are bound to.
  *
  * @param {import('express').Request} req
- * @returns {number|string|undefined}
+ * Every route here runs after AuthMiddleware.authenticate, so the id is always
+ * present; a missing one is refused rather than bound into a backup token.
+ *
+ * @returns {number|string}
+ * @throws {AppError} 401 when the request carries no authenticated admin
  */
-const _actorId = (req: import('express').Request): number | string | undefined => req.user?.id ?? req.user?.userId;
+const _actorId = (req: import('express').Request): number | string => {
+    const id = req.user?.id ?? req.user?.userId;
+    if (id === undefined) throw new AppError(AUTH_ERRORS.AUTHENTICATION_REQUIRED, HTTP_STATUS.UNAUTHORIZED);
+    return id;
+};
 
 class AdminManagementController {
     /**

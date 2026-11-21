@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -44,25 +43,30 @@ class ClusterSupervisor {
     static SIGNALS = Object.freeze(["SIGTERM", "SIGINT", "SIGBREAK"]);
 
     /** @type {Map<number, object>} live workers by id */
-    #live: Map<number, Record<string, any>> = new Map();
+    #live: Map<number, import("cluster").Worker> = new Map();
     /** @type {Map<number, string>} worker.id -> "true" | "false" (CRON_LEADER env) */
     #workerLeaderEnv: Map<number, string> = new Map();
     /** @type {Map<ReturnType<typeof setTimeout>, boolean>} pending respawn timer -> wasLeader */
     #pendingRespawns: Map<ReturnType<typeof setTimeout>, boolean> = new Map();
     /** @type {Set<number>} workers that emitted `listening` (past boot) */
     #listening: Set<number> = new Set();
-    #cronLeaderId = null;
+    #cronLeaderId: number | null = null;
     #stopping = false;
     #fatal = false;
     #maxExitCode = 0;
     #minExitCode = 0;
     /** @type {number[]} timestamps of recent worker exits */
     #exitTimes: number[] = [];
-    #failsafeTimer = null;
+    #failsafeTimer: NodeJS.Timeout | null = null;
+
+    /** The live cron-leader worker, if one is elected and alive. */
+    #leaderWorker(): import("cluster").Worker | undefined {
+        return this.#cronLeaderId === null ? undefined : this.#live.get(this.#cronLeaderId);
+    }
     #started = false;
     #finished = false;
     declare _runId: string;
-    declare _rpcHub: import("./ClusterRpcHub").ClusterRpcHub;
+    declare _rpcHub: import("./ClusterRpcHub").ClusterRpcHub | null;
     declare _now: () => number;
     declare _process: NodeJS.EventEmitter & { exit: ((...args: any[]) => any); pid?: number; };
     declare _clusterRole: { electionHealth: ((...args: any[]) => any); cronLeaderEnv: ((...args: any[]) => any); };
@@ -101,7 +105,7 @@ class ClusterSupervisor {
         now = Date.now,
         rpcHub = null,
         runId = crypto.randomUUID(),
-    }: { cluster: import("cluster").Cluster; numWorkers: number; forcedExitMs: number; marginMs: number; logger: Record<string, any>; notifyCritical: (message: string) => Promise<any>; clusterRole: { electionHealth: ((...args: any[]) => any); cronLeaderEnv: ((...args: any[]) => any); }; processRef?: NodeJS.EventEmitter & { exit: ((...args: any[]) => any); pid?: number; }; now?: () => number; rpcHub?: import("./ClusterRpcHub").ClusterRpcHub; runId?: string; }) {
+    }: { cluster: import("cluster").Cluster; numWorkers: number; forcedExitMs: number; marginMs: number; logger: Record<string, any>; notifyCritical: (message: string) => Promise<any>; clusterRole: { electionHealth: ((...args: any[]) => any); cronLeaderEnv: ((...args: any[]) => any); }; processRef?: NodeJS.EventEmitter & { exit: ((...args: any[]) => any); pid?: number; }; now?: () => number; rpcHub?: import("./ClusterRpcHub").ClusterRpcHub | null; runId?: string; }) {
         this._cluster = cluster;
         this._numWorkers = numWorkers;
         this._forcedExitMs = forcedExitMs;
@@ -137,7 +141,7 @@ class ClusterSupervisor {
 
     /** @returns {object|null} the live cron-leader worker, or null */
     getLeader(): Record<string, any> | null {
-        return this.#live.get(this.#cronLeaderId) ?? null;
+        return this.#leaderWorker() ?? null;
     }
 
     /**
@@ -236,7 +240,7 @@ class ClusterSupervisor {
         const log = this._logger;
         const { leaderCount, severity } = this._clusterRole.electionHealth([...this.#workerLeaderEnv.values()]);
         if (severity !== "critical") {
-            const leaderPid = this.#live.get(this.#cronLeaderId)?.process?.pid;
+            const leaderPid = this.#leaderWorker()?.process?.pid;
             log.notice(middlewareMessages.CRON_LEADER_ELECTED(this.#cronLeaderId, leaderPid, context));
         } else if (leaderCount === 0) {
             log.critical(middlewareMessages.CRON_LEADER_NONE_ELECTED(context));
@@ -325,7 +329,7 @@ class ClusterSupervisor {
         this._notifyLeaderInvariantBreach(message);
         if (this.#live.size === 0) {
             this._finishNoWorkers();
-        } else if (!this.#live.has(this.#cronLeaderId)) {
+        } else if (!(this.#leaderWorker() !== undefined)) {
             // No cron leader left and none will be forked: scheduled jobs
             // would silently stop. Stop the siblings gracefully and
             // exit 1 so the service supervisor restarts the whole cluster.
@@ -368,7 +372,7 @@ class ClusterSupervisor {
     /** Forwards a non-leader worker's critical log to the current cron leader. */
     _relayCritical(fromWorker: any, msg: any) {
         if (this.#stopping) return;
-        const leader = this.#live.get(this.#cronLeaderId);
+        const leader = this.#leaderWorker();
         if (!leader || leader.id === fromWorker.id) {
             this._logger.warning(
                 clusterMessages.CLUSTER_CRIT_RELAY_DROPPED(fromWorker.id, leader ? "sender is the leader" : "no leader"),

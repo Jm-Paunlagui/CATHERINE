@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -41,7 +40,7 @@ class IntegrityService {
      * @param {string} key
      * @returns {Promise<Object<string, Array<{ value, label }>>>}
      */
-    static async getFilterOptions(key: string): Promise<{ [s: string]: Array<{ value; label; }>; }> {
+    static async getFilterOptions(key: string): ReturnType<typeof IntegrityModel.getFilterOptions> {
         const cfg = IntegrityService._requireTable(key);
         if (!cfg.enums) return {};
         const cacheKey = CacheKeyBuilder.build("integrity", { table: key, resource: "filterOptions" });
@@ -77,7 +76,7 @@ class IntegrityService {
      * @private
      */
     static _sweepKey(key: string, cfg: Record<string, any>, filters: Record<string, any>): string {
-        const parts = { table: key, mode: "tamper" };
+        const parts: Record<string, string> = { table: key, mode: "tamper" };
         for (const name of Object.keys(cfg.filters ?? {})) {
             if (name === "date") continue;
             parts[name] = filters[name] ?? "none";

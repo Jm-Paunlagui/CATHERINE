@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -243,6 +242,36 @@ const BACKGROUND_PROBES_DEFAULT = !(
 /** Max distinct route labels kept in the watchdog termination breakdown. */
 const WATCHDOG_ROUTES_MAX = 200;
 
+/** Per-channel email delivery counters. */
+type NotificationDelivery = {
+    sent: number;
+    failed: number;
+    consecutiveFailures: number;
+    lastSuccessAt: string | null;
+    lastFailureAt: string | null;
+    lastFailureCause: string | null;
+    suppressedCount: number;
+};
+
+/** Post-major-GC live-set trend (the leak detector). */
+type HeapTrend = {
+    sampleCount: number;
+    windowMs: number;
+    growthBytesPerMin: number;
+    firstHeapUsed: number;
+    lastHeapUsed: number;
+    suspected: boolean;
+};
+
+/** SMTP dependency health as shown on the metrics snapshot. */
+type SmtpDependencySnapshot = { status: "up" | "degraded" | "down"; consecutiveFailures: number; lastSuccessAt: string | null; lastFailureAt: string | null; }
+
+/** Undocumented Node process internals read for the handle/request counts. */
+const internalProcess = process as NodeJS.Process & {
+    _getActiveHandles?: () => unknown[];
+    _getActiveRequests?: () => unknown[];
+};
+
 class MetricsStore {
   declare _backgroundProbes: boolean;
   declare _prevCpuUsage: NodeJS.CpuUsage;
@@ -259,8 +288,8 @@ class MetricsStore {
   };
   declare _frontendErrors: any[];
   declare _frontendVitals: any[];
-  declare _watchdog: { terminated: number; byRoute: Map<any, any>; };
-  declare _notifications: Map<any, any>;
+  declare _watchdog: { terminated: number; byRoute: Map<string, number>; };
+  declare _notifications: Map<string, NotificationDelivery>;
   declare _oraclePoolStats: Map<any, any>;
   declare _oracle: Map<any, any>;
   declare _errorWindow: Map<any, any>;
@@ -459,12 +488,12 @@ class MetricsStore {
 
       // Active handles and requests (internal V8 metrics)
       this._system.handles =
-        typeof process._getActiveHandles === "function"
-          ? process._getActiveHandles().length
+        typeof internalProcess._getActiveHandles === "function"
+          ? internalProcess._getActiveHandles().length
           : -1;
       this._system.requests =
-        typeof process._getActiveRequests === "function"
-          ? process._getActiveRequests().length
+        typeof internalProcess._getActiveRequests === "function"
+          ? internalProcess._getActiveRequests().length
           : -1;
 
       // GC overhead — fraction of this poll window spent paused in GC.
@@ -514,7 +543,8 @@ class MetricsStore {
       const obs = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           const pauseMs = entry.duration; // keep float precision for overhead math
-          const kind = entry.detail?.kind ?? entry.kind;
+          const gcEntry = entry as PerformanceEntry & { detail?: { kind?: number }; kind?: number };
+          const kind = gcEntry.detail?.kind ?? gcEntry.kind;
 
           this._system.gc.collections++;
           this._system.gc.pauseMs += pauseMs;
@@ -571,14 +601,7 @@ class MetricsStore {
    *   suspected: boolean
    * }}
    */
-  #analyzeHeapTrend(): {
-      sampleCount: number;
-      windowMs: number;
-      growthBytesPerMin: number;
-      firstHeapUsed: number;
-      lastHeapUsed: number;
-      suspected: boolean;
-  } {
+  #analyzeHeapTrend(): HeapTrend {
     const baselines = this._heapBaselines;
     const sampleCount = baselines.length;
     if (sampleCount < 2) {
@@ -922,7 +945,7 @@ class MetricsStore {
    *
    * @returns {{ status: "up"|"degraded"|"down", consecutiveFailures: number, lastSuccessAt: string|null, lastFailureAt: string|null }}
    */
-  #buildSmtpDependencySnapshot(): { status: "up" | "degraded" | "down"; consecutiveFailures: number; lastSuccessAt: string | null; lastFailureAt: string | null; } {
+  #buildSmtpDependencySnapshot(): SmtpDependencySnapshot {
     let consecutiveFailures = 0;
     let lastSuccessAt = null;
     let lastFailureAt = null;
@@ -971,11 +994,13 @@ class MetricsStore {
       timestamp: string;
       uptime: number;
       red: { [s: string]: { count: number; clientErrorCount: number; serverErrorCount: number; errorRate: number; clientErrorRate: number; availability: number; p50: number; p95: number; p99: number; avgMs: number; window: { windowMs: number; count: number; p99: number; }; }; };
-      system: { cpu: Record<string, any>; memory: Record<string, any>; eventLoopLag: number; gc: Record<string, any>; handles: number; requests: number; };
-      dependencies: { oracle: { [s: string]: { queryCount: number; errorCount: number; avgMs: number; p95Ms: number; poolUtilization: number | null; connectionsInUse: number | null; connectionsOpen: number | null; poolMax: number | null; queueLength: number | null; capacity: number | null; healthy: boolean | null; consecutiveFailures: number | null; }; }; };
+      system: { cpu: Record<string, any>; memory: Record<string, any>; eventLoopLag: number; gc: Record<string, any>; memoryTrend: HeapTrend; handles: number; requests: number; };
+      dependencies: { oracle: { [s: string]: { queryCount: number; errorCount: number; avgMs: number; p95Ms: number; poolUtilization: number | null; connectionsInUse: number | null; connectionsOpen: number | null; poolMax: number | null; queueLength: number | null; capacity: number | null; healthy: boolean | null; consecutiveFailures: number | null; }; }; smtp: SmtpDependencySnapshot; };
       totals: { requestsTotal: number; clientErrorsTotal: number; serverErrorsTotal: number; errorRate: number; clientErrorRate: number; availability: number; };
       frontendVitals: Array<any>;
       frontendErrors: Array<any>;
+      notifications: Record<string, NotificationDelivery>;
+      watchdog: { terminated: number; byRoute: Record<string, number> };
   } {
     // Build RED metrics per route. Apdex is accumulated globally in the same
     // pass over each route's duration ring buffer — O(total samples), no extra

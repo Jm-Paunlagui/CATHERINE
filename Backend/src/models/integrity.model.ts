@@ -42,20 +42,32 @@ function _col(name: any) {
     return c;
 }
 
+/** One tamper-verifiable table in the Integrity Center registry. */
+export interface TableConfig {
+    /** Stable client/route key. */
+    key: string;
+    /** Human label for the catalog. */
+    label: string;
+    /** Physical Oracle table name. */
+    table: string;
+    /** Numeric primary key column (keyset + live-tail). */
+    pk: string;
+    /** oracle-mongo-wrapper projection (verify ∪ display ∪ pk ∪ ROW_HASH). */
+    project: Record<string, 0 | 1>;
+    /** row → verified? e.g. `(row) => TamperDetectionService.verifyRow("T_ORDERS", row)` */
+    verifyFn: (row: Record<string, unknown>) => Promise<boolean>;
+    /** Client filter key → column (allow-list); `date` is the from/to range column. */
+    filters: Record<string, string>;
+    /** Filter keys whose values are bound as numbers. */
+    numericFilters?: string[];
+    /** Dropdown filters. */
+    enums?: Record<string, { column: string; source?: string; label?: string }>;
+    /** Exposes an SSE live-tail. */
+    live: boolean;
+}
+
 /**
- * Registry of every tamper-verifiable table.
- *
- * @typedef {object} TableConfig
- * @property {string}   key      - stable client/route key
- * @property {string}   label    - human label for the catalog
- * @property {string}   table    - physical Oracle table name
- * @property {string}   pk       - numeric primary key column (keyset + live-tail)
- * @property {object}   project  - oracle-mongo-wrapper projection (verify ∪ display ∪ pk ∪ ROW_HASH)
- * @property {Function} verifyFn - row → Promise<boolean> (e.g. `(row) => TamperDetectionService.verifyRow("T_ORDERS", row)`)
- * @property {Object<string,string>} filters - client filter key → column (allow-list); `date` is the from/to range column
- * @property {string[]} [numericFilters] - filter keys whose values are bound as numbers
- * @property {Object<string,{column:string, source?:string, label?:string}>} [enums] - dropdown filters
- * @property {boolean}  live     - exposes an SSE live-tail
+ * Registry of every tamper-verifiable table (see TableConfig).
  */
 // Projects register their ROW_HASH-signed tables here. The table's domain must
 // first be added to TamperDetectionService's _FIELD_BUILDERS (only

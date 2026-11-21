@@ -1,4 +1,3 @@
-// @ts-nocheck -- TS migration: delete this line when the file is typed (bun run typecheck).
 
 
 /**
@@ -78,24 +77,52 @@ const DEFAULT_LOCKOUT_WINDOW_MS = 60_000;
  */
 const DEFAULT_EVENT_DELAY_MS = 900_000;
 
-/**
- * @typedef {object} BackupScheduleEvent
- * @property {number|string} eventId - stable id; part of the archive id and the idempotency key
- * @property {string} event          - short name, e.g. "NIGHTLY"
- * @property {Date} at               - when the event occurred / will occur
- */
+/** One scheduled-backup event from the registered event source. */
+export interface BackupScheduleEvent {
+    /** Stable id; part of the archive id and the idempotency key. */
+    eventId: number | string;
+    /** Short name, e.g. "NIGHTLY". */
+    event: string;
+    /** When the event occurred / will occur. */
+    at: Date;
+}
 
-/**
- * @typedef {object} BackupEventSource
- * @property {(windowHours: number) => Promise<BackupScheduleEvent[]>} getDueEvents - events inside the look-back window
- * @property {(horizonMs?: number) => Promise<BackupScheduleEvent[]>} getUpcomingEvents - future events, soonest first
- */
+/** Where scheduled backups get their events (a project registers one). */
+export interface BackupEventSource {
+    /** Events inside the look-back window. */
+    getDueEvents: (windowHours: number) => Promise<BackupScheduleEvent[]>;
+    /** Future events, soonest first. */
+    getUpcomingEvents: (horizonMs?: number) => Promise<BackupScheduleEvent[]>;
+}
+
+/** Whether operator-initiated actions are locked out around a backup. */
+export interface LockoutStatus {
+    active: boolean;
+    reason: "running" | "imminent" | null;
+    msRemaining: number | null;
+    lockoutWindowMs: number;
+}
 
 /** No events: scheduled backups stay idle until a project registers a source. */
 const EMPTY_EVENT_SOURCE = Object.freeze({
     getDueEvents: async () => [],
     getUpcomingEvents: async () => [],
 });
+
+/** One scheduled backup that ran. */
+interface ScheduledRun {
+    eventId: number | string;
+    event: string;
+    archiveId: string;
+    mode: "FULL" | "INCREMENTAL";
+}
+
+/** One scheduled backup that failed. */
+interface ScheduledFailure {
+    eventId: number | string;
+    event: string;
+    error: string;
+}
 
 class BackupScheduleService {
     /**
@@ -161,8 +188,8 @@ class BackupScheduleService {
     static async triggerScheduledBackup(label: string = "cron"): Promise<{
         skipped: false | "disabled" | "already-running";
         due: number;
-        ran: Array<{ eventId: number | string; event: string; archiveId: string; mode: "FULL" | "INCREMENTAL"; }>;
-        failed: Array<{ eventId: number | string; event: string; error: string; }>;
+        ran: ScheduledRun[];
+        failed: ScheduledFailure[];
         pruned: string[];
     }> {
         if (!BackupScheduleService.isEnabled()) {
@@ -190,12 +217,12 @@ class BackupScheduleService {
      * @returns {Promise<{ skipped: false, due: number, ran: Array<object>, failed: Array<object>, pruned: string[] }>}
      * @private
      */
-    static async _runDueBackups(label: string): Promise<{ skipped: false; due: number; ran: Array<Record<string, any>>; failed: Array<Record<string, any>>; pruned: string[]; }> {
+    static async _runDueBackups(label: string): Promise<{ skipped: false; due: number; ran: ScheduledRun[]; failed: ScheduledFailure[]; pruned: string[]; }> {
         const windowHours = Number(process.env.DB_BACKUP_CATCHUP_WINDOW_HOURS) || DEFAULT_CATCHUP_WINDOW_HOURS;
         const due = await BackupScheduleService._eventSource.getDueEvents(windowHours);
 
-        const ran = [];
-        const failed = [];
+        const ran: ScheduledRun[] = [];
+        const failed: ScheduledFailure[] = [];
 
         if (due.length === 0) {
             logger.info(dataBackupMessages.SCHEDULE_NO_EVENTS_DUE(label, windowHours));
@@ -253,7 +280,7 @@ class BackupScheduleService {
             if (entry.trigger === "PURGE" || !entry.chain) continue;
             const key = entry.chain.baseArchiveId;
             if (!chains.has(key)) chains.set(key, []);
-            chains.get(key).push(entry);
+            chains.get(key)!.push(entry); // set just above
         }
 
         const pruned = [];
@@ -296,7 +323,7 @@ class BackupScheduleService {
      * @param {number} [lookaheadMs] - horizon override (tests)
      * @returns {Promise<number|null>} null when nothing is scheduled in the horizon
      */
-    static async msUntilNextScheduledBackup(lookaheadMs: number): Promise<number | null> {
+    static async msUntilNextScheduledBackup(lookaheadMs?: number): Promise<number | null> {
         const eventDelayMs = parseInt(process.env.DB_BACKUP_EVENT_DELAY_MS ?? "", 10) || DEFAULT_EVENT_DELAY_MS;
         const lockoutWindowMs = BackupScheduleService.getLockoutWindowMs();
         // The horizon must clear both the lockout window and the event delay.
@@ -314,14 +341,6 @@ class BackupScheduleService {
         const fireAt = events[0].at.getTime() + eventDelayMs;
         return fireAt - Date.now();
     }
-
-    /**
-     * @typedef {object} LockoutStatus
-     * @property {boolean} active
-     * @property {"running"|"imminent"|null} reason
-     * @property {number|null} msRemaining
-     * @property {number} lockoutWindowMs
-     */
 
     /**
      * Single entry point every operator-initiated-action gate calls before
