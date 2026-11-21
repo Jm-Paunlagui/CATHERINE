@@ -12,7 +12,7 @@ Branch `backend-rewrite-to-typescript` (PR #4, open, not merged). Status as of 2
 
 ## 2. Follow-up PRs (after merge)
 
-- [ ] **G18:** `updateOne({})`, `replaceOne({})` and `deleteOne({})` build `… t0  AND ROWNUM = 1`, which is invalid SQL. See `oracle-wrapper-gap-inventory.md`.
+- [x] **G18:** `updateOne({})`, `replaceOne({})` and `deleteOne({})` build `… t0  AND ROWNUM = 1`, which is invalid SQL. See `oracle-wrapper-gap-inventory.md`.
 - [ ] **Remaining `any`:** 550 `: any`, 172 `Record<string, any>`, 49 `any[]`, 1 `as any`. Most of it is in `metricsMerge.ts` (71), `OracleCollection.ts` (24), `AlertNotifierService.ts` (24), `ClusterRpcHub.ts` (23) and `oracle.ts` (22). The wrapper's filter operands may stay `any`; the rest is typeable debt.
 - [ ] **Port to TypeScript:** `scripts/` (7 files), `test/` (109 files) and the root configs (`eslint.config.js`, `vitest*.config.js`). This removes `require(...).default` from tests.
 - [ ] **Frontend** TypeScript conversion (not started).

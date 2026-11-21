@@ -101,6 +101,15 @@ function _deepClone(value: any): any {
     return out;
 }
 
+/**
+ * WHERE clause that picks ONE matching row for updateOne / replaceOne /
+ * deleteOne. An empty filter yields no WHERE from parseFilter, so appending
+ * "AND ROWNUM = 1" would produce invalid SQL ("… t0  AND ROWNUM = 1").
+ */
+function _firstRowWhere(whereClause: string): string {
+    return whereClause ? `${whereClause} AND ROWNUM = 1` : "WHERE ROWNUM = 1";
+}
+
 class OracleCollection {
     declare _conn: Record<string, unknown> | null;
     declare db: Record<string, any>;
@@ -1115,7 +1124,7 @@ class OracleCollection {
             }
 
             const finalBinds = { ...allBinds, ...outBinds };
-            const sql = `UPDATE ${quoteIdentifier(this.tableName)} ${setClause} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} AND ROWNUM = 1)${returningSql}`;
+            const sql = `UPDATE ${quoteIdentifier(this.tableName)} ${setClause} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${_firstRowWhere(whereClause)})${returningSql}`;
 
             try {
                 const result = await conn.execute(sql, finalBinds, {
@@ -1254,7 +1263,7 @@ class OracleCollection {
             });
 
             const allBinds = mergeBinds(filterBinds, replBinds);
-            const sql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} AND ROWNUM = 1)`;
+            const sql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setParts.join(", ")} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${_firstRowWhere(whereClause)})`;
 
             try {
                 const result = await conn.execute(sql, allBinds, {
@@ -1399,7 +1408,7 @@ class OracleCollection {
             }
 
             const allBinds = { ...binds, ...outBinds };
-            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} AND ROWNUM = 1)${returningSql}`;
+            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} WHERE ROWID = (SELECT ROWID FROM ${quoteIdentifier(this.tableName)} t0 ${_firstRowWhere(whereClause)})${returningSql}`;
 
             try {
                 const result = await conn.execute(sql, allBinds, {

@@ -11,6 +11,7 @@
  *   G3  filter-driven DML had no t0 alias, so a correlated $exists (t0."COL")
  *       failed with ORA-00904
  *   G4  $currentDate always wrote SYSDATE (TIMESTAMP columns lost fractions)
+ *   G18 updateOne/replaceOne/deleteOne({}) built "t0  AND ROWNUM = 1" (invalid SQL)
  *
  * No database: a recording connection captures the SQL and execute options.
  */
@@ -157,6 +158,27 @@ describe("oracle-mongo-wrapper defect regressions", function () {
                 await c.distinct("S", CORRELATED);
             });
             for (const sql of sqls) expect(sql).toMatch(/FROM "TX" t0 WHERE EXISTS/);
+        });
+    });
+
+    describe("G18 — single-row statements with an empty filter", function () {
+        it("updateOne / replaceOne / deleteOne({}) pick one row with valid SQL", async function () {
+            const session = recordingConn();
+            const c = new OracleCollection("TX", fakeDb(), session);
+            await c.updateOne({}, { $set: { S: "X" } });
+            await c.replaceOne({}, { S: "X" });
+            await c.deleteOne({});
+            expect(session.calls).toHaveLength(3);
+            for (const { sql } of session.calls) {
+                expect(sql).toMatch(/\(SELECT ROWID FROM "TX" t0 WHERE ROWNUM = 1\)/);
+                expect(sql).not.toMatch(/t0\s+AND ROWNUM/);
+            }
+        });
+
+        it("a non-empty filter keeps its predicate before ROWNUM", async function () {
+            const session = recordingConn();
+            await new OracleCollection("TX", fakeDb(), session).deleteOne({ A: 1 });
+            expect(session.calls[0].sql).toMatch(/t0 WHERE "A" = :\w+ AND ROWNUM = 1\)/);
         });
     });
 
