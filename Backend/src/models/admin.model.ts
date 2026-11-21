@@ -74,7 +74,7 @@ const SIGN_CONTEXT = "T_ADMINS_DEV";
  * @param {object} row
  * @returns {object}
  */
-function buildSignedFields(row: Record<string, any>): Record<string, any> {
+function buildSignedFields(row: Record<string, unknown>): Record<string, unknown> {
     return {
         USERNAME: row.USERNAME,
         PASSWORD: row.PASSWORD,
@@ -141,7 +141,7 @@ function writeCol(session: Record<string, any> | null | undefined): OracleCollec
 class AdminModel {
     declare static SEARCH_MAX_LIMIT: number;
     declare static SERVER_NOTIFY_FLAG_COLUMNS: Readonly<{ "server-critical-notification": "CAN_RECEIVE_SRV_CRIT"; "server-dependencies-notification": "CAN_RECEIVE_SRV_DEPS"; "server-red-metrics-notification": "CAN_RECEIVE_SRV_RED"; "server-system-notification": "CAN_RECEIVE_SRV_SYS"; }>;
-    declare static buildSignedFields: (row: Record<string, any>) => Record<string, any>;
+    declare static buildSignedFields: (row: Record<string, unknown>) => Record<string, unknown>;
     declare static SIGN_CONTEXT: string;
     // ─── Reads ────────────────────────────────────────────────────────────────
 
@@ -164,7 +164,7 @@ class AdminModel {
      * @param {number|string} id
      * @returns {Promise<object|null>}
      */
-    static async findById(id: number | string): Promise<Record<string, any> | null> {
+    static async findById(id: number | string): Promise<Record<string, unknown> | null> {
         const numericId = Number(id);
         if (id === null || id === undefined || id === "" || !Number.isFinite(numericId)) {
             return null;
@@ -332,7 +332,7 @@ class AdminModel {
      * @returns {Promise<T>}
      * @throws {AppError} 409 LAST_ACTIVE_SUPER_ADMIN
      */
-    static async withLastSuperAdminGuard<T>(excludeId: number | string, fn: (session: Record<string, any> | null) => Promise<T>): Promise<T> {
+    static async withLastSuperAdminGuard<T>(excludeId: number | string, fn: (session: Record<string, unknown> | null) => Promise<T>): Promise<T> {
         const targetId = Number(excludeId);
 
         const assertNotLast = (rows: any) => {
@@ -507,8 +507,8 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async setNotifyFlags(username: string, channelFlags: Record<string, 'Y' | 'N'>, session: Record<string, any> | null = null): Promise<void> {
-        const fields: Record<string, any> = {};
+    static async setNotifyFlags(username: string, channelFlags: Record<string, 'Y' | 'N'>, session: Record<string, unknown> | null = null): Promise<void> {
+        const fields: Record<string, unknown> = {};
         for (const [channel, value] of Object.entries(channelFlags ?? {})) {
             const column = SERVER_NOTIFY_FLAG_COLUMNS[channel as keyof typeof SERVER_NOTIFY_FLAG_COLUMNS];
             if (column) fields[column] = value === "Y" ? "Y" : "N";
@@ -552,7 +552,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async updateRole(username: string, role: string, sysSignature: string, session: Record<string, any> | null = null): Promise<void> {
+    static async updateRole(username: string, role: string, sysSignature: string, session: Record<string, unknown> | null = null): Promise<void> {
         return AdminModel._set(
             username,
             { ROLE: role, SYSSIGNATURE: sysSignature },
@@ -568,7 +568,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async setActive(username: string, isActive: string, sysSignature: string, session: Record<string, any> | null = null): Promise<void> {
+    static async setActive(username: string, isActive: string, sysSignature: string, session: Record<string, unknown> | null = null): Promise<void> {
         return AdminModel._set(
             username,
             { IS_ACTIVE: isActive, SYSSIGNATURE: sysSignature },
@@ -582,7 +582,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async deleteAdmin(username: string, session: Record<string, any> | null = null): Promise<void> {
+    static async deleteAdmin(username: string, session: Record<string, unknown> | null = null): Promise<void> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             const idx = admins.findIndex((a) => a.USERNAME === username);
@@ -599,7 +599,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session; null uses the pool
      * @private
      */
-    static async _set(username: string, fields: Record<string, any>, session: Record<string, any> | null = null) {
+    static async _set(username: string, fields: Record<string, unknown>, session: Record<string, unknown> | null = null) {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             const row = admins.find((a) => a.USERNAME === username);

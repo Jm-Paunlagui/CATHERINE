@@ -50,7 +50,7 @@ import { quoteIdentifier } from "../utils";
  *   buildScalarSubquery({ collection: "orders", fn: "sum", field: "total", filter: { userId: "$id" } })
  *   // → '(SELECT SUM("total") FROM "orders" WHERE "userId" = t0."id")'
  */
-function buildScalarSubquery(spec: { collection: string; fn?: string; filter?: Record<string, any>; field?: string; }, outerAlias: string = "t0"): string {
+function buildScalarSubquery(spec: { collection: string; fn?: string; filter?: Record<string, unknown>; field?: string; }, outerAlias: string = "t0"): string {
   const { collection, fn, filter = {}, field } = spec;
   const fnUpper = (fn || "count").toUpperCase();
 
@@ -101,7 +101,7 @@ function buildScalarSubquery(spec: { collection: string; fn?: string; filter?: R
  * @param {string} [outerAlias='t0'] - Alias of the outer table
  * @returns {string} e.g. 'EXISTS (SELECT 1 FROM "orders" WHERE "userId" = t0."id")'
  */
-function buildExistsSubquery(spec: { collection: string; match: Record<string, any>; }, outerAlias: string = "t0"): string {
+function buildExistsSubquery(spec: { collection: string; match: Record<string, unknown>; }, outerAlias: string = "t0"): string {
   const { collection, match } = spec;
   const whereParts = [];
   for (const [col, val] of Object.entries(match)) {
@@ -142,7 +142,7 @@ function buildNotExistsSubquery(spec: Parameters<typeof buildExistsSubquery>[0],
  * @param {string} [outerAlias='t0']
  * @returns {string} e.g. '(SELECT AVG("salary") FROM "employees" WHERE "dept" = t0."dept")'
  */
-function buildCorrelatedSubquery(spec: { collection: string; field: string; aggregate?: string; where?: Record<string, any>; }, outerAlias: string = "t0"): string {
+function buildCorrelatedSubquery(spec: { collection: string; field: string; aggregate?: string; where?: Record<string, unknown>; }, outerAlias: string = "t0"): string {
   const { collection, field, aggregate, where = {} } = spec;
   const aggFn = (aggregate || "$avg").replace("$", "").toUpperCase();
   const aggExpr = `${aggFn}(${quoteIdentifier(field as string)})`;

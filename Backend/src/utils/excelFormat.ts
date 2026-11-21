@@ -189,8 +189,8 @@ function formatDateTimeText(value: Date | string | number | null | undefined): s
  * @param {Record<string, *>} row
  * @returns {{ row: Record<string, *>, dateKeys: string[] }}
  */
-function normalizeRowDates(row: Record<string, any>): { row: Record<string, any>; dateKeys: string[]; } {
-    const out: Record<string, any> = {};
+function normalizeRowDates(row: Record<string, unknown>): { row: Record<string, unknown>; dateKeys: string[]; } {
+    const out: Record<string, unknown> = {};
     const dateKeys = [];
     for (const [key, value] of Object.entries(row ?? {})) {
         if (value instanceof Date) {
@@ -215,7 +215,7 @@ function normalizeRowDates(row: Record<string, any>): { row: Record<string, any>
  * @param {Record<string, *>} rowData
  * @returns {import('exceljs').Row}
  */
-function addNormalizedRow(sheet: import('exceljs').Worksheet, rowData: Record<string, any>): import('exceljs').Row {
+function addNormalizedRow(sheet: import('exceljs').Worksheet, rowData: Record<string, unknown>): import('exceljs').Row {
     const added = sheet.addRow(normalizeRowDates(rowData).row);
     added.eachCell((cell, colNumber) => {
         if (!(cell.value instanceof Date)) return;

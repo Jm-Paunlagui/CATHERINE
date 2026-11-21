@@ -70,13 +70,13 @@ function _validateSavepointName(name: unknown) {
  * with no transactional guarantee.
  */
 class Session {
-    declare db: Record<string, any>;
+    declare db: Record<string, unknown>;
     declare _conn: Record<string, any>;
     /**
      * @param {Object} conn - The raw Oracle database connection (from the pool)
      * @param {Object} db  - The db interface (from createDb) for driver constants
      */
-    constructor(conn: Record<string, any>, db: Record<string, any>) {
+    constructor(conn: Record<string, unknown>, db: Record<string, unknown>) {
         this._conn = conn;
         this.db = db;
     }
@@ -123,7 +123,7 @@ class Session {
      *   const r = await session.execute("SELECT MY_SEQ.NEXTVAL FROM DUAL");
      *   const nextId = Number(r.rows[0][0]);
      */
-    async execute(sql: string, binds: Record<string, any> = {}, opts: Record<string, any> = {}): Promise<Record<string, any>> {
+    async execute(sql: string, binds: Record<string, unknown> = {}, opts: Record<string, unknown> = {}): Promise<Record<string, any>> {
         return this._conn.execute(sql, binds, opts);
     }
 
@@ -200,7 +200,7 @@ class Transaction {
      *   const db = createDb("appDb");
      *   const txManager = new Transaction(db);
      */
-    constructor(db: Record<string, any>) {
+    constructor(db: Record<string, unknown>) {
         this.db = db;
     }
 
@@ -224,7 +224,7 @@ class Transaction {
      *     // Both inserts COMMIT together when this function returns
      *   });
      */
-    async withTransaction(fn: ((...args: any[]) => any)): Promise<any> {
+    async withTransaction(fn: ((...args: any[]) => unknown)): Promise<any> {
         return this.db.withTransaction(async (conn: any) => {
             const session = new Session(conn, this.db);
             return fn(session);

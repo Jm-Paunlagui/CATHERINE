@@ -25,9 +25,9 @@ const SIGNAL_LABEL = Object.freeze({
 
 class ShutdownNotifier {
     /** @type {Set<Promise<any>>} */
-    #pending: Set<Promise<any>> = new Set();
+    #pending: Set<Promise<unknown>> = new Set();
     declare _announce: boolean;
-    declare _logger: { warning: ((...args: any[]) => any); };
+    declare _logger: { warning: ((...args: unknown[]) => unknown); };
     declare _alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; };
 
     /**
@@ -41,7 +41,7 @@ class ShutdownNotifier {
      *   OWN failsafe fires (otherwise a hung non-leader worker would be
      *   force-exited with no email at all).
      */
-    constructor({ alertNotifier, logger, announce = true }: { alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; }; logger: { warning: ((...args: any[]) => any); }; announce?: boolean; }) {
+    constructor({ alertNotifier, logger, announce = true }: { alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; }; logger: { warning: ((...args: unknown[]) => unknown); }; announce?: boolean; }) {
         this._alertNotifier = alertNotifier;
         this._logger = logger;
         this._announce = announce !== false;
@@ -52,7 +52,7 @@ class ShutdownNotifier {
      *   `idleLimits` switches the summary to the progress-aware wording.
      * @returns {Promise<any>}
      */
-    started({ signal, inFlight, graceMs, pendingTasks, idleLimits }: { signal: string; inFlight: number; graceMs: number; pendingTasks: number; idleLimits?: { defaultMs: number; longMs: number; }; }): Promise<any> {
+    started({ signal, inFlight, graceMs, pendingTasks, idleLimits }: { signal: string; inFlight: number; graceMs: number; pendingTasks: number; idleLimits?: { defaultMs: number; longMs: number; }; }): Promise<unknown> {
         if (!this._announce) return Promise.resolve({ sent: false, reason: "not-announcer" });
         const how = SIGNAL_LABEL[signal as keyof typeof SIGNAL_LABEL] ?? signal;
         const sec = (ms: any) => Math.round(ms / 1000);
@@ -85,7 +85,7 @@ class ShutdownNotifier {
      * @param {{reason?: "cap"|"idle"}} [opts] - `idle`: cut by the idle watchdog; `cap` (default): grace ran out.
      * @returns {Promise<any>}
      */
-    requestsCut(summary: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null; }>, graceMs: number, total: number = summary.length, { reason = "cap" }: { reason?: "cap" | "idle"; } = {}): Promise<any> {
+    requestsCut(summary: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null; }>, graceMs: number, total: number = summary.length, { reason = "cap" }: { reason?: "cap" | "idle"; } = {}): Promise<unknown> {
         const idle = reason === "idle";
         const rows = summary.map((r) => ({
             rule: "SHUTDOWN_REQUEST_CUT",
@@ -149,7 +149,7 @@ class ShutdownNotifier {
      * @param {object} payload
      * @returns {Promise<any>}
      */
-    #send(event: string, payload: Parameters<import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]>[0]): Promise<any> {
+    #send(event: string, payload: Parameters<import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]>[0]): Promise<unknown> {
         let p;
         try {
             p = Promise.resolve(this._alertNotifier.notifyLifecycleNow(payload));

@@ -18,13 +18,13 @@ const TOKEN_SIZE = 64;
 class CsrfMiddleware {
   declare handle: any;
     declare statusHandler: (req: any, res: any) => void;
-    declare refreshHandler: (req: any, res: any) => any;
+    declare refreshHandler: (req: any, res: any) => unknown;
     declare tokenHandler: (req: any, res: any) => void;
     declare _doubleCsrfProtection: import("csrf-csrf").DoubleCsrfProtection;
     declare _generateCsrfToken: import("csrf-csrf").CsrfTokenGenerator;
     declare _secret: any;
     declare _isSecure: any;
-  constructor(options: Record<string, any> = {}) {
+  constructor(options: Record<string, unknown> = {}) {
     this._isSecure =
       options.forceSecure ??
       (process.env.NODE_ENV === "production" &&

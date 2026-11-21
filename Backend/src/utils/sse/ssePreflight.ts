@@ -40,7 +40,7 @@ import { sendError } from "../../constants/responses";
  * @param {{ type?: string, details?: object[], hint?: string }} [opts]
  * @returns {void}
  */
-function sendSsePreflightError(req: import('express').Request, res: import('express').Response, message: string, code: number, opts: { type?: string; details?: Record<string, any>[]; hint?: string; } = {}): void {
+function sendSsePreflightError(req: import('express').Request, res: import('express').Response, message: string, code: number, opts: { type?: string; details?: Record<string, unknown>[]; hint?: string; } = {}): void {
     res.status(code).json(
         sendError(message, code, {
             ...opts,

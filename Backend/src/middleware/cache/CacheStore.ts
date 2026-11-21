@@ -194,7 +194,7 @@ class CacheStore {
    * @param {number}            [ttl]   - Per-entry TTL override.
    * @returns {Promise<*>}
    */
-  async getOrSet(key: string, loader: () => Promise<any>, ttl?: number): Promise<any> {
+  async getOrSet(key: string, loader: () => Promise<unknown>, ttl?: number): Promise<any> {
     const cached = this.get(key);
     if (cached !== undefined) return cached;
 
@@ -225,7 +225,7 @@ class CacheStore {
    * Returns a snapshot of store statistics and current key count.
    * @returns {Object}
    */
-  stats(): Record<string, any> {
+  stats(): Record<string, unknown> {
     const raw = this._store.getStats();
     const keys = this._store.keys().length;
     const hits = raw.hits ?? 0;

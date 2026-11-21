@@ -72,8 +72,8 @@ class SystemLogTailService {
     declare _ticking: boolean;
     declare _consecutiveErrors: number;
     declare _initializedDir: boolean;
-    declare _currentDir: any;
-    declare _offsets: Map<any, any>;
+    declare _currentDir: unknown;
+    declare _offsets: Map<unknown, any>;
     declare _timer: any;
     declare _connections: Map<any, any>;
     declare _logBaseDir: string;
@@ -236,7 +236,7 @@ class SystemLogTailService {
 
         const isFirstScan = !this._initializedDir;
         /** @type {Map<string, Array<object>>} connId -> parsed rows this tick */
-        const perConnRows: Map<string, Array<Record<string, any>>> = new Map();
+        const perConnRows: Map<string, Array<Record<string, unknown>>> = new Map();
         for (const connId of this._connections.keys()) perConnRows.set(connId, []);
 
         for (const filename of filenames) {
@@ -338,7 +338,7 @@ class SystemLogTailService {
      * @param {Map<string, Array<object>>} perConnRows
      * @private
      */
-    _dispatch(perConnRows: Map<string, Array<Record<string, any>>>) {
+    _dispatch(perConnRows: Map<string, Array<Record<string, unknown>>>) {
         const ts = new Date().toISOString();
         for (const [connId, conn] of this._connections) {
             conn.pollCount++;
@@ -377,7 +377,7 @@ class SystemLogTailService {
      * @param {object} payload
      * @private
      */
-    _safeSend(res: import('express').Response, eventName: string, payload: Record<string, any>) {
+    _safeSend(res: import('express').Response, eventName: string, payload: Record<string, unknown>) {
         try {
             res.write(`event: ${eventName}\n`);
             res.write(`data: ${JSON.stringify(payload)}\n\n`);

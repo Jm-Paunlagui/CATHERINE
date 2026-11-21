@@ -117,7 +117,7 @@ class AuditLogModel {
      * @param {object[]} records
      * @returns {Promise<object>} insertMany result
      */
-    static async insertBatch(records: Record<string, any>[]): Promise<Record<string, any>> {
+    static async insertBatch(records: Record<string, unknown>[]): Promise<Record<string, unknown>> {
         if (isDemoMode()) {
             for (const r of records) demo.auditInsert(r);
             return { rowsAffected: records.length };
@@ -158,7 +158,7 @@ class AuditLogModel {
      * @param {object} filter - oracle-mongo-wrapper filter object.
      * @returns {Promise<object>} Raw oracle-mongo-wrapper deleteMany result.
      */
-    static async deleteMany(filter: Record<string, any>): Promise<Record<string, any>> {
+    static async deleteMany(filter: Record<string, unknown>): Promise<Record<string, any>> {
         if (isDemoMode()) {
             const logs = demo.auditLogs();
             const before = logs.length;

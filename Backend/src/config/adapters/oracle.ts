@@ -282,7 +282,7 @@ let isShuttingDown = false;
  */
 class PoolHealthMonitor extends EventEmitter {
     declare _gap: any;
-    declare _nudges: Map<any, any>;
+    declare _nudges: Map<unknown, any>;
     declare _inFlight: Set<unknown>;
     declare _stopped: boolean;
     declare _timer: any;
@@ -572,7 +572,7 @@ class PoolHealthMonitor extends EventEmitter {
     }
 
     getMetrics() {
-        const out: Record<string, any> = {};
+        const out: Record<string, unknown> = {};
         for (const [n, m] of this._metrics) out[n] = { ...m };
         return out;
     }
@@ -904,7 +904,7 @@ const kScope: unique symbol = Symbol.for("app.progress.scope");
 const kInflight: unique symbol = Symbol.for("app.progress.inflight");
 
 /** A node-oracledb connection plus the progress bookkeeping this adapter hangs on it. */
-type InstrumentedConnection = Record<string, any> & {
+type InstrumentedConnection = Record<string, unknown> & {
     [kInstrumented]?: boolean;
     [kScope]?: import("../../utils/progress/ProgressScope").ProgressScope;
     [kInflight]?: number;
@@ -920,7 +920,7 @@ function _instrumentConnection(conn: InstrumentedConnection): InstrumentedConnec
     for (const method of ["execute", "executeMany", "commit"]) {
         const original = conn[method];
         if (typeof original !== "function") continue;
-        conn[method] = function instrumented(...args: any[]) {
+        conn[method] = function instrumented(...args: unknown[]) {
             // Callback-style call: leave untouched (the codebase is promise-only).
             if (typeof args[args.length - 1] === "function") {
                 return original.apply(this, args);
@@ -1072,7 +1072,7 @@ async function withConnection(connectionName: string, callback: ((...args: any[]
  * @param {string}   connectionName
  * @param {Function} callback  async (conn) => result
  */
-async function withTransaction(connectionName: string, callback: ((...args: any[]) => any)) {
+async function withTransaction(connectionName: string, callback: ((...args: unknown[]) => unknown)) {
     return withConnection(connectionName, async (conn) => {
         try {
             const result = await callback(conn);
@@ -1097,7 +1097,7 @@ async function withTransaction(connectionName: string, callback: ((...args: any[
  * @param {Function[]} operations  array of async (conn) => result
  * @returns {Promise<Array<{ success, result?, error?, index }>>}
  */
-async function withBatchConnection(connectionName: string, operations: ((...args: any[]) => any)[]): Promise<Array<{ success: boolean; result?: unknown; error?: string; index: number }>> {
+async function withBatchConnection(connectionName: string, operations: ((...args: unknown[]) => unknown)[]): Promise<Array<{ success: boolean; result?: unknown; error?: string; index: number }>> {
     if (!Array.isArray(operations) || !operations.length)
         throw new TypeError(
             "withBatchConnection: operations must be a non-empty array.",

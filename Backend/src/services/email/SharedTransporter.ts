@@ -176,7 +176,7 @@ class SharedTransporter {
      *
      * @returns {object} Pool options, or `{}` when pooling is disabled.
      */
-    _poolConfig(): Record<string, any> {
+    _poolConfig(): Record<string, unknown> {
         // Opt-out, not opt-in: an unthrottled shared transporter is the
         // behavior that lets a bulk path breach the relay cap.
         if (

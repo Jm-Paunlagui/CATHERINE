@@ -53,7 +53,7 @@ const adminMessages = {
 
   // ── Permission flags ──────────────────────────────────────────────────────
   /** @param {string} username @param {object} flags */
-  ADMIN_PERMISSIONS_UPDATED: (username: string, flags: Record<string, any>) =>
+  ADMIN_PERMISSIONS_UPDATED: (username: string, flags: Record<string, unknown>) =>
     `Admin permission flags updated — USERNAME: ${username}, flags: ${JSON.stringify(flags)}.`,
   /** @param {string} username */
   ADMIN_INACTIVE_LOGIN_BLOCKED: (username: string) =>

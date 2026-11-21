@@ -270,7 +270,7 @@ function bootWorker() {
         });
     }
     /** @type {null | { verdict: string, previous: object|null, lastNoticeAt: number|null, bootedAtMs: number }} */
-    let bootInfo: null | { verdict: string; previous: Record<string, any> | null; lastNoticeAt: number | null; bootedAtMs: number; } = null;
+    let bootInfo: null | { verdict: string; previous: Record<string, unknown> | null; lastNoticeAt: number | null; bootedAtMs: number; } = null;
     let bootAnnounced = false;
     /** @type {NodeJS.Timeout|null} Sends the boot email anyway when the pools are slow. */
     let bootAnnounceTimer: NodeJS.Timeout | null = null;
@@ -299,7 +299,7 @@ function bootWorker() {
                     lastStartNoticeAt: bootInfo.lastNoticeAt,
                     nowMs: Date.now(),
                 })
-                .then((res: any) => {
+                .then((res) => {
                     if (res && res.sent && res.event === "started") serverRunMarker.recordStartNotice(Date.now());
                     // Clear only the unclean restarts that were emailed.
                     if (res && res.uncleanReported) serverRunMarker.clearPendingUnclean();
@@ -625,7 +625,7 @@ function bootWorker() {
                         );
                     }
                 })
-                .catch((err: any) => {
+                .catch((err) => {
                     // Still announce the boot: recipients fall back to SERVER_NOTIFY_TO.
                     announceBoot();
                     logger.critical("Pool initialization failed", {

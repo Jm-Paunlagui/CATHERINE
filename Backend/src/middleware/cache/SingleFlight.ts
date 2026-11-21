@@ -21,7 +21,7 @@
  */
 
 class SingleFlight {
-  declare _inflight: Map<any, any>;
+  declare _inflight: Map<unknown, any>;
   constructor() {
     /** @type {Map<string, Promise<*>>} */
     this._inflight = new Map();
@@ -35,7 +35,7 @@ class SingleFlight {
    * @param {() => Promise<*>}  loader - Async function that produces the value.
    * @returns {Promise<*>}
    */
-  run(key: string, loader: () => Promise<any>): Promise<any> {
+  run(key: string, loader: () => Promise<unknown>): Promise<unknown> {
     const existing = this._inflight.get(key);
     if (existing) return existing;
 

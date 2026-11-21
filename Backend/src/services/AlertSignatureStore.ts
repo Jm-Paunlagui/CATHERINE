@@ -30,9 +30,9 @@ import ServerAlertLogModel from "../models/serverAlertLog.model";
 const STATE_CHANNEL = "server-critical-notification";
 
 class AlertSignatureStore {
-    declare _messages: { readFailed: ((...args: any[]) => any); writeFailed: ((...args: any[]) => any); };
-    declare _logger: { warning: ((...args: any[]) => any); };
-    declare _model: { findLatestByAlertKey: ((...args: any[]) => any); insertOne: ((...args: any[]) => any); };
+    declare _messages: { readFailed: ((...args: unknown[]) => unknown); writeFailed: ((...args: unknown[]) => unknown); };
+    declare _logger: { warning: ((...args: unknown[]) => unknown); };
+    declare _model: { findLatestByAlertKey: ((...args: unknown[]) => any); insertOne: ((...args: unknown[]) => unknown); };
     declare _rule: string;
     /**
      * @param {object} deps
@@ -42,7 +42,7 @@ class AlertSignatureStore {
      * @param {{readFailed: Function, writeFailed: Function}} deps.messages -
      *   (scopeKey, cause, label) => string, from the module's constants/messages file.
      */
-    constructor({ rule, model = ServerAlertLogModel, logger, messages }: { rule: string; model?: { findLatestByAlertKey: ((...args: any[]) => any); insertOne: ((...args: any[]) => any); }; logger: { warning: ((...args: any[]) => any); }; messages: { readFailed: ((...args: any[]) => any); writeFailed: ((...args: any[]) => any); }; }) {
+    constructor({ rule, model = ServerAlertLogModel, logger, messages }: { rule: string; model?: { findLatestByAlertKey: ((...args: any[]) => unknown); insertOne: ((...args: any[]) => unknown); }; logger: { warning: ((...args: unknown[]) => unknown); }; messages: { readFailed: ((...args: unknown[]) => unknown); writeFailed: ((...args: unknown[]) => unknown); }; }) {
         this._rule = rule;
         this._model = model;
         this._logger = logger;

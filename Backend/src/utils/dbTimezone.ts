@@ -25,7 +25,7 @@ const DEFAULT_DB_TZ_OFFSET_MINUTES = 480;
 const MIN_OFFSET_MINUTES = -12 * 60;
 const MAX_OFFSET_MINUTES = 14 * 60;
 
-let _lastWarnedValue: any = null;
+let _lastWarnedValue: unknown = null;
 
 /**
  * @returns {number} DB server UTC offset in minutes (e.g. 480 for UTC+8)
@@ -67,7 +67,7 @@ const CLOCK_OFFSET_SQL =
  * @returns {Promise<{ dbOffsetMinutes: number, configuredMinutes: number, appOffsetMinutes: number, match: boolean } | null>}
  *          null when the clock could not be read
  */
-async function verifyDbClockOffset(db: { withConnection: ((...args: any[]) => any); oracledb?: Record<string, any>; }, { appOffsetMinutes = -new Date().getTimezoneOffset() }: { appOffsetMinutes?: number; } = {}): Promise<{ dbOffsetMinutes: number; configuredMinutes: number; appOffsetMinutes: number; match: boolean; } | null> {
+async function verifyDbClockOffset(db: { withConnection: ((...args: any[]) => unknown); oracledb?: Record<string, unknown>; }, { appOffsetMinutes = -new Date().getTimezoneOffset() }: { appOffsetMinutes?: number; } = {}): Promise<{ dbOffsetMinutes: number; configuredMinutes: number; appOffsetMinutes: number; match: boolean; } | null> {
     try {
         const raw = await db.withConnection("appDb", async (conn: any) => {
             const r = await conn.execute(CLOCK_OFFSET_SQL, [], { outFormat: db.oracledb?.OUT_FORMAT_OBJECT });

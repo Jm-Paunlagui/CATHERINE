@@ -151,7 +151,7 @@ class AuditLogService {
     static FINAL_FLUSH_TIMEOUT_MS = 2000;
 
     /** @type {object[]} */
-    static _pending: Record<string, any>[] = [];
+    static _pending: Record<string, unknown>[] = [];
 
     /** @type {NodeJS.Timeout|null} */
     static _flushTimer: NodeJS.Timeout | null = null;
@@ -170,7 +170,7 @@ class AuditLogService {
      * @param {object} record - The audit log record to persist.
      * @returns {Promise<void>}
      */
-    static async insertAsync(record: Record<string, any>): Promise<void> {
+    static async insertAsync(record: Record<string, unknown>): Promise<void> {
         AuditLogService._pending.push(record);
 
         if (
@@ -372,7 +372,7 @@ class AuditLogService {
         statusCategory,
         endpoint,
         search,
-    }: { page: number; pageSize: number; fromDate?: string; toDate?: string; method?: string; statusCategory?: string; endpoint?: string; search?: string; }): Promise<{ rows: Record<string, any>[]; total: number; page: number; pageSize: number; totalPages: number; }> {
+    }: { page: number; pageSize: number; fromDate?: string; toDate?: string; method?: string; statusCategory?: string; endpoint?: string; search?: string; }): Promise<{ rows: Record<string, unknown>[]; total: number; page: number; pageSize: number; totalPages: number; }> {
         const cappedPageSize = Math.min(pageSize, 100);
 
         if (fromDate && toDate) {
@@ -383,7 +383,7 @@ class AuditLogService {
             }
         }
 
-        const filter: Record<string, any> = {};
+        const filter: Record<string, unknown> = {};
 
         if (fromDate && toDate) {
             filter.CREATED_AT = {
@@ -454,7 +454,7 @@ class AuditLogService {
      * @param {string} [params.toDate]   - ISO date string. Defaults to today 23:59:59.
      * @returns {Promise<object>} Aggregate statistics including successRate.
      */
-    static async getStats({ fromDate, toDate }: { fromDate?: string; toDate?: string; }): Promise<Record<string, any>> {
+    static async getStats({ fromDate, toDate }: { fromDate?: string; toDate?: string; }): Promise<Record<string, unknown>> {
         const resolvedToDate = toDate
             ? new Date(new Date(toDate).setHours(23, 59, 59, 999))
             : new Date(new Date().setHours(23, 59, 59, 999));
@@ -774,7 +774,7 @@ class AuditLogService {
         { date, maxPriority = 5, level, page = 1, pageSize = 50, search }: { date?: string; maxPriority?: number; level?: string; page?: number; pageSize?: number; search?: string; } = {},
         { logBaseDir = LOG_BASE_DIR }: { logBaseDir?: string; } = {},
     ): Promise<{
-        rows: Record<string, any>[]; total: number; page: number;
+        rows: Record<string, unknown>[]; total: number; page: number;
         pageSize: number; totalPages: number; truncatedFiles: string[];
     }> {
         const dateStr = date || _todayManilaDateStr();

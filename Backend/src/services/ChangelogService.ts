@@ -44,7 +44,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * @param {boolean} [requireAll=true] - false for partial update (PATCH-style)
  * @returns {object} Normalised fields
  */
-function validate(data: Record<string, any>, requireAll: boolean = true): Record<string, any> {
+function validate(data: Record<string, any>, requireAll: boolean = true): Record<string, unknown> {
     const {
         displayDate,
         version,
@@ -97,7 +97,7 @@ function validate(data: Record<string, any>, requireAll: boolean = true): Record
         });
     }
 
-    const normalised: Record<string, any> = {};
+    const normalised: Record<string, unknown> = {};
     if (displayDate !== undefined) normalised.displayDate = displayDate;
     if (version !== undefined) normalised.version = String(version).trim();
     if (title !== undefined) normalised.title = String(title).trim();
@@ -131,7 +131,7 @@ class ChangelogService {
      * Lists all entries (newest first).
      * @returns {object[]}
      */
-    static listAll(): Record<string, any>[] {
+    static listAll(): Record<string, unknown>[] {
         return ChangelogModel.listAll();
     }
 
@@ -151,7 +151,7 @@ class ChangelogService {
      *
      * @returns {object[]}
      */
-    static listPublic(): Record<string, any>[] {
+    static listPublic(): Record<string, unknown>[] {
         return ChangelogModel.listAll().map(({ authors, coAuthors, ...rest }) => rest);
     }
 
@@ -167,7 +167,7 @@ class ChangelogService {
      *
      * @returns {object|null}
      */
-    static latestPublic(): Record<string, any> | null {
+    static latestPublic(): Record<string, unknown> | null {
         return ChangelogService.listPublic()[0] ?? null;
     }
 
@@ -176,7 +176,7 @@ class ChangelogService {
      * @param {object} body - Request body
      * @returns {object} Created entry
      */
-    static create(body: Record<string, any>): Record<string, any> {
+    static create(body: Record<string, unknown>): Record<string, unknown> {
         const data = validate(body, true);
         return ChangelogModel.create(data);
     }
@@ -187,7 +187,7 @@ class ChangelogService {
      * @param {object} body
      * @returns {object} Updated entry
      */
-    static update(id: string, body: Record<string, any>): Record<string, any> {
+    static update(id: string, body: Record<string, unknown>): Record<string, unknown> {
         if (!id) throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400);
         const data = validate(body, false);
         return ChangelogModel.update(id, data);

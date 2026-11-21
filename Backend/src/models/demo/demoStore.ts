@@ -320,7 +320,7 @@ function _matchOp(value: unknown, op: unknown, expected: unknown) {
  * @param {object} filter
  * @returns {boolean}
  */
-function match(row: Record<string, any>, filter: Record<string, any>): boolean {
+function match(row: Record<string, unknown>, filter: Record<string, any>): boolean {
     if (!filter || typeof filter !== "object") return true;
 
     for (const [key, cond] of Object.entries(filter)) {
@@ -377,7 +377,7 @@ function refreshTokens(): Record<string, any>[] {
 }
 
 /** @returns {Map<string, object>} live consumed-backup-token map */
-function backupTokensConsumed(): Map<string, Record<string, any>> {
+function backupTokensConsumed(): Map<string, Record<string, unknown>> {
     return _backupTokensConsumed;
 }
 

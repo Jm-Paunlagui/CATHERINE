@@ -387,7 +387,7 @@ class BackupArchiveService {
      *     requestId: req.id,
      * });
      */
-    static async buildBackup({ selection, adminId, requestId = null }: { selection: Record<string, any>; adminId: number | string; requestId?: string | null; }): Promise<{
+    static async buildBackup({ selection, adminId, requestId = null }: { selection: Record<string, unknown>; adminId: number | string; requestId?: string | null; }): Promise<{
         zipBuffer: Buffer;
         filename: string;
         token: string;
@@ -456,7 +456,7 @@ class BackupArchiveService {
 
         // ── 4. signature.json — HMAC over the sorted file→SHA-256 map ───────
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const fileHashes: Record<string, any> = {};
+        const fileHashes: Record<string, unknown> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             fileHashes[name] = crypto.createHash("sha256").update(buf).digest("hex");
         }
@@ -574,7 +574,7 @@ class BackupArchiveService {
         requestId = null,
     }: { tables: string[]; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; event?: string | null; eventId?: number | string | null; mode: "FULL" | "INCREMENTAL"; archiveId: string; chain?: { baseArchiveId: string; generation: number; } | null; previousTableState?: Record<string, { sha256: string; sourceArchiveId: string; }>; createdBy?: number | string | null; requestId?: string | null; }): Promise<{
         zipBuffer: Buffer;
-        manifest: Record<string, any>;
+        manifest: Record<string, unknown>;
         archiveId: string;
         totalRows: number;
         tableCount: number;
@@ -658,7 +658,7 @@ class BackupArchiveService {
         // An UNCHANGED table's omitted file is exactly that: omitted, never
         // hashed as if present.
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const fileHashes: Record<string, any> = {};
+        const fileHashes: Record<string, unknown> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             fileHashes[name] = crypto.createHash("sha256").update(buf).digest("hex");
         }
@@ -799,7 +799,7 @@ class BackupArchiveService {
 
         const rowCounts: Record<string, any> = {};
         /** @type {Record<string, object[]>} */
-        const rowsByTable: Record<string, Record<string, any>[]> = {};
+        const rowsByTable: Record<string, Record<string, unknown>[]> = {};
         /** @type {Record<string, Buffer>} */
         const dataBuffers: Record<string, Buffer> = {};
 
@@ -841,7 +841,7 @@ class BackupArchiveService {
         const xlsxBuffer = await BackupArchiveService._buildReadableWorkbookFromRows(tables, rowsByTable);
 
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const fileHashes: Record<string, any> = {};
+        const fileHashes: Record<string, unknown> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             fileHashes[name] = crypto.createHash("sha256").update(buf).digest("hex");
         }
@@ -949,7 +949,7 @@ class BackupArchiveService {
      * @returns {Promise<Buffer>}
      * @private
      */
-    static async _buildReadableWorkbookFromRows(tables: string[], rowsByTable: Record<string, Record<string, any>[]>): Promise<Buffer> {
+    static async _buildReadableWorkbookFromRows(tables: string[], rowsByTable: Record<string, Record<string, unknown>[]>): Promise<Buffer> {
         const rowCap = parseInt(process.env.BACKUP_XLSX_ROW_CAP ?? "", 10) || DEFAULT_XLSX_ROW_CAP;
 
         const workbook = new ExcelJS.Workbook();

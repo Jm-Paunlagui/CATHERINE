@@ -31,7 +31,7 @@ const _str = (v: unknown) => (v == null ? "" : String(v));
  * @param {object} row
  * @returns {{ CONFIG_KEY: string, CONFIG_VALUE: string }}
  */
-function _fieldsSystemConfig(row: Record<string, any>): { CONFIG_KEY: string; CONFIG_VALUE: string; } {
+function _fieldsSystemConfig(row: Record<string, unknown>): { CONFIG_KEY: string; CONFIG_VALUE: string; } {
     return {
         CONFIG_KEY: _str(row.CONFIG_KEY),
         CONFIG_VALUE: _str(row.CONFIG_VALUE),
@@ -61,7 +61,7 @@ class TamperDetectionService {
      * const fields = TamperDetectionService.buildSignedFields("T_SYSTEM_CONFIG", row);
      * const rowHash = await CryptoVault.signRecord("T_SYSTEM_CONFIG", fields);
      */
-    static buildSignedFields(domain: string, row: Record<string, any>): Record<string, number | string> {
+    static buildSignedFields(domain: string, row: Record<string, unknown>): Record<string, number | string> {
         const builder = _FIELD_BUILDERS[domain as keyof typeof _FIELD_BUILDERS];
         if (!builder) {
             throw new Error(`TamperDetectionService.buildSignedFields: unknown ROW_HASH domain "${domain}".`);
@@ -111,7 +111,7 @@ class TamperDetectionService {
      * @param {Record<string, 1>} projection - must include ROW_HASH and every signed column
      * @returns {Promise<{ intact: object[], tampered: object[] }>}
      */
-    static async scanTable(tableName: string, domain: string, projection: Record<string, 1>): Promise<{ intact: Record<string, any>[]; tampered: Record<string, any>[]; }> {
+    static async scanTable(tableName: string, domain: string, projection: Record<string, 1>): Promise<{ intact: Record<string, unknown>[]; tampered: Record<string, unknown>[]; }> {
         const col = new OracleCollection(tableName, _db);
         const rows = await col
             .find({ ROW_HASH: { $exists: true } })

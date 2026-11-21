@@ -80,14 +80,14 @@ class QueryBuilder {
     declare _terminated: boolean;
     declare _asOf: any;
     declare _sample: any;
-    declare _forUpdate: any;
+    declare _forUpdate: unknown;
     declare _projection: any;
-    declare _skip: any;
-    declare _limit: any;
+    declare _skip: unknown;
+    declare _limit: unknown;
     declare _sort: any;
-    declare _conn: Record<string, any> | null;
+    declare _conn: Record<string, unknown> | null;
     declare db: Record<string, any>;
-    declare filter: Record<string, any>;
+    declare filter: Record<string, unknown>;
     declare tableName: string;
     /**
      * Create a new QueryBuilder. Usually called internally by OracleCollection.find().
@@ -98,7 +98,7 @@ class QueryBuilder {
      * @param {Object} [conn] - Raw connection (if inside a transaction/session)
      * @param {Object} [options] - Initial options: sort, limit, skip, projection, etc.
      */
-    constructor(tableName: string, filter: Record<string, any>, db: Record<string, any>, conn: Record<string, any> | null = null, options: Record<string, any> = {}) {
+    constructor(tableName: string, filter: Record<string, unknown>, db: Record<string, unknown>, conn: Record<string, unknown> | null = null, options: Record<string, unknown> = {}) {
         this.tableName = tableName;
         this.filter = filter || {};
         this.db = db;
@@ -132,7 +132,7 @@ class QueryBuilder {
      * @param {Object} sortSpec - e.g. { name: 1, age: -1 } (1=ASC, -1=DESC)
      * @returns {QueryBuilder} this (for chaining)
      */
-    sort(sortSpec: Record<string, any>): QueryBuilder {
+    sort(sortSpec: Record<string, unknown>): QueryBuilder {
         this._checkTerminated();
         this._sort = sortSpec;
         return this;
@@ -179,7 +179,7 @@ class QueryBuilder {
      * @param {Object} projectionSpec - Columns to include (1) or exclude (0)
      * @returns {QueryBuilder} this (for chaining)
      */
-    project(projectionSpec: Record<string, any>): QueryBuilder {
+    project(projectionSpec: Record<string, unknown>): QueryBuilder {
         this._checkTerminated();
         this._projection = projectionSpec;
         return this;
@@ -219,7 +219,7 @@ class QueryBuilder {
      *
      * @returns {{ sql: string, binds: Object }} The SQL string and bind variables
      */
-    _buildSQL(): { sql: string; binds: Record<string, any>; } {
+    _buildSQL(): { sql: string; binds: Record<string, unknown>; } {
         const { whereClause, binds } = parseFilter(this.filter, "t0");
 
         // Projection
@@ -363,7 +363,7 @@ class QueryBuilder {
             if (obj && typeof obj.then === "function") return await obj;
             if (Array.isArray(obj)) return Promise.all(obj.map(resolve));
             if (obj && typeof obj === "object" && !(obj instanceof Date)) {
-                const result: Record<string, any> = {};
+                const result: Record<string, unknown> = {};
                 for (const [k, v] of Object.entries(obj)) {
                     result[k] = await resolve(v);
                 }
@@ -371,7 +371,7 @@ class QueryBuilder {
             }
             return obj;
         };
-        this.filter = (await resolve(this.filter)) as Record<string, any>;
+        this.filter = (await resolve(this.filter)) as Record<string, unknown>;
     }
 
     /**
@@ -444,7 +444,7 @@ class QueryBuilder {
      * @example
      *   const users = await coll.find({ active: true }).sort({ name: 1 }).toArray();
      */
-    async toArray<T = Record<string, any>>(): Promise<T[]> {
+    async toArray<T = Record<string, unknown>>(): Promise<T[]> {
         this._terminated = true;
         return this._execute();
     }
@@ -464,7 +464,7 @@ class QueryBuilder {
      *     console.log(`Order ${row.id}: $${row.amount}`);
      *   });
      */
-    async forEach(fn: ((...args: any[]) => any)): Promise<void> {
+    async forEach(fn: ((...args: unknown[]) => unknown)): Promise<void> {
         this._terminated = true;
         await this._resolveFilterPromises();
         const { sql, binds } = this._buildSQL();
@@ -512,7 +512,7 @@ class QueryBuilder {
      * @example
      *   const user = await coll.find({ email: "ana@test.com" }).next();
      */
-    async next<T = Record<string, any>>(): Promise<T | null> {
+    async next<T = Record<string, unknown>>(): Promise<T | null> {
         this._terminated = true;
         const original = this._limit;
         this._limit = 1;

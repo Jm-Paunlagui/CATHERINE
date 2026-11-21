@@ -224,7 +224,7 @@ function ensureDataDir() {
  * @param {object} entry
  * @returns {object}
  */
-function migrateEntry(entry: Record<string, any>): Record<string, any> {
+function migrateEntry(entry: Record<string, unknown>): Record<string, unknown> {
     // Old entries had `summary` instead of `message` + `whatChanged`
     if (!entry.message && entry.summary) {
         const { summary, ...rest } = entry;
@@ -279,7 +279,7 @@ function readStore(): { entries: Record<string, any>[]; } {
  * Encrypts and writes the store to disk.
  * @param {{ entries: object[] }} store
  */
-function writeStore(store: { entries: Record<string, any>[]; }) {
+function writeStore(store: { entries: Record<string, unknown>[]; }) {
     ensureDataDir();
     try {
         const ciphertext = encrypt(JSON.stringify(store));
@@ -314,7 +314,7 @@ class ChangelogModel {
      * @param {string} id
      * @returns {object}
      */
-    static findById(id: string): Record<string, any> {
+    static findById(id: string): Record<string, unknown> {
         const { entries } = readStore();
         const entry = entries.find((e) => e.id === id);
         if (!entry) throw new AppError(CHANGELOG_ERRORS.ENTRY_NOT_FOUND, 404);
@@ -326,7 +326,7 @@ class ChangelogModel {
      * @param {object} data
      * @returns {object} created entry
      */
-    static create(data: Record<string, any>): Record<string, any> {
+    static create(data: Record<string, unknown>): Record<string, unknown> {
         // Whole read-modify-write cycle under the cross-process lock: readStore
         // runs AFTER any concurrent writer released the lock, so this create
         // always appends to the latest committed entries array — never a stale
@@ -362,7 +362,7 @@ class ChangelogModel {
      * @param {object} data
      * @returns {object} updated entry
      */
-    static update(id: string, data: Record<string, any>): Record<string, any> {
+    static update(id: string, data: Record<string, unknown>): Record<string, unknown> {
         return withLock(() => {
             const store = readStore();
             const idx = store.entries.findIndex((e) => e.id === id);
@@ -413,7 +413,7 @@ class ChangelogModel {
      * @param {object[]} entries  Changelog entries to seed.
      * @returns {number} Count of entries written.
      */
-    static resetStore(entries: Record<string, any>[]): number {
+    static resetStore(entries: Record<string, unknown>[]): number {
         return withLock(() => {
             const now = new Date().toISOString();
             const normalised = entries.map((e) => ({

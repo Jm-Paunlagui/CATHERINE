@@ -180,10 +180,10 @@ class IntegrityModel {
      * @param {object} filters - { <filter key>: value, from?: Date, to?: Date }
      * @returns {object} oracle-mongo-wrapper match
      */
-    static _buildMatch(cfg: TableConfig, filters: Record<string, any> = {}): Record<string, any> {
+    static _buildMatch(cfg: TableConfig, filters: Record<string, unknown> = {}): Record<string, unknown> {
         const f = cfg.filters;
         const numeric = cfg.numericFilters ?? [];
-        const match: Record<string, any> = {};
+        const match: Record<string, unknown> = {};
 
         for (const [fk, column] of Object.entries(f)) {
             if (fk === "date" || filters[fk] == null) continue;
@@ -191,7 +191,7 @@ class IntegrityModel {
         }
 
         if (f.date && (filters.from instanceof Date || filters.to instanceof Date)) {
-            const range: Record<string, any> = {};
+            const range: Record<string, unknown> = {};
             if (filters.from instanceof Date) range.$gte = filters.from;
             if (filters.to instanceof Date) range.$lte = filters.to;
             match[f.date] = range;
@@ -214,7 +214,7 @@ class IntegrityModel {
      * @param {number} [opts.cap=200000]
      * @returns {Promise<{ tampered: object[], rowsScanned: number, truncated: boolean }>}
      */
-    static async sweepTampered(key: string, filters: Record<string, any> = {}, opts: { batch?: number; cap?: number; } = {}): Promise<{ tampered: Record<string, any>[]; rowsScanned: number; truncated: boolean; }> {
+    static async sweepTampered(key: string, filters: Record<string, unknown> = {}, opts: { batch?: number; cap?: number; } = {}): Promise<{ tampered: Record<string, unknown>[]; rowsScanned: number; truncated: boolean; }> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg) return { tampered: [], rowsScanned: 0, truncated: false };
 
@@ -269,7 +269,7 @@ class IntegrityModel {
      * @param {number} [opts.limit=50]
      * @returns {Promise<{ rows: object[], total: number }>}
      */
-    static async listPage(key: string, filters: Record<string, any> = {}, opts: { page?: number; limit?: number; } = {}): Promise<{ rows: Record<string, any>[]; total: number; }> {
+    static async listPage(key: string, filters: Record<string, unknown> = {}, opts: { page?: number; limit?: number; } = {}): Promise<{ rows: Record<string, unknown>[]; total: number; }> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg) return { rows: [], total: 0 };
 
@@ -300,7 +300,7 @@ class IntegrityModel {
      * @param {object} [filters]
      * @returns {Promise<number|null>}
      */
-    static async getMaxPk(key: string, filters: Record<string, any> = {}): Promise<number | null> {
+    static async getMaxPk(key: string, filters: Record<string, unknown> = {}): Promise<number | null> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg) return null;
         const match = IntegrityModel._buildMatch(cfg, filters);
@@ -322,7 +322,7 @@ class IntegrityModel {
      * @param {number} [cap=500]
      * @returns {Promise<object[]>}
      */
-    static async listSince(key: string, filters: Record<string, any> = {}, afterPk: number, cap: number = 500): Promise<Record<string, any>[]> {
+    static async listSince(key: string, filters: Record<string, unknown> = {}, afterPk: number, cap: number = 500): Promise<Record<string, unknown>[]> {
         const cfg = TABLE_REGISTRY[key];
         if (!cfg || afterPk == null) return [];
         const match = {

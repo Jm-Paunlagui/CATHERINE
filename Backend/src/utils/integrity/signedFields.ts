@@ -95,9 +95,9 @@ function canonicalPlain(v: unknown): string {
  */
 function makeSignedFields({ domain, fields, moneyFields = [] }: { domain: string; fields: string[]; moneyFields?: string[]; }): {
     domain: string;
-    project: (row: Record<string, any>) => Record<string, any>;
-    sign: (row: Record<string, any>) => Promise<string>;
-    verify: (row: Record<string, any>, signature: string) => Promise<boolean>;
+    project: (row: Record<string, unknown>) => Record<string, unknown>;
+    sign: (row: Record<string, unknown>) => Promise<string>;
+    verify: (row: Record<string, unknown>, signature: string) => Promise<boolean>;
 } {
     if (typeof domain !== "string" || domain.length === 0) {
         throw new Error("makeSignedFields: domain must be a non-empty string.");
@@ -117,8 +117,8 @@ function makeSignedFields({ domain, fields, moneyFields = [] }: { domain: string
      * @param {Object} row
      * @returns {Object}
      */
-    function project(row: Record<string, any>): Record<string, any> {
-        const out: Record<string, any> = {};
+    function project(row: Record<string, unknown>): Record<string, unknown> {
+        const out: Record<string, unknown> = {};
         for (const key of allFields) {
             const raw = row == null ? undefined : row[key];
             out[key] = moneySet.has(key) ? canonicalMoney(raw) : canonicalPlain(raw);
@@ -130,7 +130,7 @@ function makeSignedFields({ domain, fields, moneyFields = [] }: { domain: string
      * Signs `row`. Lazy-requires CryptoVault to avoid a load-time cycle.
      * @param {Object} row @returns {Promise<string>}
      */
-    async function sign(row: Record<string, any>): Promise<string> {
+    async function sign(row: Record<string, unknown>): Promise<string> {
         const { CryptoVault } = (require("../encryption/CryptoVault") as typeof import("../encryption/CryptoVault"));
         return CryptoVault.signRecord(domain, project(row));
     }
@@ -139,7 +139,7 @@ function makeSignedFields({ domain, fields, moneyFields = [] }: { domain: string
      * Verifies `row` against `signature`. Uses the SAME projection as `sign`.
      * @param {Object} row @param {string} signature @returns {Promise<boolean>}
      */
-    async function verify(row: Record<string, any>, signature: string): Promise<boolean> {
+    async function verify(row: Record<string, unknown>, signature: string): Promise<boolean> {
         const { CryptoVault } = (require("../encryption/CryptoVault") as typeof import("../encryption/CryptoVault"));
         return CryptoVault.verifyRecord(domain, project(row), signature);
     }

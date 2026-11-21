@@ -154,7 +154,7 @@ const SECTION_SOURCE_MAP = Object.freeze({
 });
 
 /** @type {{ builtAt: number, byId: Map<string, object>, sections: object[] }|null} */
-let _manifestCache: { builtAt: number; byId: Map<string, Record<string, any>>; sections: Record<string, any>[]; } | null = null;
+let _manifestCache: { builtAt: number; byId: Map<string, Record<string, unknown>>; sections: Record<string, unknown>[]; } | null = null;
 
 class DevDocsService {
     declare static FRESHNESS_SNAPSHOT_PATH: string;
@@ -399,7 +399,7 @@ class DevDocsService {
      *
      * @returns {Promise<{ builtAt: number, byId: Map<string, object>, sections: object[] }>}
      */
-    static async _buildManifest(): Promise<{ builtAt: number; byId: Map<string, Record<string, any>>; sections: Record<string, any>[]; }> {
+    static async _buildManifest(): Promise<{ builtAt: number; byId: Map<string, Record<string, unknown>>; sections: Record<string, unknown>[]; }> {
         const byId = new Map();
         const sections: any[] = [];
 
@@ -477,7 +477,7 @@ class DevDocsService {
      *
      * @returns {Promise<{ builtAt: number, byId: Map<string, object>, sections: object[] }>}
      */
-    static async _manifest(): Promise<{ builtAt: number; byId: Map<string, Record<string, any>>; sections: Record<string, any>[]; }> {
+    static async _manifest(): Promise<{ builtAt: number; byId: Map<string, Record<string, any>>; sections: Record<string, unknown>[]; }> {
         if (_manifestCache && Date.now() - _manifestCache.builtAt < MANIFEST_TTL_MS) {
             return _manifestCache;
         }
@@ -558,7 +558,7 @@ class DevDocsService {
      * @returns {Promise<{ results: object[], total: number, truncated: boolean }>}
      * @throws {AppError} 400 when the query is too short
      */
-    static async search(rawQuery: unknown): Promise<{ results: Record<string, any>[]; total: number; truncated: boolean; }> {
+    static async search(rawQuery: unknown): Promise<{ results: Record<string, unknown>[]; total: number; truncated: boolean; }> {
         const query = String(rawQuery ?? "").trim();
         if (query.length < MIN_QUERY_LENGTH) {
             throw new AppError(DEV_DOCS_ERRORS.INVALID_QUERY, HTTP_STATUS.BAD_REQUEST, {

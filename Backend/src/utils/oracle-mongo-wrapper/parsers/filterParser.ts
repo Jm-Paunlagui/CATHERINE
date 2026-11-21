@@ -159,7 +159,7 @@ const COMPARISON_OPS: Record<string, string> = {
  *   _parseFieldExpr("age", { $gte: 18, $lt: 65 }, binds, null, counter)
  *   // → '("age" >= :where_age_0 AND "age" < :where_age_1)'
  */
-function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, outerAlias: string | null | undefined, counter: Record<string, any>): string {
+function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown>, outerAlias: string | null | undefined, counter: Record<string, any>): string {
   const qField = quoteIdentifier(field);
 
   // Simple equality: { field: value }
@@ -440,7 +440,7 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, any>, o
  *   }, binds, "t0", counter)
  *   // → '(SELECT AVG("salary") FROM "employees" WHERE "dept_id" = t0."dept_id")'
  */
-function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, binds: Record<string, any>, outerAlias: string | null | undefined, counter: Record<string, any>): string {
+function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, binds: Record<string, unknown>, outerAlias: string | null | undefined, counter: Record<string, any>): string {
   const collection = quoteIdentifier(spec.collection);
   const aggFn = spec.aggregate
     ? spec.aggregate.replace("$", "").toUpperCase()
@@ -525,7 +525,7 @@ function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, bind
  *   // → { whereClause: 'WHERE "status" = :where_status_0 AND ("age" >= :where_age_1 OR "vip" = :where_vip_2)',
  *   //     binds: { where_status_0: "active", where_age_1: 18, where_vip_2: true } }
  */
-function parseFilter(filter: Record<string, any>, tableAlias?: string | null, _counter?: Record<string, any>): { whereClause: string; binds: Record<string, any>; } {
+function parseFilter(filter: Record<string, any>, tableAlias?: string | null, _counter?: Record<string, any>): { whereClause: string; binds: Record<string, unknown>; } {
   if (
     !filter ||
     typeof filter !== "object" ||
@@ -537,7 +537,7 @@ function parseFilter(filter: Record<string, any>, tableAlias?: string | null, _c
   // Create counter once at the top-level call; reuse for recursive calls
   const counter = _counter || _createCounter();
 
-  const binds: Record<string, any> = {};
+  const binds: Record<string, unknown> = {};
   const conditions = [];
 
   for (const [key, value] of Object.entries(filter)) {

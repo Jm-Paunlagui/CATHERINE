@@ -38,7 +38,7 @@ const MODELS = Object.freeze({
 
 class ArchitectureService {
     /** @type {Map<string, object>} */
-    static #maps: Map<string, Record<string, any>> = new Map();
+    static #maps: Map<string, Record<string, unknown>> = new Map();
     declare static MAP_NAMES: string[];
 
     /**

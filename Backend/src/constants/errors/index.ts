@@ -14,7 +14,7 @@ class AppError extends Error {
     declare retryAfterSec: number | undefined;
     declare reasons: string[] | undefined;
     declare hint: string | undefined;
-    declare details: any[] | undefined;
+    declare details: unknown[] | undefined;
     declare isOperational: boolean;
     declare statusCode: number;
     /**
@@ -28,7 +28,7 @@ class AppError extends Error {
      * @param {string[]} [opts.reasons] - Machine reason codes; surfaced as
      *   `error.reasons` on the response
      */
-    constructor(message: string, statusCode: number = 500, opts: { type?: string; details?: Array<any>; hint?: string; retryAfterSec?: number; reasons?: string[]; } = {}) {
+    constructor(message: string, statusCode: number = 500, opts: { type?: string; details?: Array<unknown>; hint?: string; retryAfterSec?: number; reasons?: string[]; } = {}) {
         super(message);
         this.name = opts.type || "AppError";
         this.statusCode = statusCode;

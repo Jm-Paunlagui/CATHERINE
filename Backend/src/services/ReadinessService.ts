@@ -67,7 +67,7 @@ async function probePool(poolName: string): Promise<{ status: "up" | "down"; sta
     try {
         const probe = db.withConnection(
             poolName,
-            async (conn: any) => {
+            async (conn) => {
                 await conn.execute("SELECT 1 FROM DUAL");
             },
             { bypassBreaker: true },
@@ -123,11 +123,11 @@ let _inFlight: any = null;
  *
  * @returns {Promise<{ ready: boolean, checks: Record<string, object> }>}
  */
-function evaluate(): Promise<{ ready: boolean; checks: Record<string, Record<string, any>>; }> {
+function evaluate(): Promise<{ ready: boolean; checks: Record<string, Record<string, unknown>>; }> {
     if (_inFlight) return _inFlight;
     _inFlight = (async () => {
         const results = await Promise.all(POOL_NAMES.map(probePool));
-        const checks: Record<string, any> = {};
+        const checks: Record<string, unknown> = {};
         let ready = true;
         POOL_NAMES.forEach((name, i) => {
             const check = results[i];

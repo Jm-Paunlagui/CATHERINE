@@ -96,13 +96,13 @@ function _deepClone(value: any): any {
     if (value === null || typeof value !== "object") return value;
     if (value instanceof Date) return new Date(value.getTime());
     if (Array.isArray(value)) return value.map(_deepClone);
-    const out: Record<string, any> = {};
+    const out: Record<string, unknown> = {};
     for (const k of Object.keys(value)) out[k] = _deepClone(value[k]);
     return out;
 }
 
 class OracleCollection {
-    declare _conn: Record<string, any> | null;
+    declare _conn: Record<string, unknown> | null;
     declare db: Record<string, any>;
     declare tableName: string;
     /**
@@ -115,7 +115,7 @@ class OracleCollection {
      *   When set → transaction mode (reuses this connection for all operations).
      *   You normally don't pass this yourself — it's set by Session.collection().
      */
-    constructor(tableName: string, db: Record<string, any>, _conn: Record<string, any> | null = null) {
+    constructor(tableName: string, db: Record<string, unknown>, _conn: Record<string, unknown> | null = null) {
         this.tableName = tableName;
         this.db = db;
         this._conn = _conn;
@@ -133,7 +133,7 @@ class OracleCollection {
      * @param {Function} fn - async (conn) => result
      * @returns {Promise<*>} Whatever fn returns
      */
-    async _execute(fn: ((...args: any[]) => any)): Promise<any> {
+    async _execute(fn: ((...args: any[]) => unknown)): Promise<any> {
         if (this._conn) return fn(this._conn);
         return this.db.withConnection(fn);
     }
@@ -162,7 +162,7 @@ class OracleCollection {
      *     .project({ name: 1 })  // SELECT "name" only
      *     .toArray();            // ← NOW the SQL runs
      */
-    find(filter: Record<string, any> = {}, options: Record<string, any> = {}): QueryBuilder {
+    find(filter: Record<string, unknown> = {}, options: Record<string, any> = {}): QueryBuilder {
         const qb = new QueryBuilder(
             this.tableName,
             filter,
@@ -192,7 +192,7 @@ class OracleCollection {
      *   const user = await users.findOne({ id: 42 });
      *   if (user) console.log(user.name);
      */
-    async findOne<T = Record<string, any>>(filter: Record<string, any>, _options: Record<string, any> = {}): Promise<T | null> {
+    async findOne<T = Record<string, unknown>>(filter: Record<string, unknown>, _options: Record<string, unknown> = {}): Promise<T | null> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
             const sql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
@@ -231,7 +231,7 @@ class OracleCollection {
      *     { returnDocument: "after" }
      *   );
      */
-    async findOneAndUpdate<T = Record<string, any>>(filter: Record<string, any>, update: Record<string, any>, options: Record<string, any> = {}): Promise<T | null> {
+    async findOneAndUpdate<T = Record<string, unknown>>(filter: Record<string, unknown>, update: Record<string, unknown>, options: Record<string, unknown> = {}): Promise<T | null> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
@@ -252,10 +252,10 @@ class OracleCollection {
                 if (isSimpleEquality) {
                     const { setClause, binds: updateBinds } =
                         parseUpdate(update);
-                    const mergeBinds: Record<string, any> = {};
+                    const mergeBinds: Record<string, unknown> = {};
 
                     // Source row from filter equality values
-                    const srcParts: any[] = [];
+                    const srcParts: unknown[] = [];
                     filterEntries.forEach(([col, val], i) => {
                         const bname = `src_${i}`;
                         srcParts.push(`:${bname} AS ${quoteIdentifier(col)}`);
@@ -272,7 +272,7 @@ class OracleCollection {
                     Object.assign(mergeBinds, updateBinds);
 
                     // WHEN NOT MATCHED: insert filter scalars + $set values
-                    const insertFields: Record<string, any> = {};
+                    const insertFields: Record<string, unknown> = {};
                     filterEntries.forEach(([k, v]) => {
                         insertFields[k] = v;
                     });
@@ -333,14 +333,14 @@ class OracleCollection {
 
             if (!beforeDoc && options.upsert) {
                 // Upsert: insert
-                const fields: Record<string, any> = {};
+                const fields: Record<string, unknown> = {};
                 if (update.$set) Object.assign(fields, update.$set);
                 for (const [k, v] of Object.entries(filter)) {
                     if (typeof v !== "object") fields[k] = v;
                 }
                 const cols = Object.keys(fields);
                 const vals = cols.map((_, i) => `:v${i}`);
-                const insertBinds: Record<string, any> = {};
+                const insertBinds: Record<string, unknown> = {};
                 cols.forEach((c, i) => {
                     insertBinds[`v${i}`] = fields[c];
                 });
@@ -413,7 +413,7 @@ class OracleCollection {
      *   const deleted = await users.findOneAndDelete({ id: 42 });
      *   console.log(`Deleted user: ${deleted.name}`);
      */
-    async findOneAndDelete<T = Record<string, any>>(filter: Record<string, any>): Promise<T | null> {
+    async findOneAndDelete<T = Record<string, unknown>>(filter: Record<string, unknown>): Promise<T | null> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
             // Include ROWID so we can delete by exact row address
@@ -470,7 +470,7 @@ class OracleCollection {
      *     { returnDocument: "after" }
      *   );
      */
-    async findOneAndReplace<T = Record<string, any>>(filter: Record<string, any>, replacement: Record<string, any>, options: Record<string, any> = {}): Promise<T | null> {
+    async findOneAndReplace<T = Record<string, unknown>>(filter: Record<string, unknown>, replacement: Record<string, unknown>, options: Record<string, unknown> = {}): Promise<T | null> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} ${whereClause} FETCH FIRST 1 ROW ONLY`;
@@ -483,8 +483,8 @@ class OracleCollection {
 
             // Build SET from replacement (exclude ID/primary key)
             const cols = Object.keys(replacement).filter((c) => c !== "ID");
-            const setParts: any[] = [];
-            const replBinds: Record<string, any> = {};
+            const setParts: unknown[] = [];
+            const replBinds: Record<string, unknown> = {};
             cols.forEach((c, i) => {
                 const bname = `repl_${i}`;
                 replBinds[bname] = replacement[c];
@@ -535,7 +535,7 @@ class OracleCollection {
      *   const total = await users.countDocuments();               // Count all
      *   const active = await users.countDocuments({ status: "active" }); // Filtered
      */
-    async countDocuments(filter: Record<string, any> = {}): Promise<number> {
+    async countDocuments(filter: Record<string, unknown> = {}): Promise<number> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
             const sql = `SELECT COUNT(*) AS CNT FROM ${quoteIdentifier(this.tableName)} ${whereClause}`;
@@ -614,7 +614,7 @@ class OracleCollection {
      *   const cities = await users.distinct("city", { country: "PH" });
      *   // → ["Manila", "Cebu", "Davao"]
      */
-    async distinct(field: string, filter: Record<string, any> = {}): Promise<Array<any>> {
+    async distinct(field: string, filter: Record<string, unknown> = {}): Promise<Array<unknown>> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
             const sql = `SELECT DISTINCT ${quoteIdentifier(field)} FROM ${quoteIdentifier(this.tableName)} ${whereClause}`;
@@ -662,18 +662,18 @@ class OracleCollection {
      *   );
      *   console.log(result2.returning.CREATED_AT); // → 2024-01-15T...
      */
-    async insertOne(document: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; insertedId: any; returning?: Record<string, any>; }> {
+    async insertOne(document: Record<string, unknown>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; insertedId: any; returning?: Record<string, unknown>; }> {
         return this._execute(async (conn) => {
             const cols = Object.keys(document);
             const bindNames = cols.map((_, i) => `:v${i}`);
-            const binds: Record<string, any> = {};
+            const binds: Record<string, unknown> = {};
             cols.forEach((c, i) => {
                 binds[`v${i}`] = document[c];
             });
 
             // RETURNING clause
             let returningSql = "";
-            const outBinds: Record<string, any> = {};
+            const outBinds: Record<string, unknown> = {};
             const returningCols = options.returning || [];
             if (returningCols.length > 0) {
                 const retCols = returningCols.map(quoteIdentifier).join(", ");
@@ -803,10 +803,10 @@ class OracleCollection {
      *   });
      *   console.log(r2.batchErrors); // → [{ offset: 3, message: "ORA-00001: …" }]
      */
-    async insertMany(documents: Array<Record<string, any>>, options: Record<string, any> = {}): Promise<{
+    async insertMany(documents: Array<Record<string, unknown>>, options: Record<string, any> = {}): Promise<{
         acknowledged: boolean;
         insertedCount: number;
-        insertedIds: Array<any>;
+        insertedIds: Array<unknown>;
         returning?: Array<Record<string, any>>;
         batchErrors?: Array<{ offset: number; message: string; }>;
     }> {
@@ -835,7 +835,7 @@ class OracleCollection {
             const sql = `INSERT INTO ${quoteIdentifier(this.tableName)} (${cols.map(quoteIdentifier).join(", ")}) VALUES (${placeholders})${returningSql}`;
 
             // Build bind arrays for executeMany
-            const bindDefs: Record<string, any> = {};
+            const bindDefs: Record<string, unknown> = {};
             cols.forEach((c, i) => {
                 // Scan all documents for a non-null sample to determine the type
                 let sampleVal = null;
@@ -877,7 +877,7 @@ class OracleCollection {
             }
 
             const bindRows = documents.map((doc) => {
-                const row: Record<string, any> = {};
+                const row: Record<string, unknown> = {};
                 cols.forEach((c, i) => {
                     row[`v${i}`] = doc[c] ?? null;
                 });
@@ -899,7 +899,7 @@ class OracleCollection {
 
                 if (returningCols.length > 0 && result.outBinds) {
                     const returning: Record<string, unknown>[] = result.outBinds.map((ob: any) => {
-                        const rowOut: Record<string, any> = {};
+                        const rowOut: Record<string, unknown> = {};
                         for (const c of returningCols) {
                             const val = ob[`out_${c}`];
                             rowOut[c] = Array.isArray(val) ? val[0] : val;
@@ -968,7 +968,7 @@ class OracleCollection {
      *   );
      *   // → UPDATE "T_ORDERS" SET "ROW_HASH" = :s0 WHERE "ORDER_ID" = :k0
      */
-    async bulkUpdateByKeys(rows: Array<Record<string, any>>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; modifiedCount: number; }> {
+    async bulkUpdateByKeys(rows: Array<Record<string, unknown>>, options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean; modifiedCount: number; }> {
         if (!Array.isArray(rows) || rows.length === 0) {
             throw new Error(MSG.BULK_UPDATE_EMPTY);
         }
@@ -995,7 +995,7 @@ class OracleCollection {
         const sql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setClause} WHERE ${whereClause}`;
 
         // Bind definitions: same type-scan approach as insertMany.
-        const bindDefs: Record<string, any> = {};
+        const bindDefs: Record<string, unknown> = {};
         const defFor = (col: any) => {
             let sampleVal = null;
             for (const row of rows) {
@@ -1034,7 +1034,7 @@ class OracleCollection {
         });
 
         const bindRows = rows.map((row) => {
-            const bound: Record<string, any> = {};
+            const bound: Record<string, unknown> = {};
             setCols.forEach((c, i) => {
                 bound[`s${i}`] = row[c] ?? null;
             });
@@ -1093,7 +1093,7 @@ class OracleCollection {
      *     { $set: { status: "premium" }, $inc: { loginCount: 1 } }
      *   );
      */
-    async updateOne(filter: Record<string, any>, update: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number; returning?: Record<string, unknown>;  }> {
+    async updateOne(filter: Record<string, unknown>, update: Record<string, unknown>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number; returning?: Record<string, unknown>;  }> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const { setClause, binds: updateBinds } = parseUpdate(update);
@@ -1101,7 +1101,7 @@ class OracleCollection {
 
             // RETURNING
             let returningSql = "";
-            const outBinds: Record<string, any> = {};
+            const outBinds: Record<string, unknown> = {};
             const returningCols = options.returning || [];
             if (returningCols.length > 0) {
                 const retCols = returningCols.map(quoteIdentifier).join(", ");
@@ -1124,14 +1124,14 @@ class OracleCollection {
 
                 if (result.rowsAffected === 0 && options.upsert) {
                     // Upsert: insert
-                    const fields: Record<string, any> = {};
+                    const fields: Record<string, unknown> = {};
                     if (update.$set) Object.assign(fields, update.$set);
                     for (const [k, v] of Object.entries(filter)) {
                         if (typeof v !== "object") fields[k] = v;
                     }
                     const cols = Object.keys(fields);
                     const vals = cols.map((_, i) => `:v${i}`);
-                    const insertBinds: Record<string, any> = {};
+                    const insertBinds: Record<string, unknown> = {};
                     cols.forEach((c, i) => {
                         insertBinds[`v${i}`] = fields[c];
                     });
@@ -1194,7 +1194,7 @@ class OracleCollection {
      *   );
      *   console.log(`Updated ${result.modifiedCount} users`);
      */
-    async updateMany(filter: Record<string, any>, update: Record<string, any>, _options: Record<string, any> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number;  }> {
+    async updateMany(filter: Record<string, unknown>, update: Record<string, unknown>, _options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number;  }> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const { setClause, binds: updateBinds } = parseUpdate(update);
@@ -1241,12 +1241,12 @@ class OracleCollection {
      *     { name: "New Name", email: "new@test.com", status: "active" }
      *   );
      */
-    async replaceOne(filter: Record<string, any>, replacement: Record<string, any>, _options: Record<string, any> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number;  }> {
+    async replaceOne(filter: Record<string, unknown>, replacement: Record<string, unknown>, _options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number;  }> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const cols = Object.keys(replacement).filter((c) => c !== "ID");
-            const setParts: any[] = [];
-            const replBinds: Record<string, any> = {};
+            const setParts: unknown[] = [];
+            const replBinds: Record<string, unknown> = {};
             cols.forEach((c, i) => {
                 const bname = `repl_${i}`;
                 replBinds[bname] = replacement[c];
@@ -1380,12 +1380,12 @@ class OracleCollection {
      *   );
      *   console.log(result2.returning.name); // → "Ana"
      */
-    async deleteOne(filter: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; deletedCount: number; returning?: Record<string, unknown>;  }> {
+    async deleteOne(filter: Record<string, unknown>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; deletedCount: number; returning?: Record<string, unknown>;  }> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
 
             let returningSql = "";
-            const outBinds: Record<string, any> = {};
+            const outBinds: Record<string, unknown> = {};
             const returningCols = options.returning || [];
             if (returningCols.length > 0) {
                 const retCols = returningCols.map(quoteIdentifier).join(", ");
@@ -1446,7 +1446,7 @@ class OracleCollection {
      *   const result = await users.deleteMany({ status: "inactive" });
      *   console.log(`Deleted ${result.deletedCount} users`);
      */
-    async deleteMany(filter: Record<string, any>): Promise<{ acknowledged: boolean; deletedCount: number;  }> {
+    async deleteMany(filter: Record<string, unknown>): Promise<{ acknowledged: boolean; deletedCount: number;  }> {
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
             const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} ${whereClause}`;
@@ -1520,7 +1520,7 @@ class OracleCollection {
      *   ]);
      *   // Returns the top 5 regions by total order amount
      */
-    aggregate(pipeline: Array<any>): Promise<Record<string, unknown>[]> & { _buildSQL: () => { sql: string; binds: Record<string, unknown> } } {
+    aggregate(pipeline: Array<unknown>): Promise<Record<string, unknown>[]> & { _buildSQL: () => { sql: string; binds: Record<string, unknown> } } {
         const { buildAggregateSQL } = (require("../pipeline/aggregatePipeline") as typeof import("../pipeline/aggregatePipeline"));
         // Deep-clone preserving Date instances — JSON round-trip converts Dates to
         // ISO strings which then fail Oracle's NLS_DATE_FORMAT implicit conversion
@@ -1564,7 +1564,7 @@ class OracleCollection {
      * @param {Object} [options] - unique, name, type ('bitmap')
      * @returns {Promise<{ acknowledged, indexName }>}
      */
-    async createIndex(fields: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; indexName: string;  }> {
+    async createIndex(fields: Record<string, unknown>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; indexName: string;  }> {
         return this._execute(async (conn) => {
             const cols = Object.entries(fields)
                 .map(
@@ -1745,14 +1745,14 @@ class OracleCollection {
      *     }
      *   );
      */
-    async merge(sourceData: Record<string, any>, matchCondition: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean;  }> {
+    async merge(sourceData: Record<string, unknown>, matchCondition: Record<string, any>, options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean;  }> {
         return this._execute(async (conn) => {
             const cols = Object.keys(sourceData);
             const srcParts = cols.map((c) => {
                 const bname = `merge_${c}`;
                 return `:${bname} AS ${quoteIdentifier(c)}`;
             });
-            const srcBinds: Record<string, any> = {};
+            const srcBinds: Record<string, unknown> = {};
             cols.forEach((c) => {
                 srcBinds[`merge_${c}`] = sourceData[c];
             });
@@ -1822,7 +1822,7 @@ class OracleCollection {
     async mergeFrom(sourceTable: string, matchCondition: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean;  }> {
         return this._execute(async (conn) => {
             const onClause = `tgt.${quoteIdentifier(matchCondition.localField)} = src.${quoteIdentifier(matchCondition.foreignField)}`;
-            const binds: Record<string, any> = {};
+            const binds: Record<string, unknown> = {};
 
             let whenMatchedSql = "";
             if (options.whenMatched) {
@@ -1886,7 +1886,7 @@ class OracleCollection {
      *     maxLevel: 5,
      *   });
      */
-    async connectBy(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildConnectBy>[1]): Promise<Array<any>> {
+    async connectBy(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildConnectBy>[1]): Promise<Array<unknown>> {
         const { buildConnectBy } = (require("../advanced/oracleAdvanced") as typeof import("../advanced/oracleAdvanced"));
         const { sql, binds } = buildConnectBy(this.tableName, spec);
 
@@ -1923,7 +1923,7 @@ class OracleCollection {
      *   - groupBy: Column(s) to keep as rows (e.g. ["product"])
      * @returns {Promise<Array>} Pivoted rows
      */
-    async pivot(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildPivot>[1]): Promise<Array<any>> {
+    async pivot(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildPivot>[1]): Promise<Array<unknown>> {
         const { buildPivot } = (require("../advanced/oracleAdvanced") as typeof import("../advanced/oracleAdvanced"));
         const { sql, binds } = buildPivot(this.tableName, spec);
 
@@ -1955,7 +1955,7 @@ class OracleCollection {
      *   - includeNulls: true to include NULL values (uses INCLUDE NULLS)
      * @returns {Promise<Array>} Unpivoted rows
      */
-    async unpivot(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildUnpivot>[1]): Promise<Array<any>> {
+    async unpivot(spec: Parameters<typeof import("../advanced/oracleAdvanced").buildUnpivot>[1]): Promise<Array<unknown>> {
         const { buildUnpivot } = (require("../advanced/oracleAdvanced") as typeof import("../advanced/oracleAdvanced"));
         const { sql, binds } = buildUnpivot(this.tableName, spec);
 
@@ -1993,7 +1993,7 @@ class OracleCollection {
      *     { all: true }
      *   ).toArray();
      */
-    static union(qb1: QueryBuilder, qb2: QueryBuilder, options: Record<string, any> = {}): import("../joins/setOperations").SetResultBuilder {
+    static union(qb1: QueryBuilder, qb2: QueryBuilder, options: Record<string, unknown> = {}): import("../joins/setOperations").SetResultBuilder {
         const { SetResultBuilder } = (require("../joins/setOperations") as typeof import("../joins/setOperations"));
         return new SetResultBuilder(
             qb1,
@@ -2134,7 +2134,7 @@ class OracleCollection {
 
             // Build correlated UPDATE subquery approach (more reliable in Oracle)
             const setParts = [];
-            const binds: Record<string, any> = {};
+            const binds: Record<string, unknown> = {};
             let bindIdx = 0;
 
             for (const [col, val] of Object.entries(set)) {

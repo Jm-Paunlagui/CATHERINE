@@ -79,7 +79,7 @@ class HealthStreamHub {
     declare _evalTimer: any;
     declare _heartbeat: any;
     declare _last: any;
-    declare _perIp: Map<any, any>;
+    declare _perIp: Map<unknown, any>;
     declare _clients: Map<any, any>;
     constructor() {
         /** @type {Map<import('express').Response, { ip: string, teardown: () => void }>} */
@@ -225,12 +225,12 @@ class HealthStreamHub {
     }
 
     /** @param {string} event @param {object} data */
-    _broadcast(event: string, data: Record<string, any>) {
+    _broadcast(event: string, data: Record<string, unknown>) {
         for (const res of [...this._clients.keys()]) this._send(res, event, data);
     }
 
     /** @param {import('express').Response} res @param {string} event @param {object} data */
-    _send(res: import('express').Response, event: string, data: Record<string, any>) {
+    _send(res: import('express').Response, event: string, data: Record<string, unknown>) {
         this._write(res, `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     }
 

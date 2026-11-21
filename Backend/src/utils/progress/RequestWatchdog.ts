@@ -81,8 +81,8 @@ class RequestWatchdog {
     declare _now: () => number;
     declare _idleWatchdog: import("./IdleWatchdog").IdleWatchdog;
     declare _limits: { defaultMs: number; longMs: number; };
-    declare _corsOverride: { applyToErrorResponse: ((...args: any[]) => any); } | null;
-    declare _burstDetector: { record: ((...args: any[]) => any); };
+    declare _corsOverride: { applyToErrorResponse: ((...args: any[]) => unknown); } | null;
+    declare _burstDetector: { record: ((...args: unknown[]) => unknown); };
 
     /**
      * The ProgressScope of a request (undefined outside a watched server).
@@ -110,7 +110,7 @@ class RequestWatchdog {
      * @param {{ applyToErrorResponse: Function }} [options.cors] - CORS policy for the 504 (default: the one `app.js` mounts).
      * @param {{ record: Function }} [options.burstDetector=defaultBurstDetector] - Stall-burst alert (one critical log per burst).
      */
-    constructor({ limits, idleWatchdog = defaultIdleWatchdog, now = Date.now, cors, burstDetector = defaultBurstDetector }: { limits?: { defaultMs: number; longMs: number; }; idleWatchdog?: import("./IdleWatchdog").IdleWatchdog; now?: () => number; cors?: { applyToErrorResponse: ((...args: any[]) => any); }; burstDetector?: { record: ((...args: any[]) => any); }; } = {}) {
+    constructor({ limits, idleWatchdog = defaultIdleWatchdog, now = Date.now, cors, burstDetector = defaultBurstDetector }: { limits?: { defaultMs: number; longMs: number; }; idleWatchdog?: import("./IdleWatchdog").IdleWatchdog; now?: () => number; cors?: { applyToErrorResponse: ((...args: unknown[]) => unknown); }; burstDetector?: { record: ((...args: any[]) => unknown); }; } = {}) {
         this._burstDetector = burstDetector;
         this._corsOverride = cors ?? null;
         if (limits) {
@@ -129,7 +129,7 @@ class RequestWatchdog {
     }
 
     /** @returns {{ applyToErrorResponse: Function }} */
-    _corsPolicy(): { applyToErrorResponse: ((...args: any[]) => any); } {
+    _corsPolicy(): { applyToErrorResponse: ((...args: unknown[]) => unknown); } {
         return (
             this._corsOverride ??
             (require("../../middleware/security/CorsMiddleware") as typeof import("../../middleware/security/CorsMiddleware")).defaultCors

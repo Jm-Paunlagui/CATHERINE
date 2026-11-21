@@ -28,7 +28,7 @@ const SWEEP_MIN_GAP_MS = 1000;
 
 class LoginLockoutState {
     /** @type {Map<string, {state: object, expiresAt: number}>} */
-    #entries: Map<string, { state: Record<string, any>; expiresAt: number; }> = new Map();
+    #entries: Map<string, { state: Record<string, unknown>; expiresAt: number; }> = new Map();
     #policy;
     #maxKeys;
     #lastSweep = -Infinity;

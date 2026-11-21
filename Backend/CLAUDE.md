@@ -1093,24 +1093,27 @@ Compiled-exe rules:
 
 ---
 
-## TypeScript Migration (in progress)
+## TypeScript
 
-`server.ts` and `src/` are `.ts` ES modules (`import`/`export`) and Bun runs them directly; `tsc` only type-checks (`noEmit`). `scripts/` and `test/` are still CommonJS JavaScript and load `src` with `require()`.
+`server.ts` and every file under `src/` are TypeScript ES modules (`import`/`export`), type-checked under `strict`. Bun runs them directly; `tsc` only type-checks (`noEmit`). `scripts/` and `test/` are still CommonJS JavaScript and load `src` with `require()`.
 
 ```bash
-bun run typecheck   # tsc -p . — strict, server.ts + src/**/*.ts
+bun run typecheck   # tsc -p . — must stay at zero errors
 bun run lint        # .ts files go through typescript-eslint (eslint.config.js BLOCK 1b)
 ```
 
-Rules while the migration runs:
+Rules:
 
-1. **`// @ts-nocheck` on line 1 marks an unconverted file.** Converting a file means deleting that line and getting `bun run typecheck` clean. `grep -rl @ts-nocheck server.ts src` is the remaining work list. Never add it to a converted or new file.
-2. New files under `src/` are written as typed `.ts` from the start.
-3. `typescript` is pinned to `~6.0`: typescript-eslint needs TypeScript's JS API (`<6.1`), which TypeScript 7 (the native compiler) does not ship. Move to 7 when typescript-eslint supports it.
-4. Two lint rules are relaxed for the migration only (BLOCK 1b): `ban-ts-comment` allows `@ts-nocheck`, and `no-require-imports` is off while lazy in-function `require()` calls remain (cycle breakers and branch-only loads in `server.ts`; Bun allows `require` inside ES modules). Restore both when the last file is converted.
-5. **Imports run before the module body.** Any side effect another module depends on at load time goes in its own side-effect module imported first, never in the importer's body: `server.ts` imports `src/config/bootEnv.ts` (thread pool, `.env`, `TZ`) then `src/config/bootSecrets.ts` (boot guard) before anything else, and `app.ts` imports `src/config/cacheStores.ts` above the routes. No top-level `return` (ESM forbids it; `server.ts`'s worker boot is `bootWorker()` for that reason).
-6. **Export shape.** A CommonJS caller's `require()` of a module with `export default X` returns `{ default: X }`, so scripts and tests write `require("../src/...").default`. A named export cannot be replaced by `vi.spyOn` or by assignment, so anything a test stubs is exported as an object (default export) whose properties can be swapped — see `models/demo/demoStore.ts` and the default export of `config/database.ts`.
-7. A source path in code or docs names the `.ts` file (`src/utils/logger.ts`). The logger skips its own stack frames by matching `logger.[jt]s`; keep that match extension-agnostic.
+1. **No `// @ts-nocheck`, no new `any`.** Type new code precisely. For data whose shape is not known yet (IPC messages, parsed JSON, `req.query`, thrown values) use `unknown` and narrow it with a type guard; see `utils/cluster/ipcSchemas.ts` (`isPlainObject`, `isBoundedString`) and `utils/http/queryString.ts`. `any` that remains is debt from the JavaScript (`grep -rnE ':\s*any\b|Record<string, any>' src server.ts`); replace it when you touch that code.
+2. **Casts carry a reason.** `x as T` and `x!` are allowed only where the code already guarantees the type, with a comment saying how (e.g. `zip.file(name)! // name came from zip.files`). `as unknown as T` is not allowed.
+3. **Express:** `req.user` is optional (public routes have none); on authenticated routes call `requireAuthUser(req)` (`utils/auth/requireAuthUser.ts`). A named `:param` is read as `req.params.id as string`. Read `req.query` values through `queryString()`. App-specific `Request` fields are declared in `src/types/express.d.ts`.
+4. **Database rows:** the wrapper's `toArray<T>()` / `next<T>()` / `findOne<T>()` are generic; a model declares its row interface (e.g. `SystemConfigRow`, `BackupVoteRow`) and gets it without a cast. Oracle `DATE`/`TIMESTAMP` columns arrive as `Date`.
+5. **Class fields** that a constructor or method assigns are declared with `declare field: T;`. A bare `field: T;` is emitted as a real field and resets, after `super()`, a value a base constructor set.
+6. **Lazy `require()`** (cycle breakers, branch-only loads in `server.ts`) is written `(require("./x") as typeof import("./x"))` so the module keeps its types; a bare `require()` is `any`. This is why `@typescript-eslint/no-require-imports` stays off.
+7. **Imports run before the module body.** A side effect another module depends on at load time goes in its own side-effect module imported first, never in the importer's body: `server.ts` imports `src/config/bootEnv.ts` (thread pool, `.env`, `TZ`) then `src/config/bootSecrets.ts` (boot guard) before anything else, and `app.ts` imports `src/config/cacheStores.ts` above the routes. No top-level `return` (ESM forbids it; the worker boot is `bootWorker()` for that reason).
+8. **Export shape.** A CommonJS caller's `require()` of a module with `export default X` returns `{ default: X }`, so scripts and tests write `require("../src/...").default`. A named export cannot be replaced by `vi.spyOn` or by assignment, so anything a test stubs is exported as an object (default export) whose properties can be swapped: see `models/demo/demoStore.ts` and the default export of `config/database.ts`.
+9. `typescript` is pinned to `~6.0`: typescript-eslint needs TypeScript's JS API (`<6.1`), which TypeScript 7 (the native compiler) does not ship. Move to 7 when typescript-eslint supports it.
+10. A source path in code or docs names the `.ts` file (`src/utils/logger.ts`). The logger skips its own stack frames by matching `logger.[jt]s`; keep that match extension-agnostic.
 
 ---
 

@@ -52,7 +52,7 @@ import { quoteIdentifier } from "../utils";
  * @param {string} [spec.frame] - Custom frame clause (e.g., 'ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING')
  * @returns {string} The complete SQL analytic expression
  */
-function buildWindowExpr(spec: { fn: string; field?: string; partitionBy?: string | string[]; orderBy?: Record<string, any>; offset?: number; n?: number; frame?: string; }): string {
+function buildWindowExpr(spec: { fn: string; field?: string; partitionBy?: string | string[]; orderBy?: Record<string, unknown>; offset?: number; n?: number; frame?: string; }): string {
   const { fn, field, partitionBy, orderBy, offset, n, frame } = spec;
 
   // Build OVER clause

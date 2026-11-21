@@ -20,7 +20,7 @@ class ResponseTimeMiddleware {
   declare _metrics: Map<any, any>;
   declare _verySlowThreshold: any;
   declare _slowThreshold: any;
-  constructor(options: Record<string, any> = {}) {
+  constructor(options: Record<string, unknown> = {}) {
     this._slowThreshold = options.slowThreshold ?? 1000;
     this._verySlowThreshold = options.verySlowThreshold ?? 3000;
     this._metrics = new Map();
@@ -43,7 +43,7 @@ class ResponseTimeMiddleware {
         );
         res.setHeader("X-Response-Time", `${ms}ms`);
       }
-      return (originalWriteHead as (...a: any[]) => Response).call(this, statusCode, statusMessage, headers);
+      return (originalWriteHead as (...a: unknown[]) => Response).call(this, statusCode, statusMessage, headers);
     } as typeof res.writeHead;
 
     res.on("finish", () => {
@@ -85,7 +85,7 @@ class ResponseTimeMiddleware {
   }
 
   getPerformanceMetrics() {
-    const out: Record<string, any> = {};
+    const out: Record<string, unknown> = {};
     for (const [route, d] of this._metrics) {
       out[route] = {
         ...d,

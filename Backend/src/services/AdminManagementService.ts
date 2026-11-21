@@ -94,7 +94,7 @@ class AdminManagementService {
      * @returns {Promise<Array<object>>} at most {@link SEARCH_LIMIT} rows
      * @throws {AppError} 400 when query is empty
      */
-    static async searchAccounts(query: string): Promise<Array<Record<string, any>>> {
+    static async searchAccounts(query: string): Promise<Array<Record<string, unknown>>> {
         if (!query || typeof query !== "string" || !query.trim()) {
             throw new AppError(
                 VALIDATION_ERRORS.INVALID_INPUT,
@@ -229,7 +229,7 @@ class AdminManagementService {
      *
      * @returns {Promise<Array<object>>}
      */
-    static async listAdmins(): Promise<Array<Record<string, any>>> {
+    static async listAdmins(): Promise<Array<Record<string, unknown>>> {
         const [admins, users] = await Promise.all([AdminModel.findAll(), UserModel.findAll()]);
         const usersByName = new Map(users.map((u) => [u.USERNAME, u]));
 
@@ -274,7 +274,7 @@ class AdminManagementService {
      * @returns {Record<string, 'Y'|'N'>}
      * @private
      */
-    static _flagsOf(admin: Record<string, any>): Record<string, 'Y' | 'N'> {
+    static _flagsOf(admin: Record<string, unknown>): Record<string, 'Y' | 'N'> {
         const flags: Record<string, any> = {};
         for (const [key, channel] of Object.entries(NOTIFY_FLAG_CHANNELS)) {
             const column = AdminModel.SERVER_NOTIFY_FLAG_COLUMNS[channel];
@@ -291,7 +291,7 @@ class AdminManagementService {
      * @throws {AppError} 400 on unknown keys or invalid values
      * @private
      */
-    static _validateFlags(flags: Record<string, any>) {
+    static _validateFlags(flags: Record<string, unknown>) {
         if (flags == null || typeof flags !== "object" || Array.isArray(flags)) {
             throw new AppError(VALIDATION_ERRORS.INVALID_INPUT, HTTP_STATUS.BAD_REQUEST, {
                 type: "ValidationError",
@@ -327,7 +327,7 @@ class AdminManagementService {
      * @returns {Record<string, 'Y'|'N'>}
      * @private
      */
-    static _notifyChannelFlags(flags: Record<string, any>): Record<string, 'Y' | 'N'> {
+    static _notifyChannelFlags(flags: Record<string, unknown>): Record<string, 'Y' | 'N'> {
         const channelFlags: Record<string, any> = {};
         for (const [key, channel] of Object.entries(NOTIFY_FLAG_CHANNELS)) {
             if (flags[key] !== undefined) channelFlags[channel] = flags[key];
@@ -361,7 +361,7 @@ class AdminManagementService {
      * @returns {Promise<object>} `{ username, role, emailDelivered, recipientSource, recipientHint, tempPasswordExpiresAt }`
      * @throws {AppError} 400 | 403 | 409 | 422 | 503
      */
-    static async addAdmin({ username, role, caller, overrideEmail, retainPassword, newPassword, flags }: { username: string; role: string; caller: { username: string; role: string | undefined; }; overrideEmail?: string; retainPassword?: any; newPassword?: any; flags?: Record<string, any>; }): Promise<Record<string, any>> {
+    static async addAdmin({ username, role, caller, overrideEmail, retainPassword, newPassword, flags }: { username: string; role: string; caller: { username: string; role: string | undefined; }; overrideEmail?: string; retainPassword?: unknown; newPassword?: unknown; flags?: Record<string, any>; }): Promise<Record<string, unknown>> {
         AdminManagementService._validateRole(role);
 
         if (retainPassword !== undefined || newPassword !== undefined) {
@@ -513,7 +513,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string, role: string }>}
      * @throws {AppError} 400 | 403 | 404 | 409 | 422
      */
-    static async updateAdmin({ username, role, caller, changePassword, newPassword }: { username: string; role: string; caller: { username: string; role: string | undefined; }; changePassword?: boolean; newPassword?: any; }): Promise<{ username: string; role: string; }> {
+    static async updateAdmin({ username, role, caller, changePassword, newPassword }: { username: string; role: string; caller: { username: string; role: string | undefined; }; changePassword?: boolean; newPassword?: unknown; }): Promise<{ username: string; role: string; }> {
         AdminManagementService._validateRole(role);
 
         if (changePassword === true || newPassword !== undefined) {
@@ -572,7 +572,7 @@ class AdminManagementService {
      * @returns {Promise<object>}
      * @throws {AppError} 400 | 403 | 404 | 422 | 503
      */
-    static async resetPassword(username: string, { overrideEmail, caller }: { overrideEmail?: string; caller?: { username: string; role: string | undefined; }; } = {}): Promise<Record<string, any>> {
+    static async resetPassword(username: string, { overrideEmail, caller }: { overrideEmail?: string; caller?: { username: string; role: string | undefined; }; } = {}): Promise<Record<string, unknown>> {
         const existing = await AdminManagementService._fetchAndVerify(username);
 
         AdminManagementService._assertCanManage(caller, "resetPassword", {
@@ -795,7 +795,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string, flags: object }>}
      * @throws {AppError} 400 | 404 | 409 | 422
      */
-    static async updatePermissions({ username, flags }: { username: string; flags: Record<string, any>; }): Promise<{ username: string; flags: Record<string, any>; }> {
+    static async updatePermissions({ username, flags }: { username: string; flags: Record<string, any>; }): Promise<{ username: string; flags: Record<string, unknown>; }> {
         AdminManagementService._validateFlags(flags);
 
         const existing = await AdminManagementService._fetchAndVerify(username);
@@ -921,7 +921,7 @@ class AdminManagementService {
      * @throws {AppError} 409 LAST_ACTIVE_SUPER_ADMIN
      * @private
      */
-    static async _withSuperAdminGuard<T>(existing: Record<string, any>, fn: (session: Record<string, any> | null) => Promise<T>): Promise<T> {
+    static async _withSuperAdminGuard<T>(existing: Record<string, any>, fn: (session: Record<string, unknown> | null) => Promise<T>): Promise<T> {
         if (existing.ROLE !== "SUPER_ADMIN" || String(existing.IS_ACTIVE ?? "Y") !== "Y") {
             return fn(null);
         }

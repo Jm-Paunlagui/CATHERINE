@@ -116,9 +116,9 @@ class BatchGuard {
      *   pending: Array<{item: T, reason: string}>
      * }>}
      */
-    async run<T,     R>(items: Array<T>, worker: (item: T, index: number) => Promise<R>, options: { hooks?: Record<string, any> | ((item: T, index: number) => Record<string, any>); } = {}): Promise<{
+    async run<T,     R>(items: Array<T>, worker: (item: T, index: number) => Promise<R>, options: { hooks?: Record<string, any> | ((item: T, index: number) => Record<string, unknown>); } = {}): Promise<{
         succeeded: Array<{ item: T; result: R; }>;
-        failed: Array<{ item: T; error: any; attempts: number; classification: string | null; }>;
+        failed: Array<{ item: T; error: unknown; attempts: number; classification: string | null; }>;
         pending: Array<{ item: T; reason: string; }>;
     }> {
         const list = Array.isArray(items) ? items : [];
@@ -272,7 +272,7 @@ class BatchGuard {
      * @param {{succeeded: Array, failed: Array, pending: Array}} report
      * @returns {200|207|null}
      */
-    static httpStatusFor(report: { succeeded: Array<any>; failed: Array<any>; pending: Array<any>; }): 200 | 207 | null {
+    static httpStatusFor(report: { succeeded: Array<unknown>; failed: Array<unknown>; pending: Array<unknown>; }): 200 | 207 | null {
         const succeededCount = report?.succeeded?.length ?? 0;
         const failedCount = report?.failed?.length ?? 0;
         const pendingCount = report?.pending?.length ?? 0;

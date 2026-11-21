@@ -158,7 +158,7 @@ router.get(
         };
 
         try {
-            await db.withConnection(POOL_NAMES[0], async (conn: any) => {
+            await db.withConnection(POOL_NAMES[0], async (conn) => {
                 await conn.execute("SELECT 1 FROM DUAL");
             });
             data.database = "connected";

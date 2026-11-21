@@ -170,8 +170,8 @@ class AlertNotifierService {
     declare _shutdownFlushed: boolean;
     declare _ackHydration: any;
     declare _acksHydrated: boolean;
-    declare _acks: Map<any, any>;
-    declare _lastPurgeDay: any;
+    declare _acks: Map<unknown, any>;
+    declare _lastPurgeDay: unknown;
     declare _retentionSweepTimer: any;
     declare _pollInFlight: boolean;
     declare _alertLogFlushing: any;
@@ -500,7 +500,7 @@ class AlertNotifierService {
      * @returns {Promise<"done"|"timeout"|"error">}
      * @private
      */
-    async _raceBudget(work: Promise<any>, timeoutMs: number): Promise<"done" | "timeout" | "error"> {
+    async _raceBudget(work: Promise<unknown>, timeoutMs: number): Promise<"done" | "timeout" | "error"> {
         let timer;
         const timeout = new Promise<"timeout">((resolve) => {
             timer = setTimeout(() => resolve("timeout"), Math.max(0, Math.min(timeoutMs, NOTIFY_NOW_TIMEOUT_MS)));
@@ -797,7 +797,7 @@ class AlertNotifierService {
      * @param {boolean} isRecovery
      * @returns {Promise<void>}
      */
-    async _dispatchMetricDigest(channel: string, events: Array<{ alert?: Record<string, any>; state?: Record<string, any>; key: string; transitionType?: string; }>, snapshot: Record<string, any>, isRecovery: boolean): Promise<void> {
+    async _dispatchMetricDigest(channel: string, events: Array<{ alert?: Record<string, any>; state?: Record<string, any>; key: string; transitionType?: string; }>, snapshot: Record<string, unknown>, isRecovery: boolean): Promise<void> {
         const rows = events.map(({ alert, state }) => {
             const source = alert || state?.lastAlert || {};
             return {
@@ -887,7 +887,7 @@ class AlertNotifierService {
      */
     _buildMetricAlertDetails(alert: Record<string, any>, scope: string, snapshot: Record<string, any>, sendResult: {
         recipientCount?: number; sent: boolean; cause?: string;
-}): Record<string, any> {
+}): Record<string, unknown> {
         const details: Record<string, unknown> = {
             value: typeof alert.value === "number" ? alert.value : null,
             description: alert.description ?? null,
@@ -1021,7 +1021,7 @@ class AlertNotifierService {
      *
      * @param {{ level: string, message: string, meta: object, requestId: string|null, timestamp: string }} record
      */
-    _onCriticalLog(record: { level: string; message: string; meta: Record<string, any>; requestId: string | null; timestamp: string; }) {
+    _onCriticalLog(record: { level: string; message: string; meta: Record<string, unknown>; requestId: string | null; timestamp: string; }) {
         if (this._criticalBuffer.length < CRITICAL_BUFFER_MAX) {
             this._criticalBuffer.push(record);
         } else {
@@ -1302,7 +1302,7 @@ class AlertNotifierService {
      * @param {{ sent: boolean, cause?: string, recipientCount?: number }} sendResult
      * @returns {object}
      */
-    _buildCriticalLogDetails(record: { level: string; message: string; meta: Record<string, any>; requestId: string | null; }, sendResult: { sent: boolean; cause?: string; recipientCount?: number; }): Record<string, any> {
+    _buildCriticalLogDetails(record: { level: string; message: string; meta: Record<string, unknown>; requestId: string | null; }, sendResult: { sent: boolean; cause?: string; recipientCount?: number; }): Record<string, unknown> {
         const meta = record.meta ?? {};
         const callsite =
             meta.function && meta.file ? `${meta.function} @ ${meta.file}:${meta.line ?? "?"}` : null;
@@ -1366,7 +1366,7 @@ class AlertNotifierService {
      * @param {{ level?: string, message: string, meta?: object }} opts
      * @returns {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string, recipientCount?: number }>}
      */
-    async notifyCriticalNow({ level = "EMERGENCY", message, meta = {} }: { level?: string; message: string; meta?: Record<string, any>; }): Promise<NotifySendResult> {
+    async notifyCriticalNow({ level = "EMERGENCY", message, meta = {} }: { level?: string; message: string; meta?: Record<string, unknown>; }): Promise<NotifySendResult> {
         if (!ServerNotificationService.isEnabled()) return { sent: false, reason: "disabled" };
 
         const record = {
@@ -1449,7 +1449,7 @@ class AlertNotifierService {
      * @param {{ severity: string, headline: string, summary: string, rows: Array<object> }} payload
      * @param {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string }>} sendPromise - never rejects
      */
-    _recordLifecycleRows({ severity, headline, summary, rows }: { severity: string; headline: string; summary: string; rows: Array<Record<string, any>>; }, sendPromise: Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; }>) {
+    _recordLifecycleRows({ severity, headline, summary, rows }: { severity: string; headline: string; summary: string; rows: Array<Record<string, unknown>>; }, sendPromise: Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; }>) {
         const work = Promise.resolve(sendPromise)
             .then((result) => {
                 const res = result ?? { sent: false };
@@ -1554,13 +1554,13 @@ class AlertNotifierService {
      * @param {object|null} details
      * @returns {object|null}
      */
-    _sanitizeDetails(details: Record<string, any> | null): Record<string, any> | null {
+    _sanitizeDetails(details: Record<string, unknown> | null): Record<string, unknown> | null {
         if (details == null) return null;
 
         const redact = (value: unknown): unknown => {
             if (Array.isArray(value)) return value.map(redact);
             if (value && typeof value === "object") {
-                const out: Record<string, any> = {};
+                const out: Record<string, unknown> = {};
                 for (const [k, v] of Object.entries(value)) {
                     if (SENSITIVE_KEY_PATTERN.test(k)) {
                         out[k] = "[REDACTED]";
@@ -1575,7 +1575,7 @@ class AlertNotifierService {
             return value;
         };
 
-        const redacted = redact(details) as Record<string, any>; // redact maps an object to an object
+        const redacted = redact(details) as Record<string, unknown>; // redact maps an object to an object
         const json = JSON.stringify(redacted);
         if (Buffer.byteLength(json, "utf8") <= MAX_DETAILS_BYTES) return redacted;
 
@@ -1955,7 +1955,7 @@ class AlertNotifierService {
      *   a cluster worker that is not the leader (the name lookup still runs here).
      * @returns {Promise<Array<object>>}
      */
-    async decorateAlertsWithAckState(alerts: Array<Record<string, any>>, acks: Map<string, Record<string, any>> | null = null): Promise<Array<Record<string, any>>> {
+    async decorateAlertsWithAckState(alerts: Array<Record<string, unknown>>, acks: Map<string, Record<string, unknown>> | null = null): Promise<Array<Record<string, unknown>>> {
         if (!alerts || alerts.length === 0) return alerts ?? [];
 
         if (acks === null && AlertNotifierService._forwardsToLeader()) {
@@ -2037,7 +2037,7 @@ class AlertNotifierService {
         ackTtlHours: number;
         running: boolean;
         activeAlerts: Array<{ rule: string; scope: string; channel: string; status: string; lastNotifiedAt: string | null; }>;
-        recentSends: Array<Record<string, any>>;
+        recentSends: Array<Record<string, unknown>>;
     }> {
         if (AlertNotifierService._forwardsToLeader()) {
             return this._forwardToLeader(CLUSTER_RPC_METHODS.ALERTS_STATUS, {});
@@ -2127,7 +2127,7 @@ class AlertNotifierService {
      * @param {{ page?: number, limit?: number }} [opts]
      * @returns {Promise<{ rows: object[], total: number, page: number, limit: number }>}
      */
-    async getAlertHistory(filters: { rule?: string; severity?: string; from?: Date; to?: Date; } = {}, opts: { page?: unknown; limit?: unknown; } = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; }> {
+    async getAlertHistory(filters: { rule?: string; severity?: string; from?: Date; to?: Date; } = {}, opts: { page?: unknown; limit?: unknown; } = {}): Promise<{ rows: Record<string, unknown>[]; total: number; page: number; limit: number; }> {
         return ServerAlertLogModel.findPage(filters, opts);
     }
 
@@ -2229,7 +2229,7 @@ class AlertNotifierService {
      * @throws {AppError}
      * @private
      */
-    async _forwardToLeader(method: string, args: Record<string, any>): Promise<any> {
+    async _forwardToLeader(method: string, args: Record<string, unknown>): Promise<any> {
         try {
             return await clusterRpc.call("leader", method, args, { timeoutMs: CLUSTER_RPC_TIMEOUTS.LEADER_FORWARD_MS });
         } catch (err) {
@@ -2264,7 +2264,7 @@ class AlertNotifierService {
      * @param {{ level?: string, message?: string, meta?: object, requestId?: string|null, timestamp?: string, pid?: number }} record
      * @returns {boolean} true when the record was buffered
      */
-    ingestRelayedCritical(record: { level?: string; message?: string; meta?: Record<string, any>; requestId?: string | null; timestamp?: string; pid?: number; }): boolean {
+    ingestRelayedCritical(record: { level?: string; message?: string; meta?: Record<string, unknown>; requestId?: string | null; timestamp?: string; pid?: number; }): boolean {
         if (!this._running || !record || typeof record !== "object") return false;
         const level = record.level && ["EMERGENCY", "ALERT", "CRITICAL"].includes(record.level) ? record.level : "CRITICAL";
         const ts = new Date(record.timestamp ?? Number.NaN); // absent -> Invalid Date -> now (below)

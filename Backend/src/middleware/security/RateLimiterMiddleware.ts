@@ -46,10 +46,10 @@ class RateLimiterMiddleware {
   declare _lastFallbackLog: number;
   declare _sharedLabel: string;
   declare _label: any;
-  declare _dryRun: any;
+  declare _dryRun: unknown;
   declare _onLimit: any;
   declare _skip: any;
-  declare _keyBy: any;
+  declare _keyBy: unknown;
   declare _windowMs: any;
   declare _max: any;
   constructor(options: Record<string, any> = {}) {
@@ -450,7 +450,7 @@ class RateLimiterGroup {
   }
 
   /** @returns {Object<string, object>} NodeCache stats keyed by member label */
-  getStats(): { [s: string]: Record<string, any>; } {
+  getStats(): { [s: string]: Record<string, unknown>; } {
     const out: Record<string, any> = {};
     for (const m of this._members) out[m._label] = m.getStats();
     return out;

@@ -85,9 +85,9 @@ const DEFAULT_MAX_POLL_ERRORS = 5;
 class ScopedSsePoller {
     declare _pollInterval: any;
     declare _scopes: Map<any, any>;
-    declare logger: Record<string, any> | null;
-    declare onChange: (scope: Record<string, any>) => void;
-    declare readCursor: (scope: Record<string, any>) => Promise<string | null>;
+    declare logger: Record<string, unknown> | null;
+    declare onChange: (scope: Record<string, unknown>) => void;
+    declare readCursor: (scope: Record<string, unknown>) => Promise<string | null>;
     declare maxPollErrors: number;
     declare pollIntervalMs: number;
     declare name: string;
@@ -105,9 +105,9 @@ class ScopedSsePoller {
             name: string;
             pollIntervalMs?: number;
             maxPollErrors?: number;
-            readCursor: (scope: Record<string, any>) => Promise<string | null>;
-            onChange?: (scope: Record<string, any>) => void;
-            logger?: Record<string, any>;
+            readCursor: (scope: Record<string, unknown>) => Promise<string | null>;
+            onChange?: (scope: Record<string, unknown>) => void;
+            logger?: Record<string, unknown>;
         }) {
         if (!opts || typeof opts.readCursor !== "function") {
             throw new TypeError(
@@ -147,7 +147,7 @@ class ScopedSsePoller {
      * @param {{ key: string, meta?: object }} params
      * @returns {() => void} Call on disconnect (wire to `req.on("close")`).
      */
-    open(res: import('express').Response, { key, meta = {} }: { key: string; meta?: Record<string, any>; }): () => void {
+    open(res: import('express').Response, { key, meta = {} }: { key: string; meta?: Record<string, unknown>; }): () => void {
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");

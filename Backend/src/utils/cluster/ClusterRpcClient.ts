@@ -58,11 +58,11 @@ class ClusterRpcError extends Error {
  */
 class ClusterRpcClient {
     /** @type {Map<string, {resolve: Function, reject: Function, timer: any, method: string}>} */
-    #pending: Map<string, { resolve: ((...args: any[]) => any); reject: ((...args: any[]) => any); timer: any; method: string; }> = new Map();
+    #pending: Map<string, { resolve: ((...args: unknown[]) => unknown); reject: ((...args: unknown[]) => unknown); timer: any; method: string; }> = new Map();
     /** @type {Map<string, Function>} */
-    #handlers: Map<string, ((...args: any[]) => any)> = new Map();
+    #handlers: Map<string, ((...args: any[]) => unknown)> = new Map();
     /** @type {Map<string, Function>} */
-    #topics: Map<string, ((...args: any[]) => any)> = new Map();
+    #topics: Map<string, ((...args: any[]) => unknown)> = new Map();
     #active = false;
     #isLeader = false;
     #seq = 0;
@@ -128,7 +128,7 @@ class ClusterRpcClient {
      * @param {string} method
      * @param {(args: object) => any} fn
      */
-    handle(method: string, fn: (args: Record<string, any>) => any) {
+    handle(method: string, fn: (args: Record<string, any>) => unknown) {
         this.#handlers.set(method, fn);
     }
 
@@ -151,7 +151,7 @@ class ClusterRpcClient {
      * @param {{timeoutMs?: number}} [opts]
      * @returns {Promise<any>} result; rejects with ClusterRpcError
      */
-    call(target: "primary" | "leader" | "all", method: string, args: Record<string, any> = {}, { timeoutMs = CLUSTER_RPC_TIMEOUTS.DEFAULT_MS }: { timeoutMs?: number; } = {}): Promise<any> {
+    call(target: "primary" | "leader" | "all", method: string, args: Record<string, unknown> = {}, { timeoutMs = CLUSTER_RPC_TIMEOUTS.DEFAULT_MS }: { timeoutMs?: number; } = {}): Promise<any> {
         if (!this.#active) return Promise.reject(new ClusterRpcError(E.REJECTED, "cluster rpc inactive"));
         // A leader call made by the leader itself runs locally, no IPC.
         if (target === CLUSTER_RPC_TARGETS.LEADER && this.#isLeader) {
@@ -184,7 +184,7 @@ class ClusterRpcClient {
      * @param {object} [args]
      * @returns {boolean} whether the send was attempted successfully
      */
-    notify(method: string, args: Record<string, any> = {}): boolean {
+    notify(method: string, args: Record<string, unknown> = {}): boolean {
         if (!this.#active) return false;
         return this.#trySend({ cmd: CLUSTER_IPC.NOTIFY, method, args });
     }

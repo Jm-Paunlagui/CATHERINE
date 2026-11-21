@@ -58,7 +58,7 @@ import { parseFilter } from "../parsers/filterParser";
  *     maxLevel: 5
  *   })
  */
-function buildConnectBy(tableName: string, spec: { startWith?: Record<string, any>; connectBy: Record<string, any>; orderSiblings?: Record<string, any>; maxLevel?: number; includeLevel?: boolean; includePath?: boolean; }): { sql: string; binds: Record<string, any>; } {
+function buildConnectBy(tableName: string, spec: { startWith?: Record<string, unknown>; connectBy: Record<string, any>; orderSiblings?: Record<string, unknown>; maxLevel?: number; includeLevel?: boolean; includePath?: boolean; }): { sql: string; binds: Record<string, unknown>; } {
   const {
     startWith,
     connectBy,
@@ -67,7 +67,7 @@ function buildConnectBy(tableName: string, spec: { startWith?: Record<string, an
     includeLevel,
     includePath,
   } = spec;
-  const binds: Record<string, any> = {};
+  const binds: Record<string, unknown> = {};
 
   // SELECT clause
   const selectParts = [];
@@ -149,9 +149,9 @@ function buildConnectBy(tableName: string, spec: { startWith?: Record<string, an
  *   })
  *   // Each year gets a row, each region becomes a column with SUM(amount)
  */
-function buildPivot(tableName: string, spec: { value: Record<string, any>; pivotOn: string; pivotValues: string[]; groupBy: string; }): { sql: string; binds: Record<string, any>; } {
+function buildPivot(tableName: string, spec: { value: Record<string, any>; pivotOn: string; pivotValues: string[]; groupBy: string; }): { sql: string; binds: Record<string, unknown>; } {
   const { value, pivotOn, pivotValues, groupBy } = spec;
-  const binds: Record<string, any> = {};
+  const binds: Record<string, unknown> = {};
 
   // Determine aggregate function and field
   const [aggOp, aggField] = Object.entries(value)[0];
@@ -199,7 +199,7 @@ function buildPivot(tableName: string, spec: { value: Record<string, any>; pivot
  *   })
  *   // Each Q1/Q2/Q3/Q4 column becomes a row: { quarter: "Q1", revenue: 1000 }
  */
-function buildUnpivot(tableName: string, spec: { valueColumn: string; nameColumn: string; columns: string[]; includeNulls?: boolean; }): { sql: string; binds: Record<string, any>; } {
+function buildUnpivot(tableName: string, spec: { valueColumn: string; nameColumn: string; columns: string[]; includeNulls?: boolean; }): { sql: string; binds: Record<string, unknown>; } {
   const { valueColumn, nameColumn, columns, includeNulls = false } = spec;
   const nullHandling = includeNulls ? "INCLUDE NULLS" : "EXCLUDE NULLS";
   const colList = columns.map(quoteIdentifier).join(", ");

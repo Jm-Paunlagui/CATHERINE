@@ -208,9 +208,9 @@ const _serverIp = (() => {
 
 class AuditLogMiddleware {
     declare _excludedPaths: any;
-    declare _excludeHealth: any;
-    declare _enabled: any;
-    constructor(options: Record<string, any> = {}) {
+    declare _excludeHealth: unknown;
+    declare _enabled: unknown;
+    constructor(options: Record<string, unknown> = {}) {
         this._enabled =
             options.enabled ?? process.env.AUDIT_LOG_ENABLED !== "false";
         this._excludeHealth =
@@ -242,8 +242,8 @@ class AuditLogMiddleware {
         const startTime = Date.now();
         const originalEnd = res.end.bind(res);
 
-        res.end = ((...args: any[]) => {
-            const result = (originalEnd as (...a: any[]) => Response)(...args);
+        res.end = ((...args: unknown[]) => {
+            const result = (originalEnd as (...a: unknown[]) => Response)(...args);
             const duration = Date.now() - startTime;
             const record = AuditLogMiddleware._buildRecord(req, res, duration);
             setImmediate(() => AuditLogService.insertAsync(record));
@@ -320,12 +320,12 @@ class AuditLogMiddleware {
      * @param {object|null} query - req.query.
      * @returns {string|null} JSON string (redacted, ≤2000 BYTES) or null.
      */
-    static _sanitizeParams(query: Record<string, any> | null): string | null {
+    static _sanitizeParams(query: Record<string, unknown> | null): string | null {
         if (!query || typeof query !== "object") return null;
         const keys = Object.keys(query);
         if (keys.length === 0) return null;
 
-        const filtered: Record<string, any> = {};
+        const filtered: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(query)) {
             filtered[k] = AuditLogMiddleware._isSensitiveParamKey(k)
                 ? "[REDACTED]"

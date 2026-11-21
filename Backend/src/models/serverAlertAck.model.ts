@@ -73,7 +73,7 @@ function col() {
 }
 
 /** @type {Map<string, object>} DEMO_MODE store, keyed by ALERT_KEY. */
-const _demoAcks: Map<string, Record<string, any>> = new Map();
+const _demoAcks: Map<string, Record<string, unknown>> = new Map();
 
 class ServerAlertAckModel {
     declare static resolveTableName: () => string;
@@ -131,7 +131,7 @@ class ServerAlertAckModel {
      * @param {string} alertKey
      * @returns {Promise<object|null>}
      */
-    static async findOne(alertKey: string): Promise<Record<string, any> | null> {
+    static async findOne(alertKey: string): Promise<Record<string, unknown> | null> {
         if (isDemoMode()) return _demoAcks.get(alertKey) ?? null;
         return col().findOne({ ALERT_KEY: alertKey });
     }

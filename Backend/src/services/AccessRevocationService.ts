@@ -131,7 +131,7 @@ class AccessRevocationService {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    static #applyLocal(entries: any, { endStreams = true }: Record<string, any> = {}) {
+    static #applyLocal(entries: any, { endStreams = true }: Record<string, unknown> = {}) {
         let added = 0;
         for (const { fid, untilMs } of entries) {
             const r = revokedSessions.revoke(fid, untilMs);

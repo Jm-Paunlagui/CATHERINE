@@ -105,7 +105,7 @@ function resetUpdateCounter() {}
  *   parseUpdate({ $currentDate: { updatedAt: true } })
  *   // → { setClause: 'SET "updatedAt" = SYSDATE', binds: {} }
  */
-function parseUpdate(update: Record<string, any>): { setClause: string; binds: Record<string, any>; } {
+function parseUpdate(update: Record<string, any>): { setClause: string; binds: Record<string, unknown>; } {
   if (
     !update ||
     typeof update !== "object" ||
@@ -116,7 +116,7 @@ function parseUpdate(update: Record<string, any>): { setClause: string; binds: R
 
   const counter = _createCounter();
   const parts = [];
-  const binds: Record<string, any> = {};
+  const binds: Record<string, unknown> = {};
   let hasOp = false;
 
   for (const [op, fields] of Object.entries(update)) {

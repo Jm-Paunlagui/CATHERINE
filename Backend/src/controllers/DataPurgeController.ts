@@ -274,7 +274,7 @@ class DataPurgeController {
 
         // Derive aggregate disk usage from the index entries.
         const totalSizeBytes = archives.reduce(
-            (sum: unknown, a: any) => sum + (a.sizeBytes ?? 0),
+            (sum: unknown, a) => sum + (a.sizeBytes ?? 0),
             0,
         );
 
@@ -466,7 +466,7 @@ class DataPurgeController {
                 archiveId,
                 votesNeeded,
                 votesCast: votes.length,
-                voters: votes.map((v: any) => ({
+                voters: votes.map((v) => ({
                     votedBy: v.VOTED_BY,
                     votedAt: v.VOTED_AT,
                 })),
@@ -557,7 +557,7 @@ class DataPurgeController {
                 archiveId,
                 votesNeeded,
                 votesCast,
-                voters: votes.map((v: any) => ({
+                voters: votes.map((v) => ({
                     votedBy: v.VOTED_BY,
                     votedAt: v.VOTED_AT,
                 })),

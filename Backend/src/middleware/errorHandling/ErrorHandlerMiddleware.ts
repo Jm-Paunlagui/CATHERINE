@@ -38,7 +38,7 @@ class ErrorHandlerMiddleware {
      *   for errors raised before the CORS middleware ran; defaults to the one
      *   `app.js` mounts.
      */
-    constructor(options: { cors?: { applyToErrorResponse: ((...args: any[]) => any); }; } = {}) {
+    constructor(options: { cors?: { applyToErrorResponse: ((...args: unknown[]) => unknown); }; } = {}) {
         this._cors = options.cors ?? (require("../security/CorsMiddleware") as typeof import("../security/CorsMiddleware")).defaultCors;
         this.handle = this.handle.bind(this);
         this.notFoundHandler = this.notFoundHandler.bind(this);

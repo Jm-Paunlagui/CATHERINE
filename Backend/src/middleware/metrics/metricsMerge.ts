@@ -456,7 +456,7 @@ function mergeWatchdog(snaps: any) {
  * @param {{missing?: number[], expected?: number}} [opts]
  * @returns {object|null} merged snapshot; null when no part is usable
  */
-function mergeMetricsSnapshots(parts: Array<{ workerId: number; pid?: number | null; isLeader?: boolean; value: { snapshot: Record<string, any>; extras?: Record<string, any>; }; }>, { missing = [], expected }: { missing?: number[]; expected?: number; } = {}): Record<string, any> | null {
+function mergeMetricsSnapshots(parts: Array<{ workerId: number; pid?: number | null; isLeader?: boolean; value: { snapshot: Record<string, unknown>; extras?: Record<string, unknown>; }; }>, { missing = [], expected }: { missing?: number[]; expected?: number; } = {}): Record<string, any> | null {
     const usable = (Array.isArray(parts) ? parts : []).filter(isUsablePart);
     if (usable.length === 0) return null;
     const skipped = (Array.isArray(parts) ? parts.length : 0) - usable.length;

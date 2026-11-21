@@ -57,7 +57,7 @@ class IntegrityController {
      * @param {object} src - req.query (and/or req.body)
      * @returns {object} `{ [filterKey]: string, from: Date|null, to: Date|null }`
      */
-    static parseFilters(src: Record<string, any> = {}): Record<string, any> {
+    static parseFilters(src: Record<string, any> = {}): Record<string, unknown> {
         const from = _parseDate(src.from, "from");
         const to = _parseDate(src.to, "to");
         if (from && to && from.getTime() > to.getTime()) {

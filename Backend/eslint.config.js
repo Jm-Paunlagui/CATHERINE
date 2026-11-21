@@ -36,10 +36,10 @@ module.exports = defineConfig([
     },
   },
 
-  // BLOCK 1b — TypeScript (src/**/*.ts). The TS parser replaces espree here and
-  // typescript-eslint's recommended set turns off core rules tsc already covers.
-  // Not type-aware yet (no parserOptions.projectService): most files are still
-  // @ts-nocheck, so type-checked rules would only report `any` noise.
+  // BLOCK 1b — TypeScript (server.ts + src/**/*.ts). The TS parser replaces
+  // espree here and typescript-eslint's recommended set turns off core rules
+  // tsc already covers. Not type-aware (no parserOptions.projectService):
+  // `bun run typecheck` is the type gate.
   {
     files: ["**/*.ts"],
     extends: [tseslint.configs.recommended],
@@ -55,17 +55,14 @@ module.exports = defineConfig([
           ignoreRestSiblings: true,
         },
       ],
-      // MIGRATION: unconverted files carry `// @ts-nocheck` (see tsconfig.json).
-      // Turn this back on (default options) once no file has it.
-      "@typescript-eslint/ban-ts-comment": ["error", { "ts-nocheck": false }],
-      // MIGRATION: explicit `any` marks code the JS left untyped (the typing
-      // codemod writes `any` where tsc reported an implicit one, and JSDoc
-      // `{*}` / `{object}` became any-based types). Count the debt with
-      // `grep -rE ": any\b|<any>|any\[\]" src server.ts | wc -l`; turn this on
-      // once a module is tightened.
+      // `any` left over from the JavaScript is debt, replaced as code is touched
+      // (Backend/CLAUDE.md, TypeScript rule 1). Kept off so lint output is not
+      // buried; count it with
+      // `grep -rnE ":\s*any\b|Record<string, any>" src server.ts | wc -l`.
       "@typescript-eslint/no-explicit-any": "off",
-      // MIGRATION: src is still CommonJS. Turn on when require() is replaced
-      // by import across src.
+      // Lazy, typed require() is deliberate: it breaks import cycles and keeps
+      // branch-only modules (server.ts primary vs worker) from loading
+      // (Backend/CLAUDE.md, TypeScript rule 6).
       "@typescript-eslint/no-require-imports": "off",
     },
   },

@@ -28,7 +28,7 @@ let nextId = 1;
 
 class InFlightTaskRegistry {
     /** @type {Map<number, { label: string, promise: Promise<any> }>} */
-    #tasks: Map<number, { label: string; promise: Promise<any>; }> = new Map();
+    #tasks: Map<number, { label: string; promise: Promise<unknown>; }> = new Map();
 
     /** @type {boolean} */
     #shuttingDown: boolean = false;
@@ -51,7 +51,7 @@ class InFlightTaskRegistry {
      * @param {Promise<any>} promise - The detached promise to observe.
      * @returns {Promise<any>} The same `promise`, untouched.
      */
-    track(label: string, promise: Promise<any>): Promise<any> {
+    track(label: string, promise: Promise<unknown>): Promise<unknown> {
         if (!promise || typeof promise.then !== "function") {
             return promise;
         }

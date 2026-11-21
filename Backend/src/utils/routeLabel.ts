@@ -112,7 +112,7 @@ const CAPTURED_LABEL_KEY = "_routeLabel";
  * @param {object} [params]   - req.params (decoded values).
  * @returns {string} e.g. "/A1/9988/history". Unknown params keep their token.
  */
-function fillRouteTemplate(routePath: string, params: Record<string, any>): string {
+function fillRouteTemplate(routePath: string, params: Record<string, unknown>): string {
   if (!params) return routePath;
   return routePath.replace(PARAM_TOKEN_RE, (token, name) =>
     params[name] != null ? String(params[name]) : token,

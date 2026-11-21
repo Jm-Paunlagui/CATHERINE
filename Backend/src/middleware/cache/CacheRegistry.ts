@@ -73,7 +73,7 @@ class CacheRegistry {
    *   e.g. { sessions: { ttl: 900 }, reports: { ttl: 0 } }
    * @returns {void}
    */
-  registerAll(definitions: { [s: string]: Record<string, any>; }): void {
+  registerAll(definitions: { [s: string]: Record<string, unknown>; }): void {
     for (const [name, options] of Object.entries(definitions)) {
       this.register(name, options);
     }
@@ -140,7 +140,7 @@ class CacheRegistry {
    * Returns aggregate stats plus per-store breakdown.
    * @returns {Object}
    */
-  report(): Record<string, any> {
+  report(): Record<string, unknown> {
     const perStore = this.statsAll();
     const totalHits = perStore.reduce((n, s) => n + s.hits, 0);
     const totalMisses = perStore.reduce((n, s) => n + s.misses, 0);

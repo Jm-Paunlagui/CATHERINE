@@ -35,10 +35,10 @@ function refuseBrotli(parser: import("express").RequestHandler): import("express
 
 class BodyParserMiddleware {
   declare _defaultBody: (req: any, _res: unknown, next: any) => void;
-  declare _urlencodedParser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
-  declare _jsonParser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
+  declare _urlencodedParser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, unknown, unknown, import("qs").ParsedQs, Record<string, unknown>>;
+  declare _jsonParser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, unknown, unknown, import("qs").ParsedQs, Record<string, unknown>>;
   declare _limit: any;
-  constructor(options: Record<string, any> = {}) {
+  constructor(options: Record<string, unknown> = {}) {
     this._limit = options.limit ?? process.env.BODY_LIMIT ?? "10mb";
 
     this._jsonParser = refuseBrotli(bodyParser.json({ limit: this._limit }));

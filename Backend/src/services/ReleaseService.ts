@@ -82,7 +82,7 @@ function compareVersion(a: Record<string, any>, b: Record<string, any>): number 
 }
 
 /** @param {object} p parsed version @returns {string} "MAJOR.MINOR.PATCH" */
-function coreStr(p: Record<string, any>): string {
+function coreStr(p: Record<string, unknown>): string {
     return `${p.major}.${p.minor}.${p.patch}`;
 }
 
@@ -99,7 +99,7 @@ function bumpCore(p: Record<string, any>, bump: "patch" | "minor" | "major"): { 
 }
 
 /** @param {object} p parsed version @returns {string} composed version string */
-function composeVersion(p: Record<string, any>): string {
+function composeVersion(p: Record<string, unknown>): string {
     return p.stage === "stable" ? coreStr(p) : `${coreStr(p)}-${p.stage}.${p.iter}`;
 }
 
@@ -143,7 +143,7 @@ class ReleaseService {
      * @returns {{ patch: object, minor: object, major: object }}
      * @private
      */
-    static _openDrafts(base: Record<string, any>): { patch: Record<string, any>; minor: Record<string, any>; major: Record<string, any>; } {
+    static _openDrafts(base: Record<string, unknown>): { patch: Record<string, unknown>; minor: Record<string, unknown>; major: Record<string, unknown>; } {
         const mk = (bump: any) => {
             const c = bumpCore(base, bump);
             return draft(
@@ -169,7 +169,7 @@ class ReleaseService {
     static getState(): {
         hasTarget: boolean; version: string | null; core: string | null;
         stage: string | null; iter: number; label: string | null;
-        nextActions: string[]; drafts: Record<string, any>;
+        nextActions: string[]; drafts: Record<string, unknown>;
     } {
         const top = ReleaseService._top();
 

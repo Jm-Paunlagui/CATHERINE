@@ -64,9 +64,9 @@ class MetricsMiddleware {
         // a finish-time read collapses every router's "/" to "GET /" and every
         // "/verify" to "POST /verify". res.end fires for success AND error responses.
         const originalEnd = res.end;
-        res.end = function patchedEnd(this: unknown, ...args: any[]) {
+        res.end = function patchedEnd(this: unknown, ...args: unknown[]) {
             captureRouteLabel(req);
-            return (originalEnd as (...a: any[]) => unknown).apply(this, args);
+            return (originalEnd as (...a: unknown[]) => unknown).apply(this, args);
         } as typeof res.end;
 
         res.on("finish", () => {

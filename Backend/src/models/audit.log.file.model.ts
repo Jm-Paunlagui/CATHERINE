@@ -143,7 +143,7 @@ async function getAvailableFilePath(baseDir: string): Promise<string> {
  * @param {object} record
  * @returns {string}
  */
-function toJsonLine(record: Record<string, any>): string {
+function toJsonLine(record: Record<string, unknown>): string {
     return `${JSON.stringify(record)}\n`;
 }
 
@@ -379,7 +379,7 @@ function _matchesFilter(record: Record<string, any>, filter: Record<string, any>
  * @param {object} filter - oracle-mongo-wrapper-style filter.
  * @returns {Promise<object[]>} All matching records (unsorted).
  */
-async function _readAndFilter(filter: Record<string, any>): Promise<Record<string, any>[]> {
+async function _readAndFilter(filter: Record<string, unknown>): Promise<Record<string, any>[]> {
     let { fromDate, toDate } = _extractDateRange(filter);
 
     // Default to today when no date range is specified
@@ -433,7 +433,7 @@ class AuditLogFileModel {
      * @param {object} record
      * @returns {Promise<{rowsAffected: number}>}
      */
-    static async insert(record: Record<string, any>): Promise<{ rowsAffected: number; }> {
+    static async insert(record: Record<string, unknown>): Promise<{ rowsAffected: number; }> {
         await enqueueAppend(toJsonLine(record));
         return { rowsAffected: 1 };
     }
@@ -445,7 +445,7 @@ class AuditLogFileModel {
      * @param {object[]} records
      * @returns {Promise<{rowsAffected: number}>}
      */
-    static async insertBatch(records: Record<string, any>[]): Promise<{ rowsAffected: number; }> {
+    static async insertBatch(records: Record<string, unknown>[]): Promise<{ rowsAffected: number; }> {
         const list = Array.isArray(records) ? records : [];
         if (list.length === 0) return { rowsAffected: 0 };
         await enqueueAppend(list.map(toJsonLine).join(""));
@@ -467,7 +467,7 @@ class AuditLogFileModel {
      * @param {number} pageSize - Rows per page.
      * @returns {Promise<object[]>} Matching records for the requested page.
      */
-    static async findPaginated(filter: Record<string, any>, page: number, pageSize: number): Promise<Record<string, any>[]> {
+    static async findPaginated(filter: Record<string, unknown>, page: number, pageSize: number): Promise<Record<string, unknown>[]> {
         try {
             const records = await _readAndFilter(filter);
             records.sort(
@@ -488,7 +488,7 @@ class AuditLogFileModel {
      * @param {object} filter - oracle-mongo-wrapper-style filter object.
      * @returns {Promise<number>}
      */
-    static async countTotal(filter: Record<string, any>): Promise<number> {
+    static async countTotal(filter: Record<string, unknown>): Promise<number> {
         try {
             const records = await _readAndFilter(filter);
             return records.length;
@@ -508,7 +508,7 @@ class AuditLogFileModel {
      * @param {object} filter - Must contain CREATED_AT with $gte/$lte bounds.
      * @returns {Promise<{rowsAffected: number}>} Count of records in deleted directories.
      */
-    static async deleteMany(filter: Record<string, any>): Promise<{ rowsAffected: number; }> {
+    static async deleteMany(filter: Record<string, unknown>): Promise<{ rowsAffected: number; }> {
         try {
             const { fromDate, toDate } = _extractDateRange(filter);
             if (!fromDate || !toDate) return { rowsAffected: 0 };
@@ -586,7 +586,7 @@ class AuditLogFileModel {
      * @param {object} matchFilter - Filter with CREATED_AT $gte/$lte bounds.
      * @returns {Promise<object>} Aggregate statistics.
      */
-    static async aggregate(matchFilter: Record<string, any>): Promise<Record<string, any>> {
+    static async aggregate(matchFilter: Record<string, unknown>): Promise<Record<string, any>> {
         try {
             const records = await _readAndFilter(matchFilter);
 

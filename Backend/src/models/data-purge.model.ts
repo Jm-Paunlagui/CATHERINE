@@ -121,7 +121,7 @@ function _requireEntry(table: string, callerLabel: string): import('../constants
  * @returns {object}
  * @private
  */
-function _boundedFilter(entry: import('../constants/purgeTables').PurgeTableEntry, highWater: string | number | null | undefined): Record<string, any> {
+function _boundedFilter(entry: import('../constants/purgeTables').PurgeTableEntry, highWater: string | number | null | undefined): Record<string, unknown> {
     if (!entry.appendOnlyLog || highWater == null || highWater === "") return {};
     return { [entry.pk]: { $lte: String(highWater) } };
 }
@@ -194,7 +194,7 @@ class DataPurgeModel {
      *     onBatch: async (rows) => archive.append(toJsonl(rows), { name: "data/T_AUDIT_LOGS_DEV.jsonl" }),
      * });
      */
-    static async streamTable(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); } = {}): Promise<number> {
+    static async streamTable(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); } = {}): Promise<number> {
         return DataPurgeModel._streamRows(table, opts, "streamTable");
     }
 
@@ -229,7 +229,7 @@ class DataPurgeModel {
      *     onBatch: (rows) => rows.forEach((r) => collected.push(r)),
      * });
      */
-    static async streamTableFiltered(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns: string[]; whereValue: string | number; }): Promise<number> {
+    static async streamTableFiltered(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns: string[]; whereValue: string | number; }): Promise<number> {
         if (!Array.isArray(opts.whereColumns) || opts.whereColumns.length === 0) {
             throw new Error(`DataPurgeModel.streamTableFiltered: "${table}" requires a non-empty opts.whereColumns array.`);
         }
@@ -317,7 +317,7 @@ class DataPurgeModel {
      * );
      * // → { T_AUDIT_LOGS_DEV: 12031, T_SERVER_ALERT_LOG_DEV: 88420 }
      */
-    static async streamAllTables(tables: string[], opts: { pageSize?: number; onBatch?: (table: string, rows: Record<string, any>[]) => (Promise<void> | void); } = {}): Promise<Record<string, number>> {
+    static async streamAllTables(tables: string[], opts: { pageSize?: number; onBatch?: (table: string, rows: Record<string, unknown>[]) => (Promise<void> | void); } = {}): Promise<Record<string, number>> {
         if (!Array.isArray(tables) || tables.length === 0) {
             throw new Error('DataPurgeModel.streamAllTables: "tables" must be a non-empty array.');
         }
@@ -332,14 +332,14 @@ class DataPurgeModel {
         try {
             // Long-hold multi-table read-only stream — routed to the appDbBulk
             // pool so it cannot starve interactive traffic on the appDb pool.
-            return await db.withConnection("appDbBulk", async (conn: any) => {
+            return await db.withConnection("appDbBulk", async (conn) => {
                 // MUST be the first statement issued on this connection —
                 // Oracle only accepts SET TRANSACTION as the first statement
                 // of a transaction (ORA-01453 otherwise). Every table read
                 // below therefore shares this one read-only transaction/SCN.
                 await conn.execute("SET TRANSACTION READ ONLY");
 
-                const perTable: Record<string, any> = {};
+                const perTable: Record<string, unknown> = {};
                 for (const entry of entries) {
                     perTable[entry.table] = await DataPurgeModel._streamRowsOnConnection(
                         conn,
@@ -394,11 +394,11 @@ class DataPurgeModel {
      * @returns {Promise<number>}
      * @private
      */
-    static async _streamRows(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
+    static async _streamRows(table: string, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
         const entry = _requireEntry(table, callerLabel);
         // Per-table row stream (used by backup/export) — long-hold read routed
         // to the appDbBulk pool so it never competes with interactive traffic.
-        return db.withConnection("appDbBulk", (conn: any) => DataPurgeModel._streamRowsOnConnection(conn, entry, opts, callerLabel));
+        return db.withConnection("appDbBulk", (conn) => DataPurgeModel._streamRowsOnConnection(conn, entry, opts, callerLabel));
     }
 
     /**
@@ -423,7 +423,7 @@ class DataPurgeModel {
      * @returns {Promise<number>} Total rows streamed for this table.
      * @private
      */
-    static async _streamRowsOnConnection(conn: import('oracledb').Connection, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, any>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
+    static async _streamRowsOnConnection(conn: import('oracledb').Connection, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
         const outFormat = { outFormat: _db.oracledb.OUT_FORMAT_OBJECT };
         const pageSize = typeof opts.pageSize === "number" && Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
         const onBatch = typeof opts.onBatch === "function" ? opts.onBatch : () => {};
@@ -676,7 +676,7 @@ class DataPurgeModel {
         const skipPk = entry.isIdentity;
 
         const insertRows = rows.map((row) => {
-            const out: Record<string, any> = {};
+            const out: Record<string, unknown> = {};
             for (const col of Object.keys(row)) {
                 if (virtualSet.has(col)) continue; // ORA-54013 guard — never insert into a virtual column
                 if (skipPk && col === entry.pk) continue; // ORA-32795 guard — never insert into an identity PK

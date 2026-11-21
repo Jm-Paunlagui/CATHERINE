@@ -82,7 +82,7 @@ class AuthService {
      * @param {string} password
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string, refreshRecord: object }>}
      */
-    static async login(userId: string, password: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
+    static async login(userId: string, password: string): Promise<{ user: Record<string, unknown>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         const lockState = await loginLockout.checkAsync(userId);
 
         if (lockState.hrReset) {
@@ -127,7 +127,7 @@ class AuthService {
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string, refreshRecord: object }>}
      * @throws {AppError} 403 invalid token; 401 revoked / reused / account gone
      */
-    static async refresh(refreshToken: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
+    static async refresh(refreshToken: string): Promise<{ user: Record<string, unknown>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         let decoded;
         try {
             decoded = jwt.verify(refreshToken, process.env.JWT_SECRET ?? "", {
@@ -230,7 +230,7 @@ class AuthService {
      * @param {object} decodedUser - req.user (verified JWT payload)
      * @returns {Promise<object>}
      */
-    static async getProfile(decodedUser: import("../types/express").AuthUser | undefined): Promise<Record<string, any> | undefined> {
+    static async getProfile(decodedUser: import("../types/express").AuthUser | undefined): Promise<Record<string, unknown> | undefined> {
         if (!decodedUser) return decodedUser;
         try {
             // USER sessions never carry admin flags.
@@ -597,7 +597,7 @@ class AuthService {
      * @returns {object}
      * @private
      */
-    static _extractPermissionFlags(admin: Record<string, any> | null): Record<string, any> {
+    static _extractPermissionFlags(admin: Record<string, unknown> | null): Record<string, unknown> {
         if (!admin) return {};
         return {
             canReceiveSrvCrit: String(admin.CAN_RECEIVE_SRV_CRIT ?? "N"),
@@ -648,7 +648,7 @@ class AuthService {
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string, refreshRecord: object }>}
      * @private
      */
-    static async _rotateInto(decoded: Record<string, any>, params: Omit<Parameters<typeof AuthService._issueTokens>[0], "familyId">): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
+    static async _rotateInto(decoded: Record<string, any>, params: Omit<Parameters<typeof AuthService._issueTokens>[0], "familyId">): Promise<{ user: Record<string, unknown>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         const tokens = AuthService._issueTokens({ ...params, familyId: decoded.fid });
         await RefreshTokenService.rotate(
             { jti: decoded.jti, familyId: decoded.fid, userId: decoded.sub },
@@ -746,7 +746,7 @@ class AuthService {
         requiresPasswordChange = false,
         permissionFlags = {},
         familyId,
-    }: { id: number | null; userId: string; firstName: string | null; lastName: string | null; email: string | null; role: string; roleSource: 'admin' | 'user'; credentialHash?: string; isDefaultPassword?: boolean; isTemporaryPassword?: boolean; temporaryPasswordExpiresAt?: string | null; requiresPasswordChange?: boolean; permissionFlags?: Record<string, any>; familyId?: string; }): { user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; } {
+    }: { id: number | null; userId: string; firstName: string | null; lastName: string | null; email: string | null; role: string; roleSource: 'admin' | 'user'; credentialHash?: string; isDefaultPassword?: boolean; isTemporaryPassword?: boolean; temporaryPasswordExpiresAt?: string | null; requiresPasswordChange?: boolean; permissionFlags?: Record<string, unknown>; familyId?: string; }): { user: Record<string, unknown>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; } {
         const pwv = credentialEpoch(credentialHash);
         const userPayload = {
             sub: String(userId),
@@ -842,7 +842,7 @@ class AuthService {
      * @throws {AppError} 404 not found; 403 inactive; 422 signature invalid;
      *   401 wrong current password / expired temporary; 400 default or reused password
      */
-    static async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ user: Record<string, any>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
+    static async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ user: Record<string, unknown>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         const admin = await AdminModel.findByUsername(userId);
         const user = admin ? null : await UserModel.findByUsername(userId);
         if (!admin && !user) {

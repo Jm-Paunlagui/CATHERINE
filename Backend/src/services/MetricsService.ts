@@ -190,7 +190,7 @@ type RouteMetrics = StoreSnapshot["red"][string];
 type PoolDependency = StoreSnapshot["dependencies"]["oracle"][string];
 class MetricsService {
     /** Shared in-flight/just-finished cluster gather (see getClusterSnapshot). */
-    static #clusterShare: { at: number; promise: Promise<Record<string, any>> } | null = null;
+    static #clusterShare: { at: number; promise: Promise<Record<string, unknown>> } | null = null;
     static #lastPartialLogAt = -Infinity;
 
     // ========================================
@@ -224,7 +224,7 @@ class MetricsService {
      *
      * @returns {Promise<object>|object} merged snapshot (see MetricsStore.getSnapshot)
      */
-    static getClusterSnapshot(): Promise<Record<string, any>> | Record<string, any> {
+    static getClusterSnapshot(): Promise<Record<string, any>> | Record<string, unknown> {
         if (!clusterRpc.active) return MetricsService.getSnapshot();
         const share = MetricsService.#clusterShare;
         if (share && Date.now() - share.at < CLUSTER_RPC_TIMEOUTS.METRICS_SHARE_MS) return share.promise;
@@ -269,7 +269,7 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot (the controller passes the cluster one)
      * @returns {{ totals: object, topSlowRoutes: Array, alertCount: number, uptime: number }}
      */
-    static getSummary(snapshot: Record<string, any> | null = null): { totals: Record<string, any>; topSlowRoutes: Array<RouteMetrics & { route: string }>; alertCount: number; uptime: number; system: { heapUsedMb: number; heapTotalMb: number; heapLimitMb: number; eventLoopLag: number } } {
+    static getSummary(snapshot: Record<string, any> | null = null): { totals: Record<string, unknown>; topSlowRoutes: Array<RouteMetrics & { route: string }>; alertCount: number; uptime: number; system: { heapUsedMb: number; heapTotalMb: number; heapLimitMb: number; eventLoopLag: number } } {
         snapshot = snapshot || MetricsService.getSnapshot();
         const alerts = MetricsService.evaluateAlerts(snapshot);
 
@@ -319,7 +319,7 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
      * @returns {string[]} Alert keys to hold; `"*"` holds every active key not seen this tick
      */
-    static evaluateAlertHolds(snapshot: Record<string, any> | null = null): string[] {
+    static evaluateAlertHolds(snapshot: Record<string, unknown> | null = null): string[] {
         const snap = snapshot || MetricsService.getSnapshot();
         const holds = [];
         const win = snap.totals?.window;
@@ -380,7 +380,7 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
      * @returns {Array<{ rule: string, severity: string, value: number, route?: string, pool?: string }>}
      */
-    static evaluateAlerts(snapshot: Record<string, any> | null = null): Array<{ rule: string; severity: string; value: number; route?: string; pool?: string; }> {
+    static evaluateAlerts(snapshot: Record<string, unknown> | null = null): Array<{ rule: string; severity: string; value: number; route?: string; pool?: string; }> {
         const snap = snapshot || MetricsService.getSnapshot();
         const alerts = [];
 

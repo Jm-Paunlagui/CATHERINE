@@ -133,7 +133,7 @@ const ARCHIVE_ID_PATTERN = /^[A-Za-z0-9_:-]+$/;
 type ManifestTableState = { state: "INCLUDED" | "UNCHANGED"; rows: number; sha256: string; sourceArchiveId?: string };
 class BackupStoreService {
     /** @type {Array<object>|null} */
-    static _indexCache: Array<Record<string, any>> | null = null;
+    static _indexCache: Array<Record<string, unknown>> | null = null;
     /** @type {number} */
     static _indexCacheAt: number = 0;
     declare static INDEX_CACHE_TTL_MS: number;
@@ -557,7 +557,7 @@ class BackupStoreService {
                     name.endsWith(".jsonl") &&
                     !zip.files[name].dir,
             );
-            const dataBuffers: Record<string, any> = {};
+            const dataBuffers: Record<string, unknown> = {};
             for (const name of dataFileNames) {
                 // Sequential zip entry extraction, archives are small in entry count.
                 dataBuffers[name] = Buffer.from(
@@ -569,7 +569,7 @@ class BackupStoreService {
                 "manifest.json": manifestBuffer,
                 ...dataBuffers,
             };
-            const recomputed: Record<string, any> = {};
+            const recomputed: Record<string, unknown> = {};
             for (const [name, buf] of Object.entries(filesToHash)) {
                 recomputed[name] = crypto
                     .createHash("sha256")
@@ -667,7 +667,7 @@ class BackupStoreService {
      *   forcedFullReason: string|null,
      * }>}
      */
-    static async _decideChain({ trigger, index }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; index: Array<Record<string, any>>; }): Promise<{
+    static async _decideChain({ trigger, index }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; index: Array<Record<string, unknown>>; }): Promise<{
         mode: "FULL" | "INCREMENTAL";
         chain: { baseArchiveId: string; generation: number; } | null;
         previousTableState: Record<string, { sha256: string; sourceArchiveId: string; }>;
@@ -812,7 +812,7 @@ class BackupStoreService {
      * @returns {Promise<any>}
      * @private
      */
-    static _withRunBackupLock(fn: () => Promise<any>): Promise<any> {
+    static _withRunBackupLock(fn: () => Promise<unknown>): Promise<any> {
         const waiterScope = currentScope();
         const queued = BackupStoreService._runLockDepth > 0;
         BackupStoreService._runLockDepth += 1;
@@ -1059,7 +1059,7 @@ class BackupStoreService {
      * @throws {Error} `err` when nothing (usable) was published.
      * @private
      */
-    static async _resolveCut({ err, stall, state, archiveId, trigger, filePath }: { err: Error; stall: { idleMs: number; lastSource: string; }; state: { publishing: Promise<Record<string, any>> | null; }; archiveId: string; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; filePath: string; }): Promise<Record<string, any>> {
+    static async _resolveCut({ err, stall, state, archiveId, trigger, filePath }: { err: Error; stall: { idleMs: number; lastSource: string; }; state: { publishing: Promise<Record<string, unknown>> | null; }; archiveId: string; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; filePath: string; }): Promise<Record<string, any>> {
         let result = null;
         if (state.publishing) {
             let timer;
@@ -1118,7 +1118,7 @@ class BackupStoreService {
         archiveId,
         signal,
         state = { publishing: null },
-    }: Record<string, any>): Promise<Record<string, any>> {
+    }: Record<string, any>): Promise<Record<string, unknown>> {
         await BackupStoreService._sweepStaleParts();
         const index = await BackupStoreService._loadIndex({ force: true });
         const decision = await BackupStoreService._decideChain({
@@ -1233,7 +1233,7 @@ class BackupStoreService {
      * @example
      * const { zipBuffer, filename } = await BackupStoreService.materialise("bk_2026-07-28T05:59:59Z_e142_NIGHTLY");
      */
-    static async materialise(archiveIdRaw: string): Promise<{ zipBuffer: Buffer; filename: string; manifest: Record<string, any>; }> {
+    static async materialise(archiveIdRaw: string): Promise<{ zipBuffer: Buffer; filename: string; manifest: Record<string, unknown>; }> {
         const archiveId = BackupStoreService._validateArchiveId(archiveIdRaw);
         const startedAt = Date.now();
         logger.info(dataBackupMessages.MATERIALISE_STARTED(archiveId));
@@ -1272,7 +1272,7 @@ class BackupStoreService {
             parseInt(process.env.BACKUP_XLSX_ROW_CAP ?? "", 10) ||
             DEFAULT_XLSX_ROW_CAP;
         const tableNames = Object.keys(entry.tables ?? {});
-        const dataBuffers: Record<string, any> = {};
+        const dataBuffers: Record<string, unknown> = {};
         const rowsByTableForXlsx: Record<string, any> = {};
 
         for (const table of tableNames) {
@@ -1422,7 +1422,7 @@ class BackupStoreService {
         );
 
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const fileHashes: Record<string, any> = {};
+        const fileHashes: Record<string, unknown> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             fileHashes[name] = crypto
                 .createHash("sha256")
@@ -1483,7 +1483,7 @@ class BackupStoreService {
      * @returns {Promise<Buffer>}
      * @private
      */
-    static async _buildSummaryWorkbook(tables: string[], rowsByTable: Record<string, Record<string, any>[]>, rowCounts: Record<string, number>): Promise<Buffer> {
+    static async _buildSummaryWorkbook(tables: string[], rowsByTable: Record<string, Record<string, unknown>[]>, rowCounts: Record<string, number>): Promise<Buffer> {
         const rowCap =
             parseInt(process.env.BACKUP_XLSX_ROW_CAP ?? "", 10) ||
             DEFAULT_XLSX_ROW_CAP;

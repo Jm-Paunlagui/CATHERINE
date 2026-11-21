@@ -116,13 +116,13 @@ type PendingCall = {
 };
 class ClusterRpcHub {
     /** @type {Map<string, Function>} method -> (args, ctx) => result | Promise */
-    #handlers: Map<string, ((...args: any[]) => any)> = new Map();
+    #handlers: Map<string, ((...args: any[]) => unknown)> = new Map();
     /** @type {Map<string, {kind: "leader"|"gather", targetId: number, fromId: number, reqId: string, gather?: object, timer?: any}>} */
     #calls: Map<string, PendingCall> = new Map();
     /** @type {Set<Function>} */
-    #listeningHooks: Set<((...args: any[]) => any)> = new Set();
+    #listeningHooks: Set<((...args: any[]) => unknown)> = new Set();
     /** @type {Set<Function>} */
-    #exitHooks: Set<((...args: any[]) => any)> = new Set();
+    #exitHooks: Set<((...args: any[]) => unknown)> = new Set();
     #seq = 0;
     #leaderCalls = 0;
     #gathers = 0;
@@ -141,7 +141,7 @@ class ClusterRpcHub {
      * @param {() => (object|null|undefined)} deps.getLeader
      * @param {() => number} [deps.now=Date.now]
      */
-    constructor({ cluster, logger, getLiveWorkers, getLeader, now = Date.now }: { cluster?: import("cluster").Cluster; logger: Record<string, any>; getLiveWorkers: () => Record<string, any>[]; getLeader: () => (Record<string, any> | null | undefined); now?: () => number; }) {
+    constructor({ cluster, logger, getLiveWorkers, getLeader, now = Date.now }: { cluster?: import("cluster").Cluster; logger: Record<string, any>; getLiveWorkers: () => Record<string, unknown>[]; getLeader: () => (Record<string, unknown> | null | undefined); now?: () => number; }) {
         this._cluster = cluster;
         this._logger = logger;
         this._getLiveWorkers = getLiveWorkers;
@@ -160,17 +160,17 @@ class ClusterRpcHub {
      * @param {string} method
      * @param {(args: object, ctx: {worker: object}) => any} handler
      */
-    register(method: string, handler: (args: Record<string, any>, ctx: { worker: Record<string, any>; }) => any) {
+    register(method: string, handler: (args: Record<string, unknown>, ctx: { worker: Record<string, unknown>; }) => unknown) {
         this.#handlers.set(method, handler);
     }
 
     /** @param {(worker: object) => void} fn called when a worker emits `listening` */
-    addListeningHook(fn: (worker: Record<string, any>) => void) {
+    addListeningHook(fn: (worker: Record<string, unknown>) => void) {
         this.#listeningHooks.add(fn);
     }
 
     /** @param {(worker: object) => void} fn called when a worker exits */
-    addExitHook(fn: (worker: Record<string, any>) => void) {
+    addExitHook(fn: (worker: Record<string, unknown>) => void) {
         this.#exitHooks.add(fn);
     }
 
@@ -181,7 +181,7 @@ class ClusterRpcHub {
      * @param {*} msg
      * @returns {boolean} true when the message belonged to this protocol
      */
-    handleMessage(worker: Record<string, any>, msg: any): boolean {
+    handleMessage(worker: Record<string, unknown>, msg: any): boolean {
         try {
             const cmd = msg && typeof msg === "object" ? msg.cmd : undefined;
             if (cmd === CLUSTER_IPC.RPC_REQUEST) {
@@ -210,7 +210,7 @@ class ClusterRpcHub {
      * @param {object} payload
      * @param {{exceptId?: number}} [opts]
      */
-    broadcast(topic: string, payload: Record<string, any>, { exceptId }: { exceptId?: number; } = {}) {
+    broadcast(topic: string, payload: Record<string, unknown>, { exceptId }: { exceptId?: number; } = {}) {
         for (const w of this._getLiveWorkers()) {
             if (exceptId !== undefined && w.id === exceptId) continue;
             this.sendTo(w, topic, payload);
@@ -225,7 +225,7 @@ class ClusterRpcHub {
      * @param {object} payload
      * @returns {boolean}
      */
-    sendTo(worker: Record<string, any>, topic: string, payload: Record<string, any>): boolean {
+    sendTo(worker: Record<string, unknown>, topic: string, payload: Record<string, unknown>): boolean {
         return this.#send(worker, { cmd: CLUSTER_IPC.BROADCAST, topic, payload });
     }
 
@@ -240,7 +240,7 @@ class ClusterRpcHub {
      *
      * @param {object} worker
      */
-    onWorkerExit(worker: Record<string, any>) {
+    onWorkerExit(worker: Record<string, unknown>) {
         for (const [callId, call] of [...this.#calls]) {
             if (call.fromId === worker.id) {
                 this.#dropCall(callId, call);

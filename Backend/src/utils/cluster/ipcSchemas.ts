@@ -89,7 +89,7 @@ function isIp(v: unknown): boolean {
  * @param {*} msg
  * @returns {{ok: true, value: {id: string, target: string, method: string, args: object}}|{ok: false, reason: string}}
  */
-function validateRequest(msg: unknown): { ok: true; value: { id: string; target: string; method: string; args: Record<string, any>; }; } | { ok: false; reason: string; } {
+function validateRequest(msg: unknown): { ok: true; value: { id: string; target: string; method: string; args: Record<string, unknown>; }; } | { ok: false; reason: string; } {
     if (!isPlainObject(msg)) return bad("not-object");
     if (msg.cmd !== CLUSTER_IPC.RPC_REQUEST) return bad("bad-cmd");
     if (!isBoundedString(msg.id, L.MAX_ID_LENGTH, 1)) return bad("bad-id");
@@ -106,7 +106,7 @@ function validateRequest(msg: unknown): { ok: true; value: { id: string; target:
  * @param {*} msg
  * @returns {{ok: true, value: {method: string, args: object}}|{ok: false, reason: string}}
  */
-function validateNotify(msg: unknown): { ok: true; value: { method: string; args: Record<string, any>; }; } | { ok: false; reason: string; } {
+function validateNotify(msg: unknown): { ok: true; value: { method: string; args: Record<string, unknown>; }; } | { ok: false; reason: string; } {
     if (!isPlainObject(msg)) return bad("not-object");
     if (msg.cmd !== CLUSTER_IPC.NOTIFY) return bad("bad-cmd");
     if (typeof msg.method !== "string" || !METHOD_SET.has(msg.method)) return bad("bad-method");
@@ -121,7 +121,7 @@ function validateNotify(msg: unknown): { ok: true; value: { method: string; args
  * @param {object} a
  * @returns {{ok: true, value: {key: string}}|{ok: false, reason: string}}
  */
-function lockoutKeyArgs(a: Record<string, any>): { ok: true; value: { key: string; }; } | { ok: false; reason: string; } {
+function lockoutKeyArgs(a: Record<string, unknown>): { ok: true; value: { key: string; }; } | { ok: false; reason: string; } {
     return isBoundedString(a.key, L.LOCKOUT_KEY_MAX, 1) ? ok({ key: a.key }) : bad("bad-key");
 }
 
@@ -322,7 +322,7 @@ function validateResult(method: string, result: unknown): boolean {
  * @param {number} [now=Date.now()]
  * @returns {{ok: true, value: object}|{ok: false, reason: string}}
  */
-function validateTopic(topic: string, payload: unknown, now: number = Date.now()): { ok: true; value: Record<string, any>; } | { ok: false; reason: string; } {
+function validateTopic(topic: string, payload: unknown, now: number = Date.now()): { ok: true; value: Record<string, unknown>; } | { ok: false; reason: string; } {
     if (typeof topic !== "string" || !TOPIC_SET.has(topic)) return bad("bad-topic");
     if (!isPlainObject(payload)) return bad("bad-payload");
     switch (topic) {

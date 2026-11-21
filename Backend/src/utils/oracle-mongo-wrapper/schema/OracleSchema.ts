@@ -54,7 +54,7 @@ class OracleSchema {
   /**
    * @param {Object} db - db interface from createDb
    */
-  constructor(db: Record<string, any>) {
+  constructor(db: Record<string, unknown>) {
     this.db = db;
   }
 
@@ -83,10 +83,10 @@ class OracleSchema {
    *     categoryId: { type: "NUMBER", references: { table: "categories", column: "id" } }
    *   }, { ifNotExists: true });
    */
-  async createTable(tableName: string, columns: Record<string, any>, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; }> {
+  async createTable(tableName: string, columns: Record<string, any>, options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean; }> {
     return this.db.withConnection(async (conn: any) => {
       const colDefs = [];
-      const constraints: any[] = [];
+      const constraints: unknown[] = [];
 
       for (const [colName, spec] of Object.entries(columns)) {
         const parts = [quoteIdentifier(colName), spec.type];
@@ -283,7 +283,7 @@ class OracleSchema {
   async createView(viewName: string, queryBuilderOrSQL: QueryBuilder | string, options: { orReplace?: boolean; force?: boolean; } = {}): Promise<{ acknowledged: boolean; }> {
     return this.db.withConnection(async (conn: any) => {
       let selectSql;
-      let binds: Record<string, any> = {};
+      let binds: Record<string, unknown> = {};
 
       if (typeof queryBuilderOrSQL === "string") {
         selectSql = queryBuilderOrSQL;
@@ -319,7 +319,7 @@ class OracleSchema {
    * @param {Object} [options] - ifExists
    * @returns {Promise<{ acknowledged: boolean }>}
    */
-  async dropView(viewName: string, options: Record<string, any> = {}): Promise<{ acknowledged: boolean; }> {
+  async dropView(viewName: string, options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean; }> {
     return this.db.withConnection(async (conn: any) => {
       let sql = `DROP VIEW ${quoteIdentifier(viewName)}`;
 

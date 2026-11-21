@@ -132,7 +132,7 @@ export interface OutcomeRow {
 }
 
 class UploadOutcomeBuilder {
-    declare _seen: Map<any, any>;
+    declare _seen: Map<unknown, unknown>;
     declare _rows: { skipped: OutcomeRow[]; failed: OutcomeRow[]; pending: OutcomeRow[]; };
     declare _counts: { inserted: number; updated: number; skipped: number; failed: number; pending: number; };
     declare _total: number;
@@ -235,7 +235,7 @@ class UploadOutcomeBuilder {
      *   (e.g. `{ code: "LOCKED" }`). Never overrides key/label/reason/category.
      * @returns {this}
      */
-    skip(key: unknown, label: unknown, reason: string, category: string = SKIP_REASON.NOT_ACTIONABLE, extra: Record<string, any> = {}): this {
+    skip(key: unknown, label: unknown, reason: string, category: string = SKIP_REASON.NOT_ACTIONABLE, extra: Record<string, unknown> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.SKIPPED]++;
         this._rows[OUTCOME.SKIPPED].push({
@@ -259,7 +259,7 @@ class UploadOutcomeBuilder {
      *   (e.g. `{ attempts: 3 }`). Never overrides key/label/reason/category.
      * @returns {this}
      */
-    fail(key: unknown, label: unknown, reason: string, category: string = FAIL_REASON.DATABASE, extra: Record<string, any> = {}): this {
+    fail(key: unknown, label: unknown, reason: string, category: string = FAIL_REASON.DATABASE, extra: Record<string, unknown> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.FAILED]++;
         this._rows[OUTCOME.FAILED].push({
@@ -282,7 +282,7 @@ class UploadOutcomeBuilder {
      * @param {object} [extra]
      * @returns {this}
      */
-    pend(key: unknown, label: unknown, reason: string, category: string = PENDING_REASON.RETRY_EXHAUSTED, extra: Record<string, any> = {}): this {
+    pend(key: unknown, label: unknown, reason: string, category: string = PENDING_REASON.RETRY_EXHAUSTED, extra: Record<string, unknown> = {}): this {
         const id = UploadOutcomeBuilder._identity(key, label);
         this._counts[OUTCOME.PENDING]++;
         this._rows[OUTCOME.PENDING].push({
@@ -432,7 +432,7 @@ class UploadOutcome {
      * @param {{ counts?: object, balanced?: boolean }} summary
      * @returns {boolean}
      */
-    static isPartial(summary: { counts?: Record<string, any>; balanced?: boolean; }): boolean {
+    static isPartial(summary: { counts?: Record<string, unknown>; balanced?: boolean; }): boolean {
         const c = summary?.counts ?? {};
         return (
             Number(c.failed ?? 0) > 0 ||
@@ -449,7 +449,7 @@ class UploadOutcome {
      * @param {{ counts?: object }} summary
      * @returns {boolean}
      */
-    static isNoop(summary: { counts?: Record<string, any>; }): boolean {
+    static isNoop(summary: { counts?: Record<string, unknown>; }): boolean {
         const c = summary?.counts ?? {};
         return Number(c.inserted ?? 0) === 0 && Number(c.updated ?? 0) === 0;
     }

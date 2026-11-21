@@ -100,7 +100,7 @@ const SELECT_COLUMNS = `
  * @param {string|null} raw
  * @returns {object|null}
  */
-function parseDetails(raw: string | null): Record<string, any> | null {
+function parseDetails(raw: string | null): Record<string, unknown> | null {
     if (raw == null) return null;
     try {
         return JSON.parse(raw);
@@ -117,9 +117,9 @@ function parseDetails(raw: string | null): Record<string, any> | null {
  * @param {{ rule?: string, severity?: string, alertKey?: string, from?: Date, to?: Date }} [filters]
  * @returns {{ whereSql: string, binds: object }}
  */
-function buildWhere(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}): { whereSql: string; binds: Record<string, any>; } {
+function buildWhere(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}): { whereSql: string; binds: Record<string, unknown>; } {
     const clauses = [];
-    const binds: Record<string, any> = {};
+    const binds: Record<string, unknown> = {};
     if (filters.rule) {
         clauses.push("RULE = :rule");
         binds.rule = filters.rule;
@@ -147,7 +147,7 @@ function buildWhere(filters: { rule?: string; severity?: string; alertKey?: stri
 }
 
 /** Applies the same filters to the DEMO_MODE array. */
-function demoFilter(filters: Record<string, any> = {}) {
+function demoFilter(filters: Record<string, unknown> = {}) {
     return _demoRows.filter((r) => {
         if (filters.rule && r.RULE !== filters.rule) return false;
         if (filters.severity && r.SEVERITY !== filters.severity) return false;
@@ -181,7 +181,7 @@ class ServerAlertLogModel {
      * @param {object|null} [row.details] - Already-sanitised object; JSON-stringified here
      * @returns {Promise<void>}
      */
-    static async insertOne(row: { alertKey: string; rule: string; severity: "WARNING" | "CRITICAL" | "RESOLVED"; transition: "FIRED" | "ESCALATED" | "RENOTIFIED" | "RECOVERED" | "SUPPRESSED"; valueNum?: number | null; description?: string | null; channel: string; notificationId?: string | null; emailStatus: "SENT" | "FAILED" | "SKIPPED" | "DISABLED"; emailError?: string | null; details?: Record<string, any> | null; }): Promise<void> {
+    static async insertOne(row: { alertKey: string; rule: string; severity: "WARNING" | "CRITICAL" | "RESOLVED"; transition: "FIRED" | "ESCALATED" | "RENOTIFIED" | "RECOVERED" | "SUPPRESSED"; valueNum?: number | null; description?: string | null; channel: string; notificationId?: string | null; emailStatus: "SENT" | "FAILED" | "SKIPPED" | "DISABLED"; emailError?: string | null; details?: Record<string, unknown> | null; }): Promise<void> {
         const record = {
             alertKey: String(row.alertKey ?? "").slice(0, 200),
             rule: String(row.rule ?? "").slice(0, 64),
@@ -257,7 +257,7 @@ class ServerAlertLogModel {
      * @param {{ page?: number, limit?: number }} [opts]
      * @returns {Promise<{ rows: object[], total: number, page: number, limit: number }>}
      */
-    static async findPage(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}, opts: { page?: unknown; limit?: unknown; } = {}): Promise<{ rows: Record<string, any>[]; total: number; page: number; limit: number; }> {
+    static async findPage(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}, opts: { page?: unknown; limit?: unknown; } = {}): Promise<{ rows: Record<string, unknown>[]; total: number; page: number; limit: number; }> {
         const page = Math.max(1, Number(opts.page) || 1);
         const limit = Math.min(
             MAX_PAGE_LIMIT,
@@ -319,7 +319,7 @@ class ServerAlertLogModel {
      * @param {string} alertKey
      * @returns {Promise<object|null>} newest row (DETAILS parsed) or null
      */
-    static async findLatestByAlertKey(rule: string, alertKey: string): Promise<Record<string, any> | null> {
+    static async findLatestByAlertKey(rule: string, alertKey: string): Promise<Record<string, unknown> | null> {
         const { rows } = await ServerAlertLogModel.findPage(
             { rule, alertKey },
             { page: 1, limit: 1 },

@@ -457,7 +457,7 @@ class DataPurgeService {
      * }>}
      * @throws {AppError} Propagated from `resolveScope`.
      */
-    static async getPreview(selection: Record<string, any>): Promise<{
+    static async getPreview(selection: Record<string, unknown>): Promise<{
         requestedGroups: string[];
         requestedTables: string[];
         autoIncludedGroups: string[];
@@ -550,7 +550,7 @@ class DataPurgeService {
     static async _assertAdminPassword(
         adminId: number | string,
         adminPassword: string,
-        adminRecord: Record<string, any> | null = null,
+        adminRecord: Record<string, unknown> | null = null,
     ): Promise<{ adminId: number | string; }> {
         const record =
             adminRecord ?? (await DataPurgeService.findAdminById(adminId));
@@ -674,7 +674,7 @@ class DataPurgeService {
      *     requestId: req.id,
      * });
      */
-    static async backup({ selection, adminId, requestId = null }: { selection: Record<string, any>; adminId: number | string; requestId?: string | null; }): Promise<{
+    static async backup({ selection, adminId, requestId = null }: { selection: Record<string, unknown>; adminId: number | string; requestId?: string | null; }): Promise<{
         zipBuffer: Buffer;
         filename: string;
         token: string;
@@ -710,7 +710,7 @@ class DataPurgeService {
                 tables: getAllTableNames(),
                 createdBy: adminId,
                 requestId,
-            }).catch((err: any) => {
+            }).catch((err) => {
                 logger.warning(
                     dataBackupMessages.ARCHIVE_WRITE_FAILED("purge", err),
                 );
@@ -731,7 +731,7 @@ class DataPurgeService {
                 tableCount: result.tableCount,
                 adminId,
                 requestId,
-            }).catch((err: any) => {
+            }).catch((err) => {
                 logger.warning(
                     backupEmailMessages.DISPATCH_REJECTED(adminId, err),
                 );
@@ -784,7 +784,7 @@ class DataPurgeService {
      *     requestId: req.id,
      * });
      */
-    static async executePurge(params: { selection: Record<string, any>; backupToken: string; adminId: number | string; adminPassword: string; confirmPhrase: string; acknowledgeLockout?: boolean; clientIp?: string | null; requestId?: string | null; }): Promise<{
+    static async executePurge(params: { selection: Record<string, unknown>; backupToken: string; adminId: number | string; adminPassword: string; confirmPhrase: string; acknowledgeLockout?: boolean; clientIp?: string | null; requestId?: string | null; }): Promise<{
         scopeHash: string;
         tables: string[];
         totalDeleted: number;

@@ -36,7 +36,7 @@ class OracleDCL {
     /**
      * @param {Object} db - db interface from createDb
      */
-    constructor(db: Record<string, any>) {
+    constructor(db: Record<string, unknown>) {
         this.db = db;
     }
 

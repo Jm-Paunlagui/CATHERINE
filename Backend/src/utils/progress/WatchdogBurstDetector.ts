@@ -45,7 +45,7 @@ class WatchdogBurstDetector {
     declare _sinceAlert: number;
     declare _lastAlertAt: any;
     declare _entries: any[];
-    declare _emit: (message: string, meta: Record<string, any>) => void;
+    declare _emit: (message: string, meta: Record<string, unknown>) => void;
     declare _now: () => number;
     declare _windowMs: number;
     declare _burst: number;
@@ -56,7 +56,7 @@ class WatchdogBurstDetector {
      * @param {() => number} [options.now=Date.now]
      * @param {(message: string, meta: object) => void} [options.emit] - Default: `logger.critical`.
      */
-    constructor({ burst, windowMs, now = Date.now, emit }: { burst?: number; windowMs?: number; now?: () => number; emit?: (message: string, meta: Record<string, any>) => void; } = {}) {
+    constructor({ burst, windowMs, now = Date.now, emit }: { burst?: number; windowMs?: number; now?: () => number; emit?: (message: string, meta: Record<string, unknown>) => void; } = {}) {
         const cfg = WatchdogBurstDetector.resolveConfig(process.env);
         this._burst = burst ?? cfg.burst;
         this._windowMs = windowMs ?? cfg.windowMs;

@@ -63,12 +63,12 @@ const lockoutKey = canonicalUserKey;
 class LoginLockoutMiddleware {
   declare _lastFallbackLog: number;
   declare _store: CacheStore;
-  declare _retryDecrement: any;
-  declare _maxLockoutCycles: any;
-  declare _lockoutMultiplier: any;
-  declare _lockoutDurationMs: any;
-  declare _lockoutMode: any;
-  declare _maxAttempts: any;
+  declare _retryDecrement: unknown;
+  declare _maxLockoutCycles: unknown;
+  declare _lockoutMultiplier: unknown;
+  declare _lockoutDurationMs: unknown;
+  declare _lockoutMode: unknown;
+  declare _maxAttempts: unknown;
   declare _policy: LoginLockoutPolicy;
   /**
    * @param {object} [options]
@@ -126,7 +126,7 @@ class LoginLockoutMiddleware {
    * @param {string} userId
    * @returns {object} The updated state object (for logging / testing).
    */
-  recordFailure(userId: string): Record<string, any> {
+  recordFailure(userId: string): Record<string, unknown> {
     const r = this._policy.fail(this._readState(userId), Date.now());
     this._logFailure(userId, r);
     if (!r.ignored) this._writeState(userId, r.state);
@@ -280,7 +280,7 @@ class LoginLockoutMiddleware {
    * @param {object} state
    * @private
    */
-  _writeState(userId: string, state: Record<string, any>) {
+  _writeState(userId: string, state: Record<string, unknown>) {
     this._store.set(lockoutKey(userId), state, 86400);
   }
 }

@@ -103,10 +103,10 @@ function _createCounter(): { next: (prefix: string) => string; } {
  *     { $group: { _id: "$region", total: { $sum: "$amount" } } },
  *   ], db);
  */
-function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<string, any>): { sql: string; binds: Record<string, any>; } {
+function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<string, unknown>): { sql: string; binds: Record<string, unknown>; } {
   const counter = _createCounter();
   const ctes = [];
-  const allBinds: Record<string, any> = {};
+  const allBinds: Record<string, unknown> = {};
   let prevSource = quoteIdentifier(tableName);
   let stageIdx = 0;
   let outTable = null;
@@ -366,8 +366,8 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
  * @param {Object} counter - Bind variable counter
  * @returns {{ sql: string, binds: Object }}
  */
-function _buildGroup(group: Record<string, any>, source: string, having: Record<string, any>, counter: Record<string, any>): { sql: string; binds: Record<string, any>; } {
-  const binds: Record<string, any> = {};
+function _buildGroup(group: Record<string, any>, source: string, having: Record<string, any>, counter: Record<string, any>): { sql: string; binds: Record<string, unknown>; } {
+  const binds: Record<string, unknown> = {};
   const selectParts = [];
   const groupByParts = [];
 
@@ -421,7 +421,7 @@ function _buildGroup(group: Record<string, any>, source: string, having: Record<
   }
 
   // Aggregate expressions
-  const aliasToExpr: Record<string, any> = {};
+  const aliasToExpr: Record<string, unknown> = {};
   for (const [alias, expr] of Object.entries(group)) {
     if (alias === "_id") continue;
     const aggSql = _buildAggExpr(expr, binds, counter);
@@ -479,7 +479,7 @@ function _buildGroup(group: Record<string, any>, source: string, having: Record<
  * @param {Object} counter - Bind name counter
  * @returns {string} Oracle SQL expression
  */
-function _buildAggExpr(expr: Record<string, any>, binds: Record<string, any>, counter: Record<string, any>): string {
+function _buildAggExpr(expr: Record<string, any>, binds: Record<string, unknown>, counter: Record<string, unknown>): string {
   if (typeof expr === "object") {
     for (const [op, val] of Object.entries(expr)) {
       switch (op) {
@@ -665,7 +665,7 @@ function _buildSortString(sortSpec: any) {
  */
 function _buildProjectCols(project: any, counter: any) {
   const parts = [];
-  const binds: Record<string, any> = {};
+  const binds: Record<string, unknown> = {};
   for (const [col, spec] of Object.entries(project)) {
     if (spec === 1 || spec === true) {
       parts.push(quoteIdentifier(col));
@@ -686,7 +686,7 @@ function _buildProjectCols(project: any, counter: any) {
  * Existing columns are kept (SELECT prev.*, newCol1, newCol2).
  */
 function _buildAddFieldsCols(addFields: any, counter: any) {
-  const binds: Record<string, any> = {};
+  const binds: Record<string, unknown> = {};
   const parts = [];
   for (const [alias, spec] of Object.entries(addFields)) {
     if (typeof spec === "object") {
@@ -751,7 +751,7 @@ function _buildMergeStage(merge: any, source: unknown) {
  * Example: boundaries [0, 100, 500] creates buckets: 0-99, 100-499
  */
 function _buildBucket(bucket: any, source: unknown, counter: any) {
-  const binds: Record<string, any> = {};
+  const binds: Record<string, unknown> = {};
   const { groupBy, boundaries, default: defaultBucket, output } = bucket;
   const col = groupBy.startsWith("$") ? groupBy.substring(1) : groupBy;
   const cases = [];

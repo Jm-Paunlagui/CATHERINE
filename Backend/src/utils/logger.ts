@@ -225,7 +225,7 @@ class Logger {
      * });
      * // later: unsubscribe();
      */
-    onLevel(maxPriority: number, fn: (record: { level: string; message: string; meta: Record<string, any>; requestId: string | null; timestamp: string; }) => void): () => void {
+    onLevel(maxPriority: number, fn: (record: { level: string; message: string; meta: Record<string, unknown>; requestId: string | null; timestamp: string; }) => void): () => void {
         if (typeof fn !== "function") return () => {};
         const entry = { maxPriority, fn };
         this._levelSubscribers.push(entry);
@@ -246,7 +246,7 @@ class Logger {
      * @param {object} meta      - Log metadata; `_noNotify: true` skips the tap
      * @param {string|null} requestId
      */
-    #notifySubscribers(level: string, message: unknown, meta: Record<string, any>, requestId: string | null) {
+    #notifySubscribers(level: string, message: unknown, meta: Record<string, unknown>, requestId: string | null) {
         if (!this._levelSubscribers.length) return;
         if (meta && meta._noNotify) return;
         const priority = Logger.CONFIG.LEVELS[level];
@@ -436,7 +436,7 @@ class Logger {
     /**
      * Capture call site information (function, file, line) from stack trace
      */
-    #captureCallSite(meta: Record<string, any> = {}) {
+    #captureCallSite(meta: Record<string, unknown> = {}) {
         let displayFn = meta.function || "anonymous";
         let displayFile = meta.file ? this.#shortenPath(meta.file) : "";
         let displayLine = meta.line ? `:${meta.line}` : "";
@@ -531,7 +531,7 @@ class Logger {
     /**
      * Build the plain-text log entry string
      */
-    #formatMessage(level: unknown, message: unknown, meta: Record<string, any> = {}, requestId = null) {
+    #formatMessage(level: unknown, message: unknown, meta: Record<string, unknown> = {}, requestId = null) {
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
         const { displayFn, displayFile, displayLine } =
@@ -559,7 +559,7 @@ class Logger {
     /**
      * Build the colorized console log entry string
      */
-    #formatColorizedMessage(level: any, message: unknown, meta: Record<string, any> = {}, requestId = null) {
+    #formatColorizedMessage(level: any, message: unknown, meta: Record<string, unknown> = {}, requestId = null) {
         const colors = Logger.CONFIG.COLORS;
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
@@ -674,7 +674,7 @@ class Logger {
     /**
      * Write a formatted log entry to the appropriate file
      */
-    async #writeToFile(level: any, message: unknown, meta: Record<string, any> = {}, requestId = null) {
+    async #writeToFile(level: any, message: unknown, meta: Record<string, unknown> = {}, requestId = null) {
         const logDir = this.#getLogDirectory();
         try {
             await this.#ensureDirectoryExists(logDir);
@@ -801,7 +801,7 @@ class Logger {
      * @param {string|*} message - Log message or value
      * @param {object} [meta={}] - Optional metadata object
      */
-    async log(level: string, message: string | any, meta: Record<string, any> = {}) {
+    async log(level: string, message: string | unknown, meta: Record<string, unknown> = {}) {
         if (Logger.CONFIG.LEVELS[level] > this.currentLevel) return;
         if (!message || (typeof message === "string" && !message.trim()))
             return;
@@ -882,7 +882,7 @@ class Logger {
      * Use for unrecoverable panics only.
      * @param {...*} args
      */
-    emergency(...args: any[]) {
+    emergency(...args: unknown[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("EMERGENCY", message, meta);
     }
@@ -892,7 +892,7 @@ class Logger {
      * @deprecated Use logger.emergency() instead.
      * @param {...*} args
      */
-    emerg(...args: any[]) {
+    emerg(...args: unknown[]) {
         return this.emergency(...args);
     }
 
@@ -901,7 +901,7 @@ class Logger {
      * Examples: DB pool completely down, critical dependency unreachable.
      * @param {...*} args
      */
-    alert(...args: any[]) {
+    alert(...args: unknown[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("ALERT", message, meta);
     }
@@ -911,7 +911,7 @@ class Logger {
      * Examples: health check hard failure, certificate expiry.
      * @param {...*} args
      */
-    critical(...args: any[]) {
+    critical(...args: unknown[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         // Level key MUST be uppercase: lowercase "critical" missed both
         // LEVELS (level filter bypassed) and COLORS (rendered white) lookups
@@ -924,7 +924,7 @@ class Logger {
      * @deprecated Use logger.critical() instead.
      * @param {...*} args
      */
-    crit(...args: any[]) {
+    crit(...args: unknown[]) {
         return this.critical(...args);
     }
 
@@ -933,7 +933,7 @@ class Logger {
      * Backward-compatible replacement for old error() at level 0.
      * @param {...*} args
      */
-    error(...args: any[]) {
+    error(...args: unknown[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("ERROR", message, meta);
     }
@@ -944,7 +944,7 @@ class Logger {
      * Backward-compatible replacement for old warn() at level 1.
      * @param {...*} args
      */
-    warning(...args: any[]) {
+    warning(...args: unknown[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("WARNING", message, meta);
     }
@@ -955,7 +955,7 @@ class Logger {
      * @deprecated Use logger.warning() instead.
      * @param {...*} args
      */
-    warn(...args: any[]) {
+    warn(...args: unknown[]) {
         return this.warning(...args);
     }
 
@@ -964,7 +964,7 @@ class Logger {
      * Examples: startup complete, config change, expected administrative events.
      * @param {...*} args
      */
-    notice(...args: any[]) {
+    notice(...args: unknown[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("NOTICE", message, meta);
     }
@@ -974,7 +974,7 @@ class Logger {
      * Backward-compatible replacement for old info() at level 2.
      * @param {...*} args
      */
-    info(...args: any[]) {
+    info(...args: unknown[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("INFO", message, meta);
     }
@@ -984,7 +984,7 @@ class Logger {
      * Backward-compatible replacement for old debug() at level 3.
      * @param {...*} args
      */
-    debug(...args: any[]) {
+    debug(...args: unknown[]) {
         const { message, meta } = this.#normalizeLogArguments(args);
         return this.log("DEBUG", message, meta);
     }
@@ -1003,7 +1003,7 @@ class Logger {
         });
     }
 
-    logHandlingRequest(req: any, additionalMeta: Record<string, any> = {}) {
+    logHandlingRequest(req: any, additionalMeta: Record<string, unknown> = {}) {
         return this.log("INFO", "Handling Request", {
             method: req.method,
             url: req.originalUrl || req.url,
@@ -1097,7 +1097,7 @@ class Logger {
         });
     }
 
-    performance(operation: unknown, duration: any, details: Record<string, any> = {}) {
+    performance(operation: unknown, duration: any, details: Record<string, unknown> = {}) {
         const level = duration > 5000 ? "WARNING" : "INFO";
         return this.log(level, "Performance", {
             operation,
@@ -1106,7 +1106,7 @@ class Logger {
         });
     }
 
-    security(event: unknown, details: Record<string, any> = {}) {
+    security(event: unknown, details: Record<string, unknown> = {}) {
         return this.log("WARNING", "Security Event", {
             event,
             timestamp: new Date().toISOString(),

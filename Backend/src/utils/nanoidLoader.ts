@@ -3,7 +3,7 @@ import { logger } from "./logger";
 // Check if we're running as a compiled executable
 import { IS_COMPILED as isCompiled } from "./runtimePaths";
 
-let nanoid: any;
+let nanoid: unknown;
 
 try {
   if (isCompiled) {

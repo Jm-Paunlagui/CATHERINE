@@ -38,7 +38,7 @@ const STALL_FACTOR = 3;
 class IdleWatchdog {
     declare _lastSweepAt: any;
     declare _timer: any;
-    declare _entries: Map<any, any>;
+    declare _entries: Map<unknown, any>;
     declare _now: () => number;
     declare _stallFactor: number;
     declare _sweepMs: number;
@@ -80,7 +80,7 @@ class IdleWatchdog {
      * @returns {() => void} dispose (idempotent)
      */
     register(scope: import("./ProgressScope").ProgressScope, onIdle: (scope: import("./ProgressScope").ProgressScope, idleMs: number) => void, { probe = null }: { probe?: ((scope: import("./ProgressScope").ProgressScope) => void) | null; } = {}): () => void {
-        const key: Record<string, any> = {};
+        const key: Record<string, unknown> = {};
         this._entries.set(key, { scope, onIdle, probe, fired: false });
         return () => {
             this._entries.delete(key);

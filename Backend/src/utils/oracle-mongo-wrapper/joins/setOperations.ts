@@ -48,9 +48,9 @@ import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
  *   to prevent collisions with the first query's binds.
  */
 class SetResultBuilder {
-  declare _skipVal: any;
-  declare _limitVal: any;
-  declare _sort: any;
+  declare _skipVal: unknown;
+  declare _limitVal: unknown;
+  declare _sort: unknown;
   declare _operator: string;
   declare _qb2: QueryBuilder;
   declare _qb1: QueryBuilder;
@@ -84,7 +84,7 @@ class SetResultBuilder {
    * @param {Object} sortSpec - { col: 1|-1 }
    * @returns {SetResultBuilder}
    */
-  sort(sortSpec: Record<string, any>): SetResultBuilder {
+  sort(sortSpec: Record<string, unknown>): SetResultBuilder {
     this._sort = sortSpec;
     return this;
   }
@@ -111,13 +111,13 @@ class SetResultBuilder {
    * Build the combined SQL.
    * @returns {{ sql: string, binds: Object }}
    */
-  _buildSQL(): { sql: string; binds: Record<string, any>; } {
+  _buildSQL(): { sql: string; binds: Record<string, unknown>; } {
     const { sql: sql1, binds: binds1 } = this._qb1._buildSQL();
     const { sql: sql2, binds: binds2Raw } = this._qb2._buildSQL();
 
     // Re-key binds2 to avoid collisions with binds1
-    const binds2: Record<string, any> = {};
-    const keyMap: Record<string, any> = {};
+    const binds2: Record<string, unknown> = {};
+    const keyMap: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(binds2Raw)) {
       const newKey = `set2_${k}`;
       binds2[newKey] = v;
@@ -170,7 +170,7 @@ class SetResultBuilder {
    * Execute the set operation and return all rows.
    * @returns {Promise<Array>}
    */
-  async toArray(): Promise<Array<any>> {
+  async toArray(): Promise<Array<unknown>> {
     const db = this._qb1.db;
     const conn = this._qb1._conn;
     const { sql, binds } = this._buildSQL();

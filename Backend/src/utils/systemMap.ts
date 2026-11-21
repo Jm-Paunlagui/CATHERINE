@@ -22,7 +22,7 @@
  * @returns {object} the map
  * @throws {Error} listing every problem found, one per line
  */
-function buildSystemMap(src: Record<string, any>): Record<string, any> {
+function buildSystemMap(src: Record<string, any>): Record<string, unknown> {
     const { MAP_VERIFIED_AT, META, LAYOUT: layout, layers, edgeKinds, nodes, E, flows } = src;
     const name = META?.title ?? "System";
     const errors = [];

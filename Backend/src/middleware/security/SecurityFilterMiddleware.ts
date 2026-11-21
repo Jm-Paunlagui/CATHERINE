@@ -64,9 +64,9 @@ function hasDeclaredBody(headers: Record<string, string | string[] | undefined> 
 }
 
 class SecurityFilterMiddleware {
-    declare _suspiciousIPs: any;
+    declare _suspiciousIPs: unknown;
     declare _tracker: SuspiciousIpTracker;
-    declare _rejectBodyOnBodylessMethods: any;
+    declare _rejectBodyOnBodylessMethods: unknown;
     declare _blockedMethods: any;
     declare _methodWhitelistedPaths: any;
     declare _injectionPatterns: any;

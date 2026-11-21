@@ -34,7 +34,7 @@ class PrimaryStateServices {
     declare _counters: Map<any, any>;
     declare _lockout: LoginLockoutState;
     declare _ipTracker: SuspiciousIpTracker;
-    declare _sched: Map<any, any>;
+    declare _sched: Map<unknown, unknown>;
     declare _lastStoreFullLog: number;
     declare _now: () => number;
     declare _logger: Record<string, any>;

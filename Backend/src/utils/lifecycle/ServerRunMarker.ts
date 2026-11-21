@@ -93,7 +93,7 @@ const isTime = (v: unknown) => v === undefined || v === null || Number.isFinite(
  * @param {object} rec
  * @returns {boolean}
  */
-function isWellFormed(rec: Record<string, any>): boolean {
+function isWellFormed(rec: Record<string, unknown>): boolean {
     if (typeof rec.state !== "string" || !Object.hasOwn(STATES, rec.state)) return false;
     if (rec.pid !== undefined && !Number.isInteger(rec.pid)) return false;
     if (rec.version !== undefined && typeof rec.version !== "string") return false;
@@ -127,7 +127,7 @@ function pendingKey(entry: any) {
  * @param {object} rec - the record that read UNCLEAN
  * @returns {object}
  */
-function uncleanSnapshot(rec: Record<string, any>): Record<string, any> {
+function uncleanSnapshot(rec: Record<string, unknown>): Record<string, unknown> {
     return {
         pid: rec.pid,
         version: rec.version,
@@ -140,26 +140,26 @@ function uncleanSnapshot(rec: Record<string, any>): Record<string, any> {
 }
 
 class ServerRunMarker {
-    declare static pendingList: (p: unknown) => any[];
+    declare static pendingList: (p: unknown) => unknown[];
     declare static pendingKey: (entry: unknown) => string;
     declare static resolveMarkerPath: (env?: NodeJS.ProcessEnv) => { path: string; ignoredOverride: string | null; ignoredReason: "relative" | "production" | null; };
     declare _pendingLeaderLost: any;
     declare _pendingUnclean: any;
-    declare _verdict: any;
+    declare _verdict: unknown;
     declare _stoppedExitCode: any;
-    declare _stoppedAt: any;
+    declare _stoppedAt: unknown;
     declare _raisedExitCode: number;
-    declare _stopEmailUnsent: any;
-    declare _unreported: any;
-    declare _reason: any;
-    declare _forcedAfterMs: any;
-    declare _stopSignal: any;
-    declare _stoppingAt: any;
-    declare _lastHeartbeatAt: any;
-    declare _bootedAt: any;
+    declare _stopEmailUnsent: unknown;
+    declare _unreported: unknown;
+    declare _reason: unknown;
+    declare _forcedAfterMs: unknown;
+    declare _stopSignal: unknown;
+    declare _stoppingAt: unknown;
+    declare _lastHeartbeatAt: unknown;
+    declare _bootedAt: unknown;
     declare _state: string;
     declare _lastStartNoticeAt: any;
-    declare _previous: any;
+    declare _previous: unknown;
     declare _warned: boolean;
     declare _timer: any;
     declare _started: boolean;
@@ -168,7 +168,7 @@ class ServerRunMarker {
     declare _fs: typeof nodeFs;
     declare _now: () => number;
     declare _intervalMs: number;
-    declare _logger: { warning: ((...args: any[]) => any); };
+    declare _logger: { warning: ((...args: unknown[]) => unknown); };
     declare _version: string;
     declare _runId: string;
     declare _filePath: string;
@@ -194,7 +194,7 @@ class ServerRunMarker {
         fs = nodeFs,
         processRef = process,
         hostname = os.hostname(),
-    }: { filePath: string; runId: string; version: string; logger: { warning: ((...args: any[]) => any); }; intervalMs?: number; now?: () => number; fs?: typeof import("fs"); processRef?: NodeJS.EventEmitter & { pid: number; }; hostname?: string; }) {
+    }: { filePath: string; runId: string; version: string; logger: { warning: ((...args: unknown[]) => unknown); }; intervalMs?: number; now?: () => number; fs?: typeof import("fs"); processRef?: NodeJS.EventEmitter & { pid: number; }; hostname?: string; }) {
         this._filePath = filePath;
         this._runId = runId;
         this._version = version;
@@ -240,7 +240,7 @@ class ServerRunMarker {
      *
      * @returns {{ verdict: string, previous: object|null, cause?: string }}
      */
-    readPrevious(): { verdict: string; previous: Record<string, any> | null; cause?: string; } {
+    readPrevious(): { verdict: string; previous: Record<string, unknown> | null; cause?: string; } {
         let raw;
         try {
             raw = this._fs.readFileSync(this._filePath, "utf8");
@@ -525,7 +525,7 @@ class ServerRunMarker {
      * @param {number|undefined} code
      * @returns {object}
      */
-    _stoppedRecord(code: number | undefined): Record<string, any> {
+    _stoppedRecord(code: number | undefined): Record<string, unknown> {
         const exitCode = Math.max(Number(code) || 0, this._raisedExitCode);
         let reason = this._reason ?? STOP_REASONS.EXIT;
         if (exitCode && reason === STOP_REASONS.SIGNAL) reason = STOP_REASONS.CRASH;
@@ -535,7 +535,7 @@ class ServerRunMarker {
     }
 
     /** @returns {object} the record as it would be written now */
-    _record(): Record<string, any> {
+    _record(): Record<string, unknown> {
         return {
             schema: SERVER_RUN_MARKER.SCHEMA,
             state: this._state,
@@ -609,7 +609,7 @@ class ServerRunMarker {
      * @param {{silent?: boolean}} [opts] - silent: no logging (exit hook)
      * @returns {boolean}
      */
-    _write(record: Record<string, any>, { silent = false }: { silent?: boolean; } = {}): boolean {
+    _write(record: Record<string, unknown>, { silent = false }: { silent?: boolean; } = {}): boolean {
         const json = JSON.stringify(record);
         const tmp = `${this._filePath}.${this._process.pid}.tmp`;
         try {

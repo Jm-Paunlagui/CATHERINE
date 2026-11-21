@@ -56,9 +56,9 @@ class RecipientResolver {
     declare RecipientResolver: typeof RecipientResolver;
     declare static REFRESH_WAIT_MS: any;
     declare _lastRefreshOk: boolean;
-    declare _refreshPromise: any;
+    declare _refreshPromise: unknown;
     declare _lastRefreshAt: number;
-    declare _cache: Map<any, any>;
+    declare _cache: Map<unknown, any>;
     constructor() {
         /** @type {Map<string, string[]>} channel -> resolved DB opt-in emails */
         this._cache = new Map();

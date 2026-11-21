@@ -152,7 +152,7 @@ class SuspiciousIpTracker {
      * @param {number} [now=Date.now()]
      * @returns {object}
      */
-    stats(now: number = Date.now()): Record<string, any> {
+    stats(now: number = Date.now()): Record<string, unknown> {
         const blocked = [];
         const suspicious = [];
         for (const [ip, r] of this.records) {

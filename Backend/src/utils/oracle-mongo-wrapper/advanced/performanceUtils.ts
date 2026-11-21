@@ -76,17 +76,17 @@ function _wrapPrivilegeError(method: string, err: Error & { errorNum?: number; c
  *   const perf = createPerformance(db);
  *   const plan = await perf.explainPlan(users.find({ active: true }));
  */
-function createPerformance(db: Record<string, any>): Record<string, any> {
+function createPerformance(db: Record<string, any>): Record<string, unknown> {
   return {
     /**
      * Get the execution plan for a query.
      * @param {QueryBuilder|string} queryBuilderOrSQL
      * @returns {Promise<Array>}
      */
-    async explainPlan(queryBuilderOrSQL: QueryBuilder | string): Promise<Array<any>> {
+    async explainPlan(queryBuilderOrSQL: QueryBuilder | string): Promise<Array<unknown>> {
       return db.withConnection(async (conn: any) => {
         let sql;
-        let binds: Record<string, any> = {};
+        let binds: Record<string, unknown> = {};
 
         if (typeof queryBuilderOrSQL === "string") {
           sql = queryBuilderOrSQL;
@@ -158,7 +158,7 @@ function createPerformance(db: Record<string, any>): Record<string, any> {
     async createMaterializedView(name: string, queryBuilderOrSQL: QueryBuilder | string, options: { refreshMode?: "fast" | "complete" | "force"; refreshOn?: "commit" | "demand"; buildMode?: "immediate" | "deferred"; orReplace?: boolean } = {}): Promise<{ acknowledged: boolean; }> {
       return db.withConnection(async (conn: any) => {
         let selectSql;
-        let binds: Record<string, any> = {};
+        let binds: Record<string, unknown> = {};
 
         if (typeof queryBuilderOrSQL === "string") {
           selectSql = queryBuilderOrSQL;

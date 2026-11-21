@@ -104,7 +104,7 @@ class LoginLockoutPolicy {
      * @param {number} now - epoch ms
      * @returns {{state: object, changed: boolean, locked: boolean, retryAfter?: number, hrReset?: boolean}}
      */
-    evaluate(state: Record<string, any>, now: number): { state: Record<string, any>; changed: boolean; locked: boolean; retryAfter?: number; hrReset?: boolean; } {
+    evaluate(state: Record<string, any>, now: number): { state: Record<string, unknown>; changed: boolean; locked: boolean; retryAfter?: number; hrReset?: boolean; } {
         if (state.lockUntil && now < state.lockUntil) {
             return {
                 state,
@@ -140,7 +140,7 @@ class LoginLockoutPolicy {
      * @param {number} now - epoch ms
      * @returns {{state: object, failCount: number, currentMax: number, cycles: number, engaged: boolean, ignored: boolean, lockDurationMs: number|null}}
      */
-    fail(state: Record<string, any>, now: number): { state: Record<string, any>; failCount: number; currentMax: number; cycles: number; engaged: boolean; ignored: boolean; lockDurationMs: number | null; } {
+    fail(state: Record<string, any>, now: number): { state: Record<string, unknown>; failCount: number; currentMax: number; cycles: number; engaged: boolean; ignored: boolean; lockDurationMs: number | null; } {
         if (state.lockUntil && now < state.lockUntil) {
             return {
                 state,

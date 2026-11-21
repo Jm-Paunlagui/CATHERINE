@@ -37,7 +37,7 @@ import crypto from "crypto";
 const MAX_KEY_LENGTH = 200;
 
 class CacheKeyBuilder {
-  declare _params: Map<any, any>;
+  declare _params: Map<any, unknown>;
   declare _prefix: string;
   /**
    * @param {string} prefix  - The logical namespace for this key (e.g. "users", "report").
@@ -83,7 +83,7 @@ class CacheKeyBuilder {
    * @param {Object.<string, *>} obj
    * @returns {this}
    */
-  params(obj: { [s: string]: any; }): this {
+  params(obj: { [s: string]: unknown; }): this {
     for (const [k, v] of Object.entries(obj)) {
       this.param(k, v);
     }
@@ -161,7 +161,7 @@ class CacheKeyBuilder {
    * @param {Object.<string, *>}  [paramsObj={}]
    * @returns {string}
    */
-  static build(prefix: string, paramsObj: { [s: string]: any; } = {}): string {
+  static build(prefix: string, paramsObj: { [s: string]: unknown; } = {}): string {
     return CacheKeyBuilder.of(prefix).params(paramsObj).build();
   }
 }

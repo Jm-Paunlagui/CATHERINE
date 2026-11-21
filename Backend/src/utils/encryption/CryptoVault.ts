@@ -79,9 +79,9 @@ const SymmetricCrypto = (() => {
 
     // ─── EncryptTransformer ───
     class EncryptTransformer {
-        declare _key: any;
+        declare _key: unknown;
         declare _iv: any;
-        declare algorithmID: any;
+        declare algorithmID: unknown;
         constructor(algId: unknown) {
             this.algorithmID = algId;
             this._iv = null;
@@ -116,7 +116,7 @@ const SymmetricCrypto = (() => {
     // ─── DecryptTransformer ───
     class DecryptTransformer {
         declare _iv: any;
-        declare algorithmID: any;
+        declare algorithmID: unknown;
         constructor(algId: unknown) {
             this.algorithmID = algId;
             this._iv = null;
@@ -136,8 +136,8 @@ const SymmetricCrypto = (() => {
 
     // ─── Encryptor ───
     class Encryptor {
-        declare _key: any;
-        declare _iv: any;
+        declare _key: unknown;
+        declare _iv: unknown;
         declare transformer: EncryptTransformer;
         constructor(algId: unknown) {
             this.transformer = new EncryptTransformer(algId);
@@ -179,7 +179,7 @@ const SymmetricCrypto = (() => {
 
     // ─── Decryptor ───
     class Decryptor {
-        declare _iv: any;
+        declare _iv: unknown;
         declare transformer: DecryptTransformer;
         constructor(algId: unknown) {
             this.transformer = new DecryptTransformer(algId);
@@ -346,7 +346,7 @@ const resolveAdminMode = (): 'bcrypt' | 'argon2' => {
 };
 
 // Cache the resolved admin mode (lazy, same pattern as _mode).
-let _adminMode: any = null;
+let _adminMode: unknown = null;
 const getAdminMode = () => {
     if (!_adminMode) _adminMode = resolveAdminMode();
     return _adminMode;
@@ -426,7 +426,7 @@ const resolveArgon2Pepper = () => {
 
 // ─── Lazy-init singletons (resolved on first use, not at import time) ───
 let _mode: any = null;
-let _bcryptRounds: any = null;
+let _bcryptRounds: unknown = null;
 let _argon2Config: any = null;
 let _argon2Pepper: any = null;
 let _signingSecret: any = null;
@@ -925,7 +925,7 @@ class CryptoVault {
      * Returns the active mode and configuration snapshot.
      * @returns {object}
      */
-    static get config(): Record<string, any> {
+    static get config(): Record<string, unknown> {
         const mode = getMode();
         const base = { mode };
 
@@ -948,7 +948,7 @@ class CryptoVault {
      * Exposes the embedded SymmetricCrypto engine for direct use.
      * @returns {object}
      */
-    static get symmetric(): Record<string, any> {
+    static get symmetric(): Record<string, unknown> {
         return SymmetricCrypto;
     }
 

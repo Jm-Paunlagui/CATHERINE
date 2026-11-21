@@ -30,7 +30,7 @@ const RELAY_META_MAX = 4000;
  * @param {*} meta
  * @returns {object}
  */
-function sanitizeMeta(meta: unknown): Record<string, any> {
+function sanitizeMeta(meta: unknown): Record<string, unknown> {
     if (!meta || typeof meta !== "object") return {};
     const seen = new WeakSet();
     try {
@@ -59,7 +59,7 @@ function sanitizeMeta(meta: unknown): Record<string, any> {
  * @param {number} pid - Originating worker pid.
  * @returns {{cmd: string, record: {level: string, message: string, meta: object, requestId: string|null, timestamp: string, pid: number}}}
  */
-function buildRelayMessage(record: { level: string; message: any; meta?: Record<string, any>; requestId?: string | null; timestamp?: string; }, pid: number): { cmd: string; record: { level: string; message: string; meta: Record<string, any>; requestId: string | null; timestamp: string; pid: number; }; } {
+function buildRelayMessage(record: { level: string; message: unknown; meta?: Record<string, unknown>; requestId?: string | null; timestamp?: string; }, pid: number): { cmd: string; record: { level: string; message: string; meta: Record<string, unknown>; requestId: string | null; timestamp: string; pid: number; }; } {
     return {
         cmd: CLUSTER_IPC.CRIT_RELAY,
         record: {
@@ -80,7 +80,7 @@ function buildRelayMessage(record: { level: string; message: any; meta?: Record<
  * @param {{send?: Function, connected?: boolean, pid: number}} proc - `process`-like
  * @returns {Function} unsubscribe
  */
-function subscribeCriticalRelay(logger: { onLevel: (max: number, fn: ((...args: any[]) => any)) => ((...args: any[]) => any); }, proc: { send?: ((...args: any[]) => any); connected?: boolean; pid: number; }): ((...args: any[]) => any) {
+function subscribeCriticalRelay(logger: { onLevel: (max: number, fn: ((...args: any[]) => unknown)) => ((...args: unknown[]) => unknown); }, proc: { send?: ((...args: any[]) => unknown); connected?: boolean; pid: number; }): ((...args: unknown[]) => unknown) {
     return logger.onLevel(2, (record) => {
         // `_noNotify` records never reach onLevel subscribers (logger skips
         // them); checked again here so a direct caller keeps the loop guard.

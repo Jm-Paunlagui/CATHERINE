@@ -172,7 +172,7 @@ class DataRestoreService {
      * const report = await DataRestoreService.preview({ zipBuffer: req.file.buffer });
      */
     static async preview({ zipBuffer }: { zipBuffer: Buffer; }): Promise<{
-        tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, any> | null;
+        tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, unknown> | null;
         rowCounts: Record<string, number>; tablesGettingNewPks: string[];
         fidelityNotes: string[];
         archiveMeta: ArchiveMeta;
@@ -389,7 +389,7 @@ class DataRestoreService {
                 let insertedCount = 0;
                 const newPkMap = entry.isIdentity ? new Map<string, unknown>() : null;
                 /** @type {Array<{ row: object, original: object, newPk: number|string }>} */
-                const insertedForResign: Array<{ row: Record<string, any>; original: Record<string, any>; newPk: number | string; }> = [];
+                const insertedForResign: Array<{ row: Record<string, unknown>; original: Record<string, unknown>; newPk: number | string; }> = [];
 
                 for (const batch of _chunk(remappedRows, batchSize)) {
                     // Batches must run sequentially inside one transaction.
@@ -523,7 +523,7 @@ class DataRestoreService {
      * @param {{ execute: Function }} session - the restore transaction session
      * @returns {Promise<{ signRows: Array<object>, tampered: number }>} rows for bulkUpdateByKeys (ROW_HASH may be null)
      */
-    static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, any>; original: Record<string, any>; newPk: number | string; }>, session: { execute: ((...args: any[]) => any); }): Promise<{ signRows: Array<Record<string, any>>; tampered: number; }> {
+    static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, unknown>; original: Record<string, any>; newPk: number | string; }>, session: { execute: ((...args: unknown[]) => any); }): Promise<{ signRows: Array<Record<string, unknown>>; tampered: number; }> {
         const domain = entry.rowHashDomain;
         // Callers only route tables with a ROW_HASH domain here.
         if (!domain) throw new Error(`_verifyThenSign: ${entry.table} has no rowHashDomain.`);
@@ -531,7 +531,7 @@ class DataRestoreService {
         const canonical = new Map();
         if (tsCols.length > 0) {
             for (const group of _chunk(items, 1000)) {
-                const binds: Record<string, any> = {};
+                const binds: Record<string, unknown> = {};
                 group.forEach(({ newPk }, i) => {
                     binds[`p${i}`] = newPk;
                 });
@@ -618,7 +618,7 @@ class DataRestoreService {
      * @throws {AppError} 400/422 — unreadable, incomplete, malformed, or signature-invalid archive.
      * @private
      */
-    static async _verifyAndParseArchive(zipBuffer: Buffer): Promise<{ manifest: Record<string, any>; signatureDoc: Record<string, any>; dataByTable: Record<string, Record<string, any>[]>; }> {
+    static async _verifyAndParseArchive(zipBuffer: Buffer): Promise<{ manifest: Record<string, any>; signatureDoc: Record<string, unknown>; dataByTable: Record<string, Record<string, any>[]>; }> {
         if (!Buffer.isBuffer(zipBuffer) || zipBuffer.length === 0) {
             throw new AppError(
                 PURGE_ERRORS.RESTORE_NO_FILE,
@@ -722,7 +722,7 @@ class DataRestoreService {
         // hashed (manifest.json + every data/*.jsonl — never
         // readable/backup-summary.xlsx, which was never part of the signed set).
         const filesToHash = { "manifest.json": manifestBuffer, ...dataBuffers };
-        const recomputedHashes: Record<string, any> = {};
+        const recomputedHashes: Record<string, unknown> = {};
         for (const [name, buf] of Object.entries(filesToHash)) {
             recomputedHashes[name] = crypto
                 .createHash("sha256")
@@ -831,8 +831,8 @@ class DataRestoreService {
      * @throws {AppError} 400/403/409/422 — see the individual checks below.
      * @private
      */
-    static async _preflight({ manifest, dataByTable }: { manifest: Record<string, any>; dataByTable: Record<string, Record<string, any>[]>; }): Promise<{
-        tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, any> | null;
+    static async _preflight({ manifest, dataByTable }: { manifest: Record<string, any>; dataByTable: Record<string, Record<string, unknown>[]>; }): Promise<{
+        tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, unknown> | null;
         rowCounts: Record<string, number>; tablesGettingNewPks: string[];
         fidelityNotes: string[];
         archiveMeta: ArchiveMeta;

@@ -72,9 +72,9 @@ function quoteIdentifier(name: string): string {
  *   convertTypes({ NAME: "Juan", AGE: "25", SALARY: "50000.5000" })
  *   // → { NAME: "Juan", AGE: 25, SALARY: "50000.5000" }  (money left as string)
  */
-function convertTypes(row: Record<string, any>): Record<string, any> {
+function convertTypes(row: Record<string, unknown>): Record<string, unknown> {
   if (!row || typeof row !== "object") return row;
-  const out: Record<string, any> = {};
+  const out: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(row)) {
     if (
       typeof val === "string" &&
@@ -105,7 +105,7 @@ function convertTypes(row: Record<string, any>): Record<string, any> {
  * @param {Object} row - A raw Oracle row object
  * @returns {Object} Cleaned document with proper types
  */
-function rowToDoc(row: Record<string, any>): Record<string, any> {
+function rowToDoc(row: Record<string, unknown>): Record<string, unknown> {
   return convertTypes(row);
 }
 
@@ -137,7 +137,7 @@ function rowToDoc(row: Record<string, any>): Record<string, any> {
  *   mergeBinds({ where_name_0: "Juan" }, { upd_status_0: "active" })
  *   // → { where_name_0: "Juan", upd_status_0: "active" }
  */
-function mergeBinds(a: Record<string, any>, b: Record<string, any>): Record<string, any> {
+function mergeBinds(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
   const merged = { ...a };
   for (const [k, v] of Object.entries(b)) {
     if (k in merged) {
@@ -166,7 +166,7 @@ function mergeBinds(a: Record<string, any>, b: Record<string, any>): Record<stri
  *
  *   buildOrderBy(null)  // → ""  (no sorting)
  */
-function buildOrderBy(sortSpec: Record<string, any>): string {
+function buildOrderBy(sortSpec: Record<string, unknown>): string {
   if (
     !sortSpec ||
     typeof sortSpec !== "object" ||
@@ -218,7 +218,7 @@ function buildOrderBy(sortSpec: Record<string, any>): string {
  *   buildProjection(null)
  *   // → { columns: '*', isExclusion: false, excludedCols: [] }
  */
-function buildProjection(projection: Record<string, any>): { columns: string; isExclusion: boolean; excludedCols: string[]; } {
+function buildProjection(projection: Record<string, unknown>): { columns: string; isExclusion: boolean; excludedCols: string[]; } {
   if (
     !projection ||
     typeof projection !== "object" ||

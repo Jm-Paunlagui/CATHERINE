@@ -61,10 +61,10 @@ function announcedStopSince(previous: Record<string, any> | null | undefined, la
 type LifecyclePayload = Omit<Parameters<import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]>[0], "persist">;
 class StartupNotifier {
     /** @type {Set<Promise<any>>} */
-    #pending: Set<Promise<any>> = new Set();
+    #pending: Set<Promise<unknown>> = new Set();
     declare static isReportedSend: (res: { sent?: boolean; reason?: string; } | null | undefined) => boolean;
     declare _tzOffsetMinutes: () => number;
-    declare _logger: { warning: ((...args: any[]) => any); info: ((...args: any[]) => any); };
+    declare _logger: { warning: ((...args: unknown[]) => unknown); info: ((...args: unknown[]) => unknown); };
     declare _alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; };
 
     /**
@@ -73,7 +73,7 @@ class StartupNotifier {
      * @param {{warning: Function, info: Function}} deps.logger
      * @param {() => number} [deps.tzOffsetMinutes] - the DB zone offset reader
      */
-    constructor({ alertNotifier, logger, tzOffsetMinutes = dbTimezoneOffsetMinutes }: { alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; }; logger: { warning: ((...args: any[]) => any); info: ((...args: any[]) => any); }; tzOffsetMinutes?: () => number; }) {
+    constructor({ alertNotifier, logger, tzOffsetMinutes = dbTimezoneOffsetMinutes }: { alertNotifier: { notifyLifecycleNow: import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]; }; logger: { warning: ((...args: unknown[]) => unknown); info: ((...args: unknown[]) => unknown); }; tzOffsetMinutes?: () => number; }) {
         this._alertNotifier = alertNotifier;
         this._logger = logger;
         this._tzOffsetMinutes = tzOffsetMinutes;
@@ -90,7 +90,7 @@ class StartupNotifier {
      * @param {number} p.nowMs
      * @returns {Promise<{sent: boolean, reason?: string, event?: string}>}
      */
-    async announce({ verdict, previous, current, lastStartNoticeAt, nowMs }: { verdict: string; previous: Record<string, any> | null; current: { pid: number; version: string; bootedAtMs: number; }; lastStartNoticeAt: number | null; nowMs: number; }): Promise<{ sent: boolean; reason?: string; event?: string; uncleanReported?: boolean; reportedKeys?: string[]; leaderLostReported?: boolean; reportedLeaderLostKeys?: string[]; }> {
+    async announce({ verdict, previous, current, lastStartNoticeAt, nowMs }: { verdict: string; previous: Record<string, unknown> | null; current: { pid: number; version: string; bootedAtMs: number; }; lastStartNoticeAt: number | null; nowMs: number; }): Promise<{ sent: boolean; reason?: string; event?: string; uncleanReported?: boolean; reportedKeys?: string[]; leaderLostReported?: boolean; reportedLeaderLostKeys?: string[]; }> {
         // `uncleanReported`: every unclean restart known to this boot was emailed;
         // `reportedKeys`: the pendingKey of each one that was, so the caller clears
         // only those. Notifications switched off counts

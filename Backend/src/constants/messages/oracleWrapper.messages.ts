@@ -67,7 +67,7 @@ function describeBindValue(v: any, depth: number = 0): string {
  * @returns {string} e.g. `"3 bind(s): where_GID=<string:11>, where_CUTOFF_ID=<number>"`,
  *   `"0 bind(s)"`, or `"<none>"`.
  */
-function describeBinds(binds: Record<string, any> | Array<any> | null | undefined): string {
+function describeBinds(binds: Record<string, any> | Array<unknown> | null | undefined): string {
   if (binds === null || typeof binds !== "object") return "<none>";
 
   const entries = Array.isArray(binds)

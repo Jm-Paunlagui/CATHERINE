@@ -9,7 +9,7 @@ import type { NextFunction, Request, Response } from "express";
 import compression from "compression";
 
 class CompressionMiddleware {
-  declare _compression: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
+  declare _compression: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, unknown, unknown, import("qs").ParsedQs, Record<string, unknown>>;
   constructor(options: Record<string, any> = {}) {
     this._compression = compression({
       level: options.level ?? 6,

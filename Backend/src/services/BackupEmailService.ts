@@ -368,7 +368,7 @@ class BackupEmailService {
         scopeLabel,
         tableCount,
         rowCount,
-    }: Record<string, any>): string {
+    }: Record<string, unknown>): string {
         const lines = [
             `[${PRODUCT_NAME}] Data purge completed — ${tableCount} table(s), ${rowCount} row(s) deleted`,
             "",

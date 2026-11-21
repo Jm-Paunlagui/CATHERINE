@@ -32,7 +32,7 @@ const DURATION_MS = Object.freeze({ s: 1_000, m: 60_000, h: 3_600_000, d: 86_400
  * @param {object|null|undefined} payload - Output of jwt.verify.
  * @returns {"access"|"legacy"|"wrong-type"}
  */
-function classifyAccessClaims(payload: Record<string, any> | null | undefined): "access" | "legacy" | "wrong-type" {
+function classifyAccessClaims(payload: Record<string, unknown> | null | undefined): "access" | "legacy" | "wrong-type" {
     if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
         return "wrong-type";
     }

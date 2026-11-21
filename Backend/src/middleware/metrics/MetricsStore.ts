@@ -286,12 +286,12 @@ class MetricsStore {
           major: { count: number; pauseMs: number; }; minor: { count: number; pauseMs: number; }; incremental: { count: number; pauseMs: number; }; weakcb: { count: number; pauseMs: number; }; overheadPct: number;
       }; handles: number; requests: number;
   };
-  declare _frontendErrors: any[];
-  declare _frontendVitals: any[];
+  declare _frontendErrors: unknown[];
+  declare _frontendVitals: unknown[];
   declare _watchdog: { terminated: number; byRoute: Map<string, number>; };
   declare _notifications: Map<string, NotificationDelivery>;
   declare _oraclePoolStats: Map<any, any>;
-  declare _oracle: Map<any, any>;
+  declare _oracle: Map<unknown, any>;
   declare _errorWindow: Map<any, any>;
   declare _serverErrorsTotal: number;
   declare _clientErrorsTotal: number;
@@ -914,7 +914,7 @@ class MetricsStore {
    * @param {string} rating  - "good" | "needs-improvement" | "poor"
    * @param {object} [context={}] - Additional context from the client
    */
-  recordFrontendVital(name: string, value: number, rating: string, context: Record<string, any> = {}) {
+  recordFrontendVital(name: string, value: number, rating: string, context: Record<string, unknown> = {}) {
     if (this._frontendVitals.length >= FRONTEND_VITALS_MAX) {
       this._frontendVitals.shift();
     }
@@ -929,7 +929,7 @@ class MetricsStore {
    * @param {string} [stack]  - Error stack trace
    * @param {object} [context={}] - Additional context (page, userAgent, etc.)
    */
-  recordFrontendError(message: string, stack: string = "", context: Record<string, any> = {}) {
+  recordFrontendError(message: string, stack: string = "", context: Record<string, unknown> = {}) {
     if (this._frontendErrors.length >= FRONTEND_VITALS_MAX) {
       this._frontendErrors.shift();
     }
@@ -994,11 +994,11 @@ class MetricsStore {
       timestamp: string;
       uptime: number;
       red: { [s: string]: { count: number; clientErrorCount: number; serverErrorCount: number; errorRate: number; clientErrorRate: number; availability: number; p50: number; p95: number; p99: number; avgMs: number; window: { windowMs: number; count: number; p99: number; }; }; };
-      system: { cpu: Record<string, any>; memory: Record<string, any>; eventLoopLag: number; gc: Record<string, any>; memoryTrend: HeapTrend; handles: number; requests: number; };
+      system: { cpu: Record<string, unknown>; memory: Record<string, unknown>; eventLoopLag: number; gc: Record<string, unknown>; memoryTrend: HeapTrend; handles: number; requests: number; };
       dependencies: { oracle: { [s: string]: { queryCount: number; errorCount: number; avgMs: number; p95Ms: number; poolUtilization: number | null; connectionsInUse: number | null; connectionsOpen: number | null; poolMax: number | null; queueLength: number | null; capacity: number | null; healthy: boolean | null; consecutiveFailures: number | null; }; }; smtp: SmtpDependencySnapshot; };
       totals: { requestsTotal: number; clientErrorsTotal: number; serverErrorsTotal: number; errorRate: number; clientErrorRate: number; availability: number; };
-      frontendVitals: Array<any>;
-      frontendErrors: Array<any>;
+      frontendVitals: Array<unknown>;
+      frontendErrors: Array<unknown>;
       notifications: Record<string, NotificationDelivery>;
       watchdog: { terminated: number; byRoute: Record<string, number> };
   } {
@@ -1187,7 +1187,7 @@ class MetricsStore {
    *
    * @returns {{ snapshot: object, extras: { routeSketches: object, routeWindowSketches: object, oracleSketches: object, oracleTotalMs: object, apdexCounts: { satisfied: number, tolerating: number, samples: number } } }}
    */
-  getMergeableSnapshot(): { snapshot: Record<string, any>; extras: { routeSketches: Record<string, any>; routeWindowSketches: Record<string, any>; oracleSketches: Record<string, any>; oracleTotalMs: Record<string, any>; apdexCounts: { satisfied: number; tolerating: number; samples: number; }; }; } {
+  getMergeableSnapshot(): { snapshot: Record<string, unknown>; extras: { routeSketches: Record<string, unknown>; routeWindowSketches: Record<string, unknown>; oracleSketches: Record<string, unknown>; oracleTotalMs: Record<string, unknown>; apdexCounts: { satisfied: number; tolerating: number; samples: number; }; }; } {
     // Lazy: metricsMerge requires this module for computeRates.
     const { buildQuantileSketch } = (require("./metricsMerge") as typeof import("./metricsMerge"));
     const snapshot = this.getSnapshot();

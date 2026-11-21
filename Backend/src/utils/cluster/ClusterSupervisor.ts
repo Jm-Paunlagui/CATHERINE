@@ -68,9 +68,9 @@ class ClusterSupervisor {
     declare _runId: string;
     declare _rpcHub: import("./ClusterRpcHub").ClusterRpcHub | null;
     declare _now: () => number;
-    declare _process: NodeJS.EventEmitter & { exit: ((...args: any[]) => any); pid?: number; };
-    declare _clusterRole: { electionHealth: ((...args: any[]) => any); cronLeaderEnv: ((...args: any[]) => any); };
-    declare _notifyCritical: (message: string) => Promise<any>;
+    declare _process: NodeJS.EventEmitter & { exit: ((...args: unknown[]) => unknown); pid?: number; };
+    declare _clusterRole: { electionHealth: ((...args: unknown[]) => any); cronLeaderEnv: ((...args: unknown[]) => any); };
+    declare _notifyCritical: (message: string) => Promise<unknown>;
     declare _logger: Record<string, any>;
     declare _marginMs: number;
     declare _forcedExitMs: number;
@@ -105,7 +105,7 @@ class ClusterSupervisor {
         now = Date.now,
         rpcHub = null,
         runId = crypto.randomUUID(),
-    }: { cluster: import("cluster").Cluster; numWorkers: number; forcedExitMs: number; marginMs: number; logger: Record<string, any>; notifyCritical: (message: string) => Promise<any>; clusterRole: { electionHealth: ((...args: any[]) => any); cronLeaderEnv: ((...args: any[]) => any); }; processRef?: NodeJS.EventEmitter & { exit: ((...args: any[]) => any); pid?: number; }; now?: () => number; rpcHub?: import("./ClusterRpcHub").ClusterRpcHub | null; runId?: string; }) {
+    }: { cluster: import("cluster").Cluster; numWorkers: number; forcedExitMs: number; marginMs: number; logger: Record<string, any>; notifyCritical: (message: string) => Promise<unknown>; clusterRole: { electionHealth: ((...args: any[]) => unknown); cronLeaderEnv: ((...args: any[]) => unknown); }; processRef?: NodeJS.EventEmitter & { exit: ((...args: any[]) => unknown); pid?: number; }; now?: () => number; rpcHub?: import("./ClusterRpcHub").ClusterRpcHub | null; runId?: string; }) {
         this._cluster = cluster;
         this._numWorkers = numWorkers;
         this._forcedExitMs = forcedExitMs;

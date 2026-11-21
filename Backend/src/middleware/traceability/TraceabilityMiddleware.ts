@@ -82,7 +82,7 @@ function redactValue(key: unknown, value: unknown) {
  * @returns {*} A redacted copy. Primitives are returned unchanged.
  * @throws {TypeError} On a circular reference.
  */
-function deepRedact(value: unknown, depth: number = 0, seen: WeakSet<Record<string, any>> = new WeakSet()): any {
+function deepRedact(value: unknown, depth: number = 0, seen: WeakSet<Record<string, any>> = new WeakSet()): unknown {
     // Depth cap: a malicious or accidental deeply-nested payload must not turn
     // a log line into a stack overflow. 8 is far past any real request shape.
     if (depth > 8) return "[MAX_DEPTH]";
@@ -98,7 +98,7 @@ function deepRedact(value: unknown, depth: number = 0, seen: WeakSet<Record<stri
             return value.map((v) => deepRedact(v, depth + 1, seen));
         }
 
-        const out: Record<string, any> = {};
+        const out: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(value)) {
             out[k] = isSensitiveKey(k)
                 ? "[REDACTED]"
@@ -115,7 +115,7 @@ function deepRedact(value: unknown, depth: number = 0, seen: WeakSet<Record<stri
 
 class TraceabilityMiddleware {
     declare _excludedUrls: any;
-    constructor(options: Record<string, any> = {}) {
+    constructor(options: Record<string, unknown> = {}) {
         this._excludedUrls = options.excludedUrls ?? [
             ...(process.env.LOG_EXCLUDE_HEALTH === "true" ? ["/health"] : []),
             ...(process.env.LOG_EXCLUDE_URLS
@@ -180,7 +180,7 @@ class TraceabilityMiddleware {
      * @param {import('express').Response} res
      * @param {Function} next
      */
-    logIncoming(req: import('express').Request, res: import('express').Response, next: ((...args: any[]) => any)) {
+    logIncoming(req: import('express').Request, res: import('express').Response, next: ((...args: unknown[]) => unknown)) {
         if (this._shouldLog(req)) this._emitIncoming(req);
         next();
     }

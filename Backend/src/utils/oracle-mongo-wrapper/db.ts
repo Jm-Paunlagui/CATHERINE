@@ -81,7 +81,7 @@ function createDb(connectionName: string = "appDb"): Record<string, any> {
      *     return result.rows;
      *   });
      */
-    withConnection: (callback: ((...args: any[]) => any)): Promise<any> =>
+    withConnection: (callback: ((...args: unknown[]) => unknown)): Promise<unknown> =>
       config.withConnection(connectionName, callback),
 
     /**
@@ -93,7 +93,7 @@ function createDb(connectionName: string = "appDb"): Record<string, any> {
      * @param {Function} callback - async (conn) => result
      * @returns {Promise<*>} Whatever your callback returns
      */
-    withTransaction: (callback: ((...args: any[]) => any)): Promise<any> =>
+    withTransaction: (callback: ((...args: unknown[]) => unknown)): Promise<unknown> =>
       config.withTransaction(connectionName, callback),
 
     /**
@@ -103,7 +103,7 @@ function createDb(connectionName: string = "appDb"): Record<string, any> {
      *
      * @param {Function[]} operations - Array of async (conn) => result
      */
-    withBatchConnection: (operations: ((...args: any[]) => any)[]) =>
+    withBatchConnection: (operations: ((...args: unknown[]) => unknown)[]) =>
       config.withBatchConnection(connectionName, operations),
 
     /** Gracefully close ALL database pools. Call during app shutdown. */

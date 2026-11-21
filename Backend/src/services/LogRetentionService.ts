@@ -168,7 +168,7 @@ function _formatBytes(bytes: number): string {
 
 class LogRetentionService {
     declare LogRetentionService: typeof LogRetentionService;
-    declare _lastSweepDay: any;
+    declare _lastSweepDay: unknown;
     declare _timer: any;
     declare _logBaseDir: string;
     /**

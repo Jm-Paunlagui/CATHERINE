@@ -260,7 +260,7 @@ class ServerNotificationService {
      * @param {string}  [payload.firedAt]        - Pre-formatted local timestamp; computed when omitted
      * @returns {Promise<{ sent: boolean, notificationId?: string, reason?: string, cause?: string, recipientCount?: number }>}
      */
-    async sendChannelDigest(channel: string, payload: { severity: string; headline: string; summary: string; rows?: Array<CriticalDigestRow | MetricDigestRow>; throttleNote?: string; detailsNote?: string; kv?: Record<string, any>; notificationId?: string; firedAt?: string; }): Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number; }> {
+    async sendChannelDigest(channel: string, payload: { severity: string; headline: string; summary: string; rows?: Array<CriticalDigestRow | MetricDigestRow>; throttleNote?: string; detailsNote?: string; kv?: Record<string, unknown>; notificationId?: string; firedAt?: string; }): Promise<{ sent: boolean; notificationId?: string; reason?: string; cause?: string; recipientCount?: number; }> {
         const {
             severity,
             headline,

@@ -67,7 +67,7 @@ import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
  *     .join({ from: "activity", localField: "id", foreignField: "userId" })
  *     .toArray();
  */
-function withCTE(db: Record<string, any>, cteDefs: Record<string, any>): CTEResult {
+function withCTE(db: Record<string, unknown>, cteDefs: Record<string, unknown>): CTEResult {
   return new CTEResult(db, cteDefs);
 }
 
@@ -93,7 +93,7 @@ function withCTE(db: Record<string, any>, cteDefs: Record<string, any>): CTEResu
  *     }
  *   }).sort({ LVL: 1, name: 1 }).toArray();
  */
-function withRecursiveCTE(db: Record<string, any>, cteName: string, def: { anchor: QueryBuilder; recursive: { collection: string; joinOn: Record<string, any>; }; }): RecursiveCTEResult {
+function withRecursiveCTE(db: Record<string, unknown>, cteName: string, def: { anchor: QueryBuilder; recursive: { collection: string; joinOn: Record<string, unknown>; }; }): RecursiveCTEResult {
   return new RecursiveCTEResult(db, cteName, def);
 }
 
@@ -111,9 +111,9 @@ function withRecursiveCTE(db: Record<string, any>, cteName: string, def: { ancho
  *   .toArray()      — Execute and return rows
  */
 class CTEResult {
-  declare _skipVal: any;
-  declare _limitVal: any;
-  declare _sort: any;
+  declare _skipVal: unknown;
+  declare _limitVal: unknown;
+  declare _sort: unknown;
   declare _join: any;
   declare _from: any;
   declare _cteDefs: Record<string, QueryBuilder>;
@@ -155,7 +155,7 @@ class CTEResult {
 
   _buildSQL() {
     const withParts = [];
-    const allBinds: Record<string, any> = {};
+    const allBinds: Record<string, unknown> = {};
 
     for (const [name, qb] of Object.entries(this._cteDefs)) {
       const { sql, binds } = qb._buildSQL();
@@ -227,9 +227,9 @@ class CTEResult {
  * Terminal method: .toArray()
  */
 class RecursiveCTEResult {
-  declare _skipVal: any;
-  declare _limitVal: any;
-  declare _sort: any;
+  declare _skipVal: unknown;
+  declare _limitVal: unknown;
+  declare _sort: unknown;
   declare _def: any;
   declare _cteName: any;
   declare _db: any;
@@ -259,7 +259,7 @@ class RecursiveCTEResult {
 
   _buildSQL(colNames = []) {
     const { anchor, recursive } = this._def;
-    const allBinds: Record<string, any> = {};
+    const allBinds: Record<string, unknown> = {};
 
     // Anchor query
     const { sql: anchorSql, binds: anchorBinds } = anchor._buildSQL();

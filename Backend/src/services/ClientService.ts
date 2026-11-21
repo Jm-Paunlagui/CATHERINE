@@ -72,7 +72,7 @@ class ClientService {
      * @param {object} [user]           - Authenticated user (req.user); may be undefined.
      * @returns {Promise<void>}
      */
-    static async logHelpMiss(payload: { query: string; surface?: string; }, user: Record<string, any> | undefined): Promise<void> {
+    static async logHelpMiss(payload: { query: string; surface?: string; }, user: Record<string, unknown> | undefined): Promise<void> {
         const MAX_QUERY_LEN = 120;
         const raw = typeof payload?.query === "string" ? payload.query : "";
         // Strip control chars (log-injection guard) then bound the length.

@@ -487,7 +487,7 @@ class AuthMiddleware {
      * @param {string} token
      * @returns {Promise<object>} decoded payload
      */
-    static verifyToken(token: string): Promise<Record<string, any>> {
+    static verifyToken(token: string): Promise<Record<string, unknown>> {
         return new Promise((resolve, reject) => {
             jwt.verify(
                 token,

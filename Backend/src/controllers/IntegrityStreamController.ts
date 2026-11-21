@@ -41,7 +41,7 @@ const DELTA_CAP = 500;
  * Subscriptions keyed by `${table}|${scopeJSON}`.
  * @type {Map<string, { key: string, filters: object, cursor: number|null, conns: Map<string, import('express').Response> }>}
  */
-const _subs: Map<string, { key: string; filters: Record<string, any>; cursor: number | null; conns: Map<string, import('express').Response>; }> = new Map();
+const _subs: Map<string, { key: string; filters: Record<string, unknown>; cursor: number | null; conns: Map<string, import('express').Response>; }> = new Map();
 
 let _pollInterval: any = null;
 let _consecutiveErrors = 0;
@@ -53,7 +53,7 @@ let _consecutiveErrors = 0;
  * @param {string} event
  * @param {object} payload
  */
-function _safeSend(res: import('express').Response, event: string, payload: Record<string, any>) {
+function _safeSend(res: import('express').Response, event: string, payload: Record<string, unknown>) {
     try {
         res.write(`event: ${event}\n`);
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -65,7 +65,7 @@ function _safeSend(res: import('express').Response, event: string, payload: Reco
 
 /** Deterministic subscription key from table + scope filters (sorted keys). */
 function _subKey(table: unknown, filters: any) {
-    const scope: Record<string, any> = {};
+    const scope: Record<string, unknown> = {};
     for (const k of Object.keys(filters).sort()) {
         const v = filters[k];
         if (v == null) continue;

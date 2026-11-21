@@ -327,7 +327,7 @@ function isOpaqueObject(value: unknown) {
  * @param {*} value
  * @returns {*}
  */
-function scrubOverBudget(value: unknown): any {
+function scrubOverBudget(value: unknown): unknown {
     if (typeof value === "string") return scrubString(value);
     if (value === null || typeof value !== "object") return value;
     if (isOpaqueObject(value)) return value;
@@ -411,7 +411,7 @@ function isPlainObject(value: unknown): boolean {
  * @param {number} [depth]
  * @returns {*}
  */
-function scrubValue(value: any, state: { nodes: number; } = { nodes: 0 }, depth: number = 0): any {
+function scrubValue(value: any, state: { nodes: number; } = { nodes: 0 }, depth: number = 0): unknown {
     if (typeof value === "string") return scrubString(value);
 
     if (Array.isArray(value)) {
@@ -431,7 +431,7 @@ function scrubValue(value: any, state: { nodes: number; } = { nodes: 0 }, depth:
             return scrubOverBudget(value);
         }
         if (!isPlainObject(value)) return scrubInstance(value, state, depth);
-        const out: Record<string, any> = {};
+        const out: Record<string, unknown> = {};
         for (const key of Object.keys(value)) {
             out[key] = scrubChild(key, value[key], state, depth + 1);
         }
@@ -464,9 +464,9 @@ const INTERNAL_KEYS = new Set(["method", "url", "function", "file", "line"]);
  * @param {object} meta
  * @returns {object} A new object; `meta` itself is never modified.
  */
-function scrubMeta(meta: Record<string, any>): Record<string, any> {
+function scrubMeta(meta: Record<string, unknown>): Record<string, unknown> {
     if (!meta || typeof meta !== "object") return meta;
-    const clone: Record<string, any> = {};
+    const clone: Record<string, unknown> = {};
     const state = { nodes: 0 };
     for (const key of Object.keys(meta)) {
         if (key.startsWith("_") || INTERNAL_KEYS.has(key)) {

@@ -147,7 +147,7 @@ function preCloseTeardown({
     httpInFlight,
     onRequestsCut,
     waitNoticeMs = SHUTDOWN_WAIT_NOTICE_MS,
-}: { sseRegistry: { endAll: (reason: string) => void; }; server: import('http').Server; forceCloseAfterMs?: number; sseDrainGraceMs?: number; minGraceMs?: number; logger: { notice?: ((...args: any[]) => any); warning: ((...args: any[]) => any); }; reason?: string; httpInFlight?: { beginShutdown: ((...args: any[]) => any); activeCount: () => number; activeSummary?: ((...args: any[]) => any); }; onRequestsCut?: (summary: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null }>, graceMs: number, total: number, opts: { reason: "cap" | "idle"; }) => void; waitNoticeMs?: number; }): { shortenTo: (ms: number) => void; recordIdleCut: (entry: Record<string, any>) => void; idleCuts: Array<Record<string, any>>; } {
+}: { sseRegistry: { endAll: (reason: string) => void; }; server: import('http').Server; forceCloseAfterMs?: number; sseDrainGraceMs?: number; minGraceMs?: number; logger: { notice?: ((...args: unknown[]) => unknown); warning: ((...args: unknown[]) => unknown); }; reason?: string; httpInFlight?: { beginShutdown: ((...args: any[]) => unknown); activeCount: () => number; activeSummary?: ((...args: any[]) => any); }; onRequestsCut?: (summary: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null }>, graceMs: number, total: number, opts: { reason: "cap" | "idle"; }) => void; waitNoticeMs?: number; }): { shortenTo: (ms: number) => void; recordIdleCut: (entry: Record<string, unknown>) => void; idleCuts: Array<Record<string, unknown>>; } {
     // Callers always pass one; 0 matches setTimeout's handling of an undefined delay.
     let graceMs: number = forceCloseAfterMs ?? sseDrainGraceMs ?? 0;
     /** @type {Array<object>} */
@@ -324,7 +324,7 @@ async function postCloseTeardown({
     alertNotifier,
     finalNotifyMs = () => 0,
     onDataTeardownComplete,
-}: { inFlight: { drain: (ms: number) => Promise<any>; }; auditLog: { flushPending: (opts?: { final?: boolean; }) => Promise<any>; }; db: { closeAll?: () => Promise<any>; }; sharedTransporter: { closeTransporter: () => void; }; logger: { notice: ((...args: any[]) => any); warning: ((...args: any[]) => any); error: ((...args: any[]) => any); }; notifyDrainMs: number | (() => number); lifecycleSettled?: () => Promise<any>; onDataTeardownComplete?: () => void; alertNotifier?: { flushForShutdown: () => Promise<any>; drainAndStop: (opts: { timeoutMs: number; persist: boolean; }) => Promise<any>; }; finalNotifyMs?: () => number; }): Promise<void> {
+}: { inFlight: { drain: (ms: number) => Promise<unknown>; }; auditLog: { flushPending: (opts?: { final?: boolean; }) => Promise<unknown>; }; db: { closeAll?: () => Promise<unknown>; }; sharedTransporter: { closeTransporter: () => void; }; logger: { notice: ((...args: unknown[]) => unknown); warning: ((...args: unknown[]) => unknown); error: ((...args: unknown[]) => unknown); }; notifyDrainMs: number | (() => number); lifecycleSettled?: () => Promise<unknown>; onDataTeardownComplete?: () => void; alertNotifier?: { flushForShutdown: () => Promise<unknown>; drainAndStop: (opts: { timeoutMs: number; persist: boolean; }) => Promise<unknown>; }; finalNotifyMs?: () => number; }): Promise<void> {
     // Phase 2 notifier flush: runs after the pools closed, before the SMTP
     // transporter closes. Single-flight in the service, so calling it from both
     // the happy path and the catch is idempotent. Never throws.

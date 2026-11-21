@@ -39,7 +39,7 @@ import SseConnectionRegistry from "../utils/sse/SseConnectionRegistry";
  * @param {object} user - Decoded JWT claims (req.user)
  * @returns {string}
  */
-function _streamKeyFor(user: Record<string, any>): string {
+function _streamKeyFor(user: Record<string, unknown>): string {
     return String(user?.id ?? user?.userId ?? user?.username ?? 'anonymous');
 }
 
@@ -87,7 +87,7 @@ const BYTES_PER_MB = 1024 * 1024;
  * @param {string} eventName
  * @param {object} payload
  */
-const _safeSend = (res: import('express').Response, eventName: string, payload: Record<string, any>) => {
+const _safeSend = (res: import('express').Response, eventName: string, payload: Record<string, unknown>) => {
     try {
         res.write(`event: ${eventName}\n`);
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -114,7 +114,7 @@ const _safeSend = (res: import('express').Response, eventName: string, payload: 
  *
  * @returns {{ red: object, totals: object, system: object, rates: object }|null}
  */
-const _buildMetricsPayload = async (): Promise<{ red: Record<string, any>; totals: Record<string, any>; system: Record<string, any>; rates: Record<string, any>; } | null> => {
+const _buildMetricsPayload = async (): Promise<{ red: Record<string, unknown>; totals: Record<string, unknown>; system: Record<string, unknown>; rates: Record<string, unknown>; } | null> => {
     try {
         const snap = await MetricsService.getClusterSnapshot();
         const t = snap.totals;
