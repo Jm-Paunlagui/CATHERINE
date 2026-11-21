@@ -425,7 +425,7 @@ export function ComingSoon({ title = "Coming Soon", subtitle = "We're laying the
 
                 {/* Terminal line */}
                 <div className={`${ANIMATE_FADE_IN_UP} ${ANIM_DELAY_500}`}>
-                    <TerminalLine text={feature ? `npm run build -- --feature="${feature}"` : "npm run build -- --env=production"} />
+                    <TerminalLine text={feature ? `bun run build -- --feature="${feature}"` : "bun run build -- --env=production"} />
                 </div>
 
                 {/* Progress bar */}

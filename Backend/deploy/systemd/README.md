@@ -7,7 +7,7 @@ graceful stop that lets work in progress finish.
 ## Install
 
 1. Check out the `Backend` folder (e.g. `/opt/catherine-backend`), run
-   `npm ci --omit=dev`, and put the production `.env` beside `server.js`.
+   `bun install --frozen-lockfile --production`, and put the production `.env` beside `server.js`.
 2. Create the service account:
    `sudo useradd --system --home /opt/catherine-backend catherine`, and give it
    ownership of `logs/`, `data/` and the backup directory (read-only is enough

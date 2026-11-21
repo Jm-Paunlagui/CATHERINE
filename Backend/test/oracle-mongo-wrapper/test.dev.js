@@ -17,14 +17,14 @@
  *   library — it is intentionally EXCLUDED from the root Vitest suite
  *   (see vitest.config.js → exclude "test/oracle-mongo-wrapper/**"). It keeps its
  *   own mocha+chai toolchain so the root Backend dependency tree stays free of
- *   mocha/chai (the pair flagged by `npm audit`).
+ *   mocha/chai (the pair flagged by `bun audit`).
  *
  *   1. Point the appDb connection in src/config/database.js at a schema that has the DEV_* fixture tables and configure ../../.env
  *   2. Install mocha+chai LOCALLY IN THIS DIRECTORY (not the Backend root):
- *        cd test/oracle-mongo-wrapper && npm install
+ *        cd test/oracle-mongo-wrapper && bun install
  *      (devDependencies mocha + chai are declared in this folder's package.json)
  *   3. Run from this directory:
- *        npx mocha test.dev.js --timeout 60000 --exit   (or `npm test`)
+ *        bunx mocha test.dev.js --timeout 60000 --exit   (or `bun run test`)
  */
 
 const path = require("path");

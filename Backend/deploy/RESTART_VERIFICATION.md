@@ -11,10 +11,10 @@ on the **next start**. The 15-minute throttle means a "Server started" notice
 is skipped if one was sent less than 15 minutes earlier; a CRITICAL is never
 skipped.
 
-## 0. Automated check (any OS with Node)
+## 0. Automated check (any OS with Bun)
 
 ```sh
-npm run test:reliability     # includes test/server/reliability/graceful-shutdown.test.js; 0 failed
+bun run test:reliability     # includes test/server/reliability/graceful-shutdown.test.js; 0 failed
 ```
 
 Every check must pass (0 failed) before the manual steps. The automated suite

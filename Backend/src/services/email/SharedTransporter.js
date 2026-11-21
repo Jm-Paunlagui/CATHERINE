@@ -1,4 +1,5 @@
 "use strict";
+const { appPath } = require("../../utils/runtimePaths");
 
 /**
  * @fileoverview Singleton SMTP transporter shared by every email service.
@@ -306,7 +307,7 @@ class SharedTransporter {
      * to get local issuer certificate" for internal CAs).
      *
      * Resolution mirrors the PFX_FILENAME pattern in server.js:
-     *   - pkg build → certs/ sits next to the compiled executable
+     *   - compiled exe → certs/ sits next to the executable (APP_ROOT)
      *   - normal Node → certs/ sits next to server.js (project root)
      *
      * When `SMTP_CA_FILE` is unset, returns `undefined` so nodemailer
@@ -318,15 +319,8 @@ class SharedTransporter {
         const caFilename = process.env.SMTP_CA_FILE;
         if (!caFilename) return undefined;
 
-        // Resolve certs/ the same way server.js resolves PFX_FILENAME:
-        // compiled (pkg) → next to the exe; normal Node → project root.
-        const certDir = path.resolve(
-            /* c8 ignore next -- process.pkg is only defined inside the PKG-compiled binary; the compiled-exe path is structurally unreachable under Node/vitest (same policy as the encodingPolyfill/consoleManager coverage excludes) */
-            process.pkg
-                ? path.dirname(process.execPath)
-                : path.join(__dirname, "..", "..", ".."),
-            "certs",
-        );
+        // Resolve certs/ the same way server.js resolves PFX_FILENAME (APP_ROOT).
+        const certDir = appPath("certs");
         const caPath = path.join(certDir, caFilename);
 
         if (!fs.existsSync(caPath)) {

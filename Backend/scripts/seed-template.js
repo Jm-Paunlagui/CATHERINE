@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 "use strict";
 
 /**
@@ -15,7 +15,7 @@
  *
  * Usage:
  *   cd Backend
- *   npm run db:seed:template
+ *   bun run db:seed:template
  *
  * Safe to re-run: skips accounts that already exist.
  */

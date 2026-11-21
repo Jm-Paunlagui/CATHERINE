@@ -1,27 +1,28 @@
 {
     "name": "catherine-frontend",
     "private": true,
-    "version": "1.0.0-dev.50",
+    "version": "1.0.0-dev.51",
     "description": "CATHERINE Template — React 19 + Vite + Tailwind CSS v4 web client (Aumovio Design System v3.1) for the CATHERINE Express + Oracle backend.",
     "license": "Apache-2.0",
     "type": "module",
     "engines": {
-        "node": ">=26.13.1"
+        "bun": ">=1.4.5"
     },
+    "packageManager": "bun@1.4.5",
     "scripts": {
-        "dev": "vite",
-        "build": "vite build",
-        "lint": "eslint .",
-        "preview": "vite preview",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage",
-        "test:unit": "vitest run test/unit",
-        "test:integration": "vitest run test/integration",
-        "test:security": "vitest run test/security",
-        "test:performance": "vitest run test/performance",
-        "test:reliability": "vitest run test/reliability",
-        "test:chaos": "vitest run test/chaos",
+        "dev": "bun --bun vite",
+        "build": "bun --bun vite build",
+        "lint": "bun --bun eslint .",
+        "preview": "bun --bun vite preview",
+        "test": "bun --bun vitest run",
+        "test:watch": "bun --bun vitest",
+        "test:coverage": "bun --bun vitest run --coverage",
+        "test:unit": "bun --bun vitest run test/unit",
+        "test:integration": "bun --bun vitest run test/integration",
+        "test:security": "bun --bun vitest run test/security",
+        "test:performance": "bun --bun vitest run test/performance",
+        "test:reliability": "bun --bun vitest run test/reliability",
+        "test:chaos": "bun --bun vitest run test/chaos",
         "test:e2e": "playwright test"
     },
     "dependencies": {
@@ -81,8 +82,6 @@
         "vitest": "^4.1.12"
     },
     "overrides": {
-        "exceljs": {
-            "uuid": "^11.1.1"
-        }
+        "uuid": "^11.1.1"
     }
 }

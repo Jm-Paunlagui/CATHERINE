@@ -654,7 +654,7 @@ if (!isStrongPassword(form.password)) {
 
 ### 5.7 Dependency Security (CVE hygiene)
 
-- Run `npm audit` before every release. Address critical/high severity advisories.
+- Run `bun audit` before every release. Address critical/high severity advisories.
 - Pin exact versions for security-sensitive packages (auth, crypto, HTTP).
 - Never commit `.env` files — all secrets in environment variables injected at build time via Vite (`VITE_*`).
 

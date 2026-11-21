@@ -19,6 +19,7 @@
  */
 
 "use strict";
+const { IS_COMPILED, appPath } = require("../../utils/runtimePaths");
 
 const fs = require("fs");
 const path = require("path");
@@ -87,15 +88,18 @@ function setupOracleEnvironment() {
 // SECTION 2 — Driver loader  (was: oracleLoader.js)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const isCompiled = typeof process.pkg !== "undefined";
+const isCompiled = IS_COMPILED;
+
+/** Compiled exe: oracledb's Thick binary is staged beside the exe (the baked __dirname is the build box's). */
+const THICK_BINARY_OPTS = IS_COMPILED ? { binaryDir: appPath("node_modules", "oracledb", "build", "Release") } : {};
 
 function _loadEnvForCompiled() {
     if (!isCompiled) return;
     // .env is read from DISK only — the working directory, then the directory
     // containing the exe. Never reference it via path.join(__dirname, ...):
-    // pkg's static analyser resolves that pattern and silently bakes the
-    // build machine's .env (real secrets) into every distributed exe
-    // (CWE-798/CWE-540 — confirmed by byte-scanning a built binary).
+    // a compile step that follows that pattern can bake the build machine's
+    // .env (real secrets) into every distributed exe (CWE-798/CWE-540 —
+    // confirmed by byte-scanning a pkg-built binary).
     const candidates = [
         path.join(process.cwd(), ".env"),
         path.join(path.dirname(process.execPath), ".env"),
@@ -134,12 +138,12 @@ function _initOracleClient(db) {
     const isValid = validateOracleClient();
     try {
         if (isValid && clientPath) {
-            db.initOracleClient({ libDir: clientPath });
+            db.initOracleClient({ libDir: clientPath, ...THICK_BINARY_OPTS });
             logger.notice(
                 "Oracle client initialised from ORACLE_INSTANT_CLIENT.",
             );
         } else {
-            db.initOracleClient();
+            db.initOracleClient(THICK_BINARY_OPTS);
             logger.notice("Oracle client initialised from system PATH.");
         }
     } catch (err) {

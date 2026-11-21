@@ -7,8 +7,8 @@
  * Plain data: nodes, edges, flows, diagram LAYOUT and META.
  * `src/utils/systemMap.js` validates it and assembles the served map;
  * ArchitectureService builds it once per process. Sibling model:
- * `runtimeModel.js` (Support → Runtime). It lives under `src/` (not `scripts/`) because PKG only bundles
- * `src/**`, and the .exe must be able to serve it.
+ * `runtimeModel.js` (Support → Runtime). It is a JS module under `src/` (not data on disk under `scripts/`)
+ * so it is bundled into the compiled .exe, which must be able to serve it.
  *
  * `buildSystemMap` (src/utils/systemMap.js) is meant to reject the map when:
  *   - a flow step names two nodes with no edge between them,
@@ -470,7 +470,7 @@ const META = {
     system: "CATHERINE — project-agnostic Express + React template",
     repos: ["Backend", "Frontend"],
     stack: {
-        backend: "Node.js, Express 5 (class-based OOP), node-cron, cluster, OracleDB via oracle-mongo-wrapper, ExcelJS, nodemailer, argon2, PKG (.exe, embedded Node 24)",
+        backend: "Bun, Express 5 (class-based OOP), node-cron, cluster, OracleDB via oracle-mongo-wrapper, ExcelJS, nodemailer, argon2, Bun (runtime; .exe via bun build --compile)",
         frontend: "React 19, Vite, Tailwind CSS v4, axios, Headless UI",
         database: "Oracle — pools appDb (interactive) and appDbBulk (bulk)",
     },

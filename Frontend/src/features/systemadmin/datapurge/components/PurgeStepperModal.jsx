@@ -53,7 +53,7 @@ const STEPS = [
 ];
 
 // Re-seeds the demo SUPER_ADMIN (admin / Demo@123) after the admin table is purged.
-const RECOVERY_COMMAND = "cd Backend && npm run db:seed:template";
+const RECOVERY_COMMAND = "cd Backend && bun run db:seed:template";
 
 /**
  * @param {object} props

@@ -1,4 +1,5 @@
 "use strict";
+const { APP_ROOT } = require("../runtimePaths");
 
 /**
  * @fileoverview ServerRunMarker - the cron-leader process keeps a tiny
@@ -28,8 +29,8 @@
  *   - Writes are atomic: write `<file>.<pid>.tmp`, then rename over the target.
  *     On EPERM/EBUSY/EACCES from the rename (Windows antivirus / indexer lock)
  *     fall back to a direct write. Each tmp / fallback write is followed by a
- *     best-effort fsync (open r+, fsync, close; no `flush: true` because the pkg target is
- *     node18) so a power cut right after the call is less likely to leave an empty marker. A
+ *     best-effort fsync (open r+, fsync, close; no `flush: true`, which not every
+ *     supported runtime implements) so a power cut right after the call is less likely to leave an empty marker. A
  *     failing fsync is ignored and an empty file still reads UNREADABLE. Nothing here ever
  *     throws; a write failure logs one warning per process.
  *   - No secrets, env values or identifiers other than pid/host/version.
@@ -52,7 +53,7 @@ const RENAME_FALLBACK_CODES = new Set(["EPERM", "EBUSY", "EACCES"]);
 
 /**
  * Resolves the marker file path. Same project-root rule as `changelog.model.js`:
- * next to the exe under pkg, the repo root otherwise; then `data/server-run.json`.
+ * APP_ROOT: next to the compiled exe, the Backend folder otherwise; then `data/server-run.json`.
  * `SERVER_RUN_MARKER_PATH` (tests only) wins when it is an absolute path AND the
  * process is not a production one (`NODE_ENV !== "production"`):
  * a stray variable in a production .env must not move the marker (CWE-15).
@@ -78,8 +79,7 @@ function resolveMarkerPath(env = process.env) {
             return { path: override, ignoredOverride: null, ignoredReason: null };
         }
     }
-    /* c8 ignore next 3 -- the process.pkg arm runs only inside the PKG binary. */
-    const root = process.pkg ? path.dirname(process.execPath) : path.resolve(__dirname, "../../..");
+    const root = APP_ROOT;
     return { path: path.join(root, "data", SERVER_RUN_MARKER.FILE_NAME), ignoredOverride, ignoredReason };
 }
 

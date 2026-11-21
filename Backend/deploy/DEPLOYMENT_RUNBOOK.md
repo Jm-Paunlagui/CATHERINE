@@ -1,6 +1,6 @@
 # CATHERINE Backend — Production Deployment Runbook
 
-Backend: PKG-compiled `catherine-backend.exe` as a WinSW Windows service (HTTPS, PFX read
+Backend: Bun-compiled `catherine-backend.exe` (`bun build --compile`) as a WinSW Windows service (HTTPS, PFX read
 by the exe). Frontend: Vite build copied to an IIS site root (HTTPS terminated
 at IIS). Topology: same hostname, different port — FE `https://SERVER/`, BE
 `https://SERVER:3000`. Auth cookies are `SameSite=Strict` and survive the
@@ -28,11 +28,14 @@ cookie policy first).
 
 ## B. Backend build (on the build machine)
 
-1. `npm ci --include=dev` — the PKG builder (`@yao-pkg/pkg`, pinned in
-   devDependencies) installs locally; no global `pkg` needed.
-2. `npm run build` → `dist\catherine-backend.exe` + `dist\node_modules\{oracledb,argon2}`
-   native addons. **The postbuild step fails the build (exit 1) if any native
-   stages zero files** — never deploy a dist folder from a failed build.
+1. `bun install --frozen-lockfile` (Bun 1.4.5+, see `packageManager` in `package.json`).
+2. `bun run build` (`scripts/build.js`) → `dist\catherine-backend.exe` (Windows x64; it
+   cross-compiles from macOS/Linux too) plus what the exe reads from disk:
+   `dist\src\utils\email-templates\`, `dist\src\generated\`,
+   `dist\node_modules\oracledb\build\Release\` and `dist\prebuilds\win32-x64\` (argon2).
+   **The build fails (exit 1) if any of them stages zero files** — never deploy a
+   dist folder from a failed build. The exe bundles the Bun runtime; the server
+   does not need Bun installed.
 3. Stage alongside the exe: `.env` (see C), `data\changelog.enc` (from the
    repo — preserves changelog history), `certs\` (see C).
    **Do NOT stage `data\server-run.json` from the build machine, and never
@@ -81,9 +84,9 @@ cookie policy first).
 - **`APP_TZ`** (default `Asia/Manila`) must be the zone the database's
   wall-clock values are written in. `server.js` pins the process time zone to
   it before the first `Date` is built, and the daily cron runs on that local
-  clock — node-cron's own `timezone` option is not used because PKG's
-  small-ICU build can silently break its resolution (the tick never fires, no
-  error). Exact-time timers are epoch-based and unaffected, but a wrong
+  clock — node-cron's own `timezone` option is not used because a
+  small-ICU runtime build can silently break its resolution (the tick never
+  fires, no error). Exact-time timers are epoch-based and unaffected, but a wrong
   `APP_TZ` shifts the daily jobs' wall-clock time.
 
 ## D. Windows service (WinSW)
@@ -98,7 +101,7 @@ the README's ACL example); never deploy under `C:\Program Files`.
 ## E. Frontend build + IIS
 
 1. Set `VITE_API_BASE_URL=https://<SERVER>:3000/api/v1/` in `.env.production`
-   **before** `npm run build`. The build now **fails** when the variable is
+   **before** `bun run build`. The build now **fails** when the variable is
    unset in production mode, and also fails on a plain `http://` value (an
    HTTPS-served page cannot call an HTTP API — browsers block it as mixed
    content). Deliberate plain-HTTP test builds: set

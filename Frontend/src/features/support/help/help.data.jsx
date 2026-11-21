@@ -772,7 +772,7 @@ export const HELP_CATEGORIES = [
             {
                 id: "pkg-build",
                 question: "How is the backend packaged for deployment?",
-                answer: "The backend can be compiled into a single self-contained executable, so it runs without a separate Node.js install on the target machine. A couple of native components that cannot be embedded in that bundle are copied alongside it during the build so the executable finds them at runtime. Configuration is read from a file next to the executable, so the app works no matter what folder it is launched from.",
+                answer: "The backend can be compiled into a single self-contained executable, so it runs without installing a separate runtime on the target machine. A couple of native components that cannot be embedded in that bundle are copied alongside it during the build so the executable finds them at runtime. Configuration is read from a file next to the executable, so the app works no matter what folder it is launched from.",
                 answerRender: {
                     chunk: true,
                     highlight: [
@@ -780,7 +780,7 @@ export const HELP_CATEGORIES = [
                         { phrase: "read from a file next to the executable", tone: "good" },
                     ],
                 },
-                tags: ["build", "pkg", "executable", "deploy", "package", "native"],
+                tags: ["build", "bun", "executable", "deploy", "package", "native"],
             },
         ],
     },

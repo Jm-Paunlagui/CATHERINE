@@ -13,7 +13,7 @@ schema and the backend has its own users, admins, and audit trail.
 
 > **Accounts are seeded by a Node script, not SQL.** Argon2id hashes are peppered
 > with `ARGON2_PEPPER` and each admin row is HMAC-signed with `DATA_SIGNING_SECRET`,
-> so valid rows can only be produced by the app. Run `npm run db:seed:template`
+> so valid rows can only be produced by the app. Run `bun run db:seed:template`
 > from `Backend/` (creates `admin` / `manager` / `user`, password `Demo@123`).
 > See the project root `GETTING_STARTED.md`.
 

@@ -13,10 +13,12 @@ after a crash.
 
     | Item                              | Required | Notes                                                                                                                              |
     | --------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-    | `catherine-backend.exe`           | always   | `npm run build` output.                                                                                                            |
+    | `catherine-backend.exe`           | always   | `bun run build` output.                                                                                                            |
     | `.env`                            | always   | All six bootGuard secrets set (≥32 chars, non-placeholder) or the service exits → 10 s restart loop. `DEMO_MODE=false`.            |
-    | `node_modules\oracledb\...`       | always   | Native addons staged by the build's postbuild step (fails the build if missing). Verify `oracledb` + `argon2` folders exist.       |
-    | `node_modules\argon2\prebuilds\`  | always   | Same postbuild step. A boot-time preflight logs an ALERT if argon2 cannot load.                                                    |
+    | `node_modules\oracledb\build\Release\` | always | oracledb Thick-mode binary, staged by `scripts/build.js` (fails the build if missing).                                  |
+    | `prebuilds\win32-x64\`          | always   | argon2 binary, same build step. A boot-time preflight logs an ALERT if argon2 cannot load.                                         |
+    | `src\utils\email-templates\`     | always   | Email HTML + logos, same build step. The exe reads them from disk beside itself.                                                   |
+    | `src\generated\`                | always   | Dev-docs freshness snapshot, same build step.                                                                                     |
     | `data\changelog.enc`              | always   | Copy from the repo — the app auto-creates an EMPTY store if absent and the committed changelog history is silently lost.           |
     | `certs\<PFX_FILENAME>`            | HTTPS    | `USE_HTTPS=true` (production). Missing/expired PFX fails startup → restart loop. Track expiry.                                     |
     | `certs\<SMTP_CA_FILE>`            | int. CA  | Needed when SMTP presents an internal-CA cert (e.g. `internal-root.pem`) — **independent of `USE_HTTPS`**. Missing → system CAs.   |

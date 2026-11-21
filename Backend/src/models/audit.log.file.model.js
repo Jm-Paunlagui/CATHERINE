@@ -1,4 +1,5 @@
 "use strict";
+const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
 
 /**
  * @fileoverview AuditLogFileModel — text-file fallback storage for the audit
@@ -53,11 +54,10 @@ const { logger } = require("../utils/logger");
 const CONFIG = Object.freeze({
     /**
      * Root of the fallback store: `logs/Main` under the log base — next to
-     * the exe in compiled (pkg) builds (services may start the exe with cwd
+     * the exe in the compiled exe (services may start the exe with cwd
      * anywhere), the working directory otherwise. Mirrors logger.js.
      */
-    BASE_DIR: process.pkg
-        ? path.join(path.dirname(process.execPath), "logs", "Main")
+    BASE_DIR: IS_COMPILED ? path.join(APP_ROOT, "logs", "Main")
         : path.join(process.cwd(), "logs", "Main"),
     /** Base filename — rotates to `audit_1.log`, `audit_2.log`, … */
     BASE_NAME: "audit",

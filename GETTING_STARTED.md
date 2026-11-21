@@ -1,7 +1,7 @@
 # Getting Started — CATHERINE Template
 
 A production-grade full-stack starter: **React 19 + Vite + Tailwind v4** frontend and
-**Node.js + Express 5 + OracleDB** backend, with JWT auth, RBAC, request audit logging,
+**Bun + Express 5 + OracleDB** backend, with JWT auth, RBAC, request audit logging,
 an observability dashboard, admin management, and a version-history (changelog) feature.
 
 > 📖 **The full interactive Getting Started guide is available in the app itself.**
@@ -13,12 +13,12 @@ an observability dashboard, admin management, and a version-history (changelog) 
 ## 0. First thing to do
 
 ```
-1. Install prerequisites (Node 24, Oracle Instant Client, an Oracle DB)
+1. Install prerequisites (Bun 1.4+, Oracle Instant Client, an Oracle DB)
    — OR just use Demo Mode (DEMO_MODE=true) to skip the database entirely.
 2. Backend:  copy .env.example → .env  and generate the secrets
 3. Frontend: copy .env.example → .env
-4. Create the database (Backend/sql/01_schema.sql), then npm run db:seed:template — skip if using Demo Mode
-5. npm install  in BOTH Backend/ and Frontend/
+4. Create the database (Backend/sql/01_schema.sql), then bun run db:seed:template — skip if using Demo Mode
+5. bun install  in BOTH Backend/ and Frontend/
 6. Start the backend, then the frontend
 ```
 
@@ -31,8 +31,7 @@ Each step is detailed below. If you only want to look around the UI, set
 
 | Requirement               | Version / Notes                                                                 |
 | ------------------------- | ------------------------------------------------------------------------------- |
-| **Node.js**               | **24.x** (the backend builds a `node24-win-x64` pkg target).                    |
-| **npm**                   | Ships with Node.                                                                |
+| **Bun**                   | **1.4+** — runtime, package manager and test runner for both apps. No Node.js install needed. |
 | **Oracle Database**       | 12c+ for the sample schema. **Oracle XE 21c** is ideal for local dev.           |
 | **Oracle Instant Client** | Required — `node-oracledb` runs in **Thick mode**. Set `ORACLE_INSTANT_CLIENT`. |
 | **Git**                   | To clone.                                                                       |
@@ -50,7 +49,7 @@ Optional but recommended: a SQL client (SQL Developer / SQLcl) to run the schema
 ```
 CATHERINE/
 ├── Backend/                  # Express 5 API (OracleDB, JWT, audit, metrics)
-│   ├── server.js             # Entry point — `npm start`
+│   ├── server.js             # Entry point — `bun run start`
 │   ├── .env.example          # Documented env vars (copy → .env)
 │   ├── sql/                  # ← Platform schema (auth, RBAC, audit, alerts, refresh tokens, backups, config)
 │   │   ├── 01_schema.sql                          # fresh install (drops + creates 9 tables)
@@ -72,7 +71,7 @@ CATHERINE/
 
 ```bash
 cd Backend
-npm install
+bun install
 ```
 
 ### 3.2 Create your `.env`
@@ -131,7 +130,7 @@ defaults in `.env.example`; tune it later.
 ### 3.5 Start the backend
 
 ```bash
-npm start          # node server.js  →  http://localhost:2108
+bun run start          # bun server.js  →  http://localhost:2108
 ```
 
 Health check: open `http://localhost:2108/api/v1/health` — it should return
@@ -169,7 +168,7 @@ sqlplus APP_USER/APP_PW@//localhost:1521/XEPDB1 @04_platform_tables.sql
 
 ```bash
 cd Backend
-npm run db:seed:template     # creates admin / manager / user with password Demo@123
+bun run db:seed:template     # creates admin / manager / user with password Demo@123
 ```
 
 > The seed must run through the app (not raw SQL) because Argon2id hashes are
@@ -181,9 +180,9 @@ npm run db:seed:template     # creates admin / manager / user with password Demo
 
 ```bash
 cd Frontend
-npm install
+bun install
 cp .env.example .env          # PowerShell: Copy-Item .env.example .env
-npm run dev                   # Vite dev server (prints the local URL, e.g. http://localhost:5173)
+bun run dev                   # Vite dev server (prints the local URL, e.g. http://localhost:5173)
 ```
 
 Key `Frontend/.env` values:
@@ -208,10 +207,10 @@ Open two terminals:
 
 ```bash
 # Terminal 1 — API
-cd Backend && npm start
+cd Backend && bun run start
 
 # Terminal 2 — UI
-cd Frontend && npm run dev
+cd Frontend && bun run dev
 ```
 
 Then open the Vite URL in your browser and log in.
@@ -220,7 +219,7 @@ Then open the Vite URL in your browser and log in.
 
 ## 7. Demo accounts
 
-After running `npm run db:seed:template` (or in Demo Mode — `DEMO_MODE=true`):
+After running `bun run db:seed:template` (or in Demo Mode — `DEMO_MODE=true`):
 
 | Username | Password   | Role          | Sees                                              |
 | -------- | ---------- | ------------- | ------------------------------------------------- |
@@ -234,7 +233,7 @@ Features to explore as `admin`:
   (seed `02_seed_demo.sql` for instant data).
 - **Admin Management** — create accounts (temporary password emailed, valid 72 h), change roles, reset passwords, revoke.
 - **Version History (Changelog)** — encrypted file store; seed with the changelog
-  script (`node scripts/seed-changelog.js`).
+  script (`bun scripts/seed-changelog.js`).
 
 ---
 
@@ -244,22 +243,22 @@ Features to explore as `admin`:
 
 | Command                    | What it does                                  |
 | -------------------------- | --------------------------------------------- |
-| `npm start`                | Start the API (`node server.js`).             |
-| `npm test`                 | Run the Vitest suite.                         |
-| `npm run test:unit`        | Unit tests only (also `test:integration`, `test:security`, …). |
-| `npm run lint`             | ESLint.                                       |
-| `npm run db:seed:template` | Seed demo `admin`/`manager`/`user` accounts (Argon2id). |
-| `npm run build`            | Compile `dist/catherine-backend.exe` with `@yao-pkg/pkg`. |
+| `bun run start`                | Start the API (`bun server.js`).              |
+| `bun run test`                 | Run the Vitest suite.                         |
+| `bun run test:unit`        | Unit tests only (also `test:integration`, `test:security`, …). |
+| `bun run lint`             | ESLint.                                       |
+| `bun run db:seed:template` | Seed demo `admin`/`manager`/`user` accounts (Argon2id). |
+| `bun run build`            | Compile `dist/catherine-backend.exe` with `bun build --compile` (`build:host` = this machine). |
 
 ### Frontend (`Frontend/`)
 
 | Command           | What it does                  |
 | ----------------- | ----------------------------- |
-| `npm run dev`     | Vite dev server.              |
-| `npm run build`   | Production build.             |
-| `npm run lint`    | ESLint.                       |
-| `npm run preview` | Preview the production build. |
-| `npm test`        | Run the Vitest suite.         |
+| `bun run dev`     | Vite dev server.              |
+| `bun run build`   | Production build.             |
+| `bun run lint`    | ESLint.                       |
+| `bun run preview` | Preview the production build. |
+| `bun run test`        | Run the Vitest suite.         |
 
 ---
 

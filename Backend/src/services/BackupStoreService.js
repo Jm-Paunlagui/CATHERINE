@@ -1,4 +1,5 @@
 "use strict";
+const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
 
 /**
  * @fileoverview Scheduled DB Backup — filesystem store, chain index,
@@ -133,12 +134,12 @@ class BackupStoreService {
     /** @type {number} */
     static _indexCacheAt = 0;
 
-    // ─── Backup directory resolution (PKG-safe, never __dirname) ──
+    // ─── Backup directory resolution (compiled-exe-safe, never __dirname) ──
 
     /**
      * Resolves `DB_BACKUP_DIR` to an ABSOLUTE path. Mirrors
-     * `src/utils/logger.js`'s `LOG_BASE_DIR` resolution exactly: under PKG
-     * the snapshot filesystem is read-only and `__dirname` points inside it,
+     * `src/utils/logger.js`'s `LOG_BASE_DIR` resolution exactly: in the compiled
+     * exe `__dirname` is the build machine's path baked into the binary,
      * so the directory is always resolved relative to the compiled
      * executable's location (`process.execPath`) rather than the source
      * tree, and relative to `process.cwd()` otherwise (a Windows service can
@@ -150,7 +151,7 @@ class BackupStoreService {
         const dir = process.env.DB_BACKUP_DIR || DEFAULT_BACKUP_DIR;
         if (path.isAbsolute(dir)) return dir;
         return path.resolve(
-            process.pkg ? path.dirname(process.execPath) : process.cwd(),
+            IS_COMPILED ? APP_ROOT : process.cwd(),
             dir,
         );
     }

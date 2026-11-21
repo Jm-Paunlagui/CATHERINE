@@ -15,13 +15,13 @@
  *   5. (warning only) a "release" entry is a stage marker (opened / promoted / released / included).
  *
  * Usage (from Backend/):
- *   node scripts/verify-changelog-release.js                    every release tag (local tags)
- *   node scripts/verify-changelog-release.js v1.0.0             one tag
- *   node scripts/verify-changelog-release.js --ref <sha> --tag v1.0.0   (used by the pre-push hook)
- *   npm run audit:changelog-release [-- <tag>]
+ *   bun scripts/verify-changelog-release.js                    every release tag (local tags)
+ *   bun scripts/verify-changelog-release.js v1.0.0             one tag
+ *   bun scripts/verify-changelog-release.js --ref <sha> --tag v1.0.0   (used by the pre-push hook)
+ *   bun run audit:changelog-release [-- <tag>]
  *
  * Key: CHANGELOG_ENCRYPTION_KEY (64 hex) or DATA_SIGNING_SECRET, from the environment or .env
- * (dotenv is optional so CI can run this with no npm install). Nothing is written; no entry text
+ * (dotenv is optional so CI can run this with no bun install). Nothing is written; no entry text
  * is printed, only versions and titles (the store is public release notes).
  */
 

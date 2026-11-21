@@ -72,7 +72,7 @@ Visibility uses **two models in priority order**: an exact `roles` allow-list wi
 | Tier 2 — `minRole: "SUPER_ADMIN"` | Boot, Config & Build |
 | Allow-list — `roles: ["SUPER_ADMIN"]`, `roleGroup: "System"` | Logging & Audit · Metrics & Observability · Admin Management & RBAC |
 
-Every article is plain reader language: the corpus-wide plain-language guard in `helpConsistency.test.jsx` bans CWE ids, `ORA-` codes, `dangerouslySetInnerHTML`, `npm run`, `process.env`, `httpClient` and `AuthMiddleware` from any question or answer.
+Every article is plain reader language: the corpus-wide plain-language guard in `helpConsistency.test.jsx` bans CWE ids, `ORA-` codes, `dangerouslySetInnerHTML`, `npm run`/`bun run`, `process.env`, `httpClient` and `AuthMiddleware` from any question or answer.
 
 ### Help Assistant launcher
 
@@ -136,7 +136,7 @@ If Help were ever backed by a CMS, the natural contract would be `GET /api/v1/he
 
 ## 8. Verification Q&A
 
-> **Evidence convention.** Test names are quoted from files that exist in `Frontend/test/`. None of them was run for this revision, so no pass status or count is claimed. Run them with `cd Frontend; npx vitest run test/integration/support-help test/unit/components/help` to confirm.
+> **Evidence convention.** Test names are quoted from files that exist in `Frontend/test/`. None of them was run for this revision, so no pass status or count is claimed. Run them with `cd Frontend; bunx vitest run test/integration/support-help test/unit/components/help` to confirm.
 
 > **Q:** Does a user only see categories permitted for their role?
 > **A:** Yes. `visibleCategories` applies the `roles` allow-list first, then the `minRole` tier ladder.
@@ -149,7 +149,7 @@ If Help were ever backed by a CMS, the natural contract would be `GET /api/v1/he
 > **Evidence (API):** none — UI-only; there is no server-side search endpoint.
 
 > **Q:** Is the corpus structurally sound and free of internal identifiers?
-> **A:** Yes, as far as the guards reach: every category has id/label/description/icon/≥1 article; every article has an id, a question ending in `?`, an answer over 40 chars and ≥1 tag; ids are unique; `roleGroup` blocks are contiguous; banned tokens (CWE ids, `ORA-`, `dangerouslySetInnerHTML`, `npm run`, `process.env`, `httpClient`, `AuthMiddleware`) never appear in user-facing text.
+> **A:** Yes, as far as the guards reach: every category has id/label/description/icon/≥1 article; every article has an id, a question ending in `?`, an answer over 40 chars and ≥1 tag; ids are unique; `roleGroup` blocks are contiguous; banned tokens (CWE ids, `ORA-`, `dangerouslySetInnerHTML`, `npm run`/`bun run`, `process.env`, `httpClient`, `AuthMiddleware`) never appear in user-facing text.
 > **Evidence (UI):** `Frontend/test/unit/components/helpConsistency.test.jsx` → `"gives every article an id, a question, a substantial answer, and tags"`, `"has globally unique article ids (launcher keys on them)"`, `"never repeats a roleGroup divider label in non-adjacent blocks"`, `"keeps banned internal tokens out of every question and answer"`. _Status: not run for this revision._
 > **Evidence (API):** none — UI-only.
 

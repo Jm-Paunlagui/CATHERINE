@@ -14,7 +14,7 @@ CATHERINE backend hard rules (full detail in `Backend/CLAUDE.md`):
 - **Auth is data-driven:** `AuthMiddleware.authenticate` then `requireAccess(predicate)` where predicate is `(user) => boolean`. NO hardcoded AREAS/ROLES in template.
 - **Oracle = `oracle-mongo-wrapper`** (`src/utils/oracle-mongo-wrapper/`) — MongoDB-style API over Oracle SQL. Bind variables always via `parseFilter`/`parseUpdate` (per-call counters). Only documented raw-interpolation exception: `PIVOT IN (...)` uses `.replace(/'/g,"''")`. Never `oracledb` outside `src/config/adapters/oracle.js`. Dual-pool + `PoolHealthMonitor` (30s, 3-strike), exp backoff `min(1000*2^n,10000)ms`. Adding a pool = new `.env` entry + key in `database.js` only.
 - **Cache** (`src/middleware/cache/`): `CacheKeyBuilder.build()` (params sorted alphabetically, hashes >200 chars), registry-registered stores, `read()` caches only 2xx JSON, invalidation runs in `setImmediate`.
-- **PKG quirks:** `encodingPolyfill.js` must be first require in `server.js`; `nanoidLoader.js` for nanoid ESM; Oracle Thick mode in `oracle.js`.
+- **Compiled-exe quirks:** `bun build --compile` bakes the build box's `__dirname`, so on-disk files resolve through `src/utils/runtimePaths.js` (`APP_ROOT`); `scripts/build.js` stages templates + native addons beside the exe; Oracle Thick binary via `initOracleClient({ binaryDir })` in `oracle.js`.
 - **Response shape:** `{ status, code, message, data }` (success) / `{ status, code, message, error:{type,details,hint,stack?} }` (error). All routes `/api/v1/`. `X-Request-Id` on every response.
 
 See [[catherine-template-overview]], [[catherine-frontend-conventions]].

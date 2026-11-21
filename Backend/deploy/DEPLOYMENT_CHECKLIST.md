@@ -13,9 +13,9 @@ schema and functional checks to sections B and D.
 - [ ] **A1 — `.env` is present on the host and is the production one.**
       The backend reads `.env` and only `.env`. `server.js` and `src/config/database.js` both
       hardcode that name — nothing loads `.env.production`, which is a *reference copy* you deploy
-      **as** `.env`. (Vite auto-loads `.env.production` for the frontend; Node does not. Same
+      **as** `.env`. (Vite auto-loads `.env.production` for the frontend; the backend does not. Same
       filename, different rule.)
-      For a `pkg` build the file must sit **next to the .exe**, not in the working directory — a
+      For the compiled exe the file must sit **next to the .exe**, not in the working directory — a
       Windows service can start with cwd anywhere.
 
 - [ ] **A2 — `NODE_ENV=production` in that `.env`.**
@@ -35,7 +35,7 @@ schema and functional checks to sections B and D.
       Do **not** change it as part of a deploy: it invalidates every stored credential and locks
       out every admin. If it needs to change, that is its own migration.
 
-- [ ] **A5 — `npm audit --omit=dev` is clean**, or every remaining line appears in
+- [ ] **A5 — `bun audit --prod` is clean**, or every remaining line appears in
       `audit-suppressions.md` with a reachability analysis.
 
 ---

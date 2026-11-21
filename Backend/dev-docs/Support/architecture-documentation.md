@@ -82,7 +82,7 @@ The page appears on its own map as the flow **"Open the Architecture page"**.
 | `src/constants/architectureModel.js` | Hand-authored nodes, edges, flows, diagram `LAYOUT` and `META`. Bump `MAP_VERIFIED_AT` when re-checking it against the code — the page shows it as "Verified <date>". |
 | `src/utils/systemMap.js` | `buildSystemMap(model)` — the shared validator/assembler. Throws on an unknown node, a duplicate, a flow step with no edge, or an unplaced node. |
 
-Both data files sit under `src/` deliberately: PKG bundles `src/**/*.js`, so the `.exe` can serve the map without a build step or generated artefact (`src/generated/` is gitignored and would be missing from a fresh clone).
+Both data files sit under `src/` deliberately: they are required modules, so the compiled `.exe` bundles them and can serve the map without a build step or generated artefact (`src/generated/` is gitignored and would be missing from a fresh clone).
 
 ## 5. How frontend and backend connect (the contract)
 

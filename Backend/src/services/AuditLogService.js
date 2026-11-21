@@ -1,4 +1,5 @@
 "use strict";
+const { IS_COMPILED, APP_ROOT } = require("../utils/runtimePaths");
 
 const fs = require("fs").promises;
 const path = require("path");
@@ -14,13 +15,12 @@ const { searchCandidates } = require("../utils/logRedaction");
 
 /**
  * Log directory base — MUST match logger.js's LOG_BASE_DIR resolution: in
- * compiled (pkg) builds logs live NEXT TO THE EXE (a Windows service may
+ * the compiled exe logs live NEXT TO THE EXE (a Windows service may
  * start with cwd = System32); in normal Node they live under the cwd.
  * Reading from process.cwd() here while the logger writes next to the exe
  * would make audit-log reads/exports silently target an empty directory.
  */
-const LOG_BASE_DIR = process.pkg
-    ? path.join(path.dirname(process.execPath), "logs")
+const LOG_BASE_DIR = IS_COMPILED ? path.join(APP_ROOT, "logs")
     : path.join(process.cwd(), "logs");
 
 /**
@@ -758,7 +758,7 @@ class AuditLogService {
      *   the parsed message (and raw line as a fallback). Capped at 100 chars.
      * @param {object} [options]
      * @param {string} [options.logBaseDir=LOG_BASE_DIR] - Override for the log
-     *   directory root. Defaults to the module's pkg-aware `LOG_BASE_DIR`
+     *   directory root. Defaults to the module's compiled-exe-aware `LOG_BASE_DIR`
      *   constant. Tests point this at a temp fixture directory instead of
      *   mutating a shared global.
      * @returns {Promise<{ rows: object[], total: number, page: number,

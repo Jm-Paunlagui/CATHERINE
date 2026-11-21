@@ -11,8 +11,8 @@
  * ────────────────────────
  * Each is a hand-authored model under `src/constants/` validated and
  * assembled by `src/utils/systemMap.js`, built once per process and held in
- * memory. Everything is under `src/`, so PKG bundles it and the .exe needs no
- * generated artefact.
+ * memory. Everything is a required module, so the compiled .exe bundles it and
+ * needs no generated artefact.
  *
  * WHY THE API SERVES THEM AND THE FRONTEND DOES NOT BUNDLE THEM
  * ─────────────────────────────────────────────────────────────

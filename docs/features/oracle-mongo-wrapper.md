@@ -3,7 +3,7 @@
 > **Scope:** `oracle-mongo-wrapper` — the MongoDB-shaped query layer the template puts over Oracle SQL — plus the pool adapter it runs on.
 > **Source:** `Backend/src/utils/oracle-mongo-wrapper/` and `Backend/src/config/adapters/oracle.js`. Backend-only; there is no frontend half (see [§3](#3-frontend-implementation)).
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, the library's own `README.md` or a JSDoc block disagrees with the code, the code wins and the disagreement is recorded in [§6.12](#612-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 
@@ -443,7 +443,7 @@ Commit/rollback is not the `Session`'s job. `adapters/oracle.js:694-711` commits
 
 **Driver load and Thick mode** (`oracle.js:150-171`). `_initOracleClient` is called unconditionally at module load — not only for compiled builds. If `ORACLE_INSTANT_CLIENT` validates (`oci.dll` plus `oraociei23.dll` *or* `oraociei.dll`) it calls `initOracleClient({ libDir })`; otherwise it tries the system `PATH`. `NJS-077` ("already initialised") is swallowed. The chosen mode is logged: `oracledb.oracleClientVersion` truthy ⇒ Thick, else Thin. This matters because Thin mode rejects some Oracle password verifiers (the `NJS-116` hint at `:487-488` says exactly that).
 
-Under `pkg`, `_loadEnvForCompiled` (`:91-128`) reads `.env` from `process.cwd()` then from the exe's directory — deliberately **never** via `path.join(__dirname, ".env")`, because pkg's static analyser resolves that pattern and bakes the build machine's `.env` into the binary (CWE-798/CWE-540; the comment records that this was confirmed by byte-scanning a built exe).
+In the compiled exe, `_loadEnvForCompiled` (`:91-128`) reads `.env` from `process.cwd()` then from the exe's directory — deliberately **never** via `path.join(__dirname, ".env")`, because pkg's static analyser resolves that pattern and bakes the build machine's `.env` into the binary (CWE-798/CWE-540; the comment records that this was confirmed by byte-scanning a built exe).
 
 **Pool defaults** (`:182-195`): `poolMin 10`, `poolMax 50`, `poolIncrement 5`, `poolTimeout 30`, `queueTimeout 15000`, `poolPingInterval 30`, `connectTimeout 15000`, `callTimeout 60000`, `stmtCacheSize 50`, `homogeneous true`. `database.js` overrides `poolMin`/`poolMax` for `appDb` from `APP_POOL_MIN` / `APP_POOL_MAX`, defaulting to **5 / 20**. `oracledb.fetchArraySize` is raised globally to 1000 (`:173`).
 
@@ -657,7 +657,7 @@ The code is the authority. These are places where prose currently disagrees with
 | Savepoint names are allow-listed | `^[A-Za-z_][A-Za-z0-9_]*$` before the only unbindable identifier in the transaction path | CWE-89 |
 | PIVOT literals escaped | `.replace(/'/g, "''")` on the one position Oracle forbids binds, and the exception is documented in the file header | CWE-89 |
 | Credentials never logged | `_createPool` deletes `password` and `user` from every log object (`:386-388`); `initializePools` does the same (`:469-471`) | CWE-532 |
-| Compiled-build secret leak closed | `.env` is read from disk paths only, never `path.join(__dirname, …)`, so pkg cannot bake the build machine's secrets into the exe | CWE-798, CWE-540 |
+| Compiled-build secret leak closed | `.env` is read from disk paths only, never `path.join(__dirname, …)`, so a compile step cannot bake the build machine's secrets into the exe | CWE-798, CWE-540 |
 | Connection leak closed | `_acquireConnection`'s orphan guard closes a connection that resolves after the race timeout | CWE-404 |
 | Operational errors survive the adapter | `if (err.isOperational) throw err` keeps a deliberate 4xx from being downgraded to an opaque 500 | CWE-754 |
 | Boot-time input validation upstream | `AuthMiddleware.validateRequiredFields` rejects objects and arrays before they reach `parseFilter` — the defence against `{"userId": {"$regex": ".*"}}` | CWE-943 |
@@ -678,7 +678,7 @@ The code is the authority. These are places where prose currently disagrees with
 
 ## 8. Verification Q&A
 
-Evidence is cited, not executed — every entry is marked **not run** unless stated otherwise. Backend suites are Vitest (`npm test` → `vitest run`); the library's own end-to-end suite is mocha/chai and is **excluded** from Vitest (`test/oracle-mongo-wrapper/test.js:16-27`).
+Evidence is cited, not executed — every entry is marked **not run** unless stated otherwise. Backend suites are Vitest (`bun run test` → `vitest run`); the library's own end-to-end suite is mocha/chai and is **excluded** from Vitest (`test/oracle-mongo-wrapper/test.js:16-27`).
 
 > **Q:** Does a filter value ever reach the SQL string?
 > **A:** No — every supported operator binds. The one exception is the documented `$inSelect` raw-string arm.
@@ -740,4 +740,4 @@ Evidence is cited, not executed — every entry is marked **not run** unless sta
 
 ---
 
-*Diagrams render in GitHub, GitLab, Obsidian and VS Code preview. For a PDF, pre-render the ```mermaid blocks with `npx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg` and embed the images.*
+*Diagrams render in GitHub, GitLab, Obsidian and VS Code preview. For a PDF, pre-render the ```mermaid blocks with `bunx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg` and embed the images.*

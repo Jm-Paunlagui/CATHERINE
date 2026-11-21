@@ -19,25 +19,25 @@ Package: `catherine-backend` `1.0.0-dev.46`, kept in lockstep with the frontend.
 
 ## Tech stack
 
-- **Node.js** and **Express 5**, class-based controllers, services and middleware
+- **Bun** and **Express 5**, class-based controllers, services and middleware
 - **Oracle Database** through `node-oracledb` (thick mode), with the in-house **MongoDB-style query wrapper** (`src/utils/oracle-mongo-wrapper/`)
 - Security: JWT auth, double-submit CSRF, Helmet, CORS, rate limiting, IP filter and security filter, argon2 (default) / bcrypt / tripledes / plain password modes
 - RFC 5424 logger with daily rotation, request IDs, SSE, scheduler
 - ExcelJS for imports and exports, Nodemailer for email
-- Vitest and Supertest for tests; `@yao-pkg/pkg` produces a single Windows `.exe`
+- Vitest and Supertest for tests; `bun build --compile` produces a single Windows `.exe`
 
 ## Requirements
 
-- Node.js 26 LTS for development and CI (26.13.1 or later). Production builds still target `node24-win-x64` until pkg-fetch on npm ships a 26.13.1 build, at which point they move to `node26-win-x64`
+- Bun 1.4.5 or later (runtime, package manager and test runner). The compiled exe embeds Bun, so the server host needs nothing installed.
 - Oracle Database, plus Oracle Instant Client for thick mode (`ORACLE_INSTANT_CLIENT`). Not needed with `DEMO_MODE=true`.
 - An SMTP server for notifications (optional in development)
 
 ## Getting started
 
 ```bash
-npm install
+bun install
 cp .env.example .env        # then fill in the values (see below)
-npm start                   # http://localhost:2106/api/v1/health
+bun run start                   # http://localhost:2106/api/v1/health
 ```
 
 Every setting is documented in [`.env.example`](.env.example). The main ones:
@@ -65,14 +65,14 @@ Every setting is documented in [`.env.example`](.env.example). The main ones:
 See [`sql/README.md`](sql/README.md). Then seed the template accounts:
 
 ```bash
-npm run db:seed:template
+bun run db:seed:template
 ```
 
 ## Testing
 
 ```bash
-npm test                  # everything (vitest run)
-npm run test:unit         # also: test:integration, test:security, test:performance,
+bun run test                  # everything (vitest run)
+bun run test:unit         # also: test:integration, test:security, test:performance,
                           #       test:reliability, test:resilience, test:chaos,
                           #       test:purge, test:metrics, test:money
 ```
@@ -83,16 +83,16 @@ Suites live under `test/server/{unit,integration,security,performance,reliabilit
 
 | Command | Does |
 | --- | --- |
-| `npm start` | Starts `server.js` |
-| `npm run lint` | ESLint |
-| `npm run db:seed:template` | Seeds the template accounts (`scripts/seed-template.js`) |
-| `npm run changelog:dump` / `changelog:seed` | Export / import the encrypted changelog store |
-| `npm run build` | Dev-docs freshness index, PKG build, then native-addon copy |
+| `bun run start` | Starts `server.js` |
+| `bun run lint` | ESLint |
+| `bun run db:seed:template` | Seeds the template accounts (`scripts/seed-template.js`) |
+| `bun run changelog:dump` / `changelog:seed` | Export / import the encrypted changelog store |
+| `bun run build` | Dev-docs freshness index, `bun build --compile` (Windows x64), then stages templates and native addons beside the exe. `build:host` builds for this machine |
 
 ## Build and deploy
 
 ```bash
-npm run build          # dist/catherine-backend.exe, plus native modules (oracledb, argon2)
+bun run build          # dist/catherine-backend.exe, plus native modules (oracledb, argon2)
 ```
 
 See [`deploy/`](deploy/):

@@ -26,7 +26,7 @@
 --   • Passwords are NOT seeded here. Argon2id hashes are salted + peppered with
 --     ARGON2_PEPPER and rows are signed with DATA_SIGNING_SECRET, so valid rows
 --     can only be produced by the app. Seed demo accounts with:
---         npm run db:seed:template
+--         bun run db:seed:template
 --
 -- Prerequisites : Oracle Database 12c+ (XE 18c/21c is fine). IDENTITY columns
 --                 and inline CHECK constraints require 12c or newer.
@@ -163,7 +163,7 @@ CREATE INDEX IX_ADMINS_ACTIVE ON T_ADMINS_DEV (IS_ACTIVE);
 -- of AdminModel.buildSignedFields(). Adding them would invalidate every existing
 -- row's SYSSIGNATURE the moment the new code runs and block all admin logins
 -- until each row is re-signed. If your deployment wants them tamper-evident,
--- add them to buildSignedFields() AND re-run `npm run db:seed:template` (or
+-- add them to buildSignedFields() AND re-run `bun run db:seed:template` (or
 -- re-sign every row) in the same release.
 
 --------------------------------------------------------------------------------
@@ -402,6 +402,6 @@ COMMENT ON COLUMN T_SYSTEM_CONFIG_DEV.ROW_HASH IS 'HMAC-SHA256 over (CONFIG_KEY,
 
 --------------------------------------------------------------------------------
 -- Done. Next:
---   • Seed demo accounts (Argon2id):  npm run db:seed:template
+--   • Seed demo accounts (Argon2id):  bun run db:seed:template
 --   • (Optional) sample audit rows:   @02_seed_demo.sql
 --------------------------------------------------------------------------------

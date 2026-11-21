@@ -1868,5 +1868,53 @@
     "coAuthors": [],
     "createdAt": "2026-11-15T03:14:01.696Z",
     "updatedAt": "2026-11-15T03:14:00.704Z"
+  },
+  {
+    "id": "098f8798-dfe7-4f1c-9798-87fc7a7d0c05",
+    "displayDate": "2026-11-21",
+    "version": "1.0.0-dev.51",
+    "title": "Runs Fully on Bun",
+    "message": "The backend and frontend now run on Bun: development, tests, scripts and the production server. The Windows executable is built with Bun and carries its own runtime, so the server needs nothing else installed.",
+    "whatChanged": [
+      {
+        "text": "Bun replaces npm and Node.js as the package manager, runtime and test runner for both apps",
+        "items": [
+          "Lockfiles are now bun.lock; both apps pin Bun 1.4.5",
+          "CI, the pre-push release check and the Linux service file run Bun"
+        ]
+      },
+      {
+        "text": "The Windows executable is built with Bun instead of pkg (bun run build; build:host for a local test build)",
+        "items": [
+          "Email templates, the docs freshness snapshot and the Oracle and Argon2 native parts are placed beside the executable; the build fails if any is missing",
+          "Logs, data, certificates, docs and .env are always found beside the executable, wherever the service starts it",
+          "Log lines still name the source file and line"
+        ]
+      },
+      {
+        "text": "Email timestamps keep their exact format on the new runtime (\"Nov 3, 2026, 2:32 PM\")"
+      },
+      {
+        "text": "Fixed a high-severity redirect advisory in a frontend dependency; dependency audits for both apps are clean"
+      },
+      {
+        "text": "Not yet checked on a Windows server: the executable itself, the service stop, Oracle Thick mode and clustering (keep clustering off on Windows until checked)"
+      },
+      {
+        "text": "Tests: 7 new. Backend 1540/1541 (one long-standing flaky load test), frontend 958/958"
+      },
+      {
+        "text": "No database update"
+      }
+    ],
+    "type": "chore",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-11-21T11:21:50.355Z",
+    "updatedAt": "2026-11-21T11:21:50.355Z"
   }
 ]

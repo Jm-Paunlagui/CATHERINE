@@ -1,6 +1,3 @@
-// Apply encoding polyfills first (mirrors server.js startup order)
-require("../src/utils/encodingPolyfill");
-
 "use strict";
 
 /**

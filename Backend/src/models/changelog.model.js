@@ -1,4 +1,5 @@
 "use strict";
+const { APP_ROOT } = require("../utils/runtimePaths");
 
 /**
  * ChangelogModel
@@ -27,7 +28,7 @@
  *   updatedAt   string   ISO 8601
  *
  * To populate or reset the store run:
- *   node scripts/seed-changelog.js
+ *   bun scripts/seed-changelog.js
  */
 
 const crypto = require("crypto");
@@ -40,16 +41,9 @@ const {
 } = require("../constants/messages/changelog.messages");
 const { AppError, CHANGELOG_ERRORS } = require("../constants/errors");
 
-// In compiled (pkg) builds, __dirname points to the read-only snapshot.
-// Resolve data/ relative to the executable so the encrypted store lives
-// next to the .exe at runtime.
-/* c8 ignore next 3 -- the process.pkg arm runs ONLY inside the PKG-compiled
-   binary (process.pkg is undefined under Node/vitest), so the true branch is
-   structurally unreachable in the test runtime — same rationale as the
-   vitest.config PKG-runtime excludes (encodingPolyfill.js, consoleManager.js). */
-const PROJECT_ROOT = process.pkg
-    ? path.dirname(process.execPath)
-    : path.resolve(__dirname, "../..");
+// Resolve data/ from APP_ROOT so the encrypted store lives next to the
+// compiled exe at runtime (see utils/runtimePaths.js).
+const PROJECT_ROOT = APP_ROOT;
 const DATA_DIR = path.join(PROJECT_ROOT, "data");
 const STORE_PATH = path.join(DATA_DIR, "changelog.enc");
 const ALG = "aes-256-gcm";
@@ -247,7 +241,7 @@ function migrateEntry(entry) {
 /**
  * Reads all entries from the encrypted store.
  * Initialises the file with an empty store on first run.
- * Run `node scripts/seed-changelog.js` to populate with entries.
+ * Run `bun scripts/seed-changelog.js` to populate with entries.
  * Migrates legacy entries (summary → message) on read.
  * @returns {{ entries: object[] }}
  */

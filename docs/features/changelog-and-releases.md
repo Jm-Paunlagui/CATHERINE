@@ -3,7 +3,7 @@
 > **Scope:** the changelog + release-train capability — the encrypted on-disk store (`Backend/data/changelog.enc`), the thin controllers (`ChangelogController`, `ReleaseController`), the validation/business layer (`ChangelogService`, `ReleaseService`) and the encrypted model (`changelog.model.js`), the public read / SUPER_ADMIN write route surface, and the frontend Version History page (`Frontend/src/features/support/changelog/`) plus the version badge it feeds.
 > **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/models/changelog.model.js`, `Backend/src/services/{ChangelogService,ReleaseService}.js`, `Backend/src/controllers/{ChangelogController,ReleaseController}.js`, `Backend/src/routes/changelog.route.js`; the frontend is `Frontend/src/features/support/changelog/` and `Frontend/src/contexts/version/VersionContext.jsx`.
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block or a source comment disagrees with the code, the code wins and the disagreement is recorded in [§7.4](#74-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 
@@ -143,7 +143,7 @@ flowchart TD
 
 ### 3.2 The store path in dev vs compiled builds
 
-In a pkg build `__dirname` points to the read-only snapshot (`C:\snapshot\...`), where `mkdir`/`writeFile` fail. So `PROJECT_ROOT` is `path.dirname(process.execPath)` under `process.pkg`, and `path.resolve(__dirname, "../..")` otherwise — the encrypted store always lives in a writable `data/` next to the running artifact.
+In the compiled exe `__dirname` is the build machine's path baked into the binary, so `PROJECT_ROOT` is `APP_ROOT` from `utils/runtimePaths.js` (the exe folder when compiled, the Backend folder otherwise) — the encrypted store always lives in a writable `data/` next to the running artifact.
 
 ### 3.3 Entry shape and migration
 
@@ -227,7 +227,7 @@ The feature follows the three-layer pattern: `changelog.api.js` (HTTP through `H
 
 ### 7.1 Seeding and inspecting the store
 
-`node scripts/seed-changelog.js` wipes and re-seeds via `ChangelogModel.resetStore(entries)`; the store is created empty on first read if the file is absent. `scripts/dump-changelog.js` decrypts and dumps the store for inspection (`scripts/changelog-dump.json`). Both need the same key material the runtime uses.
+`bun scripts/seed-changelog.js` wipes and re-seeds via `ChangelogModel.resetStore(entries)`; the store is created empty on first read if the file is absent. `scripts/dump-changelog.js` decrypts and dumps the store for inspection (`scripts/changelog-dump.json`). Both need the same key material the runtime uses.
 
 ### 7.2 Environment variables this feature depends on
 
@@ -273,7 +273,7 @@ The code is the authority. These are places where prose disagrees with it.
 | SemVer input is anchored | the version regex rejects arbitrary pre-release tags | CWE-20 (improper input validation) |
 | Single write path | release transitions go through the same validated `POST` — no unvalidated back door | logic integrity |
 | Failures never leak internals | all errors funnel through `AppError` + the global handler | CWE-209 (information exposure) |
-| Store path is pkg-safe | resolved next to the executable, never the read-only snapshot | availability / write-integrity |
+| Store path is compiled-exe-safe | resolved next to the executable (`APP_ROOT`), never the baked `__dirname` | availability / write-integrity |
 
 ### 8.2 Residual risks and things to know before shipping
 

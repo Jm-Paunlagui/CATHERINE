@@ -3,7 +3,7 @@
 > **Scope:** how the CATHERINE template provisions privileged accounts and enforces role-based access control (RBAC) — the `T_ADMINS_DEV` table, its tamper-evident `SYSSIGNATURE`, the string role vocabulary (`SUPER_ADMIN` / `ADMIN` / `USER`), the admin-management CRUD path across both surfaces, and the `requireAccess(predicate)` mechanism that every protected route states inline.
 > **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/controllers/AdminManagementController.js`, `Backend/src/services/AdminManagementService.js`, `Backend/src/models/admin.model.js`, `Backend/src/routes/admin-management.route.js`, `Backend/sql/03_alter_admins_notification_columns.sql`; the presentation layer is `Frontend/src/features/systemadmin/adminmanagement/` and `Frontend/src/components/routing/ProtectedRoute.jsx`.
 > **Generated:** 2026-09-04; route table, create flow, guards and drift list re-checked against the code 2026-10-28. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block, a source comment or a reference-view claim disagrees with the code, the code wins and the disagreement is recorded in [§7.5](#75-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") will print them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") will print them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 

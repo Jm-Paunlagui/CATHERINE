@@ -3,7 +3,7 @@
 > **Scope:** the two observability *records* the CATHERINE template writes for every request — the RFC 5424 log files on disk and the per-request audit row in Oracle — plus the browse, trace, live-tail, export and retention surfaces built on top of them.
 > **Source:** `Frontend/` (React 19 + Vite SPA) and `Backend/` (Node.js + Express v5 API).
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md` disagrees with the code, the code wins and the disagreement is recorded in [§6.12](#612-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") will print them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path (Chrome "print to PDF") will print them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 
@@ -246,7 +246,7 @@ The traffic stream is torn down when the tab is backgrounded and re-opened when 
 
 **Levels** (`:31-40`) are the RFC 5424 eight, numbered 0–7 with `EMERGENCY` at 0. The v5 upgrade renamed the old four: `ERROR 0→3`, `WARN 1→ WARNING 4`, `INFO 2→6`, `DEBUG 3→7`. Public methods: `emergency`, `alert`, `critical`, `error`, `warning`, `notice`, `info`, `debug`, plus three `@deprecated` short aliases — `emerg` (`:758`), `crit` (`:790`) and `warn` (`:821`). See [§6.2](#62-loggerwarn-is-a-deprecated-alias-and-so-are-emerg-and-crit).
 
-**Files.** `LOG_BASE_DIR` is `logs/` next to the executable under `pkg`, else under `process.cwd()` (`:69-71`) — a Windows service can start the exe with cwd anywhere, including `System32`. The daily directory is `logs/YYYY/MM/DD` (`:454-457`) in `Asia/Manila`, and the filename is the lowercased level: `logs/2026/09/04/warning.log`. At 50 MB (`:23`) it rolls to `warning_1.log`, up to `_999`, then a timestamped escape hatch (`:427-449`).
+**Files.** `LOG_BASE_DIR` is `logs/` next to the executable in the compiled exe (`IS_COMPILED`), else under `process.cwd()` (`:69-71`) — a Windows service can start the exe with cwd anywhere, including `System32`. The daily directory is `logs/YYYY/MM/DD` (`:454-457`) in `Asia/Manila`, and the filename is the lowercased level: `logs/2026/09/04/warning.log`. At 50 MB (`:23`) it rolls to `warning_1.log`, up to `_999`, then a timestamped escape hatch (`:427-449`).
 
 **Timestamps** use `Intl.DateTimeFormat("en-CA", …)` with `hourCycle: "h23"` — *not* `hour12: false`, because some ICU builds map that to the h24 cycle and render midnight as hour `24`, which breaks parsing and sorts the first hour of the day last. That bug was observed in the PKG-compiled production exe (`:106-110`). Milliseconds come from `Date` directly, not ICU, so the PKG build has no ICU dependency for them (`:270-272`).
 
@@ -696,4 +696,4 @@ Evidence is cited, not executed — every entry below is marked **not run** unle
 
 ---
 
-*Diagrams render in GitHub, GitLab, Obsidian and VS Code preview. For a PDF, pre-render the ```mermaid blocks with `npx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg` and embed the images.*
+*Diagrams render in GitHub, GitLab, Obsidian and VS Code preview. For a PDF, pre-render the ```mermaid blocks with `bunx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg` and embed the images.*

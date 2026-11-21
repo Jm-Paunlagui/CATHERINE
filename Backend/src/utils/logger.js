@@ -10,6 +10,7 @@
 
 const fs = require("fs").promises;
 const path = require("path");
+const { IS_COMPILED, APP_ROOT } = require("./runtimePaths");
 const os = require("os");
 const { requestContext } = require("./requestContext");
 const { scrubValue, scrubMeta } = require("./logRedaction");
@@ -86,10 +87,9 @@ class Logger {
             SEPARATOR: "\x1b[37m",
         },
 
-        // In compiled (pkg) builds logs live NEXT TO THE EXE — a service can
+        // In the compiled exe logs live NEXT TO THE EXE — a service can
         // start the exe with cwd anywhere (e.g. System32).
-        LOG_BASE_DIR: process.pkg
-            ? path.join(path.dirname(process.execPath), "logs")
+        LOG_BASE_DIR: IS_COMPILED ? path.join(APP_ROOT, "logs")
             : path.join(process.cwd(), "logs"),
 
         /**
@@ -337,6 +337,8 @@ class Logger {
             const srcIdx = norm.lastIndexOf("/src/");
 
             if (srcIdx !== -1) return norm.substring(srcIdx + 1);
+            // Compiled exe: the embedded source map reports repo-relative paths ("src/...").
+            if (norm.startsWith("src/")) return norm;
             if (norm.startsWith(cwd)) {
                 const rel = norm.substring(cwd.length);
                 return rel.startsWith("/") ? rel.substring(1) : rel;

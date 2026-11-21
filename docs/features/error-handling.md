@@ -3,7 +3,7 @@
 > **Scope:** how a failure becomes a status code on the server, an envelope on the wire, and a screen in the browser — and the single rule that decides whether that screen replaces the page or stays inside the feature.
 > **Source:** `Frontend/` (React 19 + Vite SPA) and `Backend/` (Node.js + Express v5 API).
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md` or a JSDoc block disagrees with the code, the code wins and the disagreement is recorded in [§6.10](#610-known-documentation-drift).
-> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `npx @mermaid-js/mermaid-cli` if you need a PDF.
+> **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
 ---
 
@@ -741,4 +741,4 @@ Evidence is cited, not executed — every entry is marked **not run** unless sta
 
 ---
 
-*Diagrams render in GitHub, GitLab, Obsidian and VS Code preview. For a PDF, pre-render the ```mermaid blocks with `npx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg` and embed the images.*
+*Diagrams render in GitHub, GitLab, Obsidian and VS Code preview. For a PDF, pre-render the ```mermaid blocks with `bunx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.svg` and embed the images.*

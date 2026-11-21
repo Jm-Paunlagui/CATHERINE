@@ -27,13 +27,13 @@ Roles: `SUPER_ADMIN`, `ADMIN`, `USER` (`ROLES` in `src/App.jsx`). The backend en
 
 ## Getting started
 
-Requirements: Node.js 26 LTS (26.13.1 or later) for development and CI, and a running backend from [`../Backend`](../Backend).
+Requirements: Bun 1.4.5 or later (runtime, package manager and test runner), and a running backend from [`../Backend`](../Backend).
 
 ```bash
-npm install
+bun install
 cp .env.example .env    # points at http://localhost:2108/api/v1/ (Backend/.env.example PORT,
                         # plain http unless USE_HTTPS=true); edit if you changed PORT
-npm run dev             # http://localhost:5173 (this machine only; add -- --host to test from another device)
+bun run dev             # http://localhost:5173 (this machine only; add -- --host to test from another device)
 ```
 
 Main settings in [`.env.example`](.env.example):
@@ -53,13 +53,13 @@ The API must list the UI's origin in its `CORS_ORIGINS`.
 ## Scripts
 
 ```bash
-npm run dev            # dev server with hot reload
-npm run build          # production build in dist/
-npm run preview        # serve the production build locally
-npm run lint           # ESLint
-npm test               # full Vitest run
-npm run test:coverage  # with coverage
-npm run test:e2e       # Playwright contrast checks across palettes
+bun run dev            # dev server with hot reload
+bun run build          # production build in dist/
+bun run preview        # serve the production build locally
+bun run lint           # ESLint
+bun run test               # full Vitest run
+bun run test:coverage  # with coverage
+bun run test:e2e       # Playwright contrast checks across palettes
 ```
 
 Category runs: `test:unit`, `test:integration`, `test:security`, `test:performance`, `test:reliability`, `test:chaos`. Current baseline: 32 files / 555 tests green.

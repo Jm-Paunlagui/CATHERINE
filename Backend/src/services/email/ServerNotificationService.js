@@ -1,4 +1,7 @@
 "use strict";
+const { appPath } = require("../../utils/runtimePaths");
+
+const { formatUtcStamp } = require("../../utils/formatUtcStamp");
 
 /**
  * @fileoverview Server Email Notifications — the sender.
@@ -120,21 +123,13 @@ class ServerNotificationService {
         this._transporter = SharedTransporter.getTransporter();
 
         /** Absolute path to the server-notification email-templates directory. */
-        this._templateDir = path.join(
-            __dirname,
-            "..",
-            "..",
-            "utils",
+        this._templateDir = appPath("src", "utils",
             "email-templates",
             "server-notification",
         );
 
         /** Absolute path to the shared assets directory (logos). */
-        this._assetsDir = path.join(
-            __dirname,
-            "..",
-            "..",
-            "utils",
+        this._assetsDir = appPath("src", "utils",
             "email-templates",
             "assets",
         );
@@ -393,11 +388,7 @@ class ServerNotificationService {
         const mm = String(absMin % 60).padStart(2, "0");
         const label = `UTC${sign}${hh}:${mm}`;
         return (
-            shifted.toLocaleString("en-US", {
-                timeZone: "UTC",
-                dateStyle: "medium",
-                timeStyle: "short",
-            }) + ` ${label}`
+            formatUtcStamp(shifted) + ` ${label}`
         );
     }
 
