@@ -80,7 +80,7 @@ const SymmetricCrypto = (() => {
     // ─── EncryptTransformer ───
     class EncryptTransformer {
         declare _key: unknown;
-        declare _iv: any;
+        declare _iv: Buffer | null;
         declare algorithmID: unknown;
         constructor(algId: unknown) {
             this.algorithmID = algId;
@@ -98,7 +98,7 @@ const SymmetricCrypto = (() => {
             return this._key;
         }
 
-        getCryptoServiceProvider(bytesKey: any) {
+        getCryptoServiceProvider(bytesKey: Buffer | null | undefined) {
             const { keySize, ivSize } = getDefaultSizes(this.algorithmID);
             const key = bytesKey
                 ? Buffer.from(bytesKey)
@@ -115,20 +115,21 @@ const SymmetricCrypto = (() => {
 
     // ─── DecryptTransformer ───
     class DecryptTransformer {
-        declare _iv: any;
+        declare _iv: Buffer | null;
         declare algorithmID: unknown;
         constructor(algId: unknown) {
             this.algorithmID = algId;
             this._iv = null;
         }
 
-        set IV(v: unknown) {
+        set IV(v: Buffer | null) {
             this._iv = v;
         }
 
-        getCryptoServiceProvider(bytesKey: any) {
+        getCryptoServiceProvider(bytesKey: Buffer) {
             const key = Buffer.from(bytesKey);
-            const iv = Buffer.from(this._iv);
+            // Decryptor.decrypt sets IV before every call; a missing IV throws here and is caught there.
+            const iv = Buffer.from(this._iv!);
             const cipherName = getCipherName(this.algorithmID, key.length);
             return crypto.createDecipheriv(cipherName, key, iv);
         }
@@ -137,7 +138,7 @@ const SymmetricCrypto = (() => {
     // ─── Encryptor ───
     class Encryptor {
         declare _key: unknown;
-        declare _iv: unknown;
+        declare _iv: Buffer | null;
         declare transformer: EncryptTransformer;
         constructor(algId: unknown) {
             this.transformer = new EncryptTransformer(algId);
@@ -148,7 +149,7 @@ const SymmetricCrypto = (() => {
         get IV() {
             return this._iv;
         }
-        set IV(v) {
+        set IV(v: Buffer | null) {
             this._iv = v;
             this.transformer.IV = v;
         }
@@ -156,7 +157,7 @@ const SymmetricCrypto = (() => {
             return this._key;
         }
 
-        encrypt(bytesData: any, bytesKey: unknown) {
+        encrypt(bytesData: Buffer, bytesKey: Buffer) {
             try {
                 this.transformer.IV = this._iv;
                 const cipher =
@@ -179,18 +180,18 @@ const SymmetricCrypto = (() => {
 
     // ─── Decryptor ───
     class Decryptor {
-        declare _iv: unknown;
+        declare _iv: Buffer | null;
         declare transformer: DecryptTransformer;
         constructor(algId: unknown) {
             this.transformer = new DecryptTransformer(algId);
             this._iv = null;
         }
 
-        set IV(v: unknown) {
+        set IV(v: Buffer | null) {
             this._iv = v;
         }
 
-        decrypt(bytesData: any, bytesKey: unknown) {
+        decrypt(bytesData: Buffer, bytesKey: Buffer) {
             try {
                 this.transformer.IV = this._iv;
                 const decipher =
@@ -210,7 +211,7 @@ const SymmetricCrypto = (() => {
 
     // ─── SecurityCryptHelper ───
     class SecurityCryptHelper {
-        static encryptText(text: any) {
+        static encryptText(text: string) {
             try {
                 const initkey = process.env.PASSWORD_KEY;
                 // Never fall back to a default key: a missing key fails into the catch below.
@@ -231,7 +232,8 @@ const SymmetricCrypto = (() => {
             }
         }
 
-        static decryptText(base64CipherText: any) {
+        static decryptText(base64CipherText: string | null) {
+            if (base64CipherText === null) return null; // same result the catch below gave for a null input
             try {
                 const initkey = process.env.PASSWORD_KEY;
                 // Never fall back to a default key: a missing key fails into the catch below.
@@ -319,7 +321,7 @@ const resolveAdminMode = (): 'bcrypt' | 'argon2' => {
     const hashMode = getMode(); // triggers normal mode validation first
 
     // Fast path: PASSWORD_HASH_MODE is already strong — use it directly.
-    if (STRONG_MODES.has(hashMode)) return hashMode;
+    if (hashMode === "bcrypt" || hashMode === "argon2") return hashMode; // the STRONG_MODES members
 
     // Slow path: PASSWORD_HASH_MODE is weak — must have PASSWORD_ENCRYPTION_MODE.
     const encMode = (process.env.PASSWORD_ENCRYPTION_MODE || "")
@@ -352,7 +354,7 @@ const getAdminMode = () => {
     return _adminMode;
 };
 
-const parseEnvInt = (key: any, fallback: any, min: any, max: any) => {
+const parseEnvInt = (key: string, fallback: number, min: number, max: number): number => {
     const raw = process.env[key];
     if (!raw) return fallback;
     const val = parseInt(raw, 10);
@@ -425,11 +427,11 @@ const resolveArgon2Pepper = () => {
 };
 
 // ─── Lazy-init singletons (resolved on first use, not at import time) ───
-let _mode: any = null;
+let _mode: ReturnType<typeof resolveMode> | null = null;
 let _bcryptRounds: unknown = null;
-let _argon2Config: any = null;
-let _argon2Pepper: any = null;
-let _signingSecret: any = null;
+let _argon2Config: ReturnType<typeof resolveArgon2Config> | null = null;
+let _argon2Pepper: ReturnType<typeof resolveArgon2Pepper> | null = null;
+let _signingSecret: ReturnType<typeof resolveSigningSecret> | null = null;
 
 const getMode = () => {
     if (!_mode) _mode = resolveMode();
@@ -479,7 +481,7 @@ const MAX_PASSWORD_BYTES = parseEnvInt(
 // HMAC-SHA256 here is a keyed pepper transformation, NOT the password hash.
 // Computational hardness is enforced by Argon2 in the caller; this step only
 // binds a server-side secret to the value before it reaches Argon2.
-const applyPepper = (password: any) =>
+const applyPepper = (password: string) =>
     crypto.createHmac("sha256", getArgon2Pepper()).update(password).digest();
 
 /** bcrypt consumes only the first 72 bytes of its input. */
@@ -503,12 +505,13 @@ const validatePassword = (value: unknown, label = "Password") => {
 // security-critical operations (Argon2, TripleDES, HMAC-SHA256 signing). Using
 // console.* in the fallback would emit sensitive operational events outside the
 // structured log pipeline, making them invisible in production environments.
-let _logger: any;
+/** CryptoVault only logs errors. */
+let _logger: { error: (...args: unknown[]) => unknown };
 try {
     _logger = (require("../logger") as typeof import("../logger")).logger;
 } catch {
     const noop = () => {};
-    _logger = { error: noop, warn: noop, info: noop };
+    _logger = { error: noop };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
