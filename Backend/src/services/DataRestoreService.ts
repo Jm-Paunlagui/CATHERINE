@@ -150,6 +150,28 @@ interface ArchiveMeta {
     scopeHash: string | null;
 }
 
+/**
+ * The manifest.json fields restore reads. BackupArchiveService writes them and signs
+ * the archive; the signature is verified before _preflight, which still validates
+ * each field (schemaVersion, mode, scope.tables, kind, entity) before using it.
+ */
+type RestoreManifest = Record<string, unknown> & {
+    archiveId?: string;
+    mode?: string;
+    schemaVersion?: string;
+    kind?: string;
+    scope?: { tables?: unknown };
+    scopeHash?: string;
+    entity?: { table?: string; keyColumn?: string; keyValue?: string | number | null } | null;
+    createdBy?: string | null;
+    createdAt?: string | null;
+    requestId?: string | null;
+    appVersion?: string | null;
+};
+
+/** Per-table outcome of a restore (also written to the audit log). */
+type RestoreTableResult = { table: string; insertedCount: number; hashesResigned: number; tamperedRowsRestoredUnsigned: number };
+
 class DataRestoreService {
     // ─── Public entry points ────────────────────────────────────────────────
 
@@ -342,7 +364,7 @@ class DataRestoreService {
         // remap, ROW_HASH re-sign, commit.
         /** table -> Map<oldPkString, newPkNumber> — identity tables only. */
         const pkMaps = new Map();
-        const perTable: any[] = [];
+        const perTable: RestoreTableResult[] = [];
         let totalInserted = 0;
         let totalResigned = 0;
         let totalTampered = 0;
@@ -413,7 +435,7 @@ class DataRestoreService {
                             insertedForResign.push({
                                 row,
                                 original: originalOf.get(row) ?? row,
-                                newPk: row[entry.pk],
+                                newPk: row[entry.pk] as string | number, // the signed archive row's own pk (NUMBER or VARCHAR2 column)
                             }),
                         );
                     }
@@ -539,7 +561,7 @@ class DataRestoreService {
         return newPk;
     }
 
-    static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, unknown>; original: Record<string, any>; newPk: number | string; }>, session: { execute: ((...args: unknown[]) => any); }): Promise<{ signRows: Array<Record<string, unknown>>; tampered: number; }> {
+    static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, unknown>; original: Record<string, unknown>; newPk: number | string; }>, session: { execute: ((...args: unknown[]) => any); }): Promise<{ signRows: Array<Record<string, unknown>>; tampered: number; }> {
         const domain = entry.rowHashDomain;
         // Callers only route tables with a ROW_HASH domain here.
         if (!domain) throw new Error(`_verifyThenSign: ${entry.table} has no rowHashDomain.`);
@@ -573,7 +595,7 @@ class DataRestoreService {
                         (await CryptoVault.verifyRecord(
                             domain,
                             TamperDetectionService.buildSignedFields(domain, original),
-                            original.ROW_HASH,
+                            typeof original.ROW_HASH === "string" ? original.ROW_HASH : null,
                         ));
                 } catch {
                     valid = false; // a row the signer cannot canonicalise is unverifiable
@@ -634,7 +656,7 @@ class DataRestoreService {
      * @throws {AppError} 400/422 — unreadable, incomplete, malformed, or signature-invalid archive.
      * @private
      */
-    static async _verifyAndParseArchive(zipBuffer: Buffer): Promise<{ manifest: Record<string, any>; signatureDoc: Record<string, unknown>; dataByTable: Record<string, Record<string, any>[]>; }> {
+    static async _verifyAndParseArchive(zipBuffer: Buffer): Promise<{ manifest: RestoreManifest; signatureDoc: Record<string, unknown>; dataByTable: Record<string, Record<string, unknown>[]>; }> {
         if (!Buffer.isBuffer(zipBuffer) || zipBuffer.length === 0) {
             throw new AppError(
                 PURGE_ERRORS.RESTORE_NO_FILE,
@@ -726,7 +748,7 @@ class DataRestoreService {
                 name.endsWith(".jsonl") &&
                 !zip.files[name].dir,
         );
-        const dataBuffers: Record<string, any> = {};
+        const dataBuffers: Record<string, Buffer> = {};
         for (const name of dataFileNames) {
             // Sequential zip entry extraction, archives are small.
             dataBuffers[name] = Buffer.from(
@@ -812,7 +834,7 @@ class DataRestoreService {
 
         // Parse JSONL rows per table — only reached once the archive is
         // proven authentic.
-        const dataByTable: Record<string, any> = {};
+        const dataByTable: Record<string, Record<string, unknown>[]> = {};
         for (const [name, buf] of Object.entries(dataBuffers)) {
             const table = name.slice(
                 "data/".length,
@@ -821,8 +843,8 @@ class DataRestoreService {
             const text = buf.toString("utf8");
             const rows = text
                 .split("\n")
-                .filter((line: any) => line.trim() !== "")
-                .map((line: any) => JSON.parse(line));
+                .filter((line) => line.trim() !== "")
+                .map((line) => JSON.parse(line) as Record<string, unknown>); // one signed row object per line
             dataByTable[table] = rows;
         }
 
@@ -847,7 +869,7 @@ class DataRestoreService {
      * @throws {AppError} 400/403/409/422 — see the individual checks below.
      * @private
      */
-    static async _preflight({ manifest, dataByTable }: { manifest: Record<string, any>; dataByTable: Record<string, Record<string, unknown>[]>; }): Promise<{
+    static async _preflight({ manifest, dataByTable }: { manifest: RestoreManifest; dataByTable: Record<string, Record<string, unknown>[]>; }): Promise<{
         tables: string[]; kind: "FULL_SCOPE" | "ENTITY"; entity: Record<string, unknown> | null;
         rowCounts: Record<string, number>; tablesGettingNewPks: string[];
         fidelityNotes: string[];
@@ -901,9 +923,8 @@ class DataRestoreService {
         // ── Table allow-list — CWE-89: an uploaded archive is UNTRUSTED
         // INPUT. Every name is checked against the registry allow-list and
         // the NEVER_PURGE deny-list before anything else looks at it.
-        const requestedTables = Array.isArray(manifest?.scope?.tables)
-            ? manifest.scope.tables
-            : [];
+        const scopeTables = manifest?.scope?.tables;
+        const requestedTables: unknown[] = Array.isArray(scopeTables) ? scopeTables : [];
         if (requestedTables.length === 0) {
             throw new AppError(
                 PURGE_ERRORS.RESTORE_EMPTY_SCOPE,
@@ -914,12 +935,12 @@ class DataRestoreService {
             );
         }
 
-        const protectedNames = requestedTables.filter((t: any) =>
-            NEVER_PURGE.includes(t),
+        const protectedNames = requestedTables.filter((t) =>
+            typeof t === "string" && NEVER_PURGE.includes(t),
         );
         if (protectedNames.length > 0) {
             logger.alert(
-                dataPurgeMessages.RESTORE_MALICIOUS_MANIFEST(protectedNames),
+                dataPurgeMessages.RESTORE_MALICIOUS_MANIFEST(protectedNames.map(String)),
             );
             throw new AppError(
                 PURGE_ERRORS.PROTECTED_TABLE,
@@ -934,10 +955,11 @@ class DataRestoreService {
             );
         }
 
-        const unknownNames = requestedTables.filter((t: any) => !getEntry(t));
+        // A non-string entry is unknown too (getEntry never matches it).
+        const unknownNames = requestedTables.filter((t) => typeof t !== "string" || !getEntry(t));
         if (unknownNames.length > 0) {
             logger.alert(
-                dataPurgeMessages.RESTORE_MALICIOUS_MANIFEST(unknownNames),
+                dataPurgeMessages.RESTORE_MALICIOUS_MANIFEST(unknownNames.map(String)),
             );
             throw new AppError(
                 PURGE_ERRORS.RESTORE_UNKNOWN_TABLE,
@@ -952,12 +974,15 @@ class DataRestoreService {
             );
         }
 
+        // Every entry passed getEntry above, so each is a known table name.
+        const tables = requestedTables.filter((t): t is string => typeof t === "string");
+
         // A data/*.jsonl file present in the zip but not declared in
         // manifest.scope.tables is rejected too — defense in depth on top of
         // the signature check (an undeclared extra file would already have
         // failed signature verification unless the whole set was re-signed).
         const undeclaredDataTables = Object.keys(dataByTable).filter(
-            (t) => !requestedTables.includes(t),
+            (t) => !tables.includes(t),
         );
         if (undeclaredDataTables.length > 0) {
             logger.alert(
@@ -997,17 +1022,17 @@ class DataRestoreService {
         }
 
         if (kind === "FULL_SCOPE") {
-            const liveCounts = await DataPurgeModel.countRows(requestedTables);
-            const nonEmpty = requestedTables
-                .filter((t: any) => (liveCounts[t] ?? 0) > 0)
-                .map((t: any) => ({ table: t, liveCount: liveCounts[t] }));
+            const liveCounts = await DataPurgeModel.countRows(tables);
+            const nonEmpty = tables
+                .filter((t) => (liveCounts[t] ?? 0) > 0)
+                .map((t) => ({ table: t, liveCount: liveCounts[t] }));
             if (nonEmpty.length > 0) {
                 throw new AppError(
                     PURGE_ERRORS.RESTORE_TARGET_NOT_EMPTY,
                     HTTP_STATUS.CONFLICT,
                     {
                         type: "ConflictError",
-                        details: nonEmpty.map((n: any) => ({
+                        details: nonEmpty.map((n) => ({
                             field: n.table,
                             issue: `"${n.table}" already has ${n.liveCount} row(s).`,
                         })),
@@ -1034,7 +1059,7 @@ class DataRestoreService {
                 );
             }
             const parentEntry = getEntry(entity.table);
-            if (!parentEntry || !requestedTables.includes(entity.table)) {
+            if (!parentEntry || !tables.includes(entity.table)) {
                 throw new AppError(
                     PURGE_ERRORS.RESTORE_UNKNOWN_TABLE,
                     HTTP_STATUS.FORBIDDEN,
@@ -1093,16 +1118,16 @@ class DataRestoreService {
         // ── Fidelity report — shared with the purge preview so the two
         // never drift.
         const fidelityNotes =
-            DataPurgeService.buildFidelityNotes(requestedTables);
-        const tablesGettingNewPks = requestedTables.filter(
-            (t: any) => requireEntry(t).isIdentity,
+            DataPurgeService.buildFidelityNotes(tables);
+        const tablesGettingNewPks = tables.filter(
+            (t) => requireEntry(t).isIdentity,
         );
         const rowCounts = Object.fromEntries(
-            requestedTables.map((t: any) => [t, (dataByTable[t] ?? []).length]),
+            tables.map((t) => [t, (dataByTable[t] ?? []).length]),
         );
 
         return {
-            tables: requestedTables,
+            tables: tables,
             kind,
             entity: manifest.entity ?? null,
             rowCounts,
@@ -1139,7 +1164,16 @@ class DataRestoreService {
         durationMs,
         clientIp,
         requestId,
-    }: Record<string, any>): Promise<void> {
+    }: {
+        adminId: unknown;
+        manifest: RestoreManifest;
+        preflight: { kind: unknown; tables: string[] };
+        perTable: RestoreTableResult[];
+        totalInserted: number;
+        durationMs: number;
+        clientIp?: string | null;
+        requestId?: string | null;
+    }): Promise<void> {
         await AuditLogModel.insert({
             REQUEST_ID: requestId ?? `restore-${Date.now()}`,
             USER_ID: Number.isFinite(Number(adminId))
