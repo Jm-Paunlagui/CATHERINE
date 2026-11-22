@@ -403,7 +403,7 @@ class DataRestoreService {
 
                     if (entry.isIdentity) {
                         batch.forEach((row, idx) => {
-                            const newPk = returning[idx]?.[entry.pk];
+                            const newPk = DataRestoreService._returnedIdentity(returning, idx, entry.table, entry.pk);
                             newPkMap!.set(String(row[entry.pk]), newPk); // non-null: entry.isIdentity
                             if (entry.rowHashDomain)
                                 insertedForResign.push({ row, original: originalOf.get(row) ?? row, newPk });
@@ -523,6 +523,22 @@ class DataRestoreService {
      * @param {{ execute: Function }} session - the restore transaction session
      * @returns {Promise<{ signRows: Array<object>, tampered: number }>} rows for bulkUpdateByKeys (ROW_HASH may be null)
      */
+    /**
+     * The identity Oracle assigned to inserted row `idx` (from the batch's RETURNING).
+     * Oracle always assigns one, so a missing value means RETURNING failed; remapping
+     * or re-signing against it would be silently wrong. Fail closed: the throw rolls
+     * the restore transaction back.
+     *
+     * @throws {Error} when row `idx` carries no numeric identity
+     */
+    static _returnedIdentity(returning: Array<Record<string, number | null>>, idx: number, table: string, pk: string): number {
+        const newPk = returning[idx]?.[pk];
+        if (typeof newPk !== "number") {
+            throw new Error(`Restore of ${table}: no identity value returned for row ${idx}`);
+        }
+        return newPk;
+    }
+
     static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, unknown>; original: Record<string, any>; newPk: number | string; }>, session: { execute: ((...args: unknown[]) => any); }): Promise<{ signRows: Array<Record<string, unknown>>; tampered: number; }> {
         const domain = entry.rowHashDomain;
         // Callers only route tables with a ROW_HASH domain here.

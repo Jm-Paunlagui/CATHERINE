@@ -13,7 +13,7 @@ Branch `backend-rewrite-to-typescript` (PR #4, open, not merged). Status as of 2
 ## 2. Follow-up PRs (after merge)
 
 - [x] **G18:** `updateOne({})`, `replaceOne({})` and `deleteOne({})` build `… t0  AND ROWNUM = 1`, which is invalid SQL. See `oracle-wrapper-gap-inventory.md`.
-- [ ] **Remaining `any`:** 417 `: any`, 155 `Record<string, any>` (was 550 / 172). Done: `metricsMerge.ts`, `AlertNotifierService.ts`, `ClusterRpcHub.ts`, `ClusterSupervisor.ts`, `config/adapters/oracle.ts`. Next: `OracleCollection.ts` (24, partly justified).
+- [ ] **Remaining `any`:** 410 `: any`, 141 `Record<string, any>` (was 550 / 172). Done: `metricsMerge.ts`, `AlertNotifierService.ts`, `ClusterRpcHub.ts`, `ClusterSupervisor.ts`, `config/adapters/oracle.ts`, `OracleCollection.ts` (4 left, all the `conn` boundary). Next: the files with the most remaining (`grep -rcE ':\s*any\b|Record<string, any>' src | sort -t: -k2 -rn`).
 - [ ] **Type the connection boundary:** `withConnection`'s callback `conn` is untyped; typing it as `oracledb.Connection` makes every `result.rows` in the models `unknown[]`, so models need row types first.
 - [ ] **Unify the two metrics snapshot shapes:** the cluster merge (`metricsMerge`) and `MetricsStore.getSnapshot()` should share one type, then `AlertNotifierService`'s `AlertSnapshot = Record<string, any>` can become that type.
 - [ ] **Port to TypeScript:** ~~`scripts/` (7 files)~~ done, `test/` (109 files) and the root configs (`eslint.config.js`, `vitest*.config.js`). This removes `require(...).default` from tests.

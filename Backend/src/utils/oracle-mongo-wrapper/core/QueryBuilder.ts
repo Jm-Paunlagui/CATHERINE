@@ -629,3 +629,4 @@ class QueryBuilder {
 }
 
 export { QueryBuilder };
+export type { ForUpdateMode };

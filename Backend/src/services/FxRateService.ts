@@ -174,10 +174,10 @@ class FxRateService {
      * @param {string} params.source - 'MANUAL' or a provider identifier.
      * @param {string} params.setBy - The responsible admin/system principal.
      * @param {Date} [params.retrievedAt] - When the value was obtained.
-     * @returns {Promise<{insertedId: number}>}
+     * @returns {Promise<{insertedId: number | string | null}>}
      * @throws {AppError} 400 on an unknown currency or a non-string rate.
      */
-    static async recordRate(params: { currencyCode: string; rate: string; effectiveFrom: Date; effectiveTo?: Date; source: string; setBy: string; retrievedAt?: Date; }): Promise<{ insertedId: number; }> {
+    static async recordRate(params: { currencyCode: string; rate: string; effectiveFrom: Date; effectiveTo?: Date; source: string; setBy: string; retrievedAt?: Date; }): Promise<{ insertedId: number | string | null; }> {
         const { currencyCode, rate, effectiveFrom, effectiveTo = null, source, setBy, retrievedAt } = params;
         if (!isValidCurrency(currencyCode)) {
             throw new AppError(`Unknown currency ${currencyCode} for FX rate.`, 400, {

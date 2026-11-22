@@ -634,7 +634,7 @@ class DataPurgeModel {
      * @param {string} table
      * @param {object[]} rows - Already FK-remapped rows for this table, in the exact order they should be inserted.
      * @param {import('../utils/oracle-mongo-wrapper/Transaction').Session} session
-     * @returns {Promise<{ insertedCount: number, returning: Array<Record<string, number>> }>}
+     * @returns {Promise<{ insertedCount: number, returning: Array<Record<string, number | null>> }>}
      *   `returning` is `[]` when `entry.isIdentity` is false (the table's
      *   primary key is natural and was inserted as backed up — there is
      *   nothing new to learn back). When `entry.isIdentity` is true,
@@ -651,7 +651,7 @@ class DataPurgeModel {
      * );
      * // returning[i].ID -> the NEW identity value Oracle assigned to remappedRows[i]
      */
-    static async insertRestoreBatch(table: string, rows: Record<string, any>[], session: import('../utils/oracle-mongo-wrapper/Transaction').Session): Promise<{ insertedCount: number; returning: Array<Record<string, number>>; }> {
+    static async insertRestoreBatch(table: string, rows: Record<string, any>[], session: import('../utils/oracle-mongo-wrapper/Transaction').Session): Promise<{ insertedCount: number; returning: Array<Record<string, number | null>>; }> {
         const entry = _requireEntry(table, "insertRestoreBatch");
         if (!Array.isArray(rows) || rows.length === 0) {
             return { insertedCount: 0, returning: [] };
