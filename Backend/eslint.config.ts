@@ -1,13 +1,13 @@
-const js = require("@eslint/js");
-const globals = require("globals");
-const tseslint = require("typescript-eslint");
-const { defineConfig, globalIgnores } = require("eslint/config");
+import js from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import { defineConfig, globalIgnores } from "eslint/config";
 
-module.exports = defineConfig([
+export default defineConfig([
   // BLOCK 0 — global ignores
   globalIgnores(["dist", "coverage", "node_modules"]),
 
-  // BLOCK 1 — base: all .js/.ts (server.ts + src + scripts/tests + root configs).
+  // BLOCK 1 — base: all .js/.ts (server.ts + src + scripts + root configs, and the .js tests).
   // BLOCK 1b below layers the TypeScript parser and rules onto the .ts files.
   {
     files: ["**/*.{js,ts}"],
@@ -36,7 +36,7 @@ module.exports = defineConfig([
     },
   },
 
-  // BLOCK 1b — TypeScript (server.ts + src/**/*.ts). The TS parser replaces
+  // BLOCK 1b — TypeScript (server.ts, src, scripts and the root *.config.ts). The TS parser replaces
   // espree here and typescript-eslint's recommended set turns off core rules
   // tsc already covers. Not type-aware (no parserOptions.projectService):
   // `bun run typecheck` is the type gate.
@@ -127,7 +127,7 @@ module.exports = defineConfig([
   },
 
   // BLOCK 7 — standalone CLI diagnostic harnesses. These paths are explicitly
-  // EXCLUDED from the vitest suite (see vitest.config.js `exclude`): they are
+  // EXCLUDED from the vitest suite (see vitest.config.mts `exclude`): they are
   // hand-run report generators (like scripts/), and console output IS their
   // function. Allow console here for the same reason BLOCK 3 allows it in scripts.
   {
