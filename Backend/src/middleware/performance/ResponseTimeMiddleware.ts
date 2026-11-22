@@ -112,7 +112,7 @@ class ResponseTimeMiddleware {
   }
 
   getSlowRoutes() {
-    const routes = [];
+    const routes: { route: string; avgTime: number; slowRate: string; totalRequests: number; }[] = [];
     for (const [route, d] of this._metrics) {
       const avg = d.count ? d.totalTime / d.count : 0;
       const slowRate = d.count ? d.slowCount / d.count : 0;

@@ -262,7 +262,7 @@ class SystemLogTailService {
                 // directory, skip existing backlog (live tail). A file that
                 // appears mid-session (e.g. a fresh rotation `_N` file) is
                 // brand new — read it from the start.
-                offset = isFirstScan ? stat.size : 0;
+                offset = Number(isFirstScan ? stat.size : 0);
                 this._offsets.set(filename, offset);
             }
 

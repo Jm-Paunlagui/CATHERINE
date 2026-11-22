@@ -566,7 +566,7 @@ class AuditLogService {
         const [year, month, day] = dateStr.split("-");
         const logDir = path.join(LOG_BASE_DIR, year, month, day);
         const token = `[${requestId}]`;
-        const matched = [];
+        const matched: string[] = [];
 
         let files;
         try {
@@ -681,9 +681,9 @@ class AuditLogService {
         const location = locationMatch ? locationMatch[1] : null;
 
         const headerEnd = trimmed.lastIndexOf("] - ");
-        let phase = null;
-        let method = null;
-        let requestId = null;
+        let phase: string | null = null;
+        let method: string | null = null;
+        let requestId: string | null = null;
         let rawAfter;
 
         if (headerEnd === -1) {
@@ -719,7 +719,7 @@ class AuditLogService {
         const metaMarker = " | META: ";
         const metaIdx = rawAfter.indexOf(metaMarker);
         let message = rawAfter;
-        let meta = null;
+        let meta: string | null = null;
         if (metaIdx !== -1) {
             message = rawAfter.slice(0, metaIdx);
             meta = rawAfter.slice(metaIdx + metaMarker.length);
@@ -782,7 +782,7 @@ class AuditLogService {
             throw new AppError(AUDIT_LOG_ERRORS.AUDIT_LOG_INVALID_DATE_FORMAT, 400);
         }
 
-        let normalizedLevel = null;
+        let normalizedLevel: string | null = null;
         if (level != null && level !== "") {
             normalizedLevel = (SYSTEM_LOG_LEVEL_NAMES as Record<string, string>)[String(level).toLowerCase()];
             if (!normalizedLevel) {
@@ -837,8 +837,8 @@ class AuditLogService {
             Number(process.env.SYSTEM_LOG_MAX_READ_BYTES) ||
             DEFAULT_SYSTEM_LOG_MAX_READ_BYTES;
 
-        const allRows = [];
-        const truncatedFiles = [];
+        const allRows: NonNullable<ReturnType<typeof AuditLogService._parseSystemLine>>[] = [];
+        const truncatedFiles: string[] = [];
 
         for (const filename of filenames) {
             const fileLevelKey = filename.match(SYSTEM_LOG_FILENAME_RE)![1]; // listed files matched the RE
@@ -1320,7 +1320,7 @@ class AuditLogService {
         const iterDate = new Date(fromDate + "T00:00:00");
         const endDate = new Date(toDate + "T00:00:00");
         let deletedDays = 0;
-        const failedDays = [];
+        const failedDays: string[] = [];
 
         while (iterDate <= endDate) {
             const yyyy = String(iterDate.getFullYear());
@@ -1342,7 +1342,7 @@ class AuditLogService {
                 // (or silently leave the dir) on Windows EPERM/EBUSY when an AV
                 // scanner, indexer, or open handle holds a file. Retry once, then
                 // verify the directory is actually gone before counting.
-                let rmError = null;
+                let rmError: Error | null = null;
                 try {
                     await fs.rm(logDir, { recursive: true, force: true });
                 } catch (_firstErr) {

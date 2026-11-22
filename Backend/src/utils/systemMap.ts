@@ -42,7 +42,7 @@ type SystemModel = {
 function buildSystemMap(src: SystemModel): Record<string, unknown> {
     const { MAP_VERIFIED_AT, META, LAYOUT: layout, layers, edgeKinds, nodes, E, flows } = src;
     const name = META?.title ?? "System";
-    const errors = [];
+    const errors: string[] = [];
 
     const nodeIds = new Set<string>();
     for (const n of nodes) {
@@ -51,7 +51,7 @@ function buildSystemMap(src: SystemModel): Record<string, unknown> {
         if (!layers.some((l) => l.id === n.layer)) errors.push(`node ${n.id}: unknown layer ${n.layer}`);
     }
 
-    const edges = [];
+    const edges: Array<{ id: string; source: string; target: string; kind: string; label: string }> = [];
     const edgeIndex = new Map();
     for (const [source, target, kind, label] of E) {
         const id = `${source}->${target}`;
@@ -68,7 +68,7 @@ function buildSystemMap(src: SystemModel): Record<string, unknown> {
     const outFlows = flows.map((f) => {
         if (flowIds.has(f.id)) errors.push(`duplicate flow ${f.id}`);
         flowIds.add(f.id);
-        const steps = [];
+        const steps: Array<{ step: number; from: string; to: string; edge: string | null; reverse: boolean; action: unknown; detail: unknown }> = [];
         if (!Array.isArray(f.steps)) {
             errors.push(`flow ${f.id}: steps is not an array`);
         } else {

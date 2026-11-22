@@ -153,8 +153,8 @@ class SuspiciousIpTracker {
      * @returns {object}
      */
     stats(now: number = Date.now()): Record<string, unknown> {
-        const blocked = [];
-        const suspicious = [];
+        const blocked: { ip: string; count: number; blockedUntil: string; }[] = [];
+        const suspicious: { ip: string; count: number; lastSeen: string; }[] = [];
         for (const [ip, r] of this.records) {
             if (r.blockedUntil > now) {
                 blocked.push({ ip, count: r.count, blockedUntil: new Date(r.blockedUntil).toISOString() });

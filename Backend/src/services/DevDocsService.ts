@@ -248,7 +248,7 @@ class DevDocsService {
      * @returns {Promise<string>}
      */
     static async _readTitle(absolutePath: string, fileName: string): Promise<string> {
-        let handle = null;
+        let handle: import("node:fs/promises").FileHandle | null = null;
         try {
             handle = await fsp.open(absolutePath, "r");
             const { buffer, bytesRead } = await handle.read({ buffer: Buffer.alloc(2048), position: 0 });
@@ -306,7 +306,7 @@ class DevDocsService {
                     maxBuffer: 32 * 1024 * 1024,
                 },
             );
-            let commitDate = null;
+            let commitDate: string | null = null;
             for (const raw of stdout.split(LINE_BREAK)) {
                 const line = raw.trim();
                 if (!line) continue;
@@ -473,7 +473,7 @@ class DevDocsService {
 
         for (const dir of dirs) {
             const dirAbs = DevDocsService._assertInsideCorpus(path.join(CORPUS_ROOT, dir));
-            let dirEntries = [];
+            let dirEntries: import("node:fs").Dirent[] = [];
             try {
                 dirEntries = await fsp.readdir(dirAbs, { withFileTypes: true });
             } catch {
@@ -583,7 +583,7 @@ class DevDocsService {
 
         const manifest = await DevDocsService._manifest();
         const needle = query.toLowerCase();
-        const results = [];
+        const results: Array<{ id: string; title: string; heading: string | null; snippet: string; line: number }> = [];
         let total = 0;
 
         for (const entry of manifest.byId.values()) {
@@ -595,7 +595,7 @@ class DevDocsService {
             }
 
             const lines = content.split(/\r?\n/);
-            let heading = null;
+            let heading: string | null = null;
             for (let i = 0; i < lines.length; i += 1) {
                 const line = lines[i];
                 const headingMatch = line.match(/^#{1,6}\s+(.*)$/);

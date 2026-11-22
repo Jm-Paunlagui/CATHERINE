@@ -582,8 +582,8 @@ class AuthMiddleware {
 
         return (req: Request, res: Response, next: NextFunction) => {
             const source = req.method === "GET" ? req.query : req.body;
-            const missing = [];
-            const typeErrors = [];
+            const missing: { field: string; issue: string; }[] = [];
+            const typeErrors: { field: string; issue: string; }[] = [];
 
             for (const f of requiredFields) {
                 const val = source[f];
@@ -647,7 +647,7 @@ class AuthMiddleware {
 
         return (req: Request, res: Response, next: NextFunction) => {
             const body = req.body ?? {};
-            const errors = [];
+            const errors: { field: string; issue: string; }[] = [];
 
             for (const [field, forHash] of checks) {
                 const value = body[field];
