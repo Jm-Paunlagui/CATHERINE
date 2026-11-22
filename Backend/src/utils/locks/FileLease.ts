@@ -1,5 +1,8 @@
 
 
+/** The lease file's JSON (written by a holder, possibly another process): read as unknown fields. */
+type LeaseInfo = { hostname?: unknown; pid?: unknown; token?: unknown; [key: string]: unknown };
+
 /**
  * @fileoverview FileLease — cross-process exclusive lease backed by one file.
  *
@@ -60,7 +63,7 @@ const NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 class FileLease {
     declare _lastBeatProgressAt: number;
-    declare _timer: any;
+    declare _timer: ReturnType<typeof setInterval> | null;
     declare _token: unknown;
     declare _heartbeatMs: number;
     declare _pollMs: number;
@@ -165,7 +168,7 @@ class FileLease {
                     logger.info(
                         dataBackupMessages.BACKUP_LEASE_WAITING(
                             this._name,
-                            info?.pid ?? null,
+                            typeof info?.pid === "number" ? info.pid : null,
                         ),
                     );
                 }
@@ -243,7 +246,7 @@ class FileLease {
     }
 
     /** @returns {Promise<object|null>} Parsed lease body, null if missing/unreadable. */
-    async _readInfo(): Promise<Record<string, any> | null> {
+    async _readInfo(): Promise<LeaseInfo | null> {
         try {
             return JSON.parse(await fsPromises.readFile(this._path, "utf8"));
         } catch {
@@ -256,11 +259,12 @@ class FileLease {
      * @param {object|null} info
      * @returns {boolean}
      */
-    _isStale(stat: import("fs").Stats, info: Record<string, any> | null): boolean {
+    _isStale(stat: import("fs").Stats, info: LeaseInfo | null): boolean {
         if (Date.now() - stat.mtimeMs > this._staleMs) return true;
         if (
             info &&
             info.hostname === os.hostname() &&
+            typeof info.pid === "number" &&
             Number.isInteger(info.pid) &&
             info.pid !== process.pid
         ) {
@@ -278,7 +282,7 @@ class FileLease {
      * @param {object|null} observed - Lease body seen when judged stale.
      * @returns {Promise<boolean>} true if WE removed the stale lease.
      */
-    async _steal(observed: Record<string, any> | null): Promise<boolean> {
+    async _steal(observed: LeaseInfo | null): Promise<boolean> {
         const graveyard = `${this._path}.stale-${crypto.randomBytes(4).toString("hex")}`;
         try {
             await fsPromises.rename(this._path, graveyard);
@@ -304,8 +308,8 @@ class FileLease {
         logger.warning(
             dataBackupMessages.BACKUP_LEASE_STOLEN(
                 this._name,
-                observed?.pid ?? null,
-                observed?.hostname ?? null,
+                typeof observed?.pid === "number" ? observed.pid : null,
+                typeof observed?.hostname === "string" ? observed.hostname : null,
             ),
         );
         return true;

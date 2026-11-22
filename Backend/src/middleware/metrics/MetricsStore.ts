@@ -276,8 +276,8 @@ class MetricsStore {
   declare _backgroundProbes: boolean;
   declare _prevCpuUsage: NodeJS.CpuUsage;
   declare _prevGcPauseMs: number;
-  declare _gcPauses: any[];
-  declare _heapBaselines: any[];
+  declare _gcPauses: number[];
+  declare _heapBaselines: Array<{ ts: number; heapUsed: number }>;
   declare _system: {
       cpu: { user: number; system: number; percent: number; }; memory: { heapUsed: number; heapTotal: number; heapSizeLimit: number; rss: number; external: number; arrayBuffers: number; }; eventLoopLag: number; gc: {
           collections: number; // lifetime total across all kinds (back-compat)
@@ -993,7 +993,7 @@ class MetricsStore {
   getSnapshot(): {
       timestamp: string;
       uptime: number;
-      red: { [s: string]: { count: number; clientErrorCount: number; serverErrorCount: number; errorRate: number; clientErrorRate: number; availability: number; p50: number; p95: number; p99: number; avgMs: number; window: { windowMs: number; count: number; p99: number; }; }; };
+      red: { [s: string]: { count: number; redirectCount: number; notModifiedCount: number; clientErrorCount: number; serverErrorCount: number; errorRate: number; clientErrorRate: number; availability: number; p50: number; p95: number; p99: number; avgMs: number; window: { windowMs: number; count: number; p99: number; }; }; };
       system: { cpu: Record<string, unknown>; memory: Record<string, unknown>; eventLoopLag: number; gc: Record<string, unknown>; memoryTrend: HeapTrend; handles: number; requests: number; };
       dependencies: { oracle: { [s: string]: { queryCount: number; errorCount: number; avgMs: number; p95Ms: number; poolUtilization: number | null; connectionsInUse: number | null; connectionsOpen: number | null; poolMax: number | null; queueLength: number | null; capacity: number | null; healthy: boolean | null; consecutiveFailures: number | null; }; }; smtp: SmtpDependencySnapshot; };
       totals: { requestsTotal: number; successTotal: number; redirectsTotal: number; notModifiedTotal: number; clientErrorsTotal: number; serverErrorsTotal: number; errorsTotal: number; errorRate: number; clientErrorRate: number; availability: number; apdex: number; window: { windowMs: number; requests: number; clientErrors: number; serverErrors: number; serviced: number; errorRate: number; availability: number; }; };
@@ -1005,7 +1005,7 @@ class MetricsStore {
     // Build RED metrics per route. Apdex is accumulated globally in the same
     // pass over each route's duration ring buffer — O(total samples), no extra
     // allocation beyond the per-route sort already needed for percentiles.
-    const red: Record<string, any> = {};
+    const red: ReturnType<MetricsStore["getSnapshot"]>["red"] = {};
     const apdexT = APDEX_THRESHOLD_MS;
     let apdexSatisfied = 0; // d ≤ T
     let apdexTolerating = 0; // T < d ≤ 4T
@@ -1061,7 +1061,7 @@ class MetricsStore {
     // and live pool saturation (recordPoolStats). Either source may be absent:
     // recordDbQuery is optional instrumentation, while pool stats arrive from the
     // adapter's 30 s health poll. A pool appears here as soon as either reports.
-    const oracleDeps: Record<string, any> = {};
+    const oracleDeps: ReturnType<MetricsStore["getSnapshot"]>["dependencies"]["oracle"] = {};
     const oracleNames = new Set([
       ...this._oracle.keys(),
       ...this._oraclePoolStats.keys(),

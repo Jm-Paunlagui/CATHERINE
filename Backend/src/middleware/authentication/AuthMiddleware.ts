@@ -94,7 +94,7 @@ class AuthMiddleware {
      * @param {object} [outcome.err]   - jsonwebtoken error (failure only).
      * @private
      */
-    static _traceAuth(req: import('express').Request, { result, status, user, err }: { result: string; status: number; user?: Record<string, any>; err?: Record<string, any>; }) {
+    static _traceAuth(req: import('express').Request, { result, status, user, err }: { result: string; status: number; user?: import("../../types/express").AuthUser; err?: Error & { expiredAt?: Date | string | number }; }) {
         const { source, cookieNames, signed } =
             AuthMiddleware._describeCredential(req);
 
@@ -205,7 +205,9 @@ class AuthMiddleware {
             token,
             process.env.JWT_SECRET ?? "", // bootGuard guarantees it; "" fails verify like undefined did
             { algorithms: ["HS256"] },
-            (err, user: any) => {
+            (err, decoded) => {
+                // An access token AuthService signed: its claims are checked below (classifyAccessClaims).
+                const user = decoded as import("../../types/express").AuthUser;
                 if (err) {
                     // TokenExpiredError   → session timed out                       → 440
                     // NotBeforeError      → token used before its nbf claim         → 403
@@ -454,7 +456,7 @@ class AuthMiddleware {
      * @param {boolean} isFileDownload - Server-controlled flag.
      * @private
      */
-    static _rejectRevokedSession(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction, user: Record<string, any>, isFileDownload: boolean) {
+    static _rejectRevokedSession(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction, user: import("../../types/express").AuthUser, isFileDownload: boolean) {
         AuthMiddleware._traceAuth(req, { result: "revoked", status: 440 });
         logger.warning(
             authMessages.ACCESS_SESSION_REVOKED_REFUSED(user.userId, String(user.fid).slice(0, 8)),
@@ -493,7 +495,9 @@ class AuthMiddleware {
                 token,
                 process.env.JWT_SECRET ?? "",
                 { algorithms: ["HS256"] },
-                (err, payload: any) => {
+                (err, decoded) => {
+                    // An access token AuthService signed (an object payload); its claims are checked just below.
+                    const payload = decoded as import("../../types/express").AuthUser;
                     if (
                         err ||
                         classifyAccessClaims(payload) !== "access" ||
@@ -534,7 +538,7 @@ class AuthMiddleware {
      *     user.userLevel >= 3 && user.permissions?.includes('DELETE_USERS')
      * )
      */
-    static requireAccess(predicate: (user: Record<string, any>) => boolean, options: { message?: string; } = {}): import('express').RequestHandler {
+    static requireAccess(predicate: (user: import("../../types/express").AuthUser) => boolean, options: { message?: string; } = {}): import('express').RequestHandler {
         return (req: Request, res: Response, next: NextFunction) => {
             if (!req.user) {
                 return next(
