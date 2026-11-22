@@ -55,7 +55,7 @@ async function listen(expressApp) {
  * @param {{ timeoutMs?: number, isHead?: boolean }} [opts]
  * @returns {Promise<{ statusLine: string, status: number, headers: Record<string,string>, body: any, rawBody: string }>}
  */
-function rawExchange(port, raw, { timeoutMs = 3000, isHead = false } = {}) {
+function rawExchange(port, raw, { timeoutMs = 3000, isHead = false }: Record<string, any> = {}) {
     return new Promise<any>((resolve, reject) => {
         const socket = net.connect(port, "127.0.0.1");
         let buf = Buffer.alloc(0);

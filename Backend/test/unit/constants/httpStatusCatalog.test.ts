@@ -20,19 +20,19 @@
 const fs = require("fs");
 const path = require("path");
 
-const { HTTP_STATUS } = require("../../../src/constants");
+const { HTTP_STATUS } = (require("../../../src/constants") as typeof import("../../../src/constants"));
 const {
     HTTP_STATUS_TITLES,
     getStatusTitle,
     sendError,
     sendSuccess,
-} = require("../../../src/constants/responses");
+} = (require("../../../src/constants/responses") as typeof import("../../../src/constants/responses"));
 // OraCode.js exports the map itself (module.exports = ORA_MAP), not a named field.
-const ORA_MAP = require("../../../src/middleware/errorHandling/OraCode").default;
+const ORA_MAP = (require("../../../src/middleware/errorHandling/OraCode") as typeof import("../../../src/middleware/errorHandling/OraCode")).default;
 const {
     NJS_MAP,
     TRANSIENT_STRING_PATTERNS,
-} = require("../../../src/middleware/errorHandling/NjsCode");
+} = (require("../../../src/middleware/errorHandling/NjsCode") as typeof import("../../../src/middleware/errorHandling/NjsCode"));
 
 const SRC_ROOT = path.join(__dirname, "..", "..", "..", "src");
 
@@ -366,7 +366,7 @@ describe("HTTP status catalogue", function () {
 
         it("keeps success envelopes title-free", function () {
             const body = sendSuccess("ok", { a: 1 }, HTTP_STATUS.CREATED);
-            expect(body.title).toBeUndefined();
+            expect((body as Record<string, unknown>).title).toBeUndefined();
             expect(body.code).toBe(201);
         });
     });

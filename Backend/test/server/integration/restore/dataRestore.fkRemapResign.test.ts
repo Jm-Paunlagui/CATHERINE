@@ -116,11 +116,11 @@ describe("DataRestoreService — FK remap and ROW_HASH re-sign", function () {
         inserts = [];
         rehashes = [];
 
-        vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch } = {}) => {
+        vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch }: Record<string, any> = {}) => {
             for (const t of tables) await onBatch?.(t, SOURCE_ROWS[t].map((r) => ({ ...r })));
             return Object.fromEntries(tables.map((t) => [t, SOURCE_ROWS[t].length]));
         });
-        vi.spyOn(DataPurgeModel, "streamTable").mockImplementation(async (t, { onBatch } = {}) => {
+        vi.spyOn(DataPurgeModel, "streamTable").mockImplementation(async (t, { onBatch }: Record<string, any> = {}) => {
             if (onBatch) await onBatch(SOURCE_ROWS[t].map((r) => ({ ...r })));
             return SOURCE_ROWS[t].length;
         });

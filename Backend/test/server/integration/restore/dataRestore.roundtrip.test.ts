@@ -46,7 +46,7 @@ const SOURCE_ROWS = {
 
 /** Feeds SOURCE_ROWS through the model's stream callbacks (both the read-consistent and per-table paths). */
 function stubSourceDatabase() {
-    vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch } = {}) => {
+    vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch }: Record<string, any> = {}) => {
         const counts: Record<string, any> = {};
         for (const t of tables) {
             const rows = SOURCE_ROWS[t] ?? [];
@@ -55,7 +55,7 @@ function stubSourceDatabase() {
         }
         return counts;
     });
-    vi.spyOn(DataPurgeModel, "streamTable").mockImplementation(async (table, { onBatch } = {}) => {
+    vi.spyOn(DataPurgeModel, "streamTable").mockImplementation(async (table, { onBatch }: Record<string, any> = {}) => {
         const rows = SOURCE_ROWS[table] ?? [];
         if (rows.length && onBatch) await onBatch(rows.map((r) => ({ ...r })));
         return rows.length;
@@ -72,7 +72,7 @@ async function buildArchive() {
 }
 
 /** Rewrites files inside a zip; `resign` recomputes signature.json with the real key (an insider forging an archive). */
-async function editArchive(zipBuffer, edit, { resign = false } = {}) {
+async function editArchive(zipBuffer, edit, { resign = false }: Record<string, any> = {}) {
     const zip = await JSZip.loadAsync(zipBuffer);
     await edit(zip);
     if (resign) {

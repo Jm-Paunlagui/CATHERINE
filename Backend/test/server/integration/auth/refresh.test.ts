@@ -52,7 +52,7 @@ const MOCK_REFRESH_RESULT = {
 };
 
 /** Refresh JWT with the full claim set AuthService.refresh requires. */
-function makeRefreshToken(overrides: Record<string, any> = {}, { secret, expiresIn = "7d" } = {}) {
+function makeRefreshToken(overrides: Record<string, any> = {}, { secret, expiresIn = "7d" }: Record<string, any> = {}) {
     const payload = {
         sub: "10001",
         type: TOKEN_TYPES.REFRESH,
@@ -89,7 +89,7 @@ describe("POST /api/v1/auth/refresh — integration", function () {
     let csrf;
 
     /** POST with CSRF header + cookie and any extra cookie pairs. */
-    function post(extraCookies: any[] = [], { withCsrf = true } = {}) {
+    function post(extraCookies: any[] = [], { withCsrf = true }: Record<string, any> = {}) {
         const cookies = [...csrf.cookies, ...extraCookies];
         const req = request(app).post(ROUTE).set("Cookie", cookies.join("; "));
         return withCsrf ? req.set("x-csrf-token", csrf.token) : req;

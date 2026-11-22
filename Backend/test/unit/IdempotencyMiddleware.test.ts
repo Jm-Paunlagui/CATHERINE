@@ -12,7 +12,7 @@ const {
 const { registry } = require("../../src/middleware/cache/CacheRegistry");
 
 /** Minimal mock Express request. */
-function mockReq({ method = "POST", headers = {}, body = {}, path = "/credit", user } = {}) {
+function mockReq({ method = "POST", headers = {}, body = {}, path = "/credit", user }: Record<string, any> = {}) {
     const lower: Record<string, any> = {};
     for (const [k, v] of Object.entries(headers)) lower[k.toLowerCase()] = v;
     return {

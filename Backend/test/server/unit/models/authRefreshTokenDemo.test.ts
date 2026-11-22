@@ -14,7 +14,7 @@ const demo = require("../../../../src/models/demo/demoStore").default;
 const ORIGINAL_DEMO_MODE = process.env.DEMO_MODE;
 const HOUR = 3_600_000;
 
-function rec(n, { fid = "fam-1", user = "alice", issued = Date.now() } = {}) {
+function rec(n, { fid = "fam-1", user = "alice", issued = Date.now() }: Record<string, any> = {}) {
     return {
         jtiHash: String(n).padStart(64, "0"),
         familyId: fid,

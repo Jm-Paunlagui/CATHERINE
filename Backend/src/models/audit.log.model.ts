@@ -297,7 +297,7 @@ class AuditLogModel {
      * @param {Array<{ STATUS_CATEGORY?: string, CNT?: number, RESPTIME?: number }>} rows
      * @returns {{ total: number, totalRespTime: number, buckets: { '2xx': number, '3xx': number, '4xx': number, '5xx': number } }}
      */
-    static _reduceCategoryGroups(rows: Array<{ STATUS_CATEGORY?: string; CNT?: number; RESPTIME?: number; }>): { total: number; totalRespTime: number; buckets: { '2xx': number; '3xx': number; '4xx': number; '5xx': number; }; } {
+    static _reduceCategoryGroups(rows: Array<{ STATUS_CATEGORY?: string | null; CNT?: number; RESPTIME?: number; }> | null | undefined): { total: number; totalRespTime: number; buckets: { '2xx': number; '3xx': number; '4xx': number; '5xx': number; }; } {
         const buckets = { "2xx": 0, "3xx": 0, "4xx": 0, "5xx": 0 };
         let total = 0;
         let totalRespTime = 0;

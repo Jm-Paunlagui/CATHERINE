@@ -14,10 +14,12 @@
  *     SERVER_NOTIFY_TO only — the cached opt-in list is not used.
  */
 
-const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService").default;
-const RecipientResolver = require("../../../../src/services/email/RecipientResolver").default;
-const AdminModel = require("../../../../src/models/admin.model").default;
-const { logger } = require("../../../../src/utils/logger");
+const ServerNotificationService = (require("../../../../src/services/email/ServerNotificationService") as typeof import("../../../../src/services/email/ServerNotificationService")).default;
+const RecipientResolver = (require("../../../../src/services/email/RecipientResolver") as typeof import("../../../../src/services/email/RecipientResolver")).default;
+// The static wait lives on the class; the default export is its instance.
+const { RecipientResolver: RecipientResolverClass } = (require("../../../../src/services/email/RecipientResolver") as typeof import("../../../../src/services/email/RecipientResolver"));
+const AdminModel = (require("../../../../src/models/admin.model") as typeof import("../../../../src/models/admin.model")).default;
+const { logger } = (require("../../../../src/utils/logger") as typeof import("../../../../src/utils/logger"));
 
 const CH = "server-critical-notification";
 const ENV_ADDR = "ops@example.com";
@@ -41,7 +43,7 @@ function dbDown() {
 beforeEach(function () {
     vi.stubEnv("SERVER_NOTIFY_TO", ENV_ADDR);
     vi.stubEnv("RECIPIENT_REFRESH_MIN", "5");
-    vi.spyOn(logger, "warning").mockImplementation(() => {});
+    vi.spyOn(logger, "warning").mockImplementation(() => undefined as never);
     freshResolver();
 });
 
@@ -72,7 +74,7 @@ describe("server alert recipients follow the database state", function () {
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([OPT_IN]);
 
         vi.restoreAllMocks();
-        vi.spyOn(logger, "warning").mockImplementation(() => {});
+        vi.spyOn(logger, "warning").mockImplementation(() => undefined as never);
         dbDown();
         RecipientResolver.invalidate();
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([ENV_ADDR]);
@@ -83,7 +85,7 @@ describe("server alert recipients follow the database state", function () {
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([ENV_ADDR]);
 
         vi.restoreAllMocks();
-        vi.spyOn(logger, "warning").mockImplementation(() => {});
+        vi.spyOn(logger, "warning").mockImplementation(() => undefined as never);
         dbUp();
         RecipientResolver.invalidate();
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([OPT_IN]);
@@ -105,12 +107,12 @@ describe("server alert recipients follow the database state", function () {
         dbUp();
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([OPT_IN]);
 
-        const db = require("../../../../src/config").default;
+        const db = (require("../../../../src/config") as typeof import("../../../../src/config")).default;
         vi.spyOn(db, "isPoolHealthy").mockImplementation((name) => name !== "appDb");
         // No invalidate(): the cached successful lookup is still fresh.
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([ENV_ADDR]);
 
-        db.isPoolHealthy.mockReturnValue(true);
+        vi.mocked(db.isPoolHealthy).mockReturnValue(true);
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([OPT_IN]);
     });
 
@@ -119,15 +121,15 @@ describe("server alert recipients follow the database state", function () {
         expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([OPT_IN]);
 
         vi.restoreAllMocks();
-        vi.spyOn(logger, "warning").mockImplementation(() => {});
+        vi.spyOn(logger, "warning").mockImplementation(() => undefined as never);
         vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise<any>(() => {}));
-        const saved = RecipientResolver.constructor.REFRESH_WAIT_MS;
-        RecipientResolver.constructor.REFRESH_WAIT_MS = 20;
+        const saved = RecipientResolverClass.REFRESH_WAIT_MS;
+        RecipientResolverClass.REFRESH_WAIT_MS = 20;
         try {
             RecipientResolver.invalidate();
             expect(await ServerNotificationService.resolveRecipients(CH)).toEqual([ENV_ADDR]);
         } finally {
-            RecipientResolver.constructor.REFRESH_WAIT_MS = saved;
+            RecipientResolverClass.REFRESH_WAIT_MS = saved;
             RecipientResolver._refreshPromise = null;
         }
     });

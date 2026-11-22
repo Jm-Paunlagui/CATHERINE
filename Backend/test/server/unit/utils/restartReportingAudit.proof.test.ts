@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-function marker({ runId = "run", pid = 4242, fsImpl = fs } = {}) {
+function marker({ runId = "run", pid = 4242, fsImpl = fs }: Record<string, any> = {}) {
     return new ServerRunMarker({
         filePath: file,
         runId,

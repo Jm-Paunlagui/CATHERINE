@@ -54,7 +54,7 @@ const DATABASE_PATH = require.resolve(
  *   `oracledb.createPool` for the lifetime of the fresh adapter.
  * @returns {{ adapter: object, restore: () => void }}
  */
-function loadFreshAdapter({ createPool } = {}) {
+function loadFreshAdapter({ createPool }: Record<string, any> = {}) {
     if (typeof createPool !== "function") {
         throw new TypeError("loadFreshAdapter: createPool stub is required.");
     }

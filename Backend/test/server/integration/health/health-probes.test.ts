@@ -15,8 +15,8 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app").default;
-const db = require("../../../../src/config").default;
+const app = (require("../../../../src/app") as typeof import("../../../../src/app")).default;
+const db = (require("../../../../src/config") as typeof import("../../../../src/config")).default;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GET /api/v1/health/live
@@ -133,7 +133,7 @@ describe("GET /api/v1/health/ready — readiness probe", function () {
 
     it("each check has a status field of 'up' or 'down'", async function () {
         const res = await request(app).get("/api/v1/health/ready");
-        Object.values(res.body.data.checks).forEach((check) => {
+        Object.values(res.body.data.checks).forEach((check: any) => {
             expect(["up", "down"]).toContain(check.status);
         });
     });
@@ -156,7 +156,7 @@ describe("GET /api/v1/health/ready — readiness probe", function () {
 
     it("failed pools report an error string in the checks object", async function () {
         const res = await request(app).get("/api/v1/health/ready");
-        Object.values(res.body.data.checks).forEach((check) => {
+        Object.values(res.body.data.checks).forEach((check: any) => {
             if (check.status === "down") {
                 expect(check).toHaveProperty("error");
                 expect(check["error"]).toEqual(expect.any(String));

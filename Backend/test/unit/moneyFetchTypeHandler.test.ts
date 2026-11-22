@@ -22,7 +22,7 @@
 const { oracledb, moneySafeFetchTypeHandler, EXECUTE_OPTIONS } = require("../../src/config/adapters/oracle");
 
 /** Build a metaData-shaped object the way the driver passes it to the handler. */
-function meta({ dbType = oracledb.DB_TYPE_NUMBER, scale = 0 } = {}) {
+function meta({ dbType = oracledb.DB_TYPE_NUMBER, scale = 0 }: Record<string, any> = {}) {
     return { dbType, scale };
 }
 

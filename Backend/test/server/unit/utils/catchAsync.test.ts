@@ -27,17 +27,26 @@ describe("catchAsync", function () {
         expect(wrapped).toBeInstanceOf(Function);
     });
 
-    it("calls the wrapped function with req, res, next", function (done) {
+    it("calls the wrapped function with req, res, next", async function () {
+        // Was a mocha-style `done` test: Vitest passes a context object, not `done`, so the
+        // call threw inside the handler and catchAsync routed it to the stub next() — the
+        // test could pass without its assertions ever running.
         const req = mockReq();
         const res = mockRes();
+        const next = vi.fn();
+        const seen: unknown[] = [];
 
-        const wrapped = catchAsync(async (r, s, _n) => {
-            expect(r).toBe(req);
-            expect(s).toBe(res);
-            done();
+        const wrapped = catchAsync(async (r, s, n) => {
+            seen.push(r, s, n);
         });
 
-        wrapped(req, res, () => {});
+        wrapped(req, res, next);
+        await new Promise((r) => setImmediate(r));
+
+        expect(seen[0]).toBe(req);
+        expect(seen[1]).toBe(res);
+        expect(seen[2]).toBe(next);
+        expect(next).not.toHaveBeenCalled();
     });
 
     it("calls next() with the error when the async function rejects", () => new Promise<void>((resolve, reject) => {
