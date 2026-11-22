@@ -1865,7 +1865,7 @@ class AlertNotifierService {
      * @param {string} [note]
      * @returns {Promise<object>}
      */
-    async _acknowledgeLocal(alertKey: string, ackedBy: string | number, note: string): ReturnType<AlertNotifierService["acknowledge"]> {
+    async _acknowledgeLocal(alertKey: string, ackedBy: string | number, note: string | null): ReturnType<AlertNotifierService["acknowledge"]> {
         if (!alertKey || typeof alertKey !== "string") {
             throw new AppError(NOTIFICATION_ERRORS.ALERT_KEY_REQUIRED, 400, {
                 type: "ValidationError",
