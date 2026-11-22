@@ -22,13 +22,14 @@
  */
 
 import { LoginLockoutPolicy } from "./LoginLockoutPolicy";
+import type { LockoutState } from "./LoginLockoutPolicy";
 
 const ENTRY_TTL_MS = 24 * 60 * 60 * 1000;
 const SWEEP_MIN_GAP_MS = 1000;
 
 class LoginLockoutState {
     /** @type {Map<string, {state: object, expiresAt: number}>} */
-    #entries: Map<string, { state: Record<string, unknown>; expiresAt: number; }> = new Map();
+    #entries: Map<string, { state: LockoutState; expiresAt: number; }> = new Map();
     #policy;
     #maxKeys;
     #lastSweep = -Infinity;
@@ -113,7 +114,7 @@ class LoginLockoutState {
         return entry;
     }
 
-    #write(key: string, state: Record<string, unknown>, now: number) {
+    #write(key: string, state: LockoutState, now: number) {
         // delete first so Map order tracks last write (oldest-first eviction).
         this.#entries.delete(key);
         this.#entries.set(key, { state, expiresAt: now + ENTRY_TTL_MS });

@@ -43,6 +43,7 @@
  *   await loginLockout.recordSuccessAsync(userId);
  */
 
+import type { LockoutState } from "./LoginLockoutPolicy";
 import { CacheStore } from "../cache";
 import { logger } from "../../utils/logger";
 import { authMessages } from "../../constants/messages";
@@ -270,7 +271,7 @@ class LoginLockoutMiddleware {
    * @returns {{ cycles: number, currentMax: number, failCount: number, lockUntil: number|null }}
    * @private
    */
-  _readState(userId: string): { cycles: number; currentMax: number; failCount: number; lockUntil: number | null; } {
+  _readState(userId: string): LockoutState {
     return this._store.get(lockoutKey(userId)) ?? this._policy.initial();
   }
 
@@ -280,7 +281,7 @@ class LoginLockoutMiddleware {
    * @param {object} state
    * @private
    */
-  _writeState(userId: string, state: Record<string, unknown>) {
+  _writeState(userId: string, state: LockoutState) {
     this._store.set(lockoutKey(userId), state, 86400);
   }
 }

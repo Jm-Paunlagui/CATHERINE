@@ -15,8 +15,8 @@
  * @param {Function} fn - Async (req, res, next) => Promise
  * @returns {Function}  Express middleware
  */
-import type { NextFunction, Request, Response } from "express";
-function catchAsync(fn: ((...args: any[]) => unknown)): ((...args: any[]) => unknown) {
+import type { NextFunction, Request, RequestHandler, Response } from "express";
+function catchAsync(fn: (req: Request, res: Response, next: NextFunction) => unknown): RequestHandler {
     return (req: Request, res: Response, next: NextFunction) => {
         try {
             Promise.resolve(fn(req, res, next)).catch(next);

@@ -31,7 +31,7 @@ const M = (f: unknown) => `${API}src/models/${f}`;
 const U = (f: unknown) => `${API}src/utils/${f}`;
 const MW = (f: unknown) => `${API}src/middleware/${f}`;
 const F = (f: unknown) => `${UI}src/features/${f}`;
-const eps = (base: unknown, list: any) => list.split(";").filter(Boolean).map((e: any) => {
+const eps = (base: unknown, list: string) => list.split(";").filter(Boolean).map((e) => {
     const [m, p] = e.split(" ");
     return `${m} /api/v1${base}${p === "/" ? "" : p}`;
 });
