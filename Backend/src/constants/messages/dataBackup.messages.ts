@@ -120,7 +120,7 @@ const dataBackupMessages = {
     SCHEDULE_BACKUP_FAILED: (label: string, eventId: number | string | undefined, event: string, err: Error | string) =>
         `Scheduled DB backup FAILED (label: ${label}) — event ${eventId} / ${event}: ${(err as Error)?.message ?? err}.`,
     /** @param {string} label @param {string} archiveId @param {string} baseArchiveId */
-    SCHEDULE_PRUNED: (label: string, archiveId: string, baseArchiveId: string) =>
+    SCHEDULE_PRUNED: (label: string, archiveId: string, baseArchiveId: string | null) =>
         `Scheduled DB backup retention sweep (label: ${label}) deleted expired archive ${archiveId} (chain base ${baseArchiveId}) — whole chain past DB_BACKUP_RETENTION_DAYS.`,
     /** @param {string} label @param {string} archiveId @param {Error|string} err */
     SCHEDULE_PRUNE_SKIPPED: (label: string, archiveId: string, err: Error | string) =>
