@@ -637,7 +637,7 @@ describe("RetryPolicy", function () {
         });
 
         it("every logger.log call made during execute() carries the ALS requestId, including across the backoff sleep", async function () {
-            const observedRequestIds = [];
+            const observedRequestIds: any[] = [];
             vi.spyOn(logger, "log").mockImplementation(async (_level, _message, _meta) => {
                 // Read the ALS store synchronously, exactly like logger.log()
                 // itself does internally — proves the context is still active
@@ -672,7 +672,7 @@ describe("RetryPolicy", function () {
         });
 
         it("logger.log observes no requestId when called outside any requestContext.run()", async function () {
-            const observedRequestIds = [];
+            const observedRequestIds: any[] = [];
             vi.spyOn(logger, "log").mockImplementation(async (_level, _message, _meta) => {
                 observedRequestIds.push(requestContext.getStore()?.requestId ?? null);
             });

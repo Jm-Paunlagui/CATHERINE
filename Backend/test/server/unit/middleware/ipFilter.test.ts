@@ -6,7 +6,7 @@ const {
 
 describe("IpFilterMiddleware", function () {
     describe("when disabled", function () {
-        it("always calls next()", () => new Promise((resolve, reject) => {
+        it("always calls next()", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const filter = new IpFilterMiddleware({ enabled: false });
@@ -16,7 +16,7 @@ describe("IpFilterMiddleware", function () {
     });
 
     describe("when enabled", function () {
-        it("allows an exact IP on the allowlist", () => new Promise((resolve, reject) => {
+        it("allows an exact IP on the allowlist", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const filter = new IpFilterMiddleware({
@@ -27,7 +27,7 @@ describe("IpFilterMiddleware", function () {
         
             }));
 
-        it("blocks an IP not on the allowlist", () => new Promise((resolve, reject) => {
+        it("blocks an IP not on the allowlist", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const filter = new IpFilterMiddleware({
@@ -50,7 +50,7 @@ describe("IpFilterMiddleware", function () {
         
             }));
 
-        it("allows an IP within a CIDR range", () => new Promise((resolve, reject) => {
+        it("allows an IP within a CIDR range", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const filter = new IpFilterMiddleware({
@@ -61,7 +61,7 @@ describe("IpFilterMiddleware", function () {
         
             }));
 
-        it("blocks an IP outside the CIDR range", () => new Promise((resolve, reject) => {
+        it("blocks an IP outside the CIDR range", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const filter = new IpFilterMiddleware({

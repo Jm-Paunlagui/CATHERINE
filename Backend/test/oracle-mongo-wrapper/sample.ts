@@ -191,7 +191,7 @@ async function generateInventoryReport() {
     .toArray();
 
   // ── 4. Build a price lookup map ───────────────────────────────────────
-  const priceMap = {}; // MATERIALID → { price, description, type }
+  const priceMap: Record<string, any> = {}; // MATERIALID → { price, description, type }
   for (const m of materials) {
     const mid = String(m.MATERIALID);
     priceMap[mid] = {
@@ -202,14 +202,14 @@ async function generateInventoryReport() {
   }
 
   // ── 5. Build book lookup:  SLOC|MATERIALID → qty ──────────────────────
-  const bookMap = {};
+  const bookMap: Record<string, any> = {};
   for (const row of bookBySlocMat) {
     const key = `${row.SLOC}|${row.MATERIALID}`;
     bookMap[key] = NUM(row.BOOK_QTY);
   }
 
   // ── 6. Build stock lookup:  SLOC|MATERIALID → qty ─────────────────────
-  const stockMap = {};
+  const stockMap: Record<string, any> = {};
   for (const row of stockBySlocMat) {
     const key = `${row.SLOC}|${row.MATERIALID}`;
     stockMap[key] = NUM(row.STOCK_QTY);
@@ -217,8 +217,8 @@ async function generateInventoryReport() {
 
   // ── 7. Merge all keys to produce the full report rows ─────────────────
   const allKeys = new Set([...Object.keys(bookMap), ...Object.keys(stockMap)]);
-  const detailRows = [];
-  const slocTotals = {}; // SLOC → { bookVal, stockVal, variance }
+  const detailRows: any[] = [];
+  const slocTotals: Record<string, any> = {}; // SLOC → { bookVal, stockVal, variance }
 
   for (const key of allKeys) {
     const [sloc, matId] = key.split("|");
@@ -305,7 +305,7 @@ async function generateInventoryReport() {
 
   const W = 140; // total width
   const now = new Date();
-  const lines = [];
+  const lines: any[] = [];
   const L = (s = "") => lines.push(s);
 
   L(SEP("═", W));
@@ -366,7 +366,7 @@ async function generateInventoryReport() {
   L("  DETAIL — Book vs Stock per Material per SLOC");
   L(SEP("─", W));
 
-  let currentSloc = null;
+  let currentSloc: string | null = null;
   for (const r of detailRows) {
     if (r.sloc !== currentSloc) {
       if (currentSloc !== null) L();

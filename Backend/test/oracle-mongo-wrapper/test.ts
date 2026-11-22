@@ -910,7 +910,7 @@ describe("7. DEV_STOCKS — Read Operations", function () {
     });
 
     it("7.8 forEach iterates with O(1) memory", async function () {
-        const items = [];
+        const items: any[] = [];
         await devStocks
             .find({})
             .limit(5)
@@ -2024,7 +2024,7 @@ describe("23. QueryBuilder Edge Cases", function () {
     });
 
     it("23.2 forEach iterates correct number of rows", async function () {
-        const items = [];
+        const items: any[] = [];
         await scratch
             .find({})
             .limit(3)
@@ -2623,7 +2623,7 @@ describe("31. Final Summary", function () {
 function generateReport() {
     const duration = ((report.endTime - report.startTime) / 1000).toFixed(2);
 
-    const lines = [];
+    const lines: string[] = [];
     lines.push(
         "═══════════════════════════════════════════════════════════════",
     );
@@ -2660,7 +2660,7 @@ function generateReport() {
     lines.push("");
 
     // Shared columns analysis
-    const sharedCols = {};
+    const sharedCols: Record<string, any> = {};
     for (const ts of [
         SAPBook,
         StorageLocation,

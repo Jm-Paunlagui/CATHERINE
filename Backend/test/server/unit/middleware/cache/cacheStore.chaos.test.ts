@@ -443,7 +443,7 @@ describe("CacheStore — chaos / edge-case unit tests", function () {
                 throw new Error("loader failed");
             };
 
-            let caught = null;
+            let caught: any = null;
             try {
                 await store.getOrSet("fail-key", bomb);
             } catch (err) {

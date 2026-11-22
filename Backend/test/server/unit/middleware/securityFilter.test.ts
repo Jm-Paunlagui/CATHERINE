@@ -38,7 +38,7 @@ function mockRes() {
 describe("SecurityFilterMiddleware (unit)", function () {
     describe("whitelisted paths", function () {
         it("allows root path /", () =>
-            new Promise((resolve, reject) => {
+            new Promise<void>((resolve, reject) => {
                 const done = (e) => (e ? reject(e) : resolve());
 
                 const filter = new SecurityFilterMiddleware();
@@ -46,7 +46,7 @@ describe("SecurityFilterMiddleware (unit)", function () {
             }));
 
         it("allows /health", () =>
-            new Promise((resolve, reject) => {
+            new Promise<void>((resolve, reject) => {
                 const done = (e) => (e ? reject(e) : resolve());
 
                 const filter = new SecurityFilterMiddleware();
@@ -54,7 +54,7 @@ describe("SecurityFilterMiddleware (unit)", function () {
             }));
 
         it("allows /api/ prefixed paths", () =>
-            new Promise((resolve, reject) => {
+            new Promise<void>((resolve, reject) => {
                 const done = (e) => (e ? reject(e) : resolve());
 
                 const filter = new SecurityFilterMiddleware();
@@ -66,7 +66,7 @@ describe("SecurityFilterMiddleware (unit)", function () {
             }));
 
         it("allows /api-docs paths", () =>
-            new Promise((resolve, reject) => {
+            new Promise<void>((resolve, reject) => {
                 const done = (e) => (e ? reject(e) : resolve());
 
                 const filter = new SecurityFilterMiddleware();
@@ -282,7 +282,7 @@ describe("SecurityFilterMiddleware (unit)", function () {
         });
 
         it("allows clean query strings through", () =>
-            new Promise((resolve, reject) => {
+            new Promise<void>((resolve, reject) => {
                 const done = (e) => (e ? reject(e) : resolve());
                 const filter = new SecurityFilterMiddleware();
                 filter.handle(

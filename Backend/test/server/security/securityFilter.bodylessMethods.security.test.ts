@@ -76,7 +76,7 @@ function rawExchange(port, raw, { timeoutMs = 3000, isHead = false } = {}) {
             const idx = text.indexOf(HEAD_END);
             if (idx < 0) return;
             const [statusLine, ...lines] = text.slice(0, idx).split("\r\n");
-            const headers = {};
+            const headers: Record<string, any> = {};
             for (const l of lines) {
                 const c = l.indexOf(":");
                 if (c > 0) headers[l.slice(0, c).trim().toLowerCase()] = l.slice(c + 1).trim();
@@ -85,7 +85,7 @@ function rawExchange(port, raw, { timeoutMs = 3000, isHead = false } = {}) {
             const cl = headers["content-length"];
             if (!isHead && cl !== undefined && bodyBuf.length < Number(cl)) return;
             const rawBody = !isHead && cl !== undefined ? bodyBuf.subarray(0, Number(cl)).toString("utf8") : "";
-            let body = null;
+            let body: any = null;
             try {
                 body = rawBody ? JSON.parse(rawBody) : null;
             } catch {

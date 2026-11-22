@@ -32,7 +32,7 @@ beforeEach(function () {
     RecipientResolver.invalidate();
     vi.spyOn(AdminModel, "findServerNotifyRecipients").mockResolvedValue([]);
     vi.spyOn(AdminModel, "getNamesByIds").mockResolvedValue(new Map());
-    vi.spyOn(ServerAlertLogModel, "insertOne").mockResolvedValue();
+    vi.spyOn(ServerAlertLogModel, "insertOne").mockResolvedValue(undefined as never);
     vi.spyOn(ServerAlertAckModel, "findAll").mockResolvedValue([]);
     vi.spyOn(logger, "critical").mockImplementation(() => {});
     vi.spyOn(logger, "warning").mockImplementation(() => {});
@@ -47,13 +47,13 @@ afterEach(function () {
 const p95 = (xs) => [...xs].sort((a, b) => a - b)[Math.ceil(xs.length * 0.95) - 1];
 
 it(`${POOLS} pools DOWN then back: one email per tick, p95 tick < ${BUDGET_MS} ms`, async function () {
-    const fired = [];
-    const resolvedMs = [];
+    const fired: number[] = [];
+    const resolvedMs: number[] = [];
     for (let run = 0; run < RUNS; run++) {
         const notifier = new AlertNotifierService();
         const store = new MetricsStore();
         vi.spyOn(MetricsService, "getSnapshot").mockImplementation(() => store.getSnapshot());
-        const sent = [];
+        const sent: any[] = [];
         vi.spyOn(SharedTransporter.getTransporter(), "sendMail").mockImplementation(async (o) => {
             sent.push(o);
             return { messageId: "m" };

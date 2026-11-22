@@ -27,15 +27,15 @@ describe("DB Pool Performance", function () {
                 if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
                 return { rows: [{ RESULT: 1 }] };
             }),
-            ping: vi.fn().mockResolvedValue(),
-            commit: vi.fn().mockResolvedValue(),
-            rollback: vi.fn().mockResolvedValue(),
-            close: vi.fn().mockResolvedValue(),
+            ping: vi.fn().mockResolvedValue(undefined as never),
+            commit: vi.fn().mockResolvedValue(undefined as never),
+            rollback: vi.fn().mockResolvedValue(undefined as never),
+            close: vi.fn().mockResolvedValue(undefined as never),
         };
     }
 
     function fakePool(opts = {}) {
-        const allConns = [];
+        const allConns: any[] = [];
         const pool = {
             poolMin: opts.poolMin ?? 2,
             poolMax: opts.poolMax ?? 5,
@@ -54,7 +54,7 @@ describe("DB Pool Performance", function () {
                 allConns.push(c);
                 return c;
             }),
-            close: vi.fn().mockResolvedValue(),
+            close: vi.fn().mockResolvedValue(undefined as never),
             _allConns: allConns,
         };
         return pool;

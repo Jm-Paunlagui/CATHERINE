@@ -101,11 +101,11 @@ describe("MetricsStore — memory & GC instrumentation", function () {
         it("per-kind collection counts always reconcile with the total (invariant)", function () {
             // Churn allocations so the GC observer fires naturally, then assert the
             // invariant that holds regardless of how many collections actually ran.
-            let churn = [];
+            let churn: any[] = [];
             for (let i = 0; i < 1_000_000; i++) churn.push({ i, s: String(i) });
             churn = null; // drop the reference so collection is possible
 
-            return new Promise((resolve) => {
+            return new Promise<void>((resolve) => {
                 setTimeout(() => {
                     const { gc } = store.getSnapshot().system;
                     const sumByKind =

@@ -43,7 +43,7 @@ afterEach(function () {
 });
 
 function run(isProduction = false) {
-    const violations = [];
+    const violations: any[] = [];
     validateMoneyConfig(violations, isProduction);
     return violations;
 }

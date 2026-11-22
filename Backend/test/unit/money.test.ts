@@ -271,7 +271,7 @@ describe("Money.allocate — deterministic tie-break (blocking)", function () {
             const allocateByIdOrder = (arr) => {
                 const sorted = [...arr].sort((a, b) => a.id - b.id);
                 const parts = total.allocate(sorted.map((p) => p.weight));
-                const byId = {};
+                const byId: Record<string, any> = {};
                 sorted.forEach((p, i) => {
                     byId[p.id] = parts[i].toStorage();
                 });

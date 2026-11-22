@@ -31,7 +31,7 @@ function freshVault() {
  * restores the original values.
  */
 function setEnv(vars) {
-    const saved = {};
+    const saved: Record<string, any> = {};
     for (const [k, v] of Object.entries(vars)) {
         saved[k] = process.env[k];
         if (v === undefined) {

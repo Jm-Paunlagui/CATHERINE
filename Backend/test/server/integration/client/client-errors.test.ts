@@ -78,7 +78,7 @@ describe("POST /api/v1/client/errors", function () {
     });
 
     beforeEach(function () {
-        vi.spyOn(ClientService, "logError").mockResolvedValue();
+        vi.spyOn(ClientService, "logError").mockResolvedValue(undefined as never);
     });
 
     afterEach(function () {

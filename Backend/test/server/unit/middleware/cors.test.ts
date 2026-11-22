@@ -51,7 +51,7 @@ describe("CorsMiddleware", function () {
         }
 
         function mockRes() {
-            const headers = {};
+            const headers: Record<string, any> = {};
             return {
                 setHeader(k, v) {
                     headers[k] = v;
@@ -65,7 +65,7 @@ describe("CorsMiddleware", function () {
             };
         }
 
-        it("allows requests with no origin (same-origin)", () => new Promise((resolve, reject) => {
+        it("allows requests with no origin (same-origin)", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
@@ -76,7 +76,7 @@ describe("CorsMiddleware", function () {
         
             }));
 
-        it("allows an explicitly listed origin", () => new Promise((resolve, reject) => {
+        it("allows an explicitly listed origin", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware({
@@ -90,7 +90,7 @@ describe("CorsMiddleware", function () {
         
             }));
 
-        it("allows a private network origin via default patterns", () => new Promise((resolve, reject) => {
+        it("allows a private network origin via default patterns", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
@@ -102,7 +102,7 @@ describe("CorsMiddleware", function () {
         
             }));
 
-        it("allows localhost origin via default patterns", () => new Promise((resolve, reject) => {
+        it("allows localhost origin via default patterns", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
@@ -114,7 +114,7 @@ describe("CorsMiddleware", function () {
         
             }));
 
-        it("blocks a public origin not in the allowlist", () => new Promise((resolve, reject) => {
+        it("blocks a public origin not in the allowlist", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware({ origins: [] });
@@ -127,7 +127,7 @@ describe("CorsMiddleware", function () {
         
             }));
 
-        it("allows .local domains via default patterns", () => new Promise((resolve, reject) => {
+        it("allows .local domains via default patterns", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
@@ -138,7 +138,7 @@ describe("CorsMiddleware", function () {
         
             }));
 
-        it("allows .vpn domains via default patterns", () => new Promise((resolve, reject) => {
+        it("allows .vpn domains via default patterns", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
@@ -153,7 +153,7 @@ describe("CorsMiddleware", function () {
         
             }));
 
-        it("allows 10.x.x.x private network via default patterns", () => new Promise((resolve, reject) => {
+        it("allows 10.x.x.x private network via default patterns", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
@@ -164,7 +164,7 @@ describe("CorsMiddleware", function () {
         
             }));
 
-        it("allows 172.16-31.x.x private network via default patterns", () => new Promise((resolve, reject) => {
+        it("allows 172.16-31.x.x private network via default patterns", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();

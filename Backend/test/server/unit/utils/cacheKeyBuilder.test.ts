@@ -35,7 +35,7 @@ describe("CacheKeyBuilder", function () {
     });
 
     it("hashes keys longer than 200 characters", function () {
-        const longParams = {};
+        const longParams: Record<string, any> = {};
         for (let i = 0; i < 30; i++) longParams[`param${i}`] = `value${i}`;
         const key = CacheKeyBuilder.build("prefix", longParams);
         expect(key.length).toBeLessThan(220); // hashed — never obscenely long

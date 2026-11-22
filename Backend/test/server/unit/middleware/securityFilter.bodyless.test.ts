@@ -38,7 +38,7 @@ function mockReq({ method = "GET", path = "/api/v1/health/stream", headers, omit
 
 function mockRes({ withSetHeader = true } = {}) {
     let _status, _body;
-    const _headers = {};
+    const _headers: Record<string, any> = {};
     const res = {
         _headers,
         get _status() {

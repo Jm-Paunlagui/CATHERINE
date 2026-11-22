@@ -47,7 +47,7 @@ const SOURCE_ROWS = {
 /** Feeds SOURCE_ROWS through the model's stream callbacks (both the read-consistent and per-table paths). */
 function stubSourceDatabase() {
     vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch }) => {
-        const counts = {};
+        const counts: Record<string, any> = {};
         for (const t of tables) {
             const rows = SOURCE_ROWS[t] ?? [];
             if (rows.length) await onBatch(t, rows.map((r) => ({ ...r })));
@@ -77,7 +77,7 @@ async function editArchive(zipBuffer, edit, { resign = false } = {}) {
     await edit(zip);
     if (resign) {
         const sig = JSON.parse(await zip.file("signature.json").async("string"));
-        const files = {};
+        const files: Record<string, any> = {};
         for (const name of Object.keys(zip.files)) {
             if (name === "manifest.json" || (name.startsWith("data/") && !zip.files[name].dir)) {
                 files[name] = crypto.createHash("sha256").update(await zip.file(name).async("nodebuffer")).digest("hex");

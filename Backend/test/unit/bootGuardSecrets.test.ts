@@ -26,7 +26,7 @@ afterEach(function () {
 });
 
 function changelogViolations() {
-    const violations = [];
+    const violations: any[] = [];
     validateSecretRules(violations);
     return violations.filter((v) => v.includes(KEY));
 }

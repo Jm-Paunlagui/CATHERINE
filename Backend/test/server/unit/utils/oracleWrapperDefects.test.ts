@@ -22,7 +22,7 @@ const { parseUpdate } = require("../../../../src/utils/oracle-mongo-wrapper/pars
 
 /** A connection that records every execute() and returns a canned result. */
 function recordingConn() {
-    const calls = [];
+    const calls: any[] = [];
     return {
         calls,
         async execute(sql, binds, opts) {

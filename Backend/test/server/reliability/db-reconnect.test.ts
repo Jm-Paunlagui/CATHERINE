@@ -22,15 +22,15 @@ describe("DB Reconnection & Resilience", function () {
     function fakeConn() {
         return {
             execute: vi.fn().mockResolvedValue({ rows: [{ RESULT: 1 }] }),
-            ping: vi.fn().mockResolvedValue(),
-            commit: vi.fn().mockResolvedValue(),
-            rollback: vi.fn().mockResolvedValue(),
-            close: vi.fn().mockResolvedValue(),
+            ping: vi.fn().mockResolvedValue(undefined as never),
+            commit: vi.fn().mockResolvedValue(undefined as never),
+            rollback: vi.fn().mockResolvedValue(undefined as never),
+            close: vi.fn().mockResolvedValue(undefined as never),
         };
     }
 
     function fakePool() {
-        const allConns = [];
+        const allConns: any[] = [];
         const pool = {
             poolMin: 2,
             poolMax: 10,
@@ -42,7 +42,7 @@ describe("DB Reconnection & Resilience", function () {
                 allConns.push(c);
                 return c;
             }),
-            close: vi.fn().mockResolvedValue(),
+            close: vi.fn().mockResolvedValue(undefined as never),
             _allConns: allConns,
         };
         return pool;

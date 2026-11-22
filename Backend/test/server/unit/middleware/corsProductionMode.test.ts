@@ -23,7 +23,7 @@ function mockReq(origin) {
 }
 
 function mockRes() {
-    const headers = {};
+    const headers: Record<string, any> = {};
     return {
         setHeader(k, v) {
             headers[k] = v;
@@ -39,7 +39,7 @@ function mockRes() {
 
 /** Saves and restores a set of env vars, returns a restore function. */
 function setEnv(vars) {
-    const saved = {};
+    const saved: Record<string, any> = {};
     for (const [k, v] of Object.entries(vars)) {
         saved[k] = process.env[k];
         if (v === undefined) delete process.env[k];
@@ -79,7 +79,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             restore();
         });
 
-        it("allows 192.168.x.x private network origin in development", () => new Promise((resolve, reject) => {
+        it("allows 192.168.x.x private network origin in development", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -94,7 +94,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("allows .vpn intranet origin in development", () => new Promise((resolve, reject) => {
+        it("allows .vpn intranet origin in development", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -109,7 +109,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("allows .local origin in development", () => new Promise((resolve, reject) => {
+        it("allows .local origin in development", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -120,7 +120,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("allows 10.x.x.x origin in development", () => new Promise((resolve, reject) => {
+        it("allows 10.x.x.x origin in development", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -144,7 +144,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             restore();
         });
 
-        it("BLOCKS 192.168.x.x private network origin in production", () => new Promise((resolve, reject) => {
+        it("BLOCKS 192.168.x.x private network origin in production", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -160,7 +160,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("BLOCKS .vpn intranet origin in production", () => new Promise((resolve, reject) => {
+        it("BLOCKS .vpn intranet origin in production", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -175,7 +175,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("BLOCKS .local origin in production", () => new Promise((resolve, reject) => {
+        it("BLOCKS .local origin in production", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -186,7 +186,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("BLOCKS 10.x.x.x origin in production", () => new Promise((resolve, reject) => {
+        it("BLOCKS 10.x.x.x origin in production", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -197,7 +197,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("STILL allows localhost origin in production (safe loopback)", () => new Promise((resolve, reject) => {
+        it("STILL allows localhost origin in production (safe loopback)", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -208,7 +208,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("STILL allows 127.0.0.1 origin in production (safe loopback)", () => new Promise((resolve, reject) => {
+        it("STILL allows 127.0.0.1 origin in production (safe loopback)", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -219,7 +219,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("STILL allows explicit CORS_ORIGINS entry in production", () => new Promise((resolve, reject) => {
+        it("STILL allows explicit CORS_ORIGINS entry in production", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const origOrigins = process.env.CORS_ORIGINS;
@@ -252,7 +252,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             restore();
         });
 
-        it("allows 192.168.x.x when opt-in flag is set in production", () => new Promise((resolve, reject) => {
+        it("allows 192.168.x.x when opt-in flag is set in production", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();
@@ -267,7 +267,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         
             }));
 
-        it("allows .vpn when opt-in flag is set in production", () => new Promise((resolve, reject) => {
+        it("allows .vpn when opt-in flag is set in production", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const cors = freshCors();

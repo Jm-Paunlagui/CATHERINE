@@ -91,7 +91,7 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
     });
 
     describe("rate limiting uses the correct IP (no XFF bypass)", function () {
-        it("rate-limits by req.ip, not by X-Forwarded-For value", () => new Promise((resolve, reject) => {
+        it("rate-limits by req.ip, not by X-Forwarded-For value", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
             const limiter = new RateLimiterMiddleware({
                 max: 1,
@@ -111,7 +111,7 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
             }
 
             const mockRes = () => {
-                const h = {};
+                const h: Record<string, any> = {};
                 return {
                     _status: null,
                     headersSent: false,

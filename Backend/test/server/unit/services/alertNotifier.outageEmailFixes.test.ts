@@ -27,7 +27,7 @@ beforeEach(function () {
     vi.stubEnv("ENABLE_SERVER_NOTIFICATIONS", "true");
     vi.stubEnv("SERVER_NOTIFY_TO", "ops@example.com");
     notifier = new AlertNotifierService();
-    vi.spyOn(ServerAlertLogModel, "insertOne").mockResolvedValue();
+    vi.spyOn(ServerAlertLogModel, "insertOne").mockResolvedValue(undefined as never);
     vi.spyOn(MetricsService, "getSnapshot").mockReturnValue({});
     vi.spyOn(MetricsService, "evaluateAlertHolds").mockReturnValue([]);
 });
@@ -76,7 +76,7 @@ describe("OF-2 — critical channel KV for metric digests", function () {
     it("the critical-log digest stamps its first event in local time too", async function () {
         vi.stubEnv("DB_TIMEZONE_OFFSET_MINUTES", "480");
         const send = vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true });
-        vi.spyOn(notifier, "_writeAlertLogRows").mockResolvedValue();
+        vi.spyOn(notifier, "_writeAlertLogRows").mockResolvedValue(undefined as never);
         await notifier._dispatchCriticalDigest(
             [{ level: "CRITICAL", message: "pool down", meta: {}, requestId: null, timestamp: "2026-11-03T06:32:05.672Z" }],
             "",

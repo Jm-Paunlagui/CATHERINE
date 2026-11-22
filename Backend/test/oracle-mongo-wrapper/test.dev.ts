@@ -1262,7 +1262,7 @@ describe("20. QueryBuilder Edge Cases", function () {
     });
 
     it("20.2 forEach iterates all rows", async function () {
-        const items = [];
+        const items: any[] = [];
         await scratch
             .find({})
             .limit(3)

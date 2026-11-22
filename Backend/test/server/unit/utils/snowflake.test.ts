@@ -98,7 +98,7 @@ describe("Snowflake ID Generator", () => {
     describe("ordering", () => {
         it("IDs generated across different milliseconds sort by timestamp", async () => {
             const { snowflake } = await freshImport();
-            const ids = [];
+            const ids: string[] = [];
             for (let i = 0; i < 5; i++) {
                 await new Promise((r) => setTimeout(r, 2));
                 ids.push(snowflake.nextId());

@@ -73,7 +73,7 @@ describe("shutdown gate - performance", function () {
                 time(bare);
                 time(gate.handle);
             }
-            const ratios = [];
+            const ratios: number[] = [];
             for (let r = 0; r < 7; r++) {
                 const b = Math.max(1, time(bare));
                 const g = time(gate.handle);
@@ -102,7 +102,7 @@ describe("shutdown gate - performance", function () {
             };
             for (let i = 0; i < 1_000; i++) drainingGate.handle(req, r, next);
             errs = 0;
-            const samples = [];
+            const samples: number[] = [];
             for (let i = 0; i < N_CALLS; i++) {
                 const t0 = process.hrtime.bigint();
                 drainingGate.handle(req, r, next);

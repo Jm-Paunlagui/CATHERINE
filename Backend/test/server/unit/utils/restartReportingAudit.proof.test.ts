@@ -363,7 +363,7 @@ describe("review M2 - recipient lookup while the database is the thing that hung
         vi.useFakeTimers();
         try {
             const t0 = Date.now();
-            let settledAt = null;
+            let settledAt: any = null;
             let value;
             const p = RecipientResolver.getDbRecipients("server-system-notification").then((v) => {
                 settledAt = Date.now();

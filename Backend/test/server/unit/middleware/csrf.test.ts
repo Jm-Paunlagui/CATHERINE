@@ -64,7 +64,7 @@ describe("CsrfMiddleware (unit)", function () {
             });
             // Access via statusHandler to check cookie name
             const req = { ip: "127.0.0.1", cookies: {}, get: () => undefined };
-            const body = {};
+            const body: Record<string, any> = {};
             const res = {
                 json(b) {
                     Object.assign(body, b);
@@ -80,7 +80,7 @@ describe("CsrfMiddleware (unit)", function () {
                 forceSecure: false,
             });
             const req = { ip: "127.0.0.1", cookies: {}, get: () => undefined };
-            const body = {};
+            const body: Record<string, any> = {};
             const res = {
                 json(b) {
                     Object.assign(body, b);
@@ -98,7 +98,7 @@ describe("CsrfMiddleware (unit)", function () {
                 forceSecure: false,
             });
             const req = { ip: "127.0.0.1", cookies: {}, get: () => undefined };
-            const body = {};
+            const body: Record<string, any> = {};
             const res = {
                 json(b) {
                     Object.assign(body, b);
@@ -125,7 +125,7 @@ describe("CsrfMiddleware (unit)", function () {
                 cookies: { [cookieName]: "some-value" },
                 get: () => undefined,
             };
-            const body = {};
+            const body: Record<string, any> = {};
             const res = {
                 json(b) {
                     Object.assign(body, b);
@@ -145,7 +145,7 @@ describe("CsrfMiddleware (unit)", function () {
                 forceSecure: false,
             });
             const req = { ip: "127.0.0.1", cookies: {}, get: () => undefined };
-            const body = {};
+            const body: Record<string, any> = {};
             const res = {
                 json(b) {
                     Object.assign(body, b);
@@ -166,7 +166,7 @@ describe("CsrfMiddleware (unit)", function () {
             });
             const req = { ip: "127.0.0.1", cookies: {}, get: () => undefined };
             let statusCode;
-            const body = {};
+            const body: Record<string, any> = {};
             const res = {
                 status(c) {
                     statusCode = c;

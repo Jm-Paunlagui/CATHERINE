@@ -58,10 +58,10 @@ function collectSourceFiles(dir, acc = []) {
  * O(n) time in the argument-string length, O(n) space.
  */
 function splitTopLevelArgs(argString) {
-    const parts = [];
+    const parts: string[] = [];
     let depth = 0; // (), [], {} nesting, outside strings
     let current = "";
-    let quote = null; // active string delimiter: ' " or `
+    let quote: any = null; // active string delimiter: ' " or `
     let escaped = false;
     let tplDepth = 0; // ${ } nesting inside a template literal
 
@@ -118,8 +118,8 @@ function splitTopLevelArgs(argString) {
  * at runtime (a lookup table, a variable) are reported separately as dynamic.
  */
 function scanAppErrorCalls(file, text) {
-    const found = [];
-    const dynamic = [];
+    const found: any[] = [];
+    const dynamic: any[] = [];
     const re = /new\s+AppError\s*\(/g;
     let match;
 
@@ -164,7 +164,7 @@ function scanAppErrorCalls(file, text) {
 
 /** Finds `res.status(<n>)` / `res.status(HTTP_STATUS.KEY)` call sites. */
 function scanResStatusCalls(file, text) {
-    const found = [];
+    const found: any[] = [];
     const re = /res\s*\.\s*status\(\s*(?:HTTP_STATUS\.)?(\w+)\s*\)/g;
     let match;
     while ((match = re.exec(text)) !== null) {
@@ -185,8 +185,8 @@ function scanResStatusCalls(file, text) {
 let SCAN;
 beforeAll(function () {
     const files = collectSourceFiles(SRC_ROOT);
-    const emitted = [];
-    const dynamic = [];
+    const emitted: any[] = [];
+    const dynamic: any[] = [];
     for (const file of files) {
         const text = fs.readFileSync(file, "utf8");
         const appError = scanAppErrorCalls(file, text);

@@ -13,7 +13,7 @@ beforeAll(async function () {
 describe("Response Time Budgets", function () {
     describe("GET /api/v1/health/live (pure HTTP, no Oracle)", function () {
         it("p50 (median of 20 runs) is under 50ms", async function () {
-            const times = [];
+            const times: any[] = [];
             for (let i = 0; i < 20; i++) {
                 const start = process.hrtime.bigint();
                 await agent.get("/api/v1/health/live");
@@ -25,7 +25,7 @@ describe("Response Time Budgets", function () {
         });
 
         it("p95 (95th percentile of 20 runs) is under 200ms", async function () {
-            const times = [];
+            const times: any[] = [];
             for (let i = 0; i < 20; i++) {
                 const start = process.hrtime.bigint();
                 await agent.get("/api/v1/health/live");

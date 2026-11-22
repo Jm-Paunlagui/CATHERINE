@@ -60,11 +60,11 @@ beforeEach(function () {
 
     vi.spyOn(AdminModel, "findServerNotifyRecipients").mockResolvedValue([]);
     vi.spyOn(AdminModel, "getNamesByIds").mockResolvedValue(new Map());
-    vi.spyOn(ServerAlertLogModel, "insertOne").mockResolvedValue();
+    vi.spyOn(ServerAlertLogModel, "insertOne").mockResolvedValue(undefined as never);
     vi.spyOn(ServerAlertLogModel, "findRecent").mockResolvedValue([]);
     vi.spyOn(ServerAlertLogModel, "purgeOlderThan").mockResolvedValue(0);
     vi.spyOn(ServerAlertAckModel, "findAll").mockResolvedValue([]);
-    vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue();
+    vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue(undefined as never);
     vi.spyOn(ServerAlertAckModel, "remove").mockResolvedValue(true);
     vi.spyOn(ServerAlertAckModel, "findOne").mockResolvedValue(null);
     vi.spyOn(MetricsService, "getSnapshot").mockImplementation(() => store.getSnapshot());
@@ -218,7 +218,7 @@ describe("OG4 â€” restart mid-outage (gap 4)", function () {
 
 describe("OG5 â€” alert-log rows queued during the outage (gap 5)", function () {
     it("rows that failed to write while the DB was down are written once, in order, on recovery", async function () {
-        const written = [];
+        const written: any[] = [];
         let dbUp = false;
         ServerAlertLogModel.insertOne.mockImplementation(async (row) => {
             if (!dbUp) throw new Error("NJS-503: connection to host failed");

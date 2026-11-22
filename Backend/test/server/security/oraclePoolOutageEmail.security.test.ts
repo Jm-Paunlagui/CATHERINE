@@ -38,7 +38,7 @@ beforeEach(function () {
     RecipientResolver.invalidate();
     vi.spyOn(AdminModel, "findServerNotifyRecipients").mockResolvedValue([]);
     vi.spyOn(AdminModel, "getNamesByIds").mockResolvedValue(new Map());
-    vi.spyOn(ServerAlertLogModel, "insertOne").mockResolvedValue();
+    vi.spyOn(ServerAlertLogModel, "insertOne").mockResolvedValue(undefined as never);
     vi.spyOn(ServerAlertAckModel, "findAll").mockResolvedValue([]);
     vi.spyOn(MetricsService, "getSnapshot").mockImplementation(() => store.getSnapshot());
     sent = [];

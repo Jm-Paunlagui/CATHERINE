@@ -391,7 +391,7 @@ describe("EmailProtectionService", function () {
 
     describe("sendProtected() — requestId propagation via AsyncLocalStorage", function () {
         it("every logger.log call made during sendProtected() carries the ALS requestId", async function () {
-            const observedRequestIds = [];
+            const observedRequestIds: any[] = [];
             vi.spyOn(logger, "log").mockImplementation(async () => {
                 observedRequestIds.push(requestContext.getStore()?.requestId ?? null);
             });

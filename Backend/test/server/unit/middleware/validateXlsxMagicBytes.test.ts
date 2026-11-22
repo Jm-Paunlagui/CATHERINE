@@ -82,7 +82,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
     // ── Happy path ────────────────────────────────────────────────────────────
 
     describe("happy path — valid XLSX buffer", function () {
-        it("calls next() without error for a valid OOXML/ZIP magic header", () => new Promise((resolve, reject) => {
+        it("calls next() without error for a valid OOXML/ZIP magic header", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(validXlsxBuffer());
@@ -93,7 +93,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("accepts a buffer that is exactly 4 bytes (minimum valid length)", () => new Promise((resolve, reject) => {
+        it("accepts a buffer that is exactly 4 bytes (minimum valid length)", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const buf = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
@@ -105,7 +105,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("accepts a large realistic buffer with correct magic bytes", () => new Promise((resolve, reject) => {
+        it("accepts a large realistic buffer with correct magic bytes", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(validXlsxBuffer(1024 * 100)); // 100 KB
@@ -120,7 +120,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
     // ── No file / null buffer — pass through ─────────────────────────────────
 
     describe("no file uploaded — pass through", function () {
-        it("calls next() without error when req.file is undefined", () => new Promise((resolve, reject) => {
+        it("calls next() without error when req.file is undefined", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(undefined);
@@ -131,7 +131,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("calls next() without error when req.file is null", () => new Promise((resolve, reject) => {
+        it("calls next() without error when req.file is null", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = { file: null };
@@ -142,7 +142,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("calls next() without error when req.file.buffer is null", () => new Promise((resolve, reject) => {
+        it("calls next() without error when req.file.buffer is null", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(null); // file present, buffer null
@@ -157,7 +157,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
     // ── Buffer too small ──────────────────────────────────────────────────────
 
     describe("buffer too small — rejected", function () {
-        it("calls next(AppError) when buffer has 0 bytes", () => new Promise((resolve, reject) => {
+        it("calls next(AppError) when buffer has 0 bytes", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(Buffer.alloc(0));
@@ -170,7 +170,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("calls next(AppError) when buffer has only 3 bytes", () => new Promise((resolve, reject) => {
+        it("calls next(AppError) when buffer has only 3 bytes", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(Buffer.from([0x50, 0x4b, 0x03]));
@@ -182,7 +182,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("AppError.details array is present for undersized buffer", () => new Promise((resolve, reject) => {
+        it("AppError.details array is present for undersized buffer", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(Buffer.from([0x50]));
@@ -198,7 +198,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
     // ── Magic bytes mismatch ──────────────────────────────────────────────────
 
     describe("magic bytes mismatch — rejected", function () {
-        it("rejects a PDF buffer (%PDF header)", () => new Promise((resolve, reject) => {
+        it("rejects a PDF buffer (%PDF header)", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(pdfBuffer());
@@ -211,7 +211,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("rejects a Windows EXE/PE buffer (MZ header)", () => new Promise((resolve, reject) => {
+        it("rejects a Windows EXE/PE buffer (MZ header)", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(exeBuffer());
@@ -223,7 +223,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("rejects a buffer of all-zero bytes", () => new Promise((resolve, reject) => {
+        it("rejects a buffer of all-zero bytes", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(Buffer.alloc(16));
@@ -235,7 +235,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("rejects a buffer starting with 50 4B 03 05 (not exactly 03 04)", () => new Promise((resolve, reject) => {
+        it("rejects a buffer starting with 50 4B 03 05 (not exactly 03 04)", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const buf = Buffer.from([0x50, 0x4b, 0x03, 0x05, 0x00, 0x00]);
@@ -248,7 +248,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("AppError.name is 'ValidationError' for mismatch", () => new Promise((resolve, reject) => {
+        it("AppError.name is 'ValidationError' for mismatch", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(pdfBuffer());
@@ -259,7 +259,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
         
             }));
 
-        it("AppError.details[0].field is 'file' for mismatch", () => new Promise((resolve, reject) => {
+        it("AppError.details[0].field is 'file' for mismatch", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const req = mockReq(exeBuffer());
@@ -275,7 +275,7 @@ describe("validateXlsxMagicBytes middleware (CWE-434)", function () {
     // ── Correct magic, wrong extension (extension spoofing attempted) ─────────
 
     describe("extension vs magic — magic wins", function () {
-        it("accepts a buffer with valid OOXML magic even if originalname ends in .csv", () => new Promise((resolve, reject) => {
+        it("accepts a buffer with valid OOXML magic even if originalname ends in .csv", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             // Magic bytes check only looks at the buffer — not the filename.

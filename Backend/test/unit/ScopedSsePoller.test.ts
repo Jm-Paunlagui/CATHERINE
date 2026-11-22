@@ -58,8 +58,8 @@ describe("ScopedSsePoller — one query per SCOPE, not per connection (8a)", fun
                 return "sig-1";
             },
         });
-        const sink = [];
-        const closers = [];
+        const sink: any[] = [];
+        const closers: any[] = [];
         for (let i = 0; i < 10; i++) {
             const res = makeRes(sink);
             closers.push(poller.open(res, { key: "acct:5", meta: { id: 5 } }));
@@ -81,7 +81,7 @@ describe("ScopedSsePoller — one query per SCOPE, not per connection (8a)", fun
                 return "sig";
             },
         });
-        const sink = [];
+        const sink: any[] = [];
         const a = poller.open(makeRes(sink), { key: "acct:1", meta: { id: 1 } });
         const b = poller.open(makeRes(sink), { key: "acct:2", meta: { id: 2 } });
 
@@ -107,7 +107,7 @@ describe("ScopedSsePoller — scope isolation / bulkhead (8b)", function () {
                 return "ok";
             },
         });
-        const sink = [];
+        const sink: any[] = [];
         const good = makeRes(sink);
         poller.open(good, { key: "good", meta: { id: "good" } });
         poller.open(makeRes(sink), { key: "bad", meta: { id: "bad" } });
@@ -129,7 +129,7 @@ describe("ScopedSsePoller — cache purge happens BEFORE the update broadcast (8
     afterEach(() => vi.useRealTimers());
 
     it("onChange (purge) is called strictly before the client is told 'update'", async function () {
-        const order = [];
+        const order: any[] = [];
         let cursor = "sig-0";
         const poller = new ScopedSsePoller({
             name: "t",
@@ -160,14 +160,14 @@ describe("ScopedSsePoller — cache purge happens BEFORE the update broadcast (8
 
     it("a null cursor (gate closed / no rows) never counts as a change", async function () {
         let cursor = "sig-0";
-        const changes = [];
+        const changes: any[] = [];
         const poller = new ScopedSsePoller({
             name: "t",
             pollIntervalMs: 1000,
             readCursor: () => cursor,
             onChange: () => changes.push("changed"),
         });
-        const sink = [];
+        const sink: any[] = [];
         poller.open(makeRes(sink), { key: "k", meta: {} });
 
         await vi.advanceTimersByTimeAsync(1000); // baseline
@@ -191,7 +191,7 @@ describe("ScopedSsePoller — lifecycle: shared interval stops when the last sco
                 return "s";
             },
         });
-        const sink = [];
+        const sink: any[] = [];
         const close = poller.open(makeRes(sink), { key: "k", meta: {} });
 
         await vi.advanceTimersByTimeAsync(1000);

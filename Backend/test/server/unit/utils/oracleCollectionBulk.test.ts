@@ -28,7 +28,7 @@ const ORACLEDB = {
 
 /** Builds a fake bound connection whose executeMany returns `result`. */
 function fakeConn(result) {
-    const calls = [];
+    const calls: any[] = [];
     return {
         calls,
         async executeMany(sql, rows, options) {
@@ -101,7 +101,7 @@ describe("OracleCollection.insertMany — options", function () {
 
     it("rejects returning + batchErrors together (mutually exclusive)", async function () {
         const coll = new OracleCollection("X", fakeDb, fakeConn({}));
-        let threw = null;
+        let threw: any = null;
         try {
             await coll.insertMany([{ A: 1 }], {
                 returning: ["ID"],
@@ -116,7 +116,7 @@ describe("OracleCollection.insertMany — options", function () {
 
     it("throws on an empty documents array", async function () {
         const coll = new OracleCollection("X", fakeDb, fakeConn({}));
-        let threw = null;
+        let threw: any = null;
         try {
             await coll.insertMany([]);
         } catch (e) {
@@ -162,7 +162,7 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
 
     it("throws when keys are missing", async function () {
         const coll = new OracleCollection("X", fakeDb, fakeConn({}));
-        let threw = null;
+        let threw: any = null;
         try {
             await coll.bulkUpdateByKeys([{ ID: 1, V: 2 }], {});
         } catch (e) {
@@ -173,7 +173,7 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
 
     it("throws when no non-key columns remain to update", async function () {
         const coll = new OracleCollection("X", fakeDb, fakeConn({}));
-        let threw = null;
+        let threw: any = null;
         try {
             await coll.bulkUpdateByKeys([{ ID: 1 }], { keys: ["ID"] });
         } catch (e) {
@@ -184,7 +184,7 @@ describe("OracleCollection.bulkUpdateByKeys", function () {
 
     it("throws on an empty rows array", async function () {
         const coll = new OracleCollection("X", fakeDb, fakeConn({}));
-        let threw = null;
+        let threw: any = null;
         try {
             await coll.bulkUpdateByKeys([], { keys: ["ID"] });
         } catch (e) {

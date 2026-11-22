@@ -53,7 +53,7 @@ const standardUserToken = () =>
 
 const MOCK_SNAPSHOT = { requests: { total: 200, errors: 4 }, uptime: 3600 };
 const MOCK_SUMMARY = { total: 200, errorRate: 0.02, topSlowRoutes: [] };
-const MOCK_ALERTS = [];
+const MOCK_ALERTS: any[] = [];
 
 // ── Assertion helpers ─────────────────────────────────────────────────────────
 
@@ -272,7 +272,7 @@ describe("POST /api/v1/metrics/frontend — frontend ingestion", function () {
         } = require("../../../../src/routes/metrics.route").default;
         frontendIngestLimiter.flushAll();
 
-        vi.spyOn(MetricsService, "ingestFrontendMetrics").mockResolvedValue();
+        vi.spyOn(MetricsService, "ingestFrontendMetrics").mockResolvedValue(undefined as never);
     });
 
     afterEach(function () {

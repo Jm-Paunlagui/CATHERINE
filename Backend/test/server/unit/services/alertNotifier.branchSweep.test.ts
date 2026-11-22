@@ -52,7 +52,7 @@ describe("AlertNotifierService — branch sweep", function () {
         it("start() still arms the poll timer and the retention sweep", function () {
             vi.spyOn(ServerNotificationService, "isEnabled").mockReturnValue(true);
             vi.spyOn(logger, "onLevel").mockReturnValue(() => {});
-            vi.spyOn(svc, "_hydrateAcks").mockResolvedValue();
+            vi.spyOn(svc, "_hydrateAcks").mockResolvedValue(undefined as never);
             const si = vi.spyOn(global, "setInterval").mockReturnValue(7);
             vi.spyOn(global, "clearInterval").mockImplementation(() => {});
 
@@ -106,7 +106,7 @@ describe("AlertNotifierService — branch sweep", function () {
             vi.useFakeTimers();
             vi.spyOn(ServerNotificationService, "isEnabled").mockReturnValue(true);
             vi.spyOn(logger, "onLevel").mockReturnValue(() => {});
-            vi.spyOn(svc, "_hydrateAcks").mockResolvedValue();
+            vi.spyOn(svc, "_hydrateAcks").mockResolvedValue(undefined as never);
             vi.spyOn(svc, "_pollTick").mockRejectedValue("plain-string-failure");
 
             svc.start();
@@ -174,7 +174,7 @@ describe("AlertNotifierService — branch sweep", function () {
             vi.spyOn(ServerNotificationService, "isEnabled").mockReturnValue(true);
             const unsub = vi.fn();
             vi.spyOn(logger, "onLevel").mockReturnValue(unsub);
-            vi.spyOn(svc, "_hydrateAcks").mockResolvedValue();
+            vi.spyOn(svc, "_hydrateAcks").mockResolvedValue(undefined as never);
             svc.start();
             svc.beginShutdown();
             expect(svc._pollTimer).toBeNull();
@@ -249,7 +249,7 @@ describe("AlertNotifierService — branch sweep", function () {
         it("a second start() while running is a no-op; stop() reports discarded buffered criticals", function () {
             vi.spyOn(ServerNotificationService, "isEnabled").mockReturnValue(true);
             vi.spyOn(logger, "onLevel").mockReturnValue(() => {});
-            vi.spyOn(svc, "_hydrateAcks").mockResolvedValue();
+            vi.spyOn(svc, "_hydrateAcks").mockResolvedValue(undefined as never);
             svc.start();
             expect(svc.start()).toEqual({ started: false, reason: "already-started" });
             svc._criticalBuffer.push(ev);
@@ -277,7 +277,7 @@ describe("AlertNotifierService — branch sweep", function () {
             vi.spyOn(MetricsService, "getClusterSnapshot").mockResolvedValue({});
             vi.spyOn(MetricsService, "evaluateAlerts").mockImplementation(() => alertsPerTick[Math.min(i++, alertsPerTick.length - 1)]);
             vi.spyOn(MetricsService, "evaluateAlertHolds").mockReturnValue([]);
-            return vi.spyOn(svc, "_dispatchMetricDigest").mockResolvedValue();
+            return vi.spyOn(svc, "_dispatchMetricDigest").mockResolvedValue(undefined as never);
         };
 
         it("an alert with no severity is treated as WARNING and fires once", async function () {
@@ -387,7 +387,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("an active event with an empty alert uses UNKNOWN_RULE / global / '' / warning defaults", async function () {
-            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             await svc._dispatchMetricDigest("server-system-notification", [{ alert: {}, key: undefined }], {}, false);
 
             const [, payload] = ServerNotificationService.sendChannelDigest.mock.calls[0];
@@ -400,7 +400,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("a recovery event takes rule and route from state.lastAlert", async function () {
-            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             await svc._dispatchMetricDigest(
                 "server-system-notification",
                 [{ state: { lastAlert: { rule: "HIGH_LATENCY", route: "/r" }, rule: "x", scope: "y" }, key: "HIGH_LATENCY::/r" }],
@@ -413,7 +413,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("a critical alert makes the digest CRITICAL", async function () {
-            vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+            vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             await svc._dispatchMetricDigest(
                 "server-system-notification",
                 [{ alert: { rule: "HIGH_HEAP", severity: "CRITICAL" }, key: "HIGH_HEAP::global", transitionType: "FIRED" }],
@@ -424,7 +424,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("recovery rows ignore alert fields and take scope from the key when state has none", async function () {
-            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             await svc._dispatchMetricDigest(
                 "server-system-notification",
                 [{ state: { lastAlert: null }, key: "HIGH_LATENCY::/api/x" }],
@@ -445,7 +445,7 @@ describe("AlertNotifierService — branch sweep", function () {
 
         it("a failed send is recorded as FAILED with the cause, a disabled one as DISABLED", async function () {
             ServerNotificationService.sendChannelDigest.mockResolvedValueOnce({ sent: false, reason: "smtp", cause: "ECONNREFUSED" });
-            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             await svc._dispatchMetricDigest("server-system-notification", [{ alert: { rule: "R" }, key: "R::global" }], {}, false);
             expect(write.mock.calls[0][0][0]).toMatchObject({ emailStatus: "FAILED", emailError: "ECONNREFUSED", notificationId: null });
             expect(svc._emailStatusFor({ sent: false, reason: "disabled" })).toBe("DISABLED");
@@ -514,7 +514,7 @@ describe("AlertNotifierService — branch sweep", function () {
 
         it("_dispatchCriticalDigest with no events falls back to 'now' for firstEventAt and counts overflow", async function () {
             const send = vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true });
-            vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+            vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             await svc._dispatchCriticalDigest([], "", 3);
             const [, payload] = send.mock.calls[0];
             expect(payload.kv.eventCount).toBe(3);
@@ -524,7 +524,7 @@ describe("AlertNotifierService — branch sweep", function () {
 
         it("persist:false skips alert-log rows and logs that it did", async function () {
             vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true });
-            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             const ev = { level: "CRITICAL", message: "m", meta: {}, requestId: null, timestamp: "2026-01-01T00:00:00Z" };
             await svc._dispatchCriticalDigest([ev], "", 0, { persist: false });
             expect(write).not.toHaveBeenCalled();
@@ -533,7 +533,7 @@ describe("AlertNotifierService — branch sweep", function () {
 
         it("persist:true writes one FIRED row per event with the callsite when function+file are present", async function () {
             vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: false, reason: "smtp", cause: "bad" });
-            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+            const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             const ev = { level: "ALERT", message: "m", meta: { function: "f", file: "a.js", line: 4 }, requestId: "r1", timestamp: "2026-01-01T00:00:00Z" };
             await svc._dispatchCriticalDigest([ev], "", 0);
             const row = write.mock.calls[0][0][0];
@@ -551,7 +551,7 @@ describe("AlertNotifierService — branch sweep", function () {
             process.env.CRITICAL_MAX_EMAILS_PER_HOUR = "1";
             try {
                 const send = vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true });
-                const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue();
+                const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
                 svc._criticalSentTimestamps = [Date.now()];
                 svc._criticalBuffer = [{ level: "CRITICAL", message: "m", meta: {}, requestId: null, timestamp: "2026-01-01T00:00:00Z" }];
                 await svc._flushCriticalDigest({ persist: false });
@@ -581,7 +581,7 @@ describe("AlertNotifierService — branch sweep", function () {
     // ── alert-log persistence ────────────────────────────────────────────────
     describe("alert-log queue", function () {
         it("overflow past 500 rows drops the oldest and warns once with the count", async function () {
-            vi.spyOn(svc, "_flushAlertLogQueue").mockResolvedValue();
+            vi.spyOn(svc, "_flushAlertLogQueue").mockResolvedValue(undefined as never);
             const rows = Array.from({ length: 502 }, (_, n) => ({ alertKey: `k${n}`, details: null }));
             await svc._writeAlertLogRows(rows);
             expect(svc._alertLogQueue).toHaveLength(500);
@@ -590,7 +590,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("overflow while a flush is in flight keeps the head row (drops index 1)", async function () {
-            vi.spyOn(svc, "_flushAlertLogQueue").mockResolvedValue();
+            vi.spyOn(svc, "_flushAlertLogQueue").mockResolvedValue(undefined as never);
             svc._alertLogFlushing = Promise.resolve();
             svc._alertLogQueue = Array.from({ length: 500 }, (_, n) => ({ alertKey: `q${n}` }));
             await svc._writeAlertLogRows([{ alertKey: "new", details: null }]);
@@ -673,7 +673,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("unknown key -> 404 ALERT_NOT_FOUND; OK-state key -> 400 ALERT_NOT_ACTIVE; no write happens", async function () {
-            const upsert = vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue();
+            const upsert = vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue(undefined as never);
             const e1 = await rejection(svc.acknowledge("HIGH_HEAP::global", 1));
             expect(e1.statusCode).toBe(404);
             expect(e1.message).toBe(NOTIFICATION_ERRORS.ALERT_NOT_FOUND);
@@ -686,7 +686,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("an unexpected status (e.g. INFO) -> 400 ALERT_NOT_ACTIVE, never reaches CK_SAA_SEVERITY", async function () {
-            const upsert = vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue();
+            const upsert = vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue(undefined as never);
             svc._alertStates.set("HIGH_HEAP::global", { status: "INFO" });
             const err = await rejection(svc.acknowledge("HIGH_HEAP::global", 1));
             expect(err.statusCode).toBe(400);
@@ -704,7 +704,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("success stores severityAtAck from live state, caps the note at 500 chars and uses the TTL", async function () {
-            const upsert = vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue();
+            const upsert = vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue(undefined as never);
             svc._alertStates.set("HIGH_HEAP::global", { status: "WARNING" });
             const res = await svc.acknowledge("HIGH_HEAP::global", "17", "n".repeat(600));
             expect(res).toMatchObject({ alertKey: "HIGH_HEAP::global", acknowledged: true, ackedBy: 17, severityAtAck: "WARNING" });
@@ -719,7 +719,7 @@ describe("AlertNotifierService — branch sweep", function () {
             expect((await rejection(svc.unacknowledge("k::g"))).message).toBe(NOTIFICATION_ERRORS.ACK_NOT_FOUND);
 
             svc._acks.set("k::g", { ackedBy: 1, ackedAt: 1, expiresAt: 2, severityAtAck: "WARNING", note: null });
-            const rm = vi.spyOn(ServerAlertAckModel, "remove").mockRejectedValueOnce("ora-down").mockResolvedValue();
+            const rm = vi.spyOn(ServerAlertAckModel, "remove").mockRejectedValueOnce("ora-down").mockResolvedValue(undefined as never);
             const err = await rejection(svc.unacknowledge("k::g"));
             expect(err.statusCode).toBe(502);
             expect(svc._acks.has("k::g")).toBe(true);
@@ -730,14 +730,14 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("an expired ack is cleared on the next check and does not suppress", function () {
-            vi.spyOn(ServerAlertAckModel, "remove").mockResolvedValue();
+            vi.spyOn(ServerAlertAckModel, "remove").mockResolvedValue(undefined as never);
             svc._acks.set("k::g", { ackedBy: 1, ackedAt: 1, expiresAt: Date.now() - 1, severityAtAck: "CRITICAL", note: null });
             expect(svc._checkAndUpdateAck("k::g", "WARNING")).toEqual({ suppress: false });
             expect(svc._acks.has("k::g")).toBe(false);
         });
 
         it("escalation past the ack baseline clears the ack; same level keeps suppressing", function () {
-            vi.spyOn(ServerAlertAckModel, "remove").mockResolvedValue();
+            vi.spyOn(ServerAlertAckModel, "remove").mockResolvedValue(undefined as never);
             svc._acks.set("k::g", { ackedBy: 1, ackedAt: 1, expiresAt: Date.now() + 1e6, severityAtAck: "WARNING", note: null });
             expect(svc._checkAndUpdateAck("k::g", "WARNING")).toEqual({ suppress: true });
             expect(svc._checkAndUpdateAck("k::g", "CRITICAL")).toEqual({ suppress: false });
@@ -756,7 +756,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("_hydrateAcks loads live rows, drops lapsed ones (and deletes them), tolerates failure", async function () {
-            const rm = vi.spyOn(ServerAlertAckModel, "remove").mockResolvedValue();
+            const rm = vi.spyOn(ServerAlertAckModel, "remove").mockResolvedValue(undefined as never);
             vi.spyOn(ServerAlertAckModel, "findAll").mockResolvedValueOnce([
                 { ALERT_KEY: "live::g", EXPIRES_AT: new Date(Date.now() + 1e6), ACKED_AT: new Date(), ACKED_BY: "5", SEVERITY_AT_ACK: "WARNING", NOTE: undefined },
                 { ALERT_KEY: "old::g", EXPIRES_AT: new Date(Date.now() - 1e6), ACKED_AT: new Date(), ACKED_BY: 6, SEVERITY_AT_ACK: "WARNING" },
@@ -777,7 +777,7 @@ describe("AlertNotifierService — branch sweep", function () {
     // ── decorate / status / history / test email ─────────────────────────────
     describe("decorateAlertsWithAckState", function () {
         it("returns the input untouched for empty / nullish alerts", async function () {
-            const empty = [];
+            const empty: any[] = [];
             await expect(svc.decorateAlertsWithAckState(empty)).resolves.toBe(empty);
             await expect(svc.decorateAlertsWithAckState(null)).resolves.toEqual([]);
         });

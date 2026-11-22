@@ -910,7 +910,7 @@ class OracleCollection {
             const bindDefs: Record<string, import("oracledb").BindDefinition> = {};
             cols.forEach((c, i) => {
                 // Scan all documents for a non-null sample to determine the type
-                let sampleVal: {} | null = null;
+                let sampleVal: unknown = null;
                 for (const doc of documents) {
                     if (doc[c] != null) {
                         sampleVal = doc[c];
@@ -1070,7 +1070,7 @@ class OracleCollection {
         // Bind definitions: same type-scan approach as insertMany.
         const bindDefs: Record<string, import("oracledb").BindDefinition> = {};
         const defFor = (col: string) => {
-            let sampleVal: {} | null = null;
+            let sampleVal: unknown = null;
             for (const row of rows) {
                 if (row[col] != null) {
                     sampleVal = row[col];

@@ -189,11 +189,11 @@ class FakeOracleConnection {
             const parsed = FakeOracleConnection._parseInsert(sql);
             if (!parsed) throw new Error(`FakeOracle: unparseable INSERT: ${sql}`);
             const t = this.store.table(parsed.table);
-            const row = {};
+            const row: Record<string, any> = {};
             parsed.cols.forEach((c, i) => {
                 row[c] = binds[`v${i}`] ?? null;
             });
-            const outBinds = {};
+            const outBinds: Record<string, any> = {};
             if (parsed.returningCol || t.idColumn) {
                 const idCol = parsed.returningCol || t.idColumn;
                 row[idCol] = t.nextId++;
@@ -242,12 +242,12 @@ class FakeOracleConnection {
             const parsed = FakeOracleConnection._parseInsert(sql);
             if (!parsed) throw new Error(`FakeOracle: unparseable INSERT: ${sql}`);
             const t = this.store.table(parsed.table);
-            const outBinds = [];
-            const batchErrors = [];
+            const outBinds: any[] = [];
+            const batchErrors: any[] = [];
             let affected = 0;
 
             bindRows.forEach((bind, offset) => {
-                const row = {};
+                const row: Record<string, any> = {};
                 parsed.cols.forEach((c, i) => {
                     row[c] = bind[`v${i}`] ?? null;
                 });

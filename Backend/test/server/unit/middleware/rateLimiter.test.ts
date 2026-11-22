@@ -9,7 +9,7 @@ function mockReq(ip = "127.0.0.1", path = "/api/v1/users") {
 }
 
 function mockRes() {
-    const headers = {};
+    const headers: Record<string, any> = {};
     return {
         headersSent: false,
         setHeader(k, v) {
@@ -55,7 +55,7 @@ describe("RateLimiterMiddleware", function () {
     });
 
     describe("handle()", function () {
-        it("calls next() when under the limit", () => new Promise((resolve, reject) => {
+        it("calls next() when under the limit", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const limiter = new RateLimiterMiddleware({
@@ -68,7 +68,7 @@ describe("RateLimiterMiddleware", function () {
         
             }));
 
-        it("responds 429 after exceeding max requests", () => new Promise((resolve, reject) => {
+        it("responds 429 after exceeding max requests", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const limiter = new RateLimiterMiddleware({
@@ -98,7 +98,7 @@ describe("RateLimiterMiddleware", function () {
         
             }));
 
-        it("sets RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset headers", () => new Promise((resolve) => {
+        it("sets RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset headers", () => new Promise<void>((resolve) => {
             const limiter = new RateLimiterMiddleware({
                 max: 100,
                 windowMs: 60000,
@@ -112,7 +112,7 @@ describe("RateLimiterMiddleware", function () {
             });
         }));
 
-        it("bypasses OPTIONS requests", () => new Promise((resolve, reject) => {
+        it("bypasses OPTIONS requests", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const limiter = new RateLimiterMiddleware({
@@ -131,7 +131,7 @@ describe("RateLimiterMiddleware", function () {
         
             }));
 
-        it("clears all keys with flushAll()", () => new Promise((resolve, reject) => {
+        it("clears all keys with flushAll()", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const limiter = new RateLimiterMiddleware({

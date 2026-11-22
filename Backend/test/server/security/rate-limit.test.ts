@@ -7,7 +7,7 @@ const {
 
 describe("Rate Limiting", function () {
     describe("unit — sliding window enforcement", function () {
-        it("returns 429 after exceeding max requests", () => new Promise((resolve, reject) => {
+        it("returns 429 after exceeding max requests", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const limiter = new RateLimiterMiddleware({
@@ -22,7 +22,7 @@ describe("Rate Limiting", function () {
                 route: null,
             });
             const mockRes = () => {
-                const h = {};
+                const h: Record<string, any> = {};
                 return {
                     headersSent: false,
                     setHeader(k, v) {
@@ -66,7 +66,7 @@ describe("Rate Limiting", function () {
         
             }));
 
-        it("429 response includes Retry-After header", () => new Promise((resolve, reject) => {
+        it("429 response includes Retry-After header", () => new Promise<void>((resolve, reject) => {
             const done = (e) => e ? reject(e) : resolve();
 
             const limiter = new RateLimiterMiddleware({
@@ -81,7 +81,7 @@ describe("Rate Limiting", function () {
                 route: null,
             };
             const mockRes = () => {
-                const h = {};
+                const h: Record<string, any> = {};
                 return {
                     headersSent: false,
                     setHeader(k, v) {

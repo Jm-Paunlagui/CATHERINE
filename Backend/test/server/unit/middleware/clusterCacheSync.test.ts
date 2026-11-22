@@ -71,7 +71,7 @@ describe("ClusterCacheSync", function () {
 
         it("sends a namespaced envelope when running as a worker", function () {
             ClusterCacheSync._cluster = { isWorker: true };
-            const sent = [];
+            const sent: any[] = [];
             ClusterCacheSync._send = (m) => sent.push(m);
             ClusterCacheSync._applyingRemote = false;
             ClusterCacheSync.broadcast("billing", "delByPattern", "billing");
@@ -149,7 +149,7 @@ describe("ClusterCacheSync", function () {
         it("sets the re-entrancy guard while applying, then clears it", function () {
             const store = fakeStore();
             // Capture the guard value at the moment the store op runs.
-            let guardDuringApply = null;
+            let guardDuringApply: any = null;
             store.flush = () => {
                 guardDuringApply = ClusterCacheSync._applyingRemote;
             };
