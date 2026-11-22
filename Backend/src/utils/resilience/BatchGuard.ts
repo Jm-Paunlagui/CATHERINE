@@ -116,16 +116,16 @@ class BatchGuard {
      *   pending: Array<{item: T, reason: string}>
      * }>}
      */
-    async run<T,     R>(items: Array<T>, worker: (item: T, index: number) => Promise<R>, options: { hooks?: Record<string, any> | ((item: T, index: number) => Record<string, unknown>); } = {}): Promise<{
+    async run<T,     R>(items: Array<T>, worker: (item: T, index: number) => Promise<R>, options: { hooks?: { onRetry?: (err: unknown, attempt: number) => Promise<{ key: unknown; resolved: R } | void> } | ((item: T, index: number) => { onRetry?: (err: unknown, attempt: number) => Promise<{ key: unknown; resolved: R } | void> }); } = {}): Promise<{
         succeeded: Array<{ item: T; result: R; }>;
         failed: Array<{ item: T; error: unknown; attempts: number; classification: string | null; }>;
         pending: Array<{ item: T; reason: string; }>;
     }> {
         const list = Array.isArray(items) ? items : [];
         const n = list.length;
-        const succeeded: any[] = [];
-        const failed: any[] = [];
-        const pending: any[] = [];
+        const succeeded: Array<{ item: T; result: R }> = [];
+        const failed: Array<{ item: T; error: unknown; attempts: number; classification: string | null }> = [];
+        const pending: Array<{ item: T; reason: string }> = [];
         const startedAt = Date.now();
 
         logger.debug(
@@ -142,13 +142,14 @@ class BatchGuard {
             return { succeeded, failed, pending };
         }
 
+        const hooksOpt = options.hooks;
         const hooksFor =
-            typeof options.hooks === "function"
-                ? options.hooks
-                : () => options.hooks ?? {};
+            typeof hooksOpt === "function"
+                ? hooksOpt
+                : () => hooksOpt ?? {};
 
         let aborted = false;
-        let abortReason: any = null;
+        let abortReason: string | null = null;
         // Cumulative retries spent across FAILED items only. We deliberately do
         // NOT count retries that ended in success (including idempotency-probe
         // "resolved" outcomes): a success-after-retry is RECOVERY, not budget
@@ -161,9 +162,13 @@ class BatchGuard {
         // `pending` instead of running against a request nobody is waiting for.
         const scope = currentScope();
 
-        const outcomes = await mapWithConcurrency(list, this._concurrency, async (item, index) => {
+        type ItemOutcome =
+            | { outcome: "succeeded"; item: T; result: R }
+            | { outcome: "failed"; item: T; error: unknown; attempts: number; classification: string | null }
+            | { outcome: "pending"; item: T; reason: string };
+        const outcomes = await mapWithConcurrency(list, this._concurrency, async (item, index): Promise<ItemOutcome> => {
             if (aborted) {
-                return { outcome: "pending", item, reason: abortReason };
+                return { outcome: "pending", item, reason: abortReason ?? "" }; // set together with `aborted`
             }
             if (scope?.aborted) {
                 return {
@@ -236,7 +241,7 @@ class BatchGuard {
                 resilienceMessages.BATCH_ABORTED(
                     this._label,
                     pending.length,
-                    abortReason,
+                    abortReason ?? "",
                 ),
             );
         }

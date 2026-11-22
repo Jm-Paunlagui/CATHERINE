@@ -93,6 +93,9 @@ function remainingDrainMs({ phaseDeadline, now, notifyDrainMs }: { phaseDeadline
     return Math.max(0, Math.min(notifyDrainMs, phaseDeadline - now));
 }
 
+/** A request the watchdog cut while the process was stopping (listed in the shutdown email). */
+type IdleCut = { method: string; path: string; ageMs: number; idleMs?: number | null };
+
 /**
  * Everything that must happen BEFORE `server.close()` is called.
  *
@@ -147,14 +150,14 @@ function preCloseTeardown({
     httpInFlight,
     onRequestsCut,
     waitNoticeMs = SHUTDOWN_WAIT_NOTICE_MS,
-}: { sseRegistry: { endAll: (reason: string) => void; }; server: import('http').Server; forceCloseAfterMs?: number; sseDrainGraceMs?: number; minGraceMs?: number; logger: { notice?: ((...args: unknown[]) => unknown); warning: ((...args: unknown[]) => unknown); }; reason?: string; httpInFlight?: { beginShutdown: ((...args: any[]) => unknown); activeCount: () => number; activeSummary?: ((...args: any[]) => any); }; onRequestsCut?: (summary: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null }>, graceMs: number, total: number, opts: { reason: "cap" | "idle"; }) => void; waitNoticeMs?: number; }): { shortenTo: (ms: number) => void; recordIdleCut: (entry: Record<string, unknown>) => void; idleCuts: Array<Record<string, unknown>>; } {
+}: { sseRegistry: { endAll: (reason: string) => void; }; server: import('http').Server; forceCloseAfterMs?: number; sseDrainGraceMs?: number; minGraceMs?: number; logger: { notice?: ((...args: unknown[]) => unknown); warning: ((...args: unknown[]) => unknown); }; reason?: string; httpInFlight?: { beginShutdown: ((...args: any[]) => unknown); activeCount: () => number; activeSummary?: ((...args: any[]) => any); }; onRequestsCut?: (summary: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null }>, graceMs: number, total: number, opts: { reason: "cap" | "idle"; }) => void; waitNoticeMs?: number; }): { shortenTo: (ms: number) => void; recordIdleCut: (entry: IdleCut) => void; idleCuts: IdleCut[]; } {
     // Callers always pass one; 0 matches setTimeout's handling of an undefined delay.
     let graceMs: number = forceCloseAfterMs ?? sseDrainGraceMs ?? 0;
     /** @type {Array<object>} */
-    const idleCuts: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null }> = [];
+    const idleCuts: IdleCut[] = [];
     const handle = {
         shortenTo(_ms: number) {},
-        recordIdleCut: (entry: any) => {
+        recordIdleCut: (entry: IdleCut) => {
             idleCuts.push(entry);
         },
         idleCuts,
@@ -162,7 +165,7 @@ function preCloseTeardown({
     const closeAll = () => {
         if (typeof server.closeAllConnections === "function") server.closeAllConnections();
     };
-    const unref = (t: any) => {
+    const unref = <T extends { unref?: () => unknown }>(t: T): T => {
         if (typeof t.unref === "function") t.unref();
         return t;
     };
@@ -185,8 +188,8 @@ function preCloseTeardown({
     const startedAt = Date.now();
     const initial = httpInFlight.activeCount();
     let finished = false;
-    let cutTimer: any = null;
-    let noticeTimer: any = null;
+    let cutTimer: ReturnType<typeof setTimeout> | null = null;
+    let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
     // ONE email for everything the idle watchdog cut during the wait.
     const reportIdleCuts = () => {
@@ -276,7 +279,7 @@ function preCloseTeardown({
         const remaining = Math.max(0, startedAt + graceMs - Date.now());
         const next = Math.max(0, Math.min(remaining, ms));
         graceMs = Date.now() - startedAt + next;
-        clearTimeout(cutTimer);
+        clearTimeout(cutTimer ?? undefined);
         cutTimer = unref(setTimeout(cut, next));
     };
     return handle;
