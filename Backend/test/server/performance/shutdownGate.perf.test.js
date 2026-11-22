@@ -23,7 +23,7 @@
  */
 
 const { ShutdownGateMiddleware } = require("../../../src/middleware/security/ShutdownGateMiddleware");
-const InFlightTaskRegistry = require("../../../src/utils/InFlightTaskRegistry");
+const InFlightTaskRegistry = require("../../../src/utils/InFlightTaskRegistry").default;
 
 const N_CALLS = 10_000;
 const PASS_P95_BUDGET_MS = 0.05;
@@ -126,12 +126,12 @@ describe("shutdown gate - performance", function () {
         // stub; without it the baseline burst's background audit flush reaches a pool.
         function restoreMocks() {
             vi.restoreAllMocks();
-            vi.spyOn(require("../../../src/services/AuditLogService"), "insertAsync").mockResolvedValue(undefined);
+            vi.spyOn(require("../../../src/services/AuditLogService").default, "insertAsync").mockResolvedValue(undefined);
         }
 
         beforeAll(function () {
-            app = require("../../../src/app");
-            db = require("../../../src/config");
+            app = require("../../../src/app").default;
+            db = require("../../../src/config").default;
             request = require("supertest");
         });
         afterEach(function () {

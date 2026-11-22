@@ -1916,5 +1916,97 @@
     ],
     "createdAt": "2026-11-21T11:21:50.355Z",
     "updatedAt": "2026-11-21T11:21:50.355Z"
+  },
+  {
+    "id": "0caca94d-e413-4115-b7e0-3474fa03c5cf",
+    "displayDate": "2026-11-22",
+    "version": "1.0.0-dev.52",
+    "title": "Backend Rewritten in TypeScript",
+    "message": "The backend is now written in TypeScript and checked for type errors before it ships, so a whole class of mistakes is caught while coding instead of in production. Behaviour is unchanged apart from a few fixes the type checker found.",
+    "whatChanged": [
+      {
+        "text": "Every backend source file is TypeScript (server.ts and all of src/), checked in strict mode with zero errors",
+        "items": [
+          "Code uses standard import/export modules instead of require()",
+          "bun run typecheck is the type gate; lint checks TypeScript too",
+          "Startup steps that must run first (settings, time zone, secret check, cache setup) run in a fixed order"
+        ]
+      },
+      {
+        "text": "Loosely typed values kept to a minimum",
+        "items": [
+          "About 1,400 untyped spots were replaced with real types; each change was verified against the whole project",
+          "Data from outside the server (requests, messages between cluster workers, parsed files) is checked before it is used",
+          "Some untyped values remain where the shape genuinely cannot be known, mainly the database query helpers"
+        ]
+      },
+      {
+        "text": "Fixed: a CSRF token sent in a form body was never read; only the request header was checked. Both are accepted now"
+      },
+      {
+        "text": "Fixed: backup vote times are dates, not text, so the demo list sorts them correctly"
+      },
+      {
+        "text": "Stricter handling of bad requests",
+        "items": [
+          "A repeated or nested query value (?a=1&a=2) is ignored instead of reaching the server logic",
+          "A request that somehow reaches a signed-in-only action without a session is refused (401)"
+        ]
+      },
+      {
+        "text": "Production build unchanged: the Windows executable still builds and runs the same way"
+      },
+      {
+        "text": "Tests: Backend 1541/1541 (two timing-sensitive tests occasionally fail and pass on rerun)"
+      },
+      {
+        "text": "No database update"
+      }
+    ],
+    "type": "refactor",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-11-21T16:10:47.426Z",
+    "updatedAt": "2026-11-21T16:10:47.426Z"
+  },
+  {
+    "id": "c648a03e-783c-45ec-8f99-1b54d7d9ffc3",
+    "displayDate": "2026-11-22",
+    "version": "1.0.0-dev.53",
+    "title": "Database Helper Fixes: Locks, Timestamps, Linked Deletes",
+    "message": "Four faults in the database helper were proven on a real Oracle database and fixed, so row locks, precise timestamps and linked-table checks now work as documented.",
+    "whatChanged": [
+      {
+        "text": "Fixed (proven): counting rows inside a transaction committed it early and released its row locks"
+      },
+      {
+        "text": "Fixed (proven): asking for the first matching row with a lock was refused by Oracle (ORA-02014); a lock can now also name its column and a wait time"
+      },
+      {
+        "text": "Fixed (proven): a delete or update that checks a linked table failed with ORA-00904"
+      },
+      {
+        "text": "Fixed (proven): a precise current-time stamp can now be requested ({ $type: \"timestamp\" }); the whole-second stamp is unchanged"
+      },
+      {
+        "text": "Tests: 17 new; 13 failed before the fix, all pass after"
+      },
+      {
+        "text": "No database update"
+      }
+    ],
+    "type": "fix",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-11-21T19:16:42.884Z",
+    "updatedAt": "2026-11-21T21:01:44.791Z"
   }
 ]

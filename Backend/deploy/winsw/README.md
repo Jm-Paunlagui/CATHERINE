@@ -15,7 +15,7 @@ after a crash.
     | --------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
     | `catherine-backend.exe`           | always   | `bun run build` output.                                                                                                            |
     | `.env`                            | always   | All six bootGuard secrets set (≥32 chars, non-placeholder) or the service exits → 10 s restart loop. `DEMO_MODE=false`.            |
-    | `node_modules\oracledb\build\Release\` | always | oracledb Thick-mode binary, staged by `scripts/build.js` (fails the build if missing).                                  |
+    | `node_modules\oracledb\build\Release\` | always | oracledb Thick-mode binary, staged by `scripts/build.ts` (fails the build if missing).                                  |
     | `prebuilds\win32-x64\`          | always   | argon2 binary, same build step. A boot-time preflight logs an ALERT if argon2 cannot load.                                         |
     | `src\utils\email-templates\`     | always   | Email HTML + logos, same build step. The exe reads them from disk beside itself.                                                   |
     | `src\generated\`                | always   | Dev-docs freshness snapshot, same build step.                                                                                     |
@@ -79,7 +79,7 @@ export finishes. The log shows a "still waiting for N in-flight request(s)"
 notice every minute during the wait.
 
 The value must exceed `FORCED_EXIT_MS_DEFAULT` + `CLUSTER_SHUTDOWN_MARGIN_MS` +
-5.5 s in `server.js` (1 834 s + 10 s + 5.5 s = 1 849.5 s < 1 860 s; see the
+5.5 s in `server.ts` (1 834 s + 10 s + 5.5 s = 1 849.5 s < 1 860 s; see the
 THE INVARIANTS comment block above those constants). An already-installed
 service keeps its old window: **re-run `install-service.ps1`** after changing
 `<stoptimeout>`, or Windows will force-kill the service at the old timeout

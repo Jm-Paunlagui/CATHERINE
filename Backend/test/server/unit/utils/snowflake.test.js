@@ -27,7 +27,7 @@ const SNOWFLAKE_RE = /^\d{13}-\d{4}-\d{4}$/;
  */
 async function freshImport() {
     vi.resetModules();
-    return await import("../../../../src/utils/snowflake.js");
+    return await import("../../../../src/utils/snowflake.ts");
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────────

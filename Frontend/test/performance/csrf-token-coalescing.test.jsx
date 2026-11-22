@@ -33,7 +33,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import csrfMiddleware from "../../src/middleware/security/CsrfMiddleware.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 
 /** A token-endpoint body in the real GET /csrf/token shape. */
 function tokenBody(token) {

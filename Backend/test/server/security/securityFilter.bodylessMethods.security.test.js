@@ -18,10 +18,10 @@
 
 const http = require("http");
 const net = require("net");
-const app = require("../../../src/app");
-const db = require("../../../src/config");
+const app = require("../../../src/app").default;
+const db = require("../../../src/config").default;
 const { POOL_NAMES } = require("../../../src/config/database");
-const HealthStreamHub = require("../../../src/services/HealthStreamHub");
+const HealthStreamHub = require("../../../src/services/HealthStreamHub").default;
 const {
     defaultSecurityFilter,
 } = require("../../../src/middleware/security/SecurityFilterMiddleware");

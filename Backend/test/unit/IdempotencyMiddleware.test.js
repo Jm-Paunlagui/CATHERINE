@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Unit tests for IdempotencyMiddleware (src/middleware/security/IdempotencyMiddleware.js).
+ * Unit tests for IdempotencyMiddleware (src/middleware/security/IdempotencyMiddleware.ts).
  * Pure — mocked req/res, no HTTP server, no DB.
  */
 

@@ -378,10 +378,10 @@ landing route from `getLandingPath`, or the forced `/auth/change-password` when
 ## 4. Backend implementation
 
 Route → Controller → Service → Model, with cross-cutting middleware applied globally and per-route. Routes
-are mounted under `/api/v1` (`app.use("/api/v1", routes)` in [app.js](Backend/src/app.js)) and the auth
-router under `/auth` (`router.use("/auth", authRoutes)` in [routes/index.js](Backend/src/routes/index.js)).
+are mounted under `/api/v1` (`app.use("/api/v1", routes)` in [app.js](Backend/src/app.ts)) and the auth
+router under `/auth` (`router.use("/auth", authRoutes)` in [routes/index.js](Backend/src/routes/index.ts)).
 
-### 4.1 Routes ([auth.route.js](Backend/src/routes/auth.route.js))
+### 4.1 Routes ([auth.route.js](Backend/src/routes/auth.route.ts))
 
 | Method & Path                        | Middleware chain                                                                             | Handler                         | Purpose                                                        |
 | ------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------- |
@@ -391,7 +391,7 @@ router under `/auth` (`router.use("/auth", authRoutes)` in [routes/index.js](Bac
 | `GET /api/v1/auth/me`                | `authenticatePendingPasswordChange`                                                          | `AuthController.me`             | Return caller profile with permission flags refreshed from DB. |
 | `PATCH /api/v1/auth/change-password` | `authenticatePendingPasswordChange` → `changePasswordRateLimiter` → invalidate `adminList` → `validateRequiredFields([currentPassword,newPassword])` → `validatePasswordFields` | `AuthController.changePassword` | Verify current password, revoke every session of the account, set the new password, issue fresh tokens. Clears the `adminList` cache (it shows each row's temporary-password expiry). |
 
-The four limiters live in [authRateLimiters.js](Backend/src/middleware/security/authRateLimiters.js) (limits in
+The four limiters live in [authRateLimiters.js](Backend/src/middleware/security/authRateLimiters.ts) (limits in
 `constants/authRateLimits.js`; constants, not env overrides):
 
 | Limiter                     | Key                                                          | Limit     | Counts                             |
@@ -406,7 +406,7 @@ refuses, the ceiling gives its hit back, so one hammered account cannot lock col
 The change-password limiter runs **after** authentication so it can key on the signed-in account; an
 unauthenticated call is always `401` and never reaches the limiter.
 
-### 4.2 Controller ([AuthControllers.js](Backend/src/controllers/AuthControllers.js))
+### 4.2 Controller ([AuthControllers.js](Backend/src/controllers/AuthControllers.ts))
 
 `AuthController` is thin — every method is wrapped in `catchAsync`, calls `AuthService`, sets cookies, and
 returns a standardised `sendSuccess(...)` envelope. It owns no business logic. `login`/`refresh`/
@@ -417,7 +417,7 @@ returns a standardised `sendSuccess(...)` envelope. It owns no business logic. `
 holding a captured token replay it. No signed cookie → `401` `REFRESH_TOKEN_MISSING` (hint "No refresh
 token provided.").
 
-### 4.3 Service ([AuthService.js](Backend/src/services/AuthService.js))
+### 4.3 Service ([AuthService.js](Backend/src/services/AuthService.ts))
 
 The brain of the feature:
 
@@ -470,7 +470,7 @@ The brain of the feature:
   The returned `user` body carries none of `type`/`aud`/`iss`/`fid` (`/auth/me` does echo them from the
   decoded token).
 
-[RefreshTokenService.js](Backend/src/services/RefreshTokenService.js) (must not import
+[RefreshTokenService.js](Backend/src/services/RefreshTokenService.ts) (must not import
 `AuthService`) owns the session lifecycle: `persistIssued` (fails closed), `rotate` (§2.5), `revokeFamily`
 (`bestEffort` / `retryTransient` options), `revokeAllForUser` (fails closed; used by change-password, admin
 Reset Password and admin create/re-add) and `purgeExpired` (best effort). It logs only an 8-character family
@@ -489,24 +489,24 @@ Also on `AuthService`:
 
 | File                                                                                          | Role                                                                                                                                                                                                                                                                                                    |
 | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [AuthMiddleware.js](Backend/src/middleware/authentication/AuthMiddleware.js)                  | `authenticate` verifies the access-token cookie/Bearer with `jwt.verify` (HS256) and classifies the payload with `classifyAccessClaims` **before** the password-change gate: `access` passes, `legacy` (no `type`/`aud`/`iss`) → `440 SessionTimeoutError`, `wrong-type` → `401 TOKEN_TYPE_INVALID` (download routes: HTML "Session Expired" / "Access Denied"). An access token whose session family was ended gets `440 SessionRevokedError` (`_rejectRevokedSession`); a restricted (`requiresPasswordChange`) token gets `403 PasswordChangeRequiredError` unless the route uses `authenticatePendingPasswordChange`. Then attaches `req.user`; maps verify errors to 440/403/401. `requireAccess(predicate)` is the authorization factory. `validateRequiredFields([...])` and `validatePasswordFields({verify,hash})` validate inputs. `authenticateForDownload` returns HTML errors for file routes. |
-| [LoginLockoutMiddleware.js](Backend/src/middleware/authentication/LoginLockoutMiddleware.js)  | Per-user progressive lockout, keyed by `canonicalUserKey`. Sync `check`/`recordFailure`/`recordSuccess` on a local store (24 h TTL); the cluster-aware `checkAsync`/`recordFailureAsync`/`recordSuccessAsync` ask the primary (`LoginLockoutState`) over IPC when clustered and fall back to the local store if it does not answer. Policy arithmetic in `LoginLockoutPolicy.js`. |
-| [security/RateLimiterMiddleware.js](Backend/src/middleware/security/RateLimiterMiddleware.js) | Sliding-window limiter (default limiter at step 12 of the chain, cluster-wide via `rl.hit`). Options: `countMode` (`all` / `failures` = reserve, then refund via `rl.refund` or locally), `maxKeys` (store full → fail open, logged at most once a minute per label), `Retry-After` from the real earliest admit time, and the `RateLimiterGroup` class. |
-| [security/authRateLimiters.js](Backend/src/middleware/security/authRateLimiters.js)           | The four route-level auth limiters and their key builders (§4.1).                                                                                                                                                                                                                                       |
+| [AuthMiddleware.js](Backend/src/middleware/authentication/AuthMiddleware.ts)                  | `authenticate` verifies the access-token cookie/Bearer with `jwt.verify` (HS256) and classifies the payload with `classifyAccessClaims` **before** the password-change gate: `access` passes, `legacy` (no `type`/`aud`/`iss`) → `440 SessionTimeoutError`, `wrong-type` → `401 TOKEN_TYPE_INVALID` (download routes: HTML "Session Expired" / "Access Denied"). An access token whose session family was ended gets `440 SessionRevokedError` (`_rejectRevokedSession`); a restricted (`requiresPasswordChange`) token gets `403 PasswordChangeRequiredError` unless the route uses `authenticatePendingPasswordChange`. Then attaches `req.user`; maps verify errors to 440/403/401. `requireAccess(predicate)` is the authorization factory. `validateRequiredFields([...])` and `validatePasswordFields({verify,hash})` validate inputs. `authenticateForDownload` returns HTML errors for file routes. |
+| [LoginLockoutMiddleware.js](Backend/src/middleware/authentication/LoginLockoutMiddleware.ts)  | Per-user progressive lockout, keyed by `canonicalUserKey`. Sync `check`/`recordFailure`/`recordSuccess` on a local store (24 h TTL); the cluster-aware `checkAsync`/`recordFailureAsync`/`recordSuccessAsync` ask the primary (`LoginLockoutState`) over IPC when clustered and fall back to the local store if it does not answer. Policy arithmetic in `LoginLockoutPolicy.js`. |
+| [security/RateLimiterMiddleware.js](Backend/src/middleware/security/RateLimiterMiddleware.ts) | Sliding-window limiter (default limiter at step 12 of the chain, cluster-wide via `rl.hit`). Options: `countMode` (`all` / `failures` = reserve, then refund via `rl.refund` or locally), `maxKeys` (store full → fail open, logged at most once a minute per label), `Retry-After` from the real earliest admit time, and the `RateLimiterGroup` class. |
+| [security/authRateLimiters.js](Backend/src/middleware/security/authRateLimiters.ts)           | The four route-level auth limiters and their key builders (§4.1).                                                                                                                                                                                                                                       |
 | [utils/auth/](Backend/src/utils/auth/)                                                        | `tokenClaims.js` (`classifyAccessClaims`, `hashJti`, `credentialEpoch`), `RefreshTokenRegistry.js` (per-process veto tier, capped at 100 000 entries), `userKey.js` (`canonicalUserKey` — one spelling-collapse rule for lockout, rate limits and revocation), `refreshFamily.js` (`refreshFamilyOf` for the refresh limiter key), `RevokedSessionSet.js` (ended families, bounded at 200 000). |
-| [security/CsrfMiddleware.js](Backend/src/middleware/security/CsrfMiddleware.js)               | `csrf-csrf` double-submit protection (step 9, global except `CSRF_EXEMPT_PATHS` in `app.js`).                                                                                                                                                                                                                 |
-| [utils/encryption/CryptoVault.js](Backend/src/utils/encryption/CryptoVault.js)                | Hashing/verification (argon2id + pepper, bcrypt, legacy TripleDES) and HMAC record signing/verification.                                                                                                                                                                                                |
+| [security/CsrfMiddleware.js](Backend/src/middleware/security/CsrfMiddleware.ts)               | `csrf-csrf` double-submit protection (step 9, global except `CSRF_EXEMPT_PATHS` in `app.js`).                                                                                                                                                                                                                 |
+| [utils/encryption/CryptoVault.js](Backend/src/utils/encryption/CryptoVault.ts)                | Hashing/verification (argon2id + pepper, bcrypt, legacy TripleDES) and HMAC record signing/verification.                                                                                                                                                                                                |
 
 ### 4.5 Models
 
-- [admin.model.js](Backend/src/models/admin.model.js) (`AdminModel`) — `T_ADMINS_DEV` via the `appDb` pool
+- [admin.model.js](Backend/src/models/admin.model.ts) (`AdminModel`) — `T_ADMINS_DEV` via the `appDb` pool
   (oracle-mongo-wrapper); `findByUsername`, `updateCredentials`, `updateRole`, `setActive`, `insertAdmin`, and
   `buildSignedFields` / `SIGN_CONTEXT` (`"T_ADMINS_DEV"`; signed fields `USERNAME`, `PASSWORD`, `ROLE`,
   `IS_ACTIVE`). The model only persists; callers compute the signature. `AdminManagementService` invalidates
   the cached `/auth/me` flags (`authProfile`) after each admin write.
-- [user.model.js](Backend/src/models/user.model.js) (`UserModel`) — `T_USERS_DEV` via `appDb`;
+- [user.model.js](Backend/src/models/user.model.ts) (`UserModel`) — `T_USERS_DEV` via `appDb`;
   `findByUsername`, `updatePassword`, `insertUser`, `deleteUser`.
-- [auth.refresh.token.model.js](Backend/src/models/auth.refresh.token.model.js) —
+- [auth.refresh.token.model.js](Backend/src/models/auth.refresh.token.model.ts) —
   `T_AUTH_REFRESH_TOKEN_DEV` via `appDb`, raw `execute` with bind variables only: `insert`,
   `rotate` (one transaction: conditional `UPDATE` then `INSERT` of the successor, or a `SELECT` that names
   the outcome `reused` / `revoked` / `absent`; never inserts on a non-`ok` outcome), `revokeFamily`,

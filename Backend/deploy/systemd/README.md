@@ -7,7 +7,7 @@ graceful stop that lets work in progress finish.
 ## Install
 
 1. Check out the `Backend` folder (e.g. `/opt/catherine-backend`), run
-   `bun install --frozen-lockfile --production`, and put the production `.env` beside `server.js`.
+   `bun install --frozen-lockfile --production`, and put the production `.env` beside `server.ts`.
 2. Create the service account:
    `sudo useradd --system --home /opt/catherine-backend catherine`, and give it
    ownership of `logs/`, `data/` and the backup directory (read-only is enough
@@ -37,7 +37,7 @@ audit buffer. A stop with nothing in flight exits in about a second.
 **Never lower `TimeoutStopSec` below 1860.** systemd's default (90 s) would
 SIGKILL a long import or export partway. It must exceed `FORCED_EXIT_MS`
 (1 834 s) + `CLUSTER_SHUTDOWN_MARGIN_MS` (10 s) + the forced-exit email
-(<= 5.5 s) from `server.js`, and should stay equal to `<stoptimeout>` in
+(<= 5.5 s) from `server.ts`, and should stay equal to `<stoptimeout>` in
 `deploy/winsw/catherine-backend-service.xml`.
 
 `KillMode=mixed` sends SIGTERM to the main process only. With

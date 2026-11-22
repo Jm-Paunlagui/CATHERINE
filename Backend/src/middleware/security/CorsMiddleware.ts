@@ -1,0 +1,199 @@
+
+
+/**
+ * @fileoverview Network-aware CORS middleware.
+ * Supports explicit origins via env, plus dynamic patterns for localhost,
+ * private networks, VPN, and corporate domains.
+ *
+ * Security (CWE-942): In production, dynamic broad-wildcard patterns (*.vpn,
+ * *.corp, *.internal, *.local, *.lan, and entire RFC-1918 ranges) are disabled
+ * when CORS_RESTRICT_PRODUCTION=true (or NODE_ENV=production by default).
+ * In production only CORS_ORIGINS (explicit allow-list) is honoured, plus the
+ * localhost/127.0.0.1 loopback pattern which is safe for server-side tooling.
+ *
+ * To opt-in to broad patterns in a non-standard environment, set:
+ *   CORS_ALLOW_BROAD_PATTERNS=true
+ * This is intentionally opt-in — production deployments should always use an
+ * explicit allow-list via CORS_ORIGINS instead of trusting network topology.
+ */
+
+import type { NextFunction, Request, Response } from "express";
+import cors from "cors";
+import { logger } from "../../utils/logger";
+
+/**
+ * Returns dynamic origin patterns allowed based on current environment.
+ *
+ * In production (NODE_ENV=production) broad wildcard patterns for private
+ * networks and intranet TLDs are omitted unless CORS_ALLOW_BROAD_PATTERNS=true.
+ *
+ * @param {RegExp[]} [override] - Explicit override (used in tests / custom instances)
+ * @returns {RegExp[]}
+ */
+function buildDynamicPatterns(override?: RegExp[]): RegExp[] {
+  if (override !== undefined) return override;
+
+  const isProduction = process.env.NODE_ENV === "production";
+  const allowBroad = process.env.CORS_ALLOW_BROAD_PATTERNS === "true";
+
+  // Always safe — loopback only (no credentials risk from external attackers).
+  // L6 note: loopback origins are kept in production because they only match
+  // requests originating from the server host itself (localhost / 127.0.0.1).
+  // An external attacker cannot forge an Origin header from a browser.
+  // If your threat model includes malicious code running on the production
+  // host itself, add the loopback origins to CORS_ORIGINS explicitly and
+  // remove them from the dynamic patterns.
+  const safePatterns = [
+    /^https?:\/\/localhost(:\d+)?$/,
+    /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  ];
+
+  // Broad patterns — private networks + intranet TLDs
+  // Only included in non-production or when explicitly opted-in.
+  const broadPatterns = [
+    /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
+    /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
+    /^https?:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+(:\d+)?$/,
+    /^https?:\/\/.+\.local(:\d+)?$/,
+    /^https?:\/\/.+\.lan(:\d+)?$/,
+    /^https?:\/\/.+\.corp(\..+)?$/i,
+    /^https?:\/\/.+\.vpn(\..+)?$/i,
+    /^https?:\/\/.+\.internal(\..+)?$/i,
+  ];
+
+  if (!isProduction || allowBroad) {
+    return [...safePatterns, ...broadPatterns];
+  }
+
+  // Production — safe loopback only; everything else must be in CORS_ORIGINS
+  logger.notice?.(
+    "CORS: running in production mode — broad wildcard patterns disabled. " +
+      "Add explicit origins to CORS_ORIGINS.",
+  );
+  return safePatterns;
+}
+
+/** Constructor overrides; each falls back to the env / built-in default. */
+interface CorsOptionsOverride {
+  origins?: string[];
+  patterns?: RegExp[];
+  credentials?: boolean;
+  methods?: string[];
+  allowedHeaders?: string[];
+  exposedHeaders?: string[];
+  maxAge?: number;
+  optionsSuccessStatus?: number;
+}
+
+class CorsMiddleware {
+  declare _cors: (req: cors.CorsRequest, res: { statusCode?: number | undefined; setHeader(key: string, value: string): unknown; end(): unknown; }, next: (err?: unknown) => unknown) => void;
+  declare _dynamicPatterns: RegExp[];
+  declare _explicitOrigins: string[];
+  constructor(options: CorsOptionsOverride = {}) {
+    this._explicitOrigins =
+      options.origins ??
+      (process.env.CORS_ORIGINS
+        ? process.env.CORS_ORIGINS.split(",")
+            .map((o) => o.trim())
+            .filter(Boolean)
+        : []);
+
+    this._dynamicPatterns = buildDynamicPatterns(options.patterns);
+
+    this._cors = cors({
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (this._explicitOrigins.includes(origin)) return callback(null, true);
+        if (this._dynamicPatterns.some((p) => p.test(origin)))
+          return callback(null, true);
+
+        logger.warning(`CORS: origin blocked — ${origin}`);
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      },
+      credentials: options.credentials ?? true,
+      methods: options.methods ?? [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS",
+        "HEAD",
+      ],
+      allowedHeaders: options.allowedHeaders ?? [
+        "Content-Type",
+        "Authorization",
+        "X-CSRF-Token",
+        "X-Request-ID",
+        "X-Requested-With",
+        "X-Client-Username",
+        "X-Client-Id",
+        "Accept",
+        "Accept-Encoding",
+        "Accept-Language",
+        "Cache-Control",
+      ],
+      exposedHeaders: options.exposedHeaders ?? [
+        "X-Request-ID",
+        "X-Response-Time",
+        "X-CSRF-Token",
+        "Content-Disposition",
+        "RateLimit-Limit",
+        "RateLimit-Remaining",
+        "RateLimit-Reset",
+        // 429 back-off (rate limiter and the NJS-076 pool load-shed) — the
+        // UI reads it to wait the server's own interval before retrying.
+        "Retry-After",
+        // Data Purge & Restore — POST /backup streams a binary
+        // .zip and returns the backup token / TTL / confirm phrase as
+        // response headers rather than a JSON body, so the FE must be able
+        // to read them across the CORS boundary.
+        "X-Backup-Token",
+        "X-Backup-Token-Expires-At",
+        "X-Confirm-Phrase",
+      ],
+      maxAge: options.maxAge ?? 86400,
+      optionsSuccessStatus: options.optionsSuccessStatus ?? 200,
+    });
+
+    this.handle = this.handle.bind(this);
+  }
+
+  handle(req: Request, res: Response, next: NextFunction) {
+    // CORS has had its say on this request — the error-handler fallback
+    // below must never evaluate it a second time.
+    if (res.locals) res.locals.corsEvaluated = true;
+    return this._cors(req, res, next);
+  }
+
+  /**
+   * CORS headers for an ERROR response raised before this middleware ran.
+   *
+   * The stack (app.js, "do not reorder") puts the body parsers at step 4 and
+   * CORS at step 7, so a malformed or oversized JSON body is answered 400/413
+   * by the global error handler with no `Access-Control-Allow-Origin`. A
+   * browser then discards the response and the UI sees only a network error —
+   * never the server's message (e.g. Access Control → Remove
+   * Access would show "Backup download failed" for a 400 it could not read).
+   *
+   * Same policy as `handle` — same allowlist, credentials and exposed headers;
+   * a blocked origin gets no headers. It does nothing when CORS already ran,
+   * for a request without an `Origin`, or for a preflight (the `cors` package
+   * would answer an OPTIONS itself, and the error response must be the one
+   * sent). Calls `done` exactly once, whatever the origin verdict.
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {() => void} done
+   */
+  applyToErrorResponse(req: import('express').Request, res: import('express').Response, done: () => void) {
+    if (res.locals?.corsEvaluated || req.method === "OPTIONS" || !req.headers?.origin) {
+      return done();
+    }
+    if (res.locals) res.locals.corsEvaluated = true;
+    return this._cors(req, res, () => done());
+  }
+}
+
+const defaultCors = new CorsMiddleware();
+export { CorsMiddleware, defaultCors };

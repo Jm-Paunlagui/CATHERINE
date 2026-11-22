@@ -6,7 +6,7 @@
  * register the SAME absolute origin or MSW's `onUnhandledRequest: "error"` turns
  * a typo into an unrelated-looking failure in whatever test happened to run first.
  *
- * `API` here is byte-identical to `API` in `./server.js` — un-slashed. Two
+ * `API` here is byte-identical to `API` in `./server.ts` — un-slashed. Two
  * spellings of the same base is how a suite ends up with `//csrf/token`
  * handlers that never match, so there is exactly one spelling and `apiUrl()`
  * owns the join.

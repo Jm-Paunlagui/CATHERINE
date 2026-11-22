@@ -36,7 +36,7 @@ Production-grade Node.js Express API template. Class-based OOP architecture, cle
 
 ```
 Backend/
-├── server.js                          # Entry point (surface root, NOT src/) — HTTP/HTTPS, clustering, scheduler, graceful shutdown
+├── server.ts                          # Entry point (surface root, NOT src/) — HTTP/HTTPS, clustering, scheduler, graceful shutdown
 ├── package.json                       # catherine-backend; engines.bun; build → bun-windows-x64 exe
 ├── .env.example                       # All env vars documented with safe defaults
 ├── sql/                               # 01_schema, 02_seed_demo, 03_alter_admins_notification_columns, 04_platform_tables
@@ -315,7 +315,7 @@ router.delete(
 
 No other roles exist. `AuthService` checks admins (`T_ADMINS_DEV`) first, then users (`T_USERS_DEV`).
 
-### Tokens and cookies (`src/constants/authTokens.js`)
+### Tokens and cookies (`src/constants/authTokens.ts`)
 
 | Constant | Value |
 | --- | --- |
@@ -341,9 +341,9 @@ Refresh (`POST /auth/refresh`) reads **only** `req.signedCookies["app.refresh-to
 
 > Known wart: a missing refresh cookie throws `AUTH_ERRORS.USER_NOT_FOUND` (401) in `AuthControllers.refresh` (~lines 47-56). The status is right; the message is misleading. Tracked in `plans/template-reimport-handover.md`.
 
-### Auth rate limiters (`src/middleware/security/authRateLimiters.js`)
+### Auth rate limiters (`src/middleware/security/authRateLimiters.ts`)
 
-Limits live in `src/constants/authRateLimits.js`; all four are grouped in `authRateLimiters = new RateLimiterGroup([...])`.
+Limits live in `src/constants/authRateLimits.ts`; all four are grouped in `authRateLimiters = new RateLimiterGroup([...])`.
 
 | Limiter | Limit | Counts |
 | --- | --- | --- |
@@ -358,7 +358,7 @@ Login lockout (`LoginLockoutMiddleware`, env `LOGIN_*`) is separate from these l
 
 ## Logger — Usage Rules
 
-`src/utils/logger.js` is **only** logger in application. **Never use `console.log`, `console.error`, or any other logging mechanism in production code.**
+`src/utils/logger.ts` is **only** logger in application. **Never use `console.log`, `console.error`, or any other logging mechanism in production code.**
 
 > **v5.0.0 — 2026-05-21:** Logger upgraded from 4-level to RFC 5424 8-level hierarchy.
 > `logger.warn(...)` was renamed to `logger.warning(...)` at all call sites.
@@ -401,13 +401,13 @@ Login lockout (`LoginLockoutMiddleware`, env `LOGIN_*`) is separate from these l
 Examples:
 
 Server function call:
-[JmPaunlagui (S) 192.168.100.92] [2025-08-22 19:43:03] [INFO] [PID:23632] [initializePool @ src/config/adapters/oracle.js:234] [FUNC] - appDb pool created successfully
+[JmPaunlagui (S) 192.168.100.92] [2025-08-22 19:43:03] [INFO] [PID:23632] [initializePool @ src/config/adapters/oracle.ts:234] [FUNC] - appDb pool created successfully
 
 Client incoming request:
-[paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.js:55] [Incoming Request] [POST] - [POST @ /api/v1/auth/login]
+[paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.ts:55] [Incoming Request] [POST] - [POST @ /api/v1/auth/login]
 
 Client request complete:
-[paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.js:80] [Request Complete] [POST] - [POST @ /api/v1/auth/login]
+[paunlaguij@48022603 (C) 192.168.100.187] [2025-08-22 19:43:13] [INFO] [PID:23632] [handle @ src/middleware/traceability/TraceabilityMiddleware.ts:80] [Request Complete] [POST] - [POST @ /api/v1/auth/login]
 ```
 
 ### Log Truncation Policy
@@ -532,7 +532,7 @@ Verbose diagnostic (local dev only)              →  debug
 
 ## Environment Variables
 
-All env vars documented in `.env.example`. **Never import `dotenv` directly in feature files** — only `server.js` and compiled-env bootstrap. **Never hardcode values** that belong in `.env.example`.
+All env vars documented in `.env.example`. **Never import `dotenv` directly in feature files** — only `server.ts` and compiled-env bootstrap. **Never hardcode values** that belong in `.env.example`.
 
 `.env.example` categories (the file is authoritative for order, defaults and comments). There are no product-specific variables (no `BILLING_*`, no per-product DB target switches); a project adds its own category with a safe default and a comment.
 
@@ -682,7 +682,7 @@ or reviewed against a four-key success shape is wrong.
 }
 ```
 
-`title` comes from `HTTP_STATUS_TITLES` in `src/constants/responses/index.js`, which
+`title` comes from `HTTP_STATUS_TITLES` in `src/constants/responses/index.ts`, which
 the frontend mirrors code-for-code in `Frontend/src/constants/httpStatus.js`. That
 parity is enforced by `Frontend/test/unit/constants/httpStatus.test.js`, which reads
 these backend files directly — changing a title on one side without the other fails
@@ -707,7 +707,7 @@ throw new AppError(AUTH_ERRORS.USER_NOT_FOUND, HTTP_STATUS.UNAUTHORIZED);
 - Global `ErrorHandlerMiddleware` catches everything — `AppError`, DB errors, unexpected crashes
 - `catchAsync(fn)` wraps async controller methods — missing it crashes process on unhandled rejections
 - **Never** `console.error` raw errors — always `logger.error(...)`
-- Unhandled promise rejections and uncaught exceptions handled in `server.js`
+- Unhandled promise rejections and uncaught exceptions handled in `server.ts`
 
 ```js
 // AppError usage
@@ -721,14 +721,14 @@ throw new AppError(AUTH_ERRORS.FORBIDDEN_ACCESS, HTTP_STATUS.FORBIDDEN, {
 
 ## Middleware Stack (order matters — do not reorder)
 
-**`src/app.js` is the authority — read the numbered comments there, do not trust a
+**`src/app.ts` is the authority — read the numbered comments there, do not trust a
 count from this file.** The chain is 13 numbered steps plus sub-steps `3a`, `3b`, `4a`
 and `5a`; step 4 mounts three handlers. A sub-step exists where a later addition had to
 land *inside* an existing step's ordering constraint rather than after it.
 
 Before the chain, `TRUST_PROXY` is parsed into `app.set("trust proxy", ...)`. The
 request watchdog is **not** an `app.use` step: it attaches to the HTTP server's
-`request` event in `server.js`.
+`request` event in `server.ts`.
 
 ```js
 // app.js — numbered exactly as the file comments them
@@ -808,11 +808,11 @@ Note the login credential field is **`userId`**, not `username`.
 ## Route Conventions
 
 - All routes prefixed with `/api/v1/`
-- Group by resource; one `<resource>.route.js` per mount, aggregated in `src/routes/index.js`
-- Project feature routes mount at the placeholder comment `Project feature routes mount here.` in `src/routes/index.js`
+- Group by resource; one `<resource>.route.js` per mount, aggregated in `src/routes/index.ts`
+- Project feature routes mount at the placeholder comment `Project feature routes mount here.` in `src/routes/index.ts`
 - Inside a router: auth gates first, then cache reads, then validation, then the controller
 
-### Route table (`src/routes/index.js`)
+### Route table (`src/routes/index.ts`)
 
 | Mount | Access | Endpoints |
 | --- | --- | --- |
@@ -871,11 +871,11 @@ An ADMIN may create and reset only `USER` accounts (`AdminManagementService._ass
 ## Database — OracleDB Adapter Rules
 
 - **Dual-pool pattern**: `appDb` (interactive; the only entry in `READINESS_GATING_POOLS`) and `appDbBulk` (bulk/long-running work). Same credentials (`APP_DB_USERNAME`/`APP_DB_PASSWORD`) and connect string (`DB_HOST`, `DB_PORT`, `DB_APP_SERVICE_NAME` as SID); separate sizing (`APP_POOL_*`, `APP_BULK_*`). Names are exported as `POOL_NAMES`.
-- `DEMO_MODE=true` skips Oracle entirely (`src/config/demoMode.js`)
-- New connection requires only new entry in `src/config/database.js` — no other file changes
+- `DEMO_MODE=true` skips Oracle entirely (`src/config/demoMode.ts`)
+- New connection requires only new entry in `src/config/database.ts` — no other file changes
 - `PoolHealthMonitor` runs every 30 seconds, marks unhealthy pools after 3 consecutive failures
 - Exponential backoff on pool init: 3 retries, delay `min(1000 * 2^n, 10000)ms`
-- **Never** use raw `oracledb` outside `src/config/adapters/oracle.js`
+- **Never** use raw `oracledb` outside `src/config/adapters/oracle.ts`
 
 ```js
 // Usage everywhere else in the app
@@ -916,7 +916,7 @@ Full API documented in `src/utils/oracle-mongo-wrapper/README.md`.
 
 Seed template accounts with `bun run db:seed:template`. Models use explicit projections, so apply SQL **before** deploying code that reads new columns (otherwise `ORA-00904`). Details in `sql/README.md`.
 
-## AdminModel (`src/models/admin.model.js`)
+## AdminModel (`src/models/admin.model.ts`)
 
 | Method | Purpose |
 | --- | --- |
@@ -933,7 +933,7 @@ Seed template accounts with `bun run db:seed:template`. Models use explicit proj
 | --- | --- |
 | `winsw/catherine-backend-service.xml` | Service id `catherine-backend`, executable `%BASE%\catherine-backend.exe`, `stoptimeout` 1860 s, preshutdown enabled |
 | `winsw/install-service.ps1` / `uninstall-service.ps1` / `check-shutdown-readiness.ps1` | Install (default ExeName `catherine-backend.exe`), remove, verify |
-| `systemd/catherine-backend.service` | `User=catherine`, `ExecStart=/usr/local/bin/bun server.js`, `TimeoutStopSec=1860` |
+| `systemd/catherine-backend.service` | `User=catherine`, `ExecStart=/usr/local/bin/bun server.ts`, `TimeoutStopSec=1860` |
 | `DEPLOYMENT_RUNBOOK.md`, `DEPLOYMENT_CHECKLIST.md`, `RESTART_VERIFICATION.md` | Operator procedures |
 
 `SHUTDOWN_FORCED_EXIT_MS` (max 1834000) must stay below the service stop timeout.
@@ -948,7 +948,7 @@ CATHERINE ships an **exact-decimal money capability**, not a money *feature*
 if broken. The worked reference lives at the `/about/money` page; this section is
 the enforced contract for backend code.
 
-### Value type — `src/utils/money.js`
+### Value type — `src/utils/money.ts`
 
 - Money is the `Money` value type: a `BigInt` coefficient plus an integer scale.
   **Never** hold a monetary amount in a JS `number`, `parseFloat`, or `FLOAT`.
@@ -993,7 +993,7 @@ the enforced contract for backend code.
   wherever a total decomposes into parts.
 - **Bind money as its fixed-scale string** through `parseUpdate`, so the value
   never round-trips through a JS double on the way to a `NUMBER(19,4)` column.
-- `src/config/adapters/oracle.js` installs a `fetchTypeHandler` that returns any
+- `src/config/adapters/oracle.ts` installs a `fetchTypeHandler` that returns any
   `NUMBER` with **scale > 0 as a string** (rule 3b). Scale-0 columns (IDs,
   counts) stay numbers. Blast radius is zero until a scaled column exists.
 - The `oracle-mongo-wrapper` `convertTypes` is **FENCED**: it converts only
@@ -1010,7 +1010,7 @@ the enforced contract for backend code.
 
 ### Ledger integrity — signed fields (§3.4)
 
-- `src/utils/integrity/signedFields.js` — one `makeSignedFields({ domain, fields,
+- `src/utils/integrity/signedFields.ts` — one `makeSignedFields({ domain, fields,
   moneyFields })` factory produces **one** projection used by both signer and
   verifier. A downstream app's projection once drifted into four copies; that drift made
   legitimately corrected rows read TAMPERED forever. There must be exactly one
@@ -1073,9 +1073,9 @@ deliberately; do not inherit a default.
 
 ## Bun Runtime and Compiled Exe
 
-Bun is the runtime, package manager and test runner (`engines.bun`, `packageManager`). `bun server.js` runs the API; `bun run test` runs Vitest under Bun (`bun --bun vitest`). Never `bun test` — that is Bun's own runner and skips Vitest.
+Bun is the runtime, package manager and test runner (`engines.bun`, `packageManager`). `bun server.ts` runs the API; `bun run test` runs Vitest under Bun (`bun --bun vitest`). Never `bun test` — that is Bun's own runner and skips Vitest.
 
-Compile into a standalone Windows executable with `bun build --compile` (`scripts/build.js`):
+Compile into a standalone Windows executable with `bun build --compile` (`scripts/build.ts`):
 
 ```bash
 bun run build        # dist/catherine-backend.exe (bun-windows-x64; cross-compiles from macOS/Linux)
@@ -1084,19 +1084,43 @@ bun run build:host   # dist/catherine-backend for this machine — smoke-test a 
 
 Compiled-exe rules:
 
-1. **Never read a file relative to `__dirname`.** `bun build --compile` bakes the BUILD machine's absolute `__dirname` into the binary, so on the server it points at nothing. Resolve every on-disk path through `src/utils/runtimePaths.js` (`APP_ROOT` = exe folder when compiled, Backend folder otherwise; `appPath(...)`).
-2. `scripts/build.js` stages beside the exe: `src/utils/email-templates/`, `src/generated/`, `node_modules/oracledb/build/Release/` (Thick binary, passed as `initOracleClient({ binaryDir })`) and `prebuilds/<platform-arch>/` (argon2, found by node-gyp-build's exe-relative lookup). It fails the build if any stages nothing. A new on-disk asset must be added to `ASSET_DIRS` there.
+1. **Never read a file relative to `__dirname`.** `bun build --compile` bakes the BUILD machine's absolute `__dirname` into the binary, so on the server it points at nothing. Resolve every on-disk path through `src/utils/runtimePaths.ts` (`APP_ROOT` = exe folder when compiled, Backend folder otherwise; `appPath(...)`).
+2. `scripts/build.ts` stages beside the exe: `src/utils/email-templates/`, `src/generated/`, `node_modules/oracledb/build/Release/` (Thick binary, passed as `initOracleClient({ binaryDir })`) and `prebuilds/<platform-arch>/` (argon2, found by node-gyp-build's exe-relative lookup). It fails the build if any stages nothing. A new on-disk asset must be added to `ASSET_DIRS` there.
 3. The source map is embedded (`--sourcemap=inline`) so log call-sites read `src/...:line`, not `root/catherine-backend:line`.
 4. `Intl` output differs between engines (JavaScriptCore writes "Nov 3, 2026 at 2:32 PM"; V8 "Nov 3, 2026, 2:32 PM"). Never use `dateStyle`/`timeStyle` for text that tests or emails depend on — use `formatUtcStamp` or `formatToParts`.
-5. `src/utils/consoleManager.js` sets the process title for the exe window.
+5. `src/utils/consoleManager.ts` sets the process title for the exe window.
 6. Clustering shares the port through SO_REUSEPORT: verified on macOS, load-balanced on Linux, not verified on Windows — keep `ENABLE_CLUSTERING=false` on a Windows host until it is.
+
+---
+
+## TypeScript
+
+`server.ts`, every file under `src/` and every CLI tool under `scripts/` are TypeScript ES modules (`import`/`export`), type-checked under `strict`. Bun runs them directly; `tsc` only type-checks (`noEmit`). `test/` is still CommonJS JavaScript and loads `src` with `require()`. A script that reads `.env` imports `src/config/bootEnv.ts` first (rule 7); `__dirname` is `import.meta.dir` and the run-as-main check is `import.meta.main`.
+
+```bash
+bun run typecheck   # tsc -p . — must stay at zero errors
+bun run lint        # .ts files go through typescript-eslint (eslint.config.ts BLOCK 1b)
+```
+
+Rules:
+
+1. **No `// @ts-nocheck`; minimize `any`.** Type new code precisely. `any` is allowed only where a value genuinely has no knowable type (e.g. the Mongo-style filter operands in the Oracle wrapper); say why in a comment. For data whose shape is not known yet (IPC messages, parsed JSON, `req.query`, thrown values) use `unknown` and narrow it with a type guard; see `utils/cluster/ipcSchemas.ts` (`isPlainObject`, `isBoundedString`) and `utils/http/queryString.ts`. `any` that remains is debt from the JavaScript (`grep -rnE ':\s*any\b|Record<string, any>' src server.ts`); replace it when you touch that code.
+2. **Casts carry a reason.** `x as T` and `x!` are allowed only where the code already guarantees the type, with a comment saying how (e.g. `zip.file(name)! // name came from zip.files`). `as unknown as T` is not allowed.
+3. **Express:** `req.user` is optional (public routes have none); on authenticated routes call `requireAuthUser(req)` (`utils/auth/requireAuthUser.ts`). A named `:param` is read as `req.params.id as string`. Read `req.query` values through `queryString()`. App-specific `Request` fields are declared in `src/types/express.d.ts`.
+4. **Database rows:** the wrapper's `toArray<T>()` / `next<T>()` / `findOne<T>()` are generic; a model declares its row interface (e.g. `SystemConfigRow`, `BackupVoteRow`) and gets it without a cast. Oracle `DATE`/`TIMESTAMP` columns arrive as `Date`.
+5. **Class fields** that a constructor or method assigns are declared with `declare field: T;`. A bare `field: T;` is emitted as a real field and resets, after `super()`, a value a base constructor set.
+6. **Lazy `require()`** (cycle breakers, branch-only loads in `server.ts`) is written `(require("./x") as typeof import("./x"))` so the module keeps its types; a bare `require()` is `any`. This is why `@typescript-eslint/no-require-imports` stays off.
+7. **Imports run before the module body.** A side effect another module depends on at load time goes in its own side-effect module imported first, never in the importer's body: `server.ts` imports `src/config/bootEnv.ts` (thread pool, `.env`, `TZ`) then `src/config/bootSecrets.ts` (boot guard) before anything else, and `app.ts` imports `src/config/cacheStores.ts` above the routes. No top-level `return` (ESM forbids it; the worker boot is `bootWorker()` for that reason).
+8. **Export shape.** A CommonJS caller's `require()` of a module with `export default X` returns `{ default: X }`, so scripts and tests write `require("../src/...").default`. A named export cannot be replaced by `vi.spyOn` or by assignment, so anything a test stubs is exported as an object (default export) whose properties can be swapped: see `models/demo/demoStore.ts` and the default export of `config/database.ts`.
+9. `typescript` is pinned to `~6.0`: typescript-eslint needs TypeScript's JS API (`<6.1`), which TypeScript 7 (the native compiler) does not ship. Move to 7 when typescript-eslint supports it.
+10. A source path in code or docs names the `.ts` file (`src/utils/logger.ts`). The logger skips its own stack frames by matching `logger.[jt]s`; keep that match extension-agnostic.
 
 ---
 
 ## Gotchas
 
 - Always use `catchAsync` around async controller functions — missing it crashes on unhandled rejections
-- `cors()` origin patterns in `CorsMiddleware.js` — add project-specific origins to `CORS_ORIGINS` env var
+- `cors()` origin patterns in `CorsMiddleware.ts` — add project-specific origins to `CORS_ORIGINS` env var
 - Rate limiter per-IP by default — create `new RateLimiterMiddleware({ max: 5 })` for strict routes
 - Cache stores registered once at startup via `registry.registerAll({...})` — resolving unregistered name throws immediately
 - Always build cache keys with `CacheKeyBuilder` — never concatenate strings manually; parameters sorted alphabetically so call-site order never matters
@@ -1246,7 +1270,7 @@ vi (built-in)      — spies, stubs, fakes (replaces sinon)
 ```
 
 `describe`, `it`, `expect`, `vi`, and the `beforeAll`/`afterAll`/`beforeEach`/`afterEach`
-hooks are injected globally via `globals: true` in `vitest.config.js` — no per-file imports.
+hooks are injected globally via `globals: true` in `vitest.config.mts` — no per-file imports.
 
 Install (all dev-only):
 
@@ -1254,7 +1278,7 @@ Install (all dev-only):
 bun add -d vitest @vitest/coverage-v8 supertest
 ```
 
-The runner is configured by `vitest.config.js` at the Backend root:
+The runner is configured by `vitest.config.mts` at the Backend root:
 
 - `pool: "forks"`, `fileParallelism: false` — each test file runs in its own child
   process, sequentially, because the suite mutates shared in-memory middleware state.

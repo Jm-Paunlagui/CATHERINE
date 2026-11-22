@@ -44,7 +44,7 @@ process.env.DATA_SIGNING_SECRET =
 // precedence while their block is active, then restores to this outer stub.
 
 beforeAll(function () {
-    const AuditLogService = require("../../src/services/AuditLogService");
+    const AuditLogService = require("../../src/services/AuditLogService").default;
     vi.spyOn(AuditLogService, "insertAsync").mockResolvedValue(undefined);
 });
 

@@ -19,13 +19,13 @@
  */
 
 const { loadFreshAdapter } = require("../helpers/freshOracleAdapter");
-const { AlertNotifierService } = require("../../../src/services/AlertNotifierService");
-const ShutdownNotifier = require("../../../src/utils/shutdown/ShutdownNotifier");
-const SharedTransporter = require("../../../src/services/email/SharedTransporter");
-const RecipientResolver = require("../../../src/services/email/RecipientResolver");
-const AdminModel = require("../../../src/models/admin.model");
-const ServerAlertLogModel = require("../../../src/models/serverAlertLog.model");
-const ServerAlertAckModel = require("../../../src/models/serverAlertAck.model");
+const { AlertNotifierService } = require("../../../src/services/AlertNotifierService").default;
+const ShutdownNotifier = require("../../../src/utils/shutdown/ShutdownNotifier").default;
+const SharedTransporter = require("../../../src/services/email/SharedTransporter").default;
+const RecipientResolver = require("../../../src/services/email/RecipientResolver").default;
+const AdminModel = require("../../../src/models/admin.model").default;
+const ServerAlertLogModel = require("../../../src/models/serverAlertLog.model").default;
+const ServerAlertAckModel = require("../../../src/models/serverAlertAck.model").default;
 const { logger } = require("../../../src/utils/logger");
 
 const DB_DOWN = () => Promise.reject(new Error("NJS-503: connection to host failed"));
@@ -99,7 +99,7 @@ describe("Gap 3 â€” DB dies during graceful shutdown", function () {
     it("shutdown email still sent; draining pools raise no ORACLE_POOL_DOWN email", async function () {
         dbUp = false; // DB dies as the stop begins
 
-        // server.js order: AlertNotifierService.beginShutdown -> shutdownNotifier.started -> ... closeAll
+        // server.ts order: AlertNotifierService.beginShutdown -> shutdownNotifier.started -> ... closeAll
         notifier.beginShutdown();
         const shutdownNotifier = new ShutdownNotifier({ alertNotifier: notifier, logger });
         const started = shutdownNotifier.started({ signal: "SIGTERM", inFlight: 0, graceMs: 30_000, pendingTasks: 0 });

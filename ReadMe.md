@@ -52,7 +52,7 @@ Security is layered so that an attacker has to beat every stage, not one. The re
 13  PreventRedirects  → API routes only
 ```
 
-`Backend/src/app.js` is the authority for this order; the global error handler runs after the routes.
+`Backend/src/app.ts` is the authority for this order; the global error handler runs after the routes.
 
 **Beyond the chain:**
 

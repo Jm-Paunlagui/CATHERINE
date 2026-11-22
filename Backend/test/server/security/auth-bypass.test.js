@@ -5,7 +5,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const cookieSignature = require("cookie-signature");
-const AuthMiddleware = require("../../../src/middleware/authentication/AuthMiddleware");
+const AuthMiddleware = require("../../../src/middleware/authentication/AuthMiddleware").default;
 const {
     defaultErrorHandler,
 } = require("../../../src/middleware/errorHandling/ErrorHandlerMiddleware");

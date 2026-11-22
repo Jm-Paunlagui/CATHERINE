@@ -40,7 +40,7 @@ import httpClient from "../../src/middleware/HttpClient.js";
 import csrfMiddleware from "../../src/middleware/security/CsrfMiddleware.js";
 import { fail, ok } from "../helpers/fixtures/contract.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 
 /** A CSRF-rejection envelope: a 403 whose `code` is one the retry allow-list matches. */
 function csrfReject(code = "CSRF_TOKEN_INVALID") {

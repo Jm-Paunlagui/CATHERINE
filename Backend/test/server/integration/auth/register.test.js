@@ -18,7 +18,7 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app");
+const app = require("../../../../src/app").default;
 
 describe("Auth — Register (no route exists)", function () {
     it("GET /api/v1/auth/register returns 404 — the route is intentionally absent", async function () {

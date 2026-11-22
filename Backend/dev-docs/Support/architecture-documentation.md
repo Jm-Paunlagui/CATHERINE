@@ -2,8 +2,8 @@
 
 > **Scope:** The **Architecture page** — Support → **Architecture** (`/support/architecture`), **SUPER_ADMIN only**. An interactive map of the whole system (actors, frontend, Express edge, every API module, shared services, the runtime band, Oracle pools and table groups, external systems) with step-through request flows and a JSON export for AI agents.
 > **Source (FE):** `Frontend/src/features/support/architecture/` — `Architecture.view.jsx`, `architecture.hook.js`, `architecture.api.js` — a thin feature over the shared engine in `Frontend/src/components/shared/systemMap/` (`index.js` — the barrel the features import from — `SystemMapView.jsx`, `useSystemMap.js`, `systemMapLayout.js`, `systemMapTones.js`, `SystemMapCanvas.jsx`, `FlowPanel.jsx`, `NodeDetails.jsx`, `systemMap.css`), which Support → Runtime also uses. Route registered in `Frontend/src/App.jsx`; nav item (SUPER_ADMIN block only) in `Frontend/src/components/layout/config/nav.config.jsx`.
-> **Source (BE):** `Backend/src/routes/architecture.route.js`, `src/controllers/ArchitectureController.js`, `src/services/ArchitectureService.js`, `src/constants/architectureModel.js` (the hand-authored map, its `LAYOUT` and `META`), `src/utils/systemMap.js` (shared validator/assembler), `src/constants/messages/architecture.messages.js`, `ARCHITECTURE_ERRORS` in `src/constants/errors/index.js`, `ARCHITECTURE_MAP_FETCHED` in `src/constants/responses/index.js`.
-> **Verified 2026-10-29.** Re-checked against the CATHERINE source: `Backend/src/constants/architectureModel.js` (`MAP_VERIFIED_AT = "2026-10-26"`, `META.system` "CATHERINE — project-agnostic Express + React template"), `Backend/src/utils/systemMap.js`, `architecture.route.js` (`requireSuperAdmin` = `requireAccess(user.role === "SUPER_ADMIN")` on `router.use`), `ArchitectureController.js` (`private, no-store, max-age=0`, `MAP_SERVED`), `ArchitectureService.js`, `architecture.messages.js`, and on the frontend `architecture.hook.js` (`cacheKey "architecture/map"`, `downloadName "architecture.json"`), `useSystemMap.js` (`staleTime 300_000`, `PLAY_INTERVAL_MS 1600`), `SystemMapCanvas.jsx` (`HOVER_LOCK_MS 250`), `App.jsx` and `nav.config.jsx`. Node, edge and flow counts in §1 were counted by hand from the model on that date. A search of `Backend/test/` and `Frontend/test/` found **no** system-map, architecture or runtime test of any kind; §6 and §8 say so instead of citing suites. No test counts are quoted.
+> **Source (BE):** `Backend/src/routes/architecture.route.ts`, `src/controllers/ArchitectureController.ts`, `src/services/ArchitectureService.ts`, `src/constants/architectureModel.ts` (the hand-authored map, its `LAYOUT` and `META`), `src/utils/systemMap.ts` (shared validator/assembler), `src/constants/messages/architecture.messages.ts`, `ARCHITECTURE_ERRORS` in `src/constants/errors/index.ts`, `ARCHITECTURE_MAP_FETCHED` in `src/constants/responses/index.ts`.
+> **Verified 2026-10-29.** Re-checked against the CATHERINE source: `Backend/src/constants/architectureModel.ts` (`MAP_VERIFIED_AT = "2026-10-26"`, `META.system` "CATHERINE — project-agnostic Express + React template"), `Backend/src/utils/systemMap.ts`, `architecture.route.js` (`requireSuperAdmin` = `requireAccess(user.role === "SUPER_ADMIN")` on `router.use`), `ArchitectureController.js` (`private, no-store, max-age=0`, `MAP_SERVED`), `ArchitectureService.js`, `architecture.messages.js`, and on the frontend `architecture.hook.js` (`cacheKey "architecture/map"`, `downloadName "architecture.json"`), `useSystemMap.js` (`staleTime 300_000`, `PLAY_INTERVAL_MS 1600`), `SystemMapCanvas.jsx` (`HOVER_LOCK_MS 250`), `App.jsx` and `nav.config.jsx`. Node, edge and flow counts in §1 were counted by hand from the model on that date. A search of `Backend/test/` and `Frontend/test/` found **no** system-map, architecture or runtime test of any kind; §6 and §8 say so instead of citing suites. No test counts are quoted.
 >
 > **Related docs:**
 > - `Support/runtime-documentation.md` — the sibling map of how the server runs (same engine, same route, same gate).
@@ -18,7 +18,7 @@
 
 The Architecture page draws the system as 50 nodes and 97 edges in eight layers, plus 12 request flows (anatomy of an API request, login & session refresh, integrity tamper sweep, data purge with mandatory backup, scheduled DB backup, metrics/alerts/logs, opening the Architecture page, admin provisioning, restore from a signed archive, health probes, version history and Dev Docs, restart detection & boot emails). Counts are by hand from `architectureModel.js` on 2026-10-29; the page header shows the live numbers. Selecting a flow highlights its path and numbers each step on the diagram; the steps can be walked with Prev/Next/Play or the arrow keys. Selecting a node shows its files, endpoints, connections and the flows it appears in. **Download JSON** exports `{ meta, layers, edgeKinds, nodes, edges, flows }` for AI agents and tooling.
 
-The map is **hand-authored**, not inferred at runtime: `src/constants/architectureModel.js` is the source of truth. Its file header names a drift test (`test/server/unit/architecture/systemMap.test.js`) that does **not** exist in this repo yet (§6) — today only `buildSystemMap` guards it, at request time.
+The map is **hand-authored**, not inferred at runtime: `src/constants/architectureModel.ts` is the source of truth. Its file header names a drift test (`test/server/unit/architecture/systemMap.test.js`) that does **not** exist in this repo yet (§6) — today only `buildSystemMap` guards it, at request time.
 
 It is SUPER_ADMIN-only — narrower than Dev Docs, which also admits ADMIN — because it lists every endpoint, table, signing step and permission predicate in one place.
 
@@ -76,11 +76,11 @@ The page appears on its own map as the flow **"Open the Architecture page"**.
 
 | File | Role |
 | --- | --- |
-| `src/routes/architecture.route.js` | `router.use(authenticate)`, `router.use(requireSuperAdmin)`, `GET /` (this map) and `GET /runtime` (Support → Runtime). No cache middleware, no extra limiter. |
-| `src/controllers/ArchitectureController.js` | One handler per map name (fixed per route, never from the request); projects the seven keys explicitly; `Cache-Control: private, no-store, max-age=0`; logs `MAP_SERVED`. |
-| `src/services/ArchitectureService.js` | `getMap(name)` builds each map once per process and holds it; a failed build is logged (`MAP_BUILD_FAILED`) and **not** cached, and does not affect the other map. |
-| `src/constants/architectureModel.js` | Hand-authored nodes, edges, flows, diagram `LAYOUT` and `META`. Bump `MAP_VERIFIED_AT` when re-checking it against the code — the page shows it as "Verified <date>". |
-| `src/utils/systemMap.js` | `buildSystemMap(model)` — the shared validator/assembler. Throws on an unknown node, a duplicate, a flow step with no edge, or an unplaced node. |
+| `src/routes/architecture.route.ts` | `router.use(authenticate)`, `router.use(requireSuperAdmin)`, `GET /` (this map) and `GET /runtime` (Support → Runtime). No cache middleware, no extra limiter. |
+| `src/controllers/ArchitectureController.ts` | One handler per map name (fixed per route, never from the request); projects the seven keys explicitly; `Cache-Control: private, no-store, max-age=0`; logs `MAP_SERVED`. |
+| `src/services/ArchitectureService.ts` | `getMap(name)` builds each map once per process and holds it; a failed build is logged (`MAP_BUILD_FAILED`) and **not** cached, and does not affect the other map. |
+| `src/constants/architectureModel.ts` | Hand-authored nodes, edges, flows, diagram `LAYOUT` and `META`. Bump `MAP_VERIFIED_AT` when re-checking it against the code — the page shows it as "Verified <date>". |
+| `src/utils/systemMap.ts` | `buildSystemMap(model)` — the shared validator/assembler. Throws on an unknown node, a duplicate, a flow step with no edge, or an unplaced node. |
 
 Both data files sit under `src/` deliberately: they are required modules, so the compiled `.exe` bundles them and can serve the map without a build step or generated artefact (`src/generated/` is gitignored and would be missing from a fresh clone).
 
@@ -98,7 +98,7 @@ Both data files sit under `src/` deliberately: they are required modules, so the
 
 ## 6. Technicalities
 
-**Completeness.** The template's map covers the modules mounted in `Backend/src/routes/index.js` (health, csrf, client, auth, admin-management, audit-logs, metrics, changelog, dev-docs, architecture, integrity, data-purge), the two pools `appDb` / `appDbBulk`, and the table groups `T_USERS_DEV` / `T_ADMINS_DEV` / refresh-token ledger, audit and alert tables, and backup governance tables. The changelog is the encrypted file `data/changelog.enc`, not a database table. No automated completeness check exists in this repo; whether every `src/**/*.js` file is on a node was **not** re-verified for this document.
+**Completeness.** The template's map covers the modules mounted in `Backend/src/routes/index.ts` (health, csrf, client, auth, admin-management, audit-logs, metrics, changelog, dev-docs, architecture, integrity, data-purge), the two pools `appDb` / `appDbBulk`, and the table groups `T_USERS_DEV` / `T_ADMINS_DEV` / refresh-token ledger, audit and alert tables, and backup governance tables. The changelog is the encrypted file `data/changelog.enc`, not a database table. No automated completeness check exists in this repo; whether every `src/**/*.js` file is on a node was **not** re-verified for this document.
 
 **Keeping the map honest.** The model's file header describes `test/server/unit/architecture/systemMap.test.js`, which would fail when:
 
@@ -119,7 +119,7 @@ Both data files sit under `src/` deliberately: they are required modules, so the
 | Reliability | none in this repo | none in this repo |
 | Chaos | none in this repo | none in this repo |
 
-**Bad payloads never draw half a map.** `validateMap` (`systemMapLayout.js`) checks a payload before anything is drawn; an empty body, a missing layout, or an edge/step pointing at something that does not exist becomes one "map data is incomplete" alert instead of a blank page or a geometry crash. `validateMap` never throws: it returns a list of problems, and a null step, a null flow, a null layer, a layout column without a node list, a flow without `nodes` or `steps`, and node `files` / `endpoints` that are not lists of text are each reported as a problem rather than raised. The server side is just as strict: `buildSystemMap` (`src/utils/systemMap.js`) walks every flow's steps with an indexed loop, so a sparse hole (a `,,` typo), an `undefined` step or a `steps` value that is not an array is rejected with the validator's "model is invalid" error instead of being served as a null step or crashing with a raw `TypeError`.
+**Bad payloads never draw half a map.** `validateMap` (`systemMapLayout.js`) checks a payload before anything is drawn; an empty body, a missing layout, or an edge/step pointing at something that does not exist becomes one "map data is incomplete" alert instead of a blank page or a geometry crash. `validateMap` never throws: it returns a list of problems, and a null step, a null flow, a null layer, a layout column without a node list, a flow without `nodes` or `steps`, and node `files` / `endpoints` that are not lists of text are each reported as a problem rather than raised. The server side is just as strict: `buildSystemMap` (`src/utils/systemMap.ts`) walks every flow's steps with an indexed loop, so a sparse hole (a `,,` typo), an `undefined` step or a `steps` value that is not an array is rejected with the validator's "model is invalid" error instead of being served as a null step or crashing with a raw `TypeError`.
 
 What the test cannot catch: a wrong *description*, a missing *edge*, or a flow that no longer reflects the code path. Those are on whoever changes the behaviour; bump `MAP_VERIFIED_AT` after re-checking.
 
@@ -168,7 +168,7 @@ No — `private, no-store`.
 
 **Q: What stops the map drifting from the code?**
 Today, only `buildSystemMap` (unknown node / layer / edge kind, duplicate node / edge / flow, a flow step with no edge, an unplaced or doubly placed node). The path and endpoint-parity checks described in the model's header are not implemented in this repo.
-**Evidence (API):** source only — `Backend/src/utils/systemMap.js`. `test/server/unit/architecture/systemMap.test.js` does not exist.
+**Evidence (API):** source only — `Backend/src/utils/systemMap.ts`. `test/server/unit/architecture/systemMap.test.js` does not exist.
 **Evidence (UI):** none — backend-only. _Status: no test in this repo._
 
 **Q: Can a flow step be linked to directly?**

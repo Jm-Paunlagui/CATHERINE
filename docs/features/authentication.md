@@ -167,7 +167,7 @@ erDiagram
     }
 ```
 
-There is **no foreign key between the two tables and no join**. `AuthService.login` probes `T_ADMINS_DEV` first and falls through to `T_USERS_DEV` only when no admin row matches; a username present in both authenticates as the admin. The signed field set is exactly four columns — `USERNAME`, `PASSWORD`, `ROLE`, `IS_ACTIVE` (`AdminModel.buildSignedFields`, `Backend/src/models/admin.model.js:30`). The four `CAN_RECEIVE_SRV_*` flags are deliberately **outside** the signature so toggling a notification opt-in does not require re-signing the row.
+There is **no foreign key between the two tables and no join**. `AuthService.login` probes `T_ADMINS_DEV` first and falls through to `T_USERS_DEV` only when no admin row matches; a username present in both authenticates as the admin. The signed field set is exactly four columns — `USERNAME`, `PASSWORD`, `ROLE`, `IS_ACTIVE` (`AdminModel.buildSignedFields`, `Backend/src/models/admin.model.ts:30`). The four `CAN_RECEIVE_SRV_*` flags are deliberately **outside** the signature so toggling a notification opt-in does not require re-signing the row.
 
 ### 2.5 Browser session lifecycle
 
@@ -264,7 +264,7 @@ That in-place behaviour is guaranteed by `SELF_HANDLED_ENDPOINTS` in `Frontend/s
 
 ### 4.1 Routes
 
-All routes are mounted under `/api/v1` (`Backend/src/app.js:192`), and the auth router at `/auth` (`Backend/src/routes/index.js:29`).
+All routes are mounted under `/api/v1` (`Backend/src/app.ts:192`), and the auth router at `/auth` (`Backend/src/routes/index.ts:29`).
 
 | Method & path | Middleware, in order | Handler | Purpose |
 | --- | --- | --- | --- |
@@ -276,7 +276,7 @@ All routes are mounted under `/api/v1` (`Backend/src/app.js:192`), and the auth 
 
 There is **no** `POST /auth/register`. `Backend/test/server/integration/auth/register.test.js:23` exists purely to assert the route is intentionally absent; account provisioning lives on the admin-management router.
 
-Supporting endpoints the auth flow depends on (`Backend/src/routes/csrf.route.js`):
+Supporting endpoints the auth flow depends on (`Backend/src/routes/csrf.route.ts`):
 
 | Method & path | Auth | Purpose |
 | --- | --- | --- |
@@ -286,7 +286,7 @@ Supporting endpoints the auth flow depends on (`Backend/src/routes/csrf.route.js
 
 ### 4.2 The middleware chain a login request traverses
 
-`Backend/src/app.js` numbers its stack in comments and states "order matters — do not reorder". Read from the file, the numbered steps run **1 through 13**, with three lettered sub-steps inserted where a later mount point is mandatory:
+`Backend/src/app.ts` numbers its stack in comments and states "order matters — do not reorder". Read from the file, the numbered steps run **1 through 13**, with three lettered sub-steps inserted where a later mount point is mandatory:
 
 | # | Mount | Module |
 | --- | --- | --- |
@@ -313,7 +313,7 @@ Step 3 is the one that shapes every response body in this document: it replaces 
 
 ### 4.3 `AuthService` — the credential authority
 
-`Backend/src/services/auth.service.js` is a static class. Public surface: `login`, `refresh`, `getProfile`, `changePassword`, `accessCookieOptions`, `refreshCookieOptions`, `COOKIE_NAMES`.
+`Backend/src/services/auth.service.ts` is a static class. Public surface: `login`, `refresh`, `getProfile`, `changePassword`, `accessCookieOptions`, `refreshCookieOptions`, `COOKIE_NAMES`.
 
 **Claim construction.** `_adminPayload` / `_userPayload` build a normalised claim object; `_issueTokens` (line 352) turns it into the signed pair:
 
@@ -340,18 +340,18 @@ The access token carries this whole object. The refresh token carries only `{ su
 
 ### 4.4 Authorization — `requireAccess(predicate)`
 
-`Backend/src/middleware/authentication/AuthMiddleware.js:362`. The factory returns a middleware that emits `401 AuthenticationError` when `req.user` is absent (i.e. `authenticate` was not mounted first) and `403 AuthorizationError` when the predicate returns false, with an optional custom `message`.
+`Backend/src/middleware/authentication/AuthMiddleware.ts:362`. The factory returns a middleware that emits `401 AuthenticationError` when `req.user` is absent (i.e. `authenticate` was not mounted first) and `403 AuthorizationError` when the predicate returns false, with an optional custom `message`.
 
 Both styles are in live use in the template:
 
 ```js
-// String-role style — Backend/src/routes/admin-management.route.js:44
+// String-role style — Backend/src/routes/admin-management.route.ts:44
 const requireAdmin = AuthMiddleware.requireAccess(
     (user) => user.role === "ADMIN" || user.role === "SUPER_ADMIN",
     { message: "Only ADMIN or SUPER_ADMIN accounts may access admin management." },
 );
 
-// Numeric-level style — Backend/src/routes/metrics.route.js:50
+// Numeric-level style — Backend/src/routes/metrics.route.ts:50
 AuthMiddleware.requireAccess((user) => user.userLevel >= 2)
 ```
 
@@ -370,7 +370,7 @@ AuthMiddleware.requireAccess((user) => user.userLevel >= 2)
 
 ### 4.5 `CryptoVault` — hashing and the tamper-evident signature
 
-`Backend/src/utils/encryption/CryptoVault.js` is one gateway over four `PASSWORD_HASH_MODE` strategies (`argon2` default, `bcrypt`, `plain`, `tripledes`) plus a generic HMAC record-signing API.
+`Backend/src/utils/encryption/CryptoVault.ts` is one gateway over four `PASSWORD_HASH_MODE` strategies (`argon2` default, `bcrypt`, `plain`, `tripledes`) plus a generic HMAC record-signing API.
 
 **Passwords.** In `argon2` mode the plaintext is first HMAC-SHA256'd with `ARGON2_PEPPER` (a *keyed transformation*, not the hash), then fed to `argon2.hash` with `type: argon2id` and the configured `memoryCost` / `timeCost` / `parallelism` / `hashLength` (defaults 19456 KiB / 2 / 1 / 32). `verifyPassword` sniffs a `$2a$` / `$2b$` prefix and falls back to bcrypt automatically, which is what makes a zero-downtime migration possible. `resolveMode` throws outright if `PASSWORD_HASH_MODE=plain` and `NODE_ENV=production`.
 
@@ -386,7 +386,7 @@ Changing `ROLE` from `USER` to `SUPER_ADMIN` in the database, or swapping in a p
 
 ### 4.6 Lockout
 
-`Backend/src/middleware/authentication/LoginLockoutMiddleware.js` keeps per-username state in a 24-hour `CacheStore` (in-memory, per process):
+`Backend/src/middleware/authentication/LoginLockoutMiddleware.ts` keeps per-username state in a 24-hour `CacheStore` (in-memory, per process):
 
 ```text
 { cycles, currentMax, failCount, lockUntil }
@@ -398,13 +398,13 @@ Defaults: 3 attempts, `incremental` mode, 30 000 ms base duration, ×2 multiplie
 
 ### 4.7 `DEMO_MODE`
 
-`Backend/src/config/demoMode.js` exports a single function — read as a function, not a cached constant, so it reflects `process.env` after `dotenv` loads and tests can toggle it at runtime:
+`Backend/src/config/demoMode.ts` exports a single function — read as a function, not a cached constant, so it reflects `process.env` after `dotenv` loads and tests can toggle it at runtime:
 
 ```js
 function isDemoMode() { return String(process.env.DEMO_MODE).toLowerCase() === "true"; }
 ```
 
-Both models branch on it at the top of every method. `AdminModel.findByUsername` and `UserModel.findByUsername` read from `Backend/src/models/demo/demoStore.js` instead of an `OracleCollection`; the collection object is created lazily inside `col()`, so in demo mode **no Oracle pool is ever opened**.
+Both models branch on it at the top of every method. `AdminModel.findByUsername` and `UserModel.findByUsername` read from `Backend/src/models/demo/demoStore.ts` instead of an `OracleCollection`; the collection object is created lazily inside `col()`, so in demo mode **no Oracle pool is ever opened**.
 
 The fixtures are not shortcuts. `demoStore._buildAccounts()` hashes the shared demo password with the real `CryptoVault.hashPassword` and signs each admin row with the real `CryptoVault.signRecord("T_ADMINS_DEV", …)` — so a demo login exercises the genuine Argon2 verify **and** the genuine signature check. Seeded accounts:
 
@@ -414,7 +414,7 @@ The fixtures are not shortcuts. `demoStore._buildAccounts()` hashes the shared d
 | `manager` | `T_ADMINS_DEV` | `ADMIN` | signed |
 | `user` | `T_USERS_DEV` | (implicit `USER`) | no signature — users are not signed |
 
-The shared password is the module constant `DEMO_PASSWORD` in `demoStore.js`. `DEMO_MODE=true` together with `NODE_ENV=production` is a **fatal boot violation** (`Backend/src/config/bootGuard.js:168-175`).
+The shared password is the module constant `DEMO_PASSWORD` in `demoStore.js`. `DEMO_MODE=true` together with `NODE_ENV=production` is a **fatal boot violation** (`Backend/src/config/bootGuard.ts:168-175`).
 
 ---
 
@@ -665,7 +665,7 @@ The code is the authority. These are places where prose currently disagrees with
 | 6 | `Backend/src/controllers/auth.controllers.js:102-105` | `GET /auth/me` returns "the decoded JWT payload with permission flags refreshed from `T_ADMINS_DEV` at read time" | `AuthService.getProfile` (line 137) returns `decodedUser` unchanged. No database read occurs. |
 | 7 | `Frontend/src/features/auth/auth.api.js:8` | `POST auth/login → { data: { user, accessToken } }` | The body carries `{ user }` only; the token is cookie-only, and `login.test.js:140` asserts the token string is absent from the body. |
 | 8 | `Frontend/src/middleware/security/CsrfMiddleware.js:7-10` | `/csrf/token` and `/csrf/refresh` return `refreshIn`; `/csrf/status` returns `{ success, isValid, expiresAt }` | Neither token endpoint returns `refreshIn` (`_buildTokenResponse`, line 73). `/csrf/status` returns `{ success, status: {...}, message }` — there is no `isValid` field. |
-| 9 | `Backend/src/constants/index.js:15` | the contract test is `test/unit/constants/httpStatusContract.test.js` | The file is `test/unit/constants/httpStatusCatalog.test.js`. |
+| 9 | `Backend/src/constants/index.ts:15` | the contract test is `test/unit/constants/httpStatusContract.test.js` | The file is `test/unit/constants/httpStatusCatalog.test.js`. |
 | 10 | `Frontend/src/config/apiBase.js:12-13` | the production-build guard "belongs in `vite.config.js` and is **NOT** wired up in this template yet" | It is wired up — `assertApiBaseUrl` is defined at `vite.config.js:32` and called at line 170. |
 
 ---
@@ -754,7 +754,7 @@ Evidence is cited, not executed — every entry below is marked **not run** unle
 
 > **Q:** Is Argon2id actually exercised, including the wrong-password rejection and the bcrypt auto-detect?
 > **A:** Yes, but by a self-test rather than the main suite.
-> **Evidence:** `Backend/src/utils/encryption/CryptoVault.js:1218-1639` is a self-test suite run with `node CryptoVault.js`; test groups 4, 5 and 8 cover Argon2 hash→verify, wrong-password rejection, bcrypt→Argon2 migration, and the full `signRecord`/`verifyRecord` matrix including mutated-field, wrong-context and null-signature rejection. `Backend/test/encryption/cryptosuite.test.js` and `Backend/test/server/unit/utils/cryptoVault.adminMode.test.js` cover the harnessed paths. _Status: not run._
+> **Evidence:** `Backend/src/utils/encryption/CryptoVault.ts:1218-1639` is a self-test suite run with `node CryptoVault.js`; test groups 4, 5 and 8 cover Argon2 hash→verify, wrong-password rejection, bcrypt→Argon2 migration, and the full `signRecord`/`verifyRecord` matrix including mutated-field, wrong-context and null-signature rejection. `Backend/test/encryption/cryptosuite.test.js` and `Backend/test/server/unit/utils/cryptoVault.adminMode.test.js` cover the harnessed paths. _Status: not run._
 
 > **Q:** Is the `DEMO_MODE` login path tested?
 > **A:** **⚠ No test covers this.** `demoStore.js` is exercised indirectly by whatever suites run with `DEMO_MODE=true`, but there is no test that asserts `AdminModel.findByUsername` reads the fixture store, that the fixture signature verifies, or that no Oracle pool is opened.

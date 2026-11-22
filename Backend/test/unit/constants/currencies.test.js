@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Unit tests for the ISO 4217 currency registry (src/constants/currencies.js).
+ * Unit tests for the ISO 4217 currency registry (src/constants/currencies.ts).
  * Pure — no DB, no HTTP.
  */
 

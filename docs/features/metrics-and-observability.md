@@ -259,7 +259,7 @@ The module emits `{ name, value, rating }` and nothing else — no PII, no ident
 
 ### 4.1 `MetricsStore` — the in-process store
 
-`Backend/src/middleware/metrics/MetricsStore.js`, exported as a singleton (`:922`).
+`Backend/src/middleware/metrics/MetricsStore.ts`, exported as a singleton (`:922`).
 
 **Per-route data** (`:199`) is a `Map` of `"<METHOD> <path>" → { count, redirectCount, notModifiedCount, clientErrorCount, serverErrorCount, durations }`, where `durations` is a ring buffer capped at `RING_BUFFER_SIZE = 1000` (`:47`). `#pushRing` (`:509-514`) `shift()`s at the cap — O(n) but n is bounded and small.
 
@@ -281,7 +281,7 @@ The module emits `{ name, value, rating }` and nothing else — no PII, no ident
 
 ### 4.2 `MetricsMiddleware` — step 5a
 
-`Backend/src/middleware/metrics/MetricsMiddleware.js` is 105 lines and does exactly three things: skip what should not be recorded, capture the label synchronously, record on `finish`.
+`Backend/src/middleware/metrics/MetricsMiddleware.ts` is 105 lines and does exactly three things: skip what should not be recorded, capture the label synchronously, record on `finish`.
 
 `shouldRecordRouteMetrics` (`routeLabel.js:248-252`) excludes `OPTIONS` and everything under `METRICS_EXCLUDED_PREFIXES` — by default `/api/v1/audit-logs` and `/api/v1/metrics` (`:67-71`). The reasoning at `:52-64` is the observer effect: the dashboard polls itself every 30 seconds, and `/audit-logs/stream` is a long-lived SSE whose `res.finish` fires only on *close*, so its "duration" would be the whole session and would wreck p95/p99/apdex in one sample.
 
@@ -293,7 +293,7 @@ The whole `finish` handler is wrapped in a bare `try {} catch {}` (`MetricsMiddl
 
 ### 4.3 `MetricsService` — the rule engine
 
-`Backend/src/services/MetricsService.js`. Static class, three methods.
+`Backend/src/services/MetricsService.ts`. Static class, three methods.
 
 `getSnapshot()` (`:85-94`) wraps `metricsStore.getSnapshot()` and converts any throw into `AppError 503 METRICS_UNAVAILABLE`. `getSummary()` (`:101-129`) is the light read for non-admins: totals, four heap numbers, event-loop lag, the top 5 routes by p95 descending, and the alert *count* only.
 
@@ -316,7 +316,7 @@ Every rule also emits a log line, and **every one of those lines carries `_noNot
 
 ### 4.4 `AlertNotifierService` — the state machine
 
-`Backend/src/services/AlertNotifierService.js`, a singleton instance (`:1492`). Two independent trigger paths feed four e-mail channels.
+`Backend/src/services/AlertNotifierService.ts`, a singleton instance (`:1492`). Two independent trigger paths feed four e-mail channels.
 
 **Path 1 — the metrics poll.** A plain `setInterval` at `ALERT_POLL_INTERVAL_MS` (default 60 s). Deliberately not `node-cron`: PKG builds have silently missed cron ticks before (`:14-18`). Every tick calls `evaluateAlerts()`, keys each result by `rule::(route ?? pool ?? "global")`, and diffs against `_alertStates`. Transitions are batched **per channel** — one digest e-mail per channel per tick, not one per alert (`:441-451`). A channel with both an escalation and a recovery in the same tick sends two, which is the acknowledged edge case.
 
@@ -333,13 +333,13 @@ Every rule also emits a log line, and **every one of those lines carries `_noNot
 
 Recovery also clears any ack (`:436`), because a later re-fire of the same identity is a new incident needing a fresh decision. The returned `suppress` flag is consulted **only** by the `RENOTIFIED` branch — `FIRED` and `ESCALATED` send unconditionally, de-escalation never sends, so an ack structurally cannot block them.
 
-State is hydrated from `T_SERVER_ALERT_ACK_DEV` at `start()`, **fire-and-forget, never awaited** (`:211-213`), because `server.js` starts this service *before* `db.initializePools()` so the critical tap is live when a pool-init failure fires. Rows whose TTL lapsed during downtime are skipped and opportunistically deleted, never resurrected (`:1119-1125`).
+State is hydrated from `T_SERVER_ALERT_ACK_DEV` at `start()`, **fire-and-forget, never awaited** (`:211-213`), because `server.ts` starts this service *before* `db.initializePools()` so the critical tap is live when a pool-init failure fires. Rows whose TTL lapsed during downtime are skipped and opportunistically deleted, never resurrected (`:1119-1125`).
 
 **Persistence is write-behind.** `_writeAlertLogRows` queues sanitised rows (cap 500, drop-oldest) and attempts a flush; `_flushAlertLogQueue` stops at the first failure to preserve order and retries at the top of the next poll tick (`:896-925`). Nothing here can block or throw into the notification path.
 
 `_sanitizeDetails` (`:940-969`) runs before persistence: recursively redacts any key matching `/password|token|secret|authorization|cookie/i`, caps an embedded `stack` at 2000 chars, and replaces a payload over 64 KB with `{ truncated: true, preview }`.
 
-**Cluster guard R5** — the class is cluster-agnostic; `server.js:375-377` calls `start()` only on the elected cron leader, so exactly one worker polls and subscribes.
+**Cluster guard R5** — the class is cluster-agnostic; `server.ts:375-377` calls `start()` only on the elected cron leader, so exactly one worker polls and subscribes.
 
 ### 4.5 Routes
 
@@ -608,7 +608,7 @@ Both are per-process, in-memory `RateLimiterMiddleware` instances. Under cluster
 | `ALERT_LOG_RETENTION_DAYS` | no | `180` | Daily purge sweep (a plain `setInterval` checking once per day, never `node-cron`). |
 | `ALERT_ACK_TTL_HOURS` | no | `24` | Acknowledgement lifetime. Also surfaced to the UI via the status endpoint. |
 | `SERVER_ALERT_LOG_TABLE` / `SERVER_ALERT_ACK_TABLE` | no | `T_SERVER_ALERT_*_DEV` (`T_SERVER_ALERT_*` in production) | Table-name overrides. |
-| `CRON_LEADER` | set by `server.js` | — | Only the elected leader worker calls `AlertNotifierService.start()`. |
+| `CRON_LEADER` | set by `server.ts` | — | Only the elected leader worker calls `AlertNotifierService.start()`. |
 | `DEMO_MODE` | no | `false` | `serverAlertLog.model.js` keeps a 500-row in-memory ring; no Oracle connection is opened. |
 
 All the `ALERT_*` / `CRITICAL_*` getters read `process.env` **live** on each call (`AlertNotifierService.js:255-287`) rather than freezing at construction, specifically so tests can change them per case.
@@ -648,7 +648,7 @@ The code is the authority. These are places where prose currently disagrees with
 | Notification loop guards | R1b (`_noNotify` on every log in the notifier) and R2 (`_noNotify` on every `ALERT_TRIGGERED` log) | prevents a self-amplifying mail storm |
 | Metrics can never break a request | The entire `finish` handler is `try {} catch {}`; the SSE metrics payload swallows a `503` and pushes `null` | CWE-703 |
 | Operator-injection defence on `alertKey` | `validateRequiredFields` rejects objects and arrays before the controller runs | CWE-943, CWE-20 |
-| Exactly one notifier per cluster | `ClusterRole.isCronLeader` gate in `server.js`, failing **closed** | prevents N× duplicate notification |
+| Exactly one notifier per cluster | `ClusterRole.isCronLeader` gate in `server.ts`, failing **closed** | prevents N× duplicate notification |
 
 ### 7.2 Residual risks and things to know before shipping
 
@@ -657,7 +657,7 @@ The code is the authority. These are places where prose currently disagrees with
 3. **`GET /metrics` is a detailed internal disclosure.** Route inventory, heap limit, PID-adjacent handle counts, Oracle pool topology, SMTP delivery health and the last 500 client errors are all in one response to any `userLevel >= 2` account. That is the correct tier for an operator; it is a lot of reconnaissance value for a compromised `ADMIN` session.
 4. **`ADMIN` can acknowledge alerts.** `userLevel >= 2` on both ack routes. An `ADMIN` cannot disable a rule, and the two safety nets bound the damage to at most `ALERT_ACK_TTL_HOURS` of suppressed *re-notifications* at a non-escalating severity — but it is a genuine "quiet the pager" capability at admin tier.
 5. **Alert state does not survive a restart** ([§6.7](#67-the-eight-rules-are-pure-only-the-diff-is-stateful)). A deployment during an incident re-fires every active alert. Acks survive; state does not.
-6. **The notification path depends on the cron-leader election being correct.** `ClusterRole.isCronLeader` fails closed, so a stray election bug yields *zero* notifiers rather than N. `server.js:104-143` mitigates that specific failure with an out-of-band `notifyCriticalNow` from the primary — read that comment before changing the election.
+6. **The notification path depends on the cron-leader election being correct.** `ClusterRole.isCronLeader` fails closed, so a stray election bug yields *zero* notifiers rather than N. `server.ts:104-143` mitigates that specific failure with an out-of-band `notifyCriticalNow` from the primary — read that comment before changing the election.
 7. **`_sanitizeDetails` matches key names, not values.** A secret stored under an unmatched key (`k`, `cfg`, `payload`) lands in the `DETAILS` CLOB in clear text. The rule authors control what goes into `details`, so this is bounded — but it is a convention, not an enforcement.
 8. **The 64 KB truncation fallback keeps a 63.8 KB `preview` of the raw JSON** (`AlertNotifierService.js:965-968`). That preview is taken **after** redaction, so it does not defeat the redaction — but it does mean an oversized payload is stored as an unstructured string that no `IS JSON` consumer can parse. It is stored under `{ truncated: true, preview }`, which *is* valid JSON, so the CHECK constraint still passes.
 9. **CPU%, handle and request counts come from `process._getActiveHandles()`** — an undocumented internal. It is guarded with a `typeof` check that yields `-1` when absent (`MetricsStore.js:349-356`), so a Node version that removes it degrades rather than crashes.

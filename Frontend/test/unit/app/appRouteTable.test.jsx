@@ -34,7 +34,7 @@ import { loginAs } from "../../helpers/auth.js";
 import { _resetServerStatusForTests } from "../../../src/utils/serverStatus.js";
 import { ok } from "../../helpers/fixtures/contract.js";
 import { apiUrl } from "../../helpers/msw/api.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 import { renderWithProviders } from "../../helpers/renderWithProviders.jsx";
 
 // ── The lazy view modules, each replaced by a text marker ───────────────────

@@ -1,0 +1,207 @@
+
+
+/**
+ * ChangelogService
+ *
+ * Business logic for the changelog feature.
+ * All validation lives here; controllers stay thin.
+ */
+
+import { AppError, CHANGELOG_ERRORS, VALIDATION_ERRORS } from "../constants/errors";
+import ChangelogModel from "../models/changelog.model";
+
+const VALID_TYPES = [
+    "breaking",
+    "feat",
+    "fix",
+    "patch",
+    "perf",
+    "refactor",
+    "security",
+    "test",
+    "docs",
+    "chore",
+    "release", // release-train milestone markers (promote / cut / open)
+];
+
+// SemVer 2.0.0 core (MAJOR.MINOR.PATCH) with an OPTIONAL release-stage
+// pre-release tag. The stage is restricted to the known ladder
+// (dev|alpha|beta|rc) and must carry at least one numeric iteration, so the
+// field still rejects arbitrary/garbage pre-release tags (CWE-20 input
+// validation — anchored, no unbounded wildcard).
+//   Accepts:  1.4.0 · 1.19.0-dev.1 · 1.19.0-beta.2 · 1.19.0-rc.1
+//   Rejects:  1.19.0-foo · 1.19.0-beta · 1.19 · v1.4.0
+const SEMVER_RE = /^\d+\.\d+\.\d+(?:-(?:dev|alpha|beta|rc)(?:\.\d+)+)?$/;
+
+// ISO date string YYYY-MM-DD
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Validates and normalises the fields for a changelog entry.
+ * Throws AppError on validation failure.
+ *
+ * @param {object}  data           - Raw request body fields
+ * @param {boolean} [requireAll=true] - false for partial update (PATCH-style)
+ * @returns {object} Normalised fields
+ */
+function validate(data: Record<string, unknown>, requireAll: boolean = true): Record<string, unknown> {
+    const {
+        displayDate,
+        version,
+        title,
+        message,
+        whatChanged,
+        type,
+        authors,
+        coAuthors,
+    } = data;
+
+    if (requireAll) {
+        if (!displayDate || !version || !title || !message || !type) {
+            throw new AppError(VALIDATION_ERRORS.MISSING_FIELDS, 400, {
+                type: "ValidationError",
+                details: [
+                    "displayDate, version, title, message, and type are required.",
+                ],
+            });
+        }
+    }
+
+    if (displayDate !== undefined && (typeof displayDate !== "string" || !DATE_RE.test(displayDate))) {
+        throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400, {
+            type: "ValidationError",
+            details: ["displayDate must be YYYY-MM-DD."],
+        });
+    }
+
+    if (type !== undefined && (typeof type !== "string" || !VALID_TYPES.includes(type))) {
+        throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400, {
+            type: "ValidationError",
+            details: [`type must be one of: ${VALID_TYPES.join(", ")}.`],
+        });
+    }
+
+    if (version !== undefined && !SEMVER_RE.test(String(version).trim())) {
+        throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400, {
+            type: "ValidationError",
+            details: [
+                "version must follow Semantic Versioning: MAJOR.MINOR.PATCH (e.g. 1.4.0), optionally with a release-stage suffix (e.g. 1.19.0-beta.1, 1.19.0-dev.1, 1.19.0-rc.1).",
+            ],
+        });
+    }
+
+    if (whatChanged !== undefined && !Array.isArray(whatChanged)) {
+        throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400, {
+            type: "ValidationError",
+            details: ["whatChanged must be an array of change items."],
+        });
+    }
+
+    const normalised: Record<string, unknown> = {};
+    if (displayDate !== undefined) normalised.displayDate = displayDate;
+    if (version !== undefined) normalised.version = String(version).trim();
+    if (title !== undefined) normalised.title = String(title).trim();
+    if (message !== undefined) normalised.message = String(message).trim();
+    if (whatChanged !== undefined) normalised.whatChanged = whatChanged;
+    if (type !== undefined) normalised.type = type;
+
+    // authors / coAuthors: accept array or comma-separated string
+    if (authors !== undefined) {
+        normalised.authors = Array.isArray(authors)
+            ? authors.map((a) => String(a).trim()).filter(Boolean)
+            : String(authors)
+                  .split(",")
+                  .map((a) => a.trim())
+                  .filter(Boolean);
+    }
+    if (coAuthors !== undefined) {
+        normalised.coAuthors = Array.isArray(coAuthors)
+            ? coAuthors.map((a) => String(a).trim()).filter(Boolean)
+            : String(coAuthors)
+                  .split(",")
+                  .map((a) => a.trim())
+                  .filter(Boolean);
+    }
+
+    return normalised;
+}
+
+class ChangelogService {
+    /**
+     * Lists all entries (newest first).
+     * @returns {object[]}
+     */
+    static listAll(): Record<string, unknown>[] {
+        return ChangelogModel.listAll();
+    }
+
+    /**
+     * Lists all entries for UNAUTHENTICATED callers (newest first).
+     *
+     * Identical to listAll() except that `authors` and `coAuthors` are removed.
+     * Those fields carry the names of individual engineers; the release notes
+     * themselves are meant to be readable by anyone (the public menu board is
+     * now the app's landing page, and its version badge resolves from this
+     * endpoint), but staff names are not, and an anonymous visitor has no
+     * reason to receive them. Authenticated callers still get the full record
+     * through GET / — this is a narrowing of the payload, not of the feature.
+     *
+     * The strip happens HERE rather than in the controller so that no future
+     * public caller can bypass it by reaching for the service directly.
+     *
+     * @returns {object[]}
+     */
+    static listPublic(): Record<string, unknown>[] {
+        return ChangelogModel.listAll().map(({ authors, coAuthors, ...rest }) => rest);
+    }
+
+    /**
+     * The newest public entry — exactly `listPublic()[0]` (same sort, same
+     * author stripping), or `null` when the store is empty.
+     *
+     * Exists so the version badge stops downloading every entry to read one
+     * field: the full public list is ~540 KB of JSON (~170 KB gzipped) and is
+     * serialised and compressed on every landing-page visit. Derived from
+     * `listPublic` on purpose, never a second sort, so the badge cannot
+     * disagree with the Version History page.
+     *
+     * @returns {object|null}
+     */
+    static latestPublic(): Record<string, unknown> | null {
+        return ChangelogService.listPublic()[0] ?? null;
+    }
+
+    /**
+     * Creates a new changelog entry.
+     * @param {object} body - Request body
+     * @returns {object} Created entry
+     */
+    static create(body: Record<string, unknown>): Record<string, unknown> {
+        // validate(requireAll) guarantees displayDate, version, title, message and type.
+        const data = validate(body, true) as import("../models/changelog.model").ChangelogInput;
+        return ChangelogModel.create(data);
+    }
+
+    /**
+     * Updates an existing entry (partial).
+     * @param {string} id
+     * @param {object} body
+     * @returns {object} Updated entry
+     */
+    static update(id: string, body: Record<string, unknown>): Record<string, unknown> {
+        if (!id) throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400);
+        const data = validate(body, false);
+        return ChangelogModel.update(id, data);
+    }
+
+    /**
+     * Permanently deletes an entry.
+     * @param {string} id
+     */
+    static delete(id: string) {
+        if (!id) throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400);
+        ChangelogModel.delete(id);
+    }
+}
+
+export default ChangelogService;

@@ -83,7 +83,7 @@ Suites live under `test/server/{unit,integration,security,performance,reliabilit
 
 | Command | Does |
 | --- | --- |
-| `bun run start` | Starts `server.js` |
+| `bun run start` | Starts `server.ts` |
 | `bun run lint` | ESLint |
 | `bun run db:seed:template` | Seeds the template accounts (`scripts/seed-template.js`) |
 | `bun run changelog:dump` / `changelog:seed` | Export / import the encrypted changelog store |
@@ -105,7 +105,7 @@ Apply any pending SQL scripts **before** starting a new build.
 ## Project layout
 
 ```
-server.js               entry point: HTTP/HTTPS, clustering, scheduler, graceful shutdown
+server.ts               entry point: HTTP/HTTPS, clustering, scheduler, graceful shutdown
 src/
   app.js                Express app and the fixed middleware order
   config/               connection registry (appDb, appDbBulk), Oracle adapter, boot guard, demo mode

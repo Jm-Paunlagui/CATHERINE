@@ -38,7 +38,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import httpClient from "../../src/middleware/HttpClient.js";
 import csrfMiddleware from "../../src/middleware/security/CsrfMiddleware.js";
 import { apiUrl } from "../helpers/msw/api.js";
-import { server } from "../helpers/msw/server.js";
+import { server } from "../helpers/msw/server.ts";
 
 let navigate;
 

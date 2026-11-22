@@ -242,7 +242,7 @@ The traffic stream is torn down when the tab is backgrounded and re-opened when 
 
 ### 4.1 `logger.js` — the file surface
 
-`Backend/src/utils/logger.js` exports a class and a **singleton** (`:1043`). Everything in `src/` uses the singleton; `console.*` is banned in production code.
+`Backend/src/utils/logger.ts` exports a class and a **singleton** (`:1043`). Everything in `src/` uses the singleton; `console.*` is banned in production code.
 
 **Levels** (`:31-40`) are the RFC 5424 eight, numbered 0–7 with `EMERGENCY` at 0. The v5 upgrade renamed the old four: `ERROR 0→3`, `WARN 1→ WARNING 4`, `INFO 2→6`, `DEBUG 3→7`. Public methods: `emergency`, `alert`, `critical`, `error`, `warning`, `notice`, `info`, `debug`, plus three `@deprecated` short aliases — `emerg` (`:758`), `crit` (`:790`) and `warn` (`:821`). See [§6.2](#62-loggerwarn-is-a-deprecated-alias-and-so-are-emerg-and-crit).
 
@@ -253,7 +253,7 @@ The traffic stream is torn down when the tab is backgrounded and re-opened when 
 **The line format** (`:482-493`):
 
 ```text
-[HOST (S) 10.0.0.4] [2026-09-04 14:22:07.418] [WARNING] [PID:14232] [AuthService.login @ src/services/auth.service.js:214] [FUNC] [0078812966528-0448-8401] - Account locked | META: {"username":"[REDACTED]"}
+[HOST (S) 10.0.0.4] [2026-09-04 14:22:07.418] [WARNING] [PID:14232] [AuthService.login @ src/services/auth.service.ts:214] [FUNC] [0078812966528-0448-8401] - Account locked | META: {"username":"[REDACTED]"}
 ```
 
 **No truncation.** `MAX_SAFESTR_LENGTH` reads `LOG_MAX_SAFESTR_LENGTH` and defaults to **`Infinity`** (`:94-96`), so `#safeStringify` (`:334-336`) never cuts. Set a number only if a specific deployment needs it. Circular structures degrade to `[Circular Reference]` rather than throwing (`:319-333`).
@@ -264,7 +264,7 @@ The traffic stream is torn down when the tab is backgrounded and re-opened when 
 
 ### 4.2 `TraceabilityMiddleware` — id, context, redaction
 
-`Backend/src/middleware/traceability/TraceabilityMiddleware.js`.
+`Backend/src/middleware/traceability/TraceabilityMiddleware.ts`.
 
 - **Request id** — `req.id = snowflake.nextId()` (`:125`). Format `0078812966528-0448-8401`: 13 digits ms-since-2024-epoch, 4-digit machine id, 4-digit tail mixing a crypto nonce with the per-ms sequence (`utils/snowflake.js:16-34`). Fixed width, lexicographically sortable, fits `VARCHAR2(64)`. Pure JS — no WASM, no ESM-only dependency, so it survives `pkg` compilation.
 - **`X-Request-ID`** response header (`:126`) for non-JSON consumers.
@@ -275,7 +275,7 @@ The traffic stream is torn down when the tab is backgrounded and re-opened when 
 
 ### 4.3 `AuditLogMiddleware` — step 3a
 
-`Backend/src/middleware/traceability/AuditLogMiddleware.js`. Skips when `AUDIT_LOG_ENABLED=false`, when the path is `/health` (unless `AUDIT_LOG_EXCLUDE_HEALTH=false`), when the path matches `AUDIT_LOG_EXCLUDE_PATHS` (default `/api/v1/audit-logs` — self-exclusion, or the observability page floods its own table), and for every `OPTIONS` preflight (`:225-236`).
+`Backend/src/middleware/traceability/AuditLogMiddleware.ts`. Skips when `AUDIT_LOG_ENABLED=false`, when the path is `/health` (unless `AUDIT_LOG_EXCLUDE_HEALTH=false`), when the path matches `AUDIT_LOG_EXCLUDE_PATHS` (default `/api/v1/audit-logs` — self-exclusion, or the observability page floods its own table), and for every `OPTIONS` preflight (`:225-236`).
 
 `_buildRecord` (`:252-296`) has two non-obvious normalisations:
 
@@ -295,9 +295,9 @@ The value is then JSON-serialised and truncated to **2000 UTF-8 *bytes***, not c
 
 ### 4.4 `AuditLogService`
 
-`Backend/src/services/AuditLogService.js` — a static class, and the only place that touches both stores.
+`Backend/src/services/AuditLogService.ts` — a static class, and the only place that touches both stores.
 
-**Batched persistence** (`:102-175`). `insertAsync` pushes to a module-level buffer and flushes when it reaches `FLUSH_MAX = 25` (`:112`) or after `FLUSH_INTERVAL_MS = 1000` (`:115`), whichever comes first. One `insertMany` round-trip instead of N. The timer is `unref()`'d so an idle buffer never holds the process open, and `server.js:443` calls `flushPending()` during graceful shutdown so a `SIGTERM` does not lose the last second of records. A flush failure logs a `warning` and swallows — a DB hiccup must never disturb an HTTP response that already completed.
+**Batched persistence** (`:102-175`). `insertAsync` pushes to a module-level buffer and flushes when it reaches `FLUSH_MAX = 25` (`:112`) or after `FLUSH_INTERVAL_MS = 1000` (`:115`), whichever comes first. One `insertMany` round-trip instead of N. The timer is `unref()`'d so an idle buffer never holds the process open, and `server.ts:443` calls `flushPending()` during graceful shutdown so a `SIGTERM` does not lose the last second of records. A flush failure logs a `warning` and swallows — a DB hiccup must never disturb an HTTP response that already completed.
 
 **`getStats`** (`:269-342`) computes the availability SLI with 4xx **excluded from the denominator**: `serviced = total − clientError`, `successRate = (success + redirect) / serviced`. A 4xx means the service correctly rejected bad input, not that it failed. `clientErrorRate` and `serverErrorRate` are reported separately as independent shares of *total* traffic, so availability is deliberately **not** `1 − serverErrorRate` — the comment at `:304-310` says so explicitly.
 
@@ -429,7 +429,7 @@ Read `successRate` as **availability** (4xx excluded from the denominator) and t
 { "data": {
     "rows": [{ "ts": "2026-09-04 14:22:07.418", "level": "WARNING",
                "machine": "HOST (S) 10.0.0.4", "pid": 14232,
-               "location": "AuthService.login @ src/services/auth.service.js:214",
+               "location": "AuthService.login @ src/services/auth.service.ts:214",
                "phase": null, "method": "FUNC",
                "requestId": "0078812966528-0448-8401",
                "message": "Account locked", "meta": "{\"username\":\"[REDACTED]\"}" }],
@@ -585,7 +585,7 @@ The code is the authority. These are places where prose currently disagrees with
 
 | # | Location | Says | Code actually does |
 | --- | --- | --- | --- |
-| 1 | `Backend/CLAUDE.md:24`, `:954` | "Request traceability (unique `X-Request-Id` per request via `nanoid`)" | `TraceabilityMiddleware.js:125` calls `snowflake.nextId()`. `nanoid` has been replaced; `src/utils/nanoidLoader.js` still exists but **nothing in `src/` requires it**. The header name is also `X-Request-ID` (all caps `ID`), not `X-Request-Id`. |
+| 1 | `Backend/CLAUDE.md:24`, `:954` | "Request traceability (unique `X-Request-Id` per request via `nanoid`)" | `TraceabilityMiddleware.js:125` calls `snowflake.nextId()`. `nanoid` has been replaced; `src/utils/nanoidLoader.ts` still exists but **nothing in `src/` requires it**. The header name is also `X-Request-ID` (all caps `ID`), not `X-Request-Id`. |
 | 2 | `Backend/CLAUDE.md:23` | "custom logger with daily file rotation, **microsecond precision**, and no truncation" | Timestamps are **millisecond** precision — `String(now.getMilliseconds()).padStart(3,"0")` (`logger.js:272`), rendered as `.418`. Rotation is *daily directories* plus *50 MB size-based* file rollover, not daily file rotation. "No truncation" is correct. |
 | 3 | `Backend/CLAUDE.md:339-346` (RFC 5424 table) | recommends `logger.emerg(...)` and `logger.crit(...)` as the canonical calls | Both are `@deprecated` aliases (`logger.js:754-760`, `:786-792`). The canonical methods are `logger.emergency(...)` and `logger.critical(...)`. The table names the *levels* `EMERG`/`CRIT`; the code's level keys are `EMERGENCY`/`CRITICAL`. |
 | 4 | `Backend/.env.example:245` | `AUDIT_LOG_RETENTION_DAYS=90  # planned — retention delete job (not in v1 scope)` | Accurate but easy to misread: no code reads this variable at all. Grep confirms the only match outside `.env.example` is none. |

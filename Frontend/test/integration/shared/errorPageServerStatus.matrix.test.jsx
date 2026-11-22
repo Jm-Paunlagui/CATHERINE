@@ -26,7 +26,7 @@ import { resetErrorPagePayloadCache } from "../../../src/utils/storage.js";
 import { fail } from "../../helpers/fixtures/contract.js";
 import { POOL_SECRETS, dbDownBody } from "../../helpers/fixtures/healthBodies.js";
 import { apiUrl } from "../../helpers/msw/api.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 import { renderWithProviders } from "../../helpers/renderWithProviders.jsx";
 
 const { default: App } = await import("../../../src/App.jsx");

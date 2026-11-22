@@ -3,7 +3,7 @@
 > **Scope:** The file logger (RFC 5424 levels, daily folders, size roll-over), log-line redaction, request tracing (Snowflake request id + AsyncLocalStorage), the per-request audit trail (Oracle or JSON-lines file fallback), client-side error ingestion, the System Logs browser and live tail, log retention, and the cluster critical-log relay.
 >
 > **Primary source files:**
-> Backend: `Backend/src/utils/logger.js`, `Backend/src/utils/logRedaction.js`, `Backend/src/utils/requestContext.js`, `Backend/src/middleware/traceability/TraceabilityMiddleware.js`, `Backend/src/middleware/traceability/AuditLogMiddleware.js`, `Backend/src/services/AuditLogService.js`, `Backend/src/services/SystemLogTailService.js`, `Backend/src/services/LogRetentionService.js`, `Backend/src/models/audit.log.model.js`, `Backend/src/models/audit.log.file.model.js`, `Backend/src/routes/audit-log.route.js`, `Backend/src/controllers/AuditLogController.js`, `Backend/src/routes/client.route.js`, `Backend/src/controllers/ClientController.js`, `Backend/src/services/ClientService.js`, `Backend/src/utils/cluster/critRelay.js`, `Backend/src/app.js`, `Backend/server.js`.
+> Backend: `Backend/src/utils/logger.ts`, `Backend/src/utils/logRedaction.ts`, `Backend/src/utils/requestContext.ts`, `Backend/src/middleware/traceability/TraceabilityMiddleware.ts`, `Backend/src/middleware/traceability/AuditLogMiddleware.ts`, `Backend/src/services/AuditLogService.ts`, `Backend/src/services/SystemLogTailService.ts`, `Backend/src/services/LogRetentionService.ts`, `Backend/src/models/audit.log.model.ts`, `Backend/src/models/audit.log.file.model.ts`, `Backend/src/routes/audit-log.route.ts`, `Backend/src/controllers/AuditLogController.ts`, `Backend/src/routes/client.route.ts`, `Backend/src/controllers/ClientController.ts`, `Backend/src/services/ClientService.ts`, `Backend/src/utils/cluster/critRelay.ts`, `Backend/src/app.ts`, `Backend/server.ts`.
 > Frontend: `Frontend/src/features/systemadmin/logsmanagement/` (`logsmanagement.api.js`, `logmanagement.hook.js`, `LogsManagement.view.jsx`, `components/*`), `Frontend/src/utils/clientLogger.js`, `Frontend/src/components/feedback/ErrorBoundary.jsx`, `Frontend/src/middleware/HttpClient.js`, `Frontend/src/App.jsx`.
 >
 > **Verified 2026-10-29 against source.** Tests were not run for this revision.
@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-CATHERINE ships its own logging stack. There is no Winston, Pino or daily-rotate dependency: `Backend/src/utils/logger.js` is a self-contained class that writes plain-text lines to per-day, per-level files.
+CATHERINE ships its own logging stack. There is no Winston, Pino or daily-rotate dependency: `Backend/src/utils/logger.ts` is a self-contained class that writes plain-text lines to per-day, per-level files.
 
 In plain terms:
 
@@ -177,7 +177,7 @@ The level filter options come from `SYSTEM_LOG_LEVEL_OPTIONS` in the hook: `"5"`
 
 ## 4. Backend Implementation
 
-### 4.1 Middleware placement (`Backend/src/app.js`)
+### 4.1 Middleware placement (`Backend/src/app.ts`)
 
 | Step | Middleware | Why there |
 | --- | --- | --- |
@@ -236,7 +236,7 @@ logs/
 
 Neither `Backend/logs/` nor `logs/Main/` is committed; both are created at runtime.
 
-### 4.5 Redaction (`Backend/src/utils/logRedaction.js`)
+### 4.5 Redaction (`Backend/src/utils/logRedaction.ts`)
 
 Runs once per record inside `logger.log()`.
 
@@ -277,7 +277,7 @@ Keys starting with `_` (for example `_clientMachine`) and the five structural ke
 
 PARAMS redaction is two-tier: a substring list (`token`, `password`, `secret`, `apikey`, `jwt`, `signature`, …) and a whole-token list (`auth`, `session`, `pin`, `otp`, `mfa`, `salt`), so `author` or `pinned` are not blinded.
 
-**Buffer — `AuditLogService.insertAsync`.** Rows are flushed as one batch at `FLUSH_MAX = 25` rows or after `FLUSH_INTERVAL_MS = 1000`. A failed batch goes back to the front of the queue and is retried on the next tick; the queue is capped at `PENDING_MAX = 1000` (oldest dropped, one warning). The timer is armed outside any request context and `unref()`'d. Shutdown calls `flushPending({ final: true })` (from `Backend/src/utils/shutdown/TeardownSequence.js`): one attempt, capped at 2000 ms, no requeue.
+**Buffer — `AuditLogService.insertAsync`.** Rows are flushed as one batch at `FLUSH_MAX = 25` rows or after `FLUSH_INTERVAL_MS = 1000`. A failed batch goes back to the front of the queue and is retried on the next tick; the queue is capped at `PENDING_MAX = 1000` (oldest dropped, one warning). The timer is armed outside any request context and `unref()`'d. Shutdown calls `flushPending({ final: true })` (from `Backend/src/utils/shutdown/TeardownSequence.ts`): one attempt, capped at 2000 ms, no requeue.
 
 **Storage — `AuditLogModel`.**
 
@@ -317,19 +317,19 @@ Both allow one connection per account (409 on a second) and register with `SseCo
 
 ### 4.11 Retention (`LogRetentionService`)
 
-Started by `server.js` on the cron leader only, outside the DB pool chain (a DB outage does not stop it). A 15-minute interval checks whether today was swept; if not, it walks `YYYY/MM/DD` folders (digit-only names) and removes those whose midnight is older than `LOG_RETENTION_DAYS` (default 90, `0` = disabled, invalid values fall back to 90 with one warning). Today and yesterday can never be removed. Max 5 failed days per sweep, then it stops until tomorrow.
+Started by `server.ts` on the cron leader only, outside the DB pool chain (a DB outage does not stop it). A 15-minute interval checks whether today was swept; if not, it walks `YYYY/MM/DD` folders (digit-only names) and removes those whose midnight is older than `LOG_RETENTION_DAYS` (default 90, `0` = disabled, invalid values fall back to 90 with one warning). Today and yesterday can never be removed. Max 5 failed days per sweep, then it stops until tomorrow.
 
 ### 4.12 Cluster behaviour
 
 With `ENABLE_CLUSTERING=true` every worker appends to the same day files; the `[PID:n]` bracket tells them apart. Pseudonyms match across workers because they share `DATA_SIGNING_SECRET`.
 
-The `AlertNotifierService` critical tap (`logger.onLevel(2, …)`) runs on the cron leader only. Non-leader workers call `critRelay.subscribeCriticalRelay(logger, process)` (`server.js`), which serialises their CRITICAL/ALERT/EMERGENCY records (message capped at 4000 chars, meta at 4000 serialised chars) and sends them through the primary to the leader.
+The `AlertNotifierService` critical tap (`logger.onLevel(2, …)`) runs on the cron leader only. Non-leader workers call `critRelay.subscribeCriticalRelay(logger, process)` (`server.ts`), which serialises their CRITICAL/ALERT/EMERGENCY records (message capped at 4000 chars, meta at 4000 serialised chars) and sends them through the primary to the leader.
 
-The primary stamps `APP_CLUSTER_RUN_ID` on every fork (`ClusterSupervisor`, key name in `Backend/src/constants/serverRunMarker.js`). It is used by the server run marker to recognise a leader handover; it does not appear in log lines.
+The primary stamps `APP_CLUSTER_RUN_ID` on every fork (`ClusterSupervisor`, key name in `Backend/src/constants/serverRunMarker.ts`). It is used by the server run marker to recognise a leader handover; it does not appear in log lines.
 
 ### 4.13 Shutdown
 
-`logger.flush(timeoutMs = 3000)` waits for the write queue to drain, bounded so a stuck disk cannot hold the process open. `server.js` calls it at the end of graceful shutdown (and with 500 ms on the forced paths).
+`logger.flush(timeoutMs = 3000)` waits for the write queue to drain, bounded so a stuck disk cannot hold the process open. `server.ts` calls it at the end of graceful shutdown (and with 500 ms on the forced paths).
 
 ---
 
@@ -469,7 +469,7 @@ Evidence points to `file:symbol`. Tests listed exist in the repo; they were **no
 ### 8.1 Behaviour
 
 **Q: Which logging library is used?**
-None. `Backend/src/utils/logger.js:Logger` is in-house; `fs.promises.appendFile` writes the files.
+None. `Backend/src/utils/logger.ts:Logger` is in-house; `fs.promises.appendFile` writes the files.
 
 **Q: Where does a WARNING line go on 29 Oct 2026?**
 `logs/2026/10/29/warning.log` (or `warning_N.log` after roll-over). Evidence: `logger.js:#getLogDirectory`, `#writeToFile`, `#getAvailableFilename`.
@@ -523,7 +523,7 @@ No. Test: `Frontend/test/security/error-disclosure-invariants.test.jsx`.
 No; one shared poller, deltas only. Evidence: `SystemLogTailService.js:_start`, `_tick`, `_readDelta`.
 
 **Q: Which worker runs retention?**
-The cron leader only. Evidence: `server.js` (`if (IS_CRON_LEADER) … LogRetentionService.start()`).
+The cron leader only. Evidence: `server.ts` (`if (IS_CRON_LEADER) … LogRetentionService.start()`).
 
 ### 8.2 Coverage gaps
 
@@ -540,7 +540,7 @@ No test file in `Backend/test` references `logRedaction`, `TraceabilityMiddlewar
 7. **`getRequestLogs` skips files over 10 MB**, unlike the tail-window read of `getSystemLogs`. Owner: backend.
 8. **Inline log string** in `AuditLogService.exportToZip` (path traversal warning) breaks the `constants/messages` rule. Owner: backend.
 9. **`LOG_MAX_SAFESTR_LENGTH` only truncates serialised objects**, not plain strings, while `.env.example` says "truncate logged strings". `logger.js:#safeStringify`. Owner: docs / backend.
-10. **Doc drift in constants** — `Backend/src/constants/runtimeModel.js` (`obs.logger`) says "microsecond timestamps"; the code writes milliseconds. The `audit-log.route.js` header comment shows stats/list cache keys without the date/filter dimensions the code actually uses. Owner: docs.
+10. **Doc drift in constants** — `Backend/src/constants/runtimeModel.ts` (`obs.logger`) says "microsecond timestamps"; the code writes milliseconds. The `audit-log.route.js` header comment shows stats/list cache keys without the date/filter dimensions the code actually uses. Owner: docs.
 11. **Unused helpers** `createHttpLoggerMiddleware` and `getLogStats` (§6.8). Owner: backend.
 
 ---
@@ -569,11 +569,11 @@ Only variables read by the code paths in this document. Defaults are the code de
 | `AUDIT_LOG_STORAGE` | `audit.log.model.js` `storageMode` | `auto` | `db` \| `file` \| `auto` (§4.7). Resolved once per process. |
 | `AUDIT_LOG_TABLE` | `audit.log.model.js` `resolveTableName` | empty | Overrides the audit table name. |
 | `DATA_SIGNING_SECRET` | `logRedaction.js` `getKey` | `unkeyed-dev` (redaction fallback only; production boot requires it) | HKDF input for log pseudonyms. Rotation breaks correlation with older lines. |
-| `DEMO_MODE` | `Backend/src/config/demoMode.js` `isDemoMode` | `false` | `true` = audit model uses the in-memory demo store. |
+| `DEMO_MODE` | `Backend/src/config/demoMode.ts` `isDemoMode` | `false` | `true` = audit model uses the in-memory demo store. |
 | `APP_NAME` | `AuditLogService.exportToExcel`, `exportTraceExcel` | `CATHERINE` | Workbook `creator` field. |
 | `BODY_LIMIT` | `BodyParserMiddleware.js` | `10mb` | Upper bound on a client error report body. |
-| `ENABLE_CLUSTERING` | `server.js` / cluster supervisor | `false` | Multiple workers share the same log files; non-leaders relay critical logs. |
-| `APP_CLUSTER_RUN_ID` | `server.js`, `ClusterSupervisor` (via `SERVER_RUN_MARKER.CLUSTER_RUN_ID_ENV`) | random UUID per primary run | Set by the primary on each fork, not in `.env.example`. Not an operator setting. |
+| `ENABLE_CLUSTERING` | `server.ts` / cluster supervisor | `false` | Multiple workers share the same log files; non-leaders relay critical logs. |
+| `APP_CLUSTER_RUN_ID` | `server.ts`, `ClusterSupervisor` (via `SERVER_RUN_MARKER.CLUSTER_RUN_ID_ENV`) | random UUID per primary run | Set by the primary on each fork, not in `.env.example`. Not an operator setting. |
 
 ---
 

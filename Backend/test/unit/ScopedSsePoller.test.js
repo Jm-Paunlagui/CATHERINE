@@ -14,7 +14,7 @@
  * every event, so no HTTP and no DB are needed.
  */
 
-const ScopedSsePoller = require("../../src/utils/sse/ScopedSsePoller");
+const ScopedSsePoller = require("../../src/utils/sse/ScopedSsePoller").default;
 
 /** A minimal Express-response stand-in that records SSE frames. */
 function makeRes(sink) {

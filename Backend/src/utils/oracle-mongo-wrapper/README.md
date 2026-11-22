@@ -102,7 +102,7 @@ Each connection gets a name (like `"appDb"`) and its credentials from `.env`. Yo
 - `buildTNSConnectString(host, port, sid)` → full `(DESCRIPTION=(ADDRESS=…)…)` with load-balance + failover
 
 ```js
-// src/config/database.js (already set up — add new connections as needed)
+// src/config/database.ts (already set up — add new connections as needed)
 
 const connections = {
   // appDb — the only connection a fresh template needs. Used by createDb("appDb").
@@ -162,7 +162,7 @@ You don't need to edit `oracle.js` — it automatically:
 This file auto-detects the adapter from `DB_TYPE` env var (defaults to `"oracle"`) and exports everything:
 
 ```js
-// src/config/index.js — you usually don't need to edit this
+// src/config/index.ts — you usually don't need to edit this
 // It exports: withConnection, withTransaction, withBatchConnection,
 //             closeAll, getPoolStats, isPoolHealthy, getConnectionConfig,
 //             oracledb, and more.
@@ -186,7 +186,7 @@ const {
     createPerformance,
 } = require("./oracle-mongo-wrapper");
 
-// Connect to your database pool (configured in src/config/database.js)
+// Connect to your database pool (configured in src/config/database.ts)
 const db = createDb("appDb");
 ```
 
@@ -409,6 +409,19 @@ const results = await users
 
 **Projection:** `{ name: 1, email: 1 }` = include only name and email. `{ password: 0 }` = exclude password, include everything else.
 
+**Row locks:** `.forUpdate(mode)` inside a transaction locks the selected rows until commit or rollback.
+
+| Mode | SQL |
+| --- | --- |
+| `true` | `FOR UPDATE` (waits forever) |
+| `"nowait"` | `FOR UPDATE NOWAIT` (ORA-00054 if locked) |
+| `"skip locked"` | `FOR UPDATE SKIP LOCKED` |
+| `{ of: ["ID"], wait: 5 }` | `FOR UPDATE OF t0."ID" WAIT 5` (ORA-30006 after 5 s) |
+
+With `.limit()` / `.skip()` / `.next()`, the page is picked in a `ROWID IN (…)` subquery and the outer query takes the lock, because Oracle rejects `FETCH FIRST … FOR UPDATE` (ORA-02014). With `"skip locked"`, a page can come back with fewer rows than the limit. An unknown mode throws instead of falling back to a plain wait.
+
+Read terminals (`toArray`, `next`, `count`, set operations) never commit a session connection, so they are safe between a lock and the write it protects.
+
 ### Terminal Methods (What Actually Runs the Query)
 
 | Method         | What it does                                             |
@@ -444,8 +457,9 @@ await products.updateMany(
 await users.updateOne({ id: 1 }, { $min: { lowScore: 50 } }); // LEAST(lowScore, 50)
 await users.updateOne({ id: 1 }, { $max: { highScore: 99 } }); // GREATEST(highScore, 99)
 
-// $currentDate — set to current timestamp
-await users.updateOne({ id: 1 }, { $currentDate: { lastLogin: true } }); // SYSDATE
+// $currentDate — set to the current date/time
+await users.updateOne({ id: 1 }, { $currentDate: { lastLogin: true } }); // SYSDATE (DATE, whole seconds)
+await users.updateOne({ id: 1 }, { $currentDate: { updatedAt: { $type: "timestamp" } } }); // SYSTIMESTAMP — use for TIMESTAMP columns
 
 // $unset — set a field to NULL
 await users.updateOne({ id: 1 }, { $unset: { temporaryNote: "" } });
@@ -1195,6 +1209,7 @@ console.log(sql);
 | `$min`         | `SET col = LEAST(col, N)`    | `{ $min: { lowScore: 50 } }`            |
 | `$max`         | `SET col = GREATEST(col, N)` | `{ $max: { highScore: 99 } }`           |
 | `$currentDate` | `SET col = SYSDATE`          | `{ $currentDate: { updatedAt: true } }` |
+| `$currentDate` | `SET col = SYSTIMESTAMP`     | `{ $currentDate: { updatedAt: { $type: "timestamp" } } }` (TIMESTAMP columns; `true` would store `.000000`) |
 
 ### Aggregate Expressions
 

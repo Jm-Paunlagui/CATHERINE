@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerStatusBanner, SERVER_STATUS_MESSAGES, SERVER_BANNER_EXIT_MS } from "../../../src/components/shared/serverStatus";
 import { _resetServerLockForTests } from "../../../src/components/shared/serverStatus/useServerLock";
 import { SERVER_DANGER_AFTER_MS, SERVER_RECOVERED_MS, SERVER_SHOW_AFTER_MS, SERVER_STATUS_KIND as K, _resetServerStatusForTests, reportServerStatus } from "../../../src/utils/serverStatus.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 import { http, HttpResponse } from "msw";
 import { apiUrl } from "../../helpers/msw/api.js";
 

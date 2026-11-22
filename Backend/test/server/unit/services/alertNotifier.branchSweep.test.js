@@ -9,12 +9,12 @@
  * alert-log / ack models, MetricsService, clusterRpc) is stubbed.
  */
 
-const { AlertNotifierService } = require("../../../../src/services/AlertNotifierService");
-const MetricsService = require("../../../../src/services/MetricsService");
-const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService");
-const ServerAlertLogModel = require("../../../../src/models/serverAlertLog.model");
-const ServerAlertAckModel = require("../../../../src/models/serverAlertAck.model");
-const AdminModel = require("../../../../src/models/admin.model");
+const { AlertNotifierService } = require("../../../../src/services/AlertNotifierService").default;
+const MetricsService = require("../../../../src/services/MetricsService").default;
+const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService").default;
+const ServerAlertLogModel = require("../../../../src/models/serverAlertLog.model").default;
+const ServerAlertAckModel = require("../../../../src/models/serverAlertAck.model").default;
+const AdminModel = require("../../../../src/models/admin.model").default;
 const { logger } = require("../../../../src/utils/logger");
 const { NOTIFICATION_ERRORS, AppError } = require("../../../../src/constants/errors");
 
@@ -682,6 +682,15 @@ describe("AlertNotifierService — branch sweep", function () {
             const e2 = await rejection(svc.acknowledge("HIGH_HEAP::global", 1));
             expect(e2.statusCode).toBe(400);
             expect(e2.message).toBe(NOTIFICATION_ERRORS.ALERT_NOT_ACTIVE);
+            expect(upsert).not.toHaveBeenCalled();
+        });
+
+        it("an unexpected status (e.g. INFO) -> 400 ALERT_NOT_ACTIVE, never reaches CK_SAA_SEVERITY", async function () {
+            const upsert = vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue();
+            svc._alertStates.set("HIGH_HEAP::global", { status: "INFO" });
+            const err = await rejection(svc.acknowledge("HIGH_HEAP::global", 1));
+            expect(err.statusCode).toBe(400);
+            expect(err.message).toBe(NOTIFICATION_ERRORS.ALERT_NOT_ACTIVE);
             expect(upsert).not.toHaveBeenCalled();
         });
 

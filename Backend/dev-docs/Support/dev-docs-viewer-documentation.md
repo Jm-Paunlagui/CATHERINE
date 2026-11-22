@@ -2,7 +2,7 @@
 
 > **Scope:** The **in-app developer documentation viewer** — Support → **Dev Docs** (`/support/dev-docs`). It serves *this corpus* (the `dev-docs/` directory you are reading) to ADMIN and SUPER_ADMIN over an authenticated API: a section tree, one document's raw markdown, and a literal substring search, plus a per-document **freshness** signal derived from git.
 > **Source (FE):** `Frontend/src/features/support/devdocs/` — `DevDocs.view.jsx`, `devdocs.hook.js`, `devdocs.api.js`, `devdocsToc.js`, `devdocs-syntax.css`, and `components/{DocIndexNav,MarkdownDoc,MermaidBlock}.jsx`; the "On this page" rail uses `Frontend/src/components/shared/DocsPage/useScrollSpy.js`. Route registered in `Frontend/src/App.jsx`; nav item in `Frontend/src/components/layout/config/nav.config.jsx`.
-> **Source (BE):** `Backend/src/routes/dev-docs.route.js`, `src/controllers/DevDocsController.js`, `src/services/DevDocsService.js`, `src/constants/messages/devdocs.messages.js`, `scripts/build-devdocs-freshness.js` (build-time freshness snapshot), `DEV_DOCS_ERRORS` in `src/constants/errors/index.js`, `DEV_DOCS_*` in `src/constants/responses/index.js`.
+> **Source (BE):** `Backend/src/routes/dev-docs.route.ts`, `src/controllers/DevDocsController.ts`, `src/services/DevDocsService.ts`, `src/constants/messages/devdocs.messages.ts`, `scripts/build-devdocs-freshness.ts` (build-time freshness snapshot), `DEV_DOCS_ERRORS` in `src/constants/errors/index.ts`, `DEV_DOCS_*` in `src/constants/responses/index.ts`.
 > **Verified 2026-10-29** against the source files above. Corpus today: 13 documents in 3 section folders (`Others`, `Support`, `System Admin`) plus `README.md` under the synthetic `Overview` section. No dedicated test suite for this feature exists in this repo (backend or frontend) — §8 cites source only. No tests were run for this revision.
 >
 > **Related docs:**
@@ -170,7 +170,7 @@ GET /search                   → searchLimiter.handle → DevDocsController.sea
 GET /doc/:section/:name       → DevDocsController.getDoc
 ```
 
-Mounted at `/dev-docs` in `src/routes/index.js`.
+Mounted at `/dev-docs` in `src/routes/index.ts`.
 
 Four things about this file are deliberate:
 
@@ -231,7 +231,7 @@ Building the manifest costs one `stat` per document plus **two** `git log` spawn
 
 A `git` failure (no git, not a repo, a shallow clone) yields an **empty index**. Freshness is advisory: it must never fail a documentation read.
 
-**Build-time snapshot.** A deployed exe has no git checkout, so the live index is always empty there — without a fallback every document would read `UNKNOWN` ("Age unknown") in production, exactly where readers are. `bun run build` / `build:host` run `scripts/build-devdocs-freshness.js` **before** the compile step. It calls the same `_commitDateIndex` over the same two pathspecs and writes `src/generated/devDocsFreshness.json` (`{ generatedAt, docs, sources }`, repo-relative path → `YYYY-MM-DD`, sorted keys), which `scripts/build.js` stages beside the exe as `src/generated/`. It is gitignored (`src/generated/` in `Backend/.gitignore`), and it **fails the build** (exit 1) when either index is empty — shipping an exe without dates is the defect it exists to stop.
+**Build-time snapshot.** A deployed exe has no git checkout, so the live index is always empty there — without a fallback every document would read `UNKNOWN` ("Age unknown") in production, exactly where readers are. `bun run build` / `build:host` run `scripts/build-devdocs-freshness.ts` **before** the compile step. It calls the same `_commitDateIndex` over the same two pathspecs and writes `src/generated/devDocsFreshness.json` (`{ generatedAt, docs, sources }`, repo-relative path → `YYYY-MM-DD`, sorted keys), which `scripts/build.ts` stages beside the exe as `src/generated/`. It is gitignored (`src/generated/` in `Backend/.gitignore`), and it **fails the build** (exit 1) when either index is empty — shipping an exe without dates is the defect it exists to stop.
 
 `_resolveDateIndexes()` prefers live git and falls back **per index** to `_loadFreshnessSnapshot()` only when git returns nothing, so a dev checkout never reads a stale snapshot. The snapshot path resolves off `__dirname` on purpose — it lives inside the exe, not beside it. A missing or malformed snapshot degrades to `UNKNOWN` and logs `FRESHNESS_SNAPSHOT_UNAVAILABLE` at warning; it never fails the tree.
 
@@ -241,10 +241,10 @@ A `git` failure (no git, not a repo, a shallow clone) yields an **empty index**.
 
 | Section | Source paths compared against |
 |---|---|
-| `System Admin` | `src/services/DataPurgeService.js`, `src/services/BackupStoreService.js`, `src/services/AdminManagementService.js`, `src/services/IntegrityService.js`, `src/services/AuditLogService.js`, `src/services/MetricsService.js` |
-| `Support` | `src/services/ChangelogService.js`, `src/services/ArchitectureService.js`, `src/constants/architectureModel.js`, `src/constants/runtimeModel.js`, `src/utils/systemMap.js`, `src/services/DevDocsService.js` |
-| `Others` | `src/services/AuthService.js`, `src/routes/health.route.js`, `src/middleware/security/CsrfMiddleware.js`, `src/services/ClientService.js` |
-| `Overview` | `src/services/DevDocsService.js` _(synthetic section for root-level files such as `README.md`)_ |
+| `System Admin` | `src/services/DataPurgeService.ts`, `src/services/BackupStoreService.ts`, `src/services/AdminManagementService.ts`, `src/services/IntegrityService.ts`, `src/services/AuditLogService.ts`, `src/services/MetricsService.ts` |
+| `Support` | `src/services/ChangelogService.ts`, `src/services/ArchitectureService.ts`, `src/constants/architectureModel.ts`, `src/constants/runtimeModel.ts`, `src/utils/systemMap.ts`, `src/services/DevDocsService.ts` |
+| `Others` | `src/services/AuthService.ts`, `src/routes/health.route.ts`, `src/middleware/security/CsrfMiddleware.ts`, `src/services/ClientService.ts` |
+| `Overview` | `src/services/DevDocsService.ts` _(synthetic section for root-level files such as `README.md`)_ |
 
 Paths are repo-relative to `Backend/`, must be **files** (not directories), and are **case-exact** — git pathspecs are case-sensitive, while Windows and macOS disks are not, so a wrong-case path passes `fs.existsSync` yet never ages its documents. The map has one key per section folder the corpus has today; a project that adds a dev-docs folder adds its key here.
 
@@ -266,7 +266,7 @@ The mapping is **deliberately coarse**. The question it answers is "has the code
 
 ### 4.4 Errors and responses
 
-`DEV_DOCS_ERRORS` (`src/constants/errors/index.js`) — every message deliberately incurious about the filesystem:
+`DEV_DOCS_ERRORS` (`src/constants/errors/index.ts`) — every message deliberately incurious about the filesystem:
 
 | Key | Status | Message |
 |---|---|---|
@@ -275,7 +275,7 @@ The mapping is **deliberately coarse**. The question it answers is "has the code
 | `CORPUS_UNAVAILABLE` | 500 | `Developer documentation is unavailable on this server.` |
 | `INVALID_QUERY` | 400 | `Enter at least 2 characters to search.` |
 
-`RESPONSE_MESSAGES` (`src/constants/responses/index.js`): `DEV_DOCS_TREE_FETCHED`, `DEV_DOCS_DOC_FETCHED`, `DEV_DOCS_SEARCH_COMPLETED`.
+`RESPONSE_MESSAGES` (`src/constants/responses/index.ts`): `DEV_DOCS_TREE_FETCHED`, `DEV_DOCS_DOC_FETCHED`, `DEV_DOCS_SEARCH_COMPLETED`.
 
 ---
 
@@ -404,7 +404,7 @@ No security test in this repo pins this exemption. If one is added, it should be
 
 **Q: Can a USER read a document?**
 No. `requireAdminAccess` (`AuthMiddleware.requireAccess` with `user.role === "ADMIN" || user.role === "SUPER_ADMIN"`) is applied with `router.use` after `AuthMiddleware.authenticate`, so every route refuses USER with 403 before the controller runs; the controller never reads the corpus for a refused caller. On screen the hook maps a 403 to "Developer documentation is available to administrators only."
-**Evidence:** source only — `Backend/src/routes/dev-docs.route.js` (`requireAdminAccess`, `router.use`), `Frontend/src/features/support/devdocs/devdocs.hook.js` (`apiError`).
+**Evidence:** source only — `Backend/src/routes/dev-docs.route.ts` (`requireAdminAccess`, `router.use`), `Frontend/src/features/support/devdocs/devdocs.hook.js` (`apiError`).
 **Gap:** a security suite asserting 403 for USER and 401 unauthenticated on all three endpoints, plus a body check that a 403 carries no markdown.
 _Status: no test in this repo._
 
@@ -421,12 +421,12 @@ _Status: no test in this repo._
 
 **Q: Does a 404 leak the corpus layout?**
 No. `DEV_DOCS_ERRORS` messages name no directory (§4.4), and controller responses are projected field by field so `absolutePath` cannot ride along.
-**Evidence:** source only — `Backend/src/constants/errors/index.js` → `DEV_DOCS_ERRORS`; `Backend/src/controllers/DevDocsController.js`.
+**Evidence:** source only — `Backend/src/constants/errors/index.ts` → `DEV_DOCS_ERRORS`; `Backend/src/controllers/DevDocsController.ts`.
 _Status: no test in this repo._
 
 **Q: Could an admin-only body end up in a cache?**
 No. `_noStore(res)` sets `Cache-Control: private, no-store, max-age=0` and `Pragma: no-cache` on all three responses, and the router mounts no cache middleware.
-**Evidence:** source only — module-level `_noStore()` in `Backend/src/controllers/DevDocsController.js`; `dev-docs.route.js` header comment.
+**Evidence:** source only — module-level `_noStore()` in `Backend/src/controllers/DevDocsController.ts`; `dev-docs.route.js` header comment.
 _Status: no test in this repo._
 
 **Q: Can `absolutePath` escape?**
@@ -446,12 +446,12 @@ _Status: no test in this repo._
 
 **Q: Is a hostile query reflected back?**
 The response carries matched corpus lines, never the query itself, and `SEARCH_COMPLETED` logs counts only — `q` is never logged.
-**Evidence:** source only — `DevDocsService.search`, `Backend/src/constants/messages/devdocs.messages.js` → `SEARCH_COMPLETED`.
+**Evidence:** source only — `DevDocsService.search`, `Backend/src/constants/messages/devdocs.messages.ts` → `SEARCH_COMPLETED`.
 _Status: no test in this repo._
 
 **Q: Does freshness work on a deployed exe with no git?**
-By design, yes. `_resolveDateIndexes()` prefers live git and falls back per index to `_loadFreshnessSnapshot()` (the build-time `src/generated/devDocsFreshness.json`); when both are missing every document reads `UNKNOWN` and `FRESHNESS_SNAPSHOT_UNAVAILABLE` ("… no git history and no build snapshot …") is logged at warning — never a failed tree. `scripts/build-devdocs-freshness.js` exits 1 if either index is empty, so a normal `bun run build` cannot ship without dates.
-**Evidence:** source only — `DevDocsService._resolveDateIndexes`, `DevDocsService._loadFreshnessSnapshot`, `Backend/scripts/build-devdocs-freshness.js`.
+By design, yes. `_resolveDateIndexes()` prefers live git and falls back per index to `_loadFreshnessSnapshot()` (the build-time `src/generated/devDocsFreshness.json`); when both are missing every document reads `UNKNOWN` and `FRESHNESS_SNAPSHOT_UNAVAILABLE` ("… no git history and no build snapshot …") is logged at warning — never a failed tree. `scripts/build-devdocs-freshness.ts` exits 1 if either index is empty, so a normal `bun run build` cannot ship without dates.
+**Evidence:** source only — `DevDocsService._resolveDateIndexes`, `DevDocsService._loadFreshnessSnapshot`, `Backend/scripts/build-devdocs-freshness.ts`.
 **Gap:** a unit test stubbing `_commitDateIndex` to return nothing and asserting zero `UNKNOWN` documents from a fixture snapshot.
 _Status: no test in this repo._
 

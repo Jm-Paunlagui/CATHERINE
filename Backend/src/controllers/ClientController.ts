@@ -1,0 +1,43 @@
+
+
+/**
+ * @fileoverview HTTP controller for the /api/v1/client resource.
+ *
+ * Thin layer: validates nothing beyond HTTP concerns, delegates all logic to
+ * ClientService. Every async method is wrapped in catchAsync — unhandled
+ * rejections route to ErrorHandlerMiddleware.
+ */
+
+import type { Request, Response } from "express";
+import { catchAsync } from "../utils/catchAsync";
+import { sendSuccess, RESPONSE_MESSAGES, HTTP_STATUS } from "../constants";
+import ClientService from "../services/ClientService";
+
+class ClientController {
+    /**
+     * POST /api/v1/client/errors
+     * Ingests a structured client-side render error report (from the
+     * frontend ErrorBoundary via clientLogger).
+     */
+    static logError = catchAsync(async (req: Request, res: Response) => {
+        await ClientService.logError(req.body, req.user);
+        res
+            .status(HTTP_STATUS.OK)
+            .json(sendSuccess(RESPONSE_MESSAGES.CLIENT_ERROR_LOGGED));
+    });
+
+    /**
+     * POST /api/v1/client/help-miss
+     * Records a Help-search zero-result event (from the frontend Help Center /
+     * Help Assistant). Fire-and-forget telemetry — always returns 200 so a
+     * failed search's telemetry never becomes a second visible failure.
+     */
+    static logHelpMiss = catchAsync(async (req: Request, res: Response) => {
+        await ClientService.logHelpMiss(req.body, req.user);
+        res
+            .status(HTTP_STATUS.OK)
+            .json(sendSuccess(RESPONSE_MESSAGES.HELP_SEARCH_MISS_LOGGED));
+    });
+}
+
+export default ClientController;

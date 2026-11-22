@@ -1,7 +1,7 @@
 # Money & Currency — Technical Documentation
 
 > **Scope:** the template's money *capability* — the exact-decimal `Money` value type, the ISO 4217 currency registry, the fixed storage/display scales, the config-driven base currency, the string wire format, the money-safe fetch fence, effective-dated FX rates, and money-aware presentation on both surfaces. This is a **capability, not a product**: there is no stored-balance account, no ledger, no finance screen — only the parts a downstream project builds a money domain on top of.
-> **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/utils/money.js`, `Backend/src/constants/currencies.js`, `Backend/src/services/FxRateService.js`, `Backend/src/config/adapters/oracle.js`; the presentation mirror is `Frontend/src/constants/currencies.js` and `Frontend/src/components/shared/money.js`.
+> **Source:** `Backend/` (Node.js + Express v5 API) and `Frontend/` (React 19 + Vite SPA). Core is `Backend/src/utils/money.ts`, `Backend/src/constants/currencies.ts`, `Backend/src/services/FxRateService.ts`, `Backend/src/config/adapters/oracle.ts`; the presentation mirror is `Frontend/src/constants/currencies.js` and `Frontend/src/components/shared/money.js`.
 > **Generated:** 2026-09-04. **Authority:** the code. Where `CLAUDE.md`, a JSDoc block, a source comment or a reference-view claim disagrees with the code, the code wins and the disagreement is recorded in [§7.5](#75-known-documentation-drift).
 > **Rendering:** the ```mermaid fences below render in GitHub, GitLab, Obsidian and VS Code preview. A plain Markdown→PDF path prints them as code — pre-render with `bunx @mermaid-js/mermaid-cli` if you need a PDF.
 
@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-A JavaScript `Number` is an IEEE-754 double, and money is exactly the kind of value it gets wrong: `0.1 + 0.2 === 0.30000000000000004`, and an Oracle `NUMBER(19,4)` fetched as a double is *already rounded* before any application code sees it. This template does not paper over that with a `roundTo` helper on every operation — rounding on every step is still rounding, silently storing a value the caller never supplied. Instead it carries money as an **exact decimal value type**: `Money` (`Backend/src/utils/money.js`) is a `BigInt` coefficient `c` and an integer scale `s`, representing the exact rational `c / 10^s`. Nothing in that type ever rounds.
+A JavaScript `Number` is an IEEE-754 double, and money is exactly the kind of value it gets wrong: `0.1 + 0.2 === 0.30000000000000004`, and an Oracle `NUMBER(19,4)` fetched as a double is *already rounded* before any application code sees it. This template does not paper over that with a `roundTo` helper on every operation — rounding on every step is still rounding, silently storing a value the caller never supplied. Instead it carries money as an **exact decimal value type**: `Money` (`Backend/src/utils/money.ts`) is a `BigInt` coefficient `c` and an integer scale `s`, representing the exact rational `c / 10^s`. Nothing in that type ever rounds.
 
 Four facts hold everywhere money exists in the template, and every rule below is a consequence of one of them:
 
@@ -121,7 +121,7 @@ The two operations that *cannot* be exact are made explicit rather than hidden. 
 
 ---
 
-## 3. The `Money` value type — `Backend/src/utils/money.js`
+## 3. The `Money` value type — `Backend/src/utils/money.ts`
 
 ### 3.1 Representation and input discipline
 
@@ -159,7 +159,7 @@ The two operations that *cannot* be exact are made explicit rather than hidden. 
 
 ---
 
-## 4. The currency registry — `Backend/src/constants/currencies.js`
+## 4. The currency registry — `Backend/src/constants/currencies.ts`
 
 The registry is the single source of truth for every currency the money layer can present. Each `CurrencyEntry` carries `code`, `displayScale`, `symbol`, `locale`, `name` — and **only `code` is ever persisted.**
 
@@ -178,7 +178,7 @@ The 16 shipped currencies span the three display-scale families: two-decimal (PH
 
 ---
 
-## 5. FX rates — `Backend/src/services/FxRateService.js`
+## 5. FX rates — `Backend/src/services/FxRateService.ts`
 
 The template ships the **rate table shape, this service, and a documented adapter interface — and nothing more.** There is no provider integration: manual admin entry is the only shipped path, because a rate used for reporting conversion must be auditable (who set it, when, from what source, over what window), and a silent API pull satisfies that only if it records the same facts.
 
@@ -265,9 +265,9 @@ The code is the authority. These are places where prose, a comment, or a claim d
 
 | # | Location | Says | Code actually does |
 | --- | --- | --- | --- |
-| 1 | Documentation brief / general "money facts" | Registry `displayScale` for each currency **equals** `Intl.NumberFormat().resolvedOptions().maximumFractionDigits` | `Backend/src/constants/currencies.js:60-79` and `Frontend/src/constants/currencies.js:38-56` set `displayScale` as **hardcoded literals** on each entry. Nothing computes it from `Intl.NumberFormat(...).resolvedOptions()`; the file does not even reference `resolvedOptions`/`maximumFractionDigits` (only a passing mention of `Intl.NumberFormat` in the header comment at `:26`). The literals *happen to match* ISO 4217 minor units, but the equality is a maintenance convention, not something the code derives or enforces. |
-| 2 | `Backend/src/config/adapters/oracle.js:198-238` (comment), `Backend/src/services/FxRateService.js:35`, `Frontend/src/features/other/money/Money.view.jsx:169` | The adapter's `moneySafeFetchTypeHandler` protects "the read side too" as if it were active on the wrapper's read path | The handler is defined and placed on the frozen `EXECUTE_OPTIONS`, but the oracle-mongo-wrapper read path passes its own options and `oracledb.fetchTypeHandler` is never set globally — so on today's schema the handler is **not actually reached** by wrapper reads. It is inert by design (CATHERINE has no scaled `NUMBER` column), but "the read side is exact too" overstates the *current* wiring. Cross-referenced in [`oracle-mongo-wrapper.md`](./oracle-mongo-wrapper.md) §6.9 and its drift row 6. **Escalation:** whether to wire `EXECUTE_OPTIONS` into the wrapper (or set the handler globally) is a backend/Oracle-adapter decision — flagged, not fixed here. |
-| 3 | `Backend/src/utils/oracle-mongo-wrapper/utils.js:78-84` | `convertTypes`/`rowToDoc` are "exported for API compatibility but called nowhere" and marked lava-flow for deletion | Accurate as documentation of dead code, but recorded here because the fence's protection is only *latent*: if a copier does adopt the helper on the read path, the decimal-point fence is what keeps money safe. Not a contradiction — a standing caveat. |
+| 1 | Documentation brief / general "money facts" | Registry `displayScale` for each currency **equals** `Intl.NumberFormat().resolvedOptions().maximumFractionDigits` | `Backend/src/constants/currencies.ts:60-79` and `Frontend/src/constants/currencies.js:38-56` set `displayScale` as **hardcoded literals** on each entry. Nothing computes it from `Intl.NumberFormat(...).resolvedOptions()`; the file does not even reference `resolvedOptions`/`maximumFractionDigits` (only a passing mention of `Intl.NumberFormat` in the header comment at `:26`). The literals *happen to match* ISO 4217 minor units, but the equality is a maintenance convention, not something the code derives or enforces. |
+| 2 | `Backend/src/config/adapters/oracle.ts:198-238` (comment), `Backend/src/services/FxRateService.ts:35`, `Frontend/src/features/other/money/Money.view.jsx:169` | The adapter's `moneySafeFetchTypeHandler` protects "the read side too" as if it were active on the wrapper's read path | The handler is defined and placed on the frozen `EXECUTE_OPTIONS`, but the oracle-mongo-wrapper read path passes its own options and `oracledb.fetchTypeHandler` is never set globally — so on today's schema the handler is **not actually reached** by wrapper reads. It is inert by design (CATHERINE has no scaled `NUMBER` column), but "the read side is exact too" overstates the *current* wiring. Cross-referenced in [`oracle-mongo-wrapper.md`](./oracle-mongo-wrapper.md) §6.9 and its drift row 6. **Escalation:** whether to wire `EXECUTE_OPTIONS` into the wrapper (or set the handler globally) is a backend/Oracle-adapter decision — flagged, not fixed here. |
+| 3 | `Backend/src/utils/oracle-mongo-wrapper/utils.ts:78-84` | `convertTypes`/`rowToDoc` are "exported for API compatibility but called nowhere" and marked lava-flow for deletion | Accurate as documentation of dead code, but recorded here because the fence's protection is only *latent*: if a copier does adopt the helper on the read path, the decimal-point fence is what keeps money safe. Not a contradiction — a standing caveat. |
 | 4 | `Backend/.env.example:448` | Lists both `MONEY_ALLOW_BASE_CHANGE` and `MONEY_BASE_CURRENCY_MIGRATION` as the migration acknowledgement | `bootGuard.js:117` reads **only** `MONEY_BASE_CURRENCY_MIGRATION`. `MONEY_ALLOW_BASE_CHANGE` is named in the `.env.example` prose but is **not read anywhere in the code** — setting it has no effect. |
 
 ---
@@ -300,7 +300,7 @@ The code is the authority. These are places where prose, a comment, or a claim d
 Evidence is cited, not executed — every entry is marked **not run** unless stated otherwise. Backend suites are Vitest (`bun run test` → `vitest run`).
 
 > **Q:** Does exact addition avoid the classic double error?
-> **A:** Yes. `Money.from("0.1").add(Money.from("0.2")).toStorage() === "0.3000"` exactly (BigInt coefficients, no double). **Evidence:** `Backend/src/utils/money.js` `add`/`_align`; asserted in the reference view example (`Money.view.jsx:110`). _Status: not run._
+> **A:** Yes. `Money.from("0.1").add(Money.from("0.2")).toStorage() === "0.3000"` exactly (BigInt coefficients, no double). **Evidence:** `Backend/src/utils/money.ts` `add`/`_align`; asserted in the reference view example (`Money.view.jsx:110`). _Status: not run._
 
 > **Q:** Can a JavaScript number ever become a stored money value?
 > **A:** No. `Money.from` throws `MoneyError` on a `number`; `toStorage` binds a string; the fetch fence reads back a string. **Evidence:** `money.js:124-131` (reject number), `:test` for the `/^[+-]?\d+(\.\d+)?$/` guard. _Status: not run._

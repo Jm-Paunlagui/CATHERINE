@@ -27,7 +27,7 @@ import { CsrfProvider, useCsrf } from "../../../src/contexts/security/CsrfContex
 import csrfMiddleware from "../../../src/middleware/security/CsrfMiddleware";
 import { apiUrl } from "../../helpers/msw/api.js";
 import { TEST_CSRF_TOKEN } from "../../helpers/msw/handlers/csrf.handlers.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 

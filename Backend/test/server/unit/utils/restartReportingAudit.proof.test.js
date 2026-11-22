@@ -17,8 +17,8 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { EventEmitter } = require("events");
-const ServerRunMarker = require("../../../../src/utils/lifecycle/ServerRunMarker");
-const StartupNotifier = require("../../../../src/utils/lifecycle/StartupNotifier");
+const ServerRunMarker = require("../../../../src/utils/lifecycle/ServerRunMarker").default;
+const StartupNotifier = require("../../../../src/utils/lifecycle/StartupNotifier").default;
 
 const noop = () => {};
 const logger = () => ({ warning: vi.fn(), error: vi.fn(), info: vi.fn(), notice: vi.fn() });
@@ -50,7 +50,7 @@ function notifier(send) {
     const alertNotifier = { notifyLifecycleNow: vi.fn(send ?? (async () => ({ sent: true }))) };
     return { n: new StartupNotifier({ alertNotifier, logger: { warning: noop, info: noop }, tzOffsetMinutes: () => 480 }), alertNotifier };
 }
-/** One boot: read the previous run, start, announce (as server.js does). */
+/** One boot: read the previous run, start, announce (as server.ts does). */
 async function boot(m, n) {
     const v = m.readPrevious();
     const lastStartNoticeAt = m.lastStartNoticeAt();
@@ -244,7 +244,7 @@ describe("R7 - the cluster primary vanished while the cron leader was stopping c
         m.readPrevious();
         m.start();
         m.noteStopping("SIGTERM", 0);
-        // gracefulShutdown re-entry from the worker's "disconnect" handler (server.js)
+        // gracefulShutdown re-entry from the worker's "disconnect" handler (server.ts)
         m.noteExitCodeRaised(1, { unreported: true, reason: "PRIMARY_DISCONNECT" });
         return { m, proc };
     }
@@ -313,9 +313,9 @@ describe("R7 - the cluster primary vanished while the cron leader was stopping c
 });
 
 describe("review M2 - recipient lookup while the database is the thing that hung", function () {
-    const RecipientResolver = require("../../../../src/services/email/RecipientResolver");
-    const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService");
-    const AdminModel = require("../../../../src/models/admin.model");
+    const RecipientResolver = require("../../../../src/services/email/RecipientResolver").default;
+    const ServerNotificationService = require("../../../../src/services/email/ServerNotificationService").default;
+    const AdminModel = require("../../../../src/models/admin.model").default;
     let savedTo;
     beforeEach(() => {
         savedTo = process.env.SERVER_NOTIFY_TO;

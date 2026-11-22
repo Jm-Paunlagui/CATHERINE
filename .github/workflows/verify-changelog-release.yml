@@ -37,4 +37,4 @@ jobs:
                   TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
               run: |
                   if [ -z "$CHANGELOG_ENCRYPTION_KEY" ]; then echo "::error::Repository secret CHANGELOG_ENCRYPTION_KEY is not set"; exit 1; fi
-                  bun scripts/verify-changelog-release.js $TAG
+                  bun scripts/verify-changelog-release.ts $TAG

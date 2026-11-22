@@ -23,9 +23,9 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app");
+const app = require("../../../../src/app").default;
 const { signToken } = require("../../helpers/auth");
-const MetricsService = require("../../../../src/services/MetricsService");
+const MetricsService = require("../../../../src/services/MetricsService").default;
 const {
     defaultRateLimiter,
 } = require("../../../../src/middleware/security/RateLimiterMiddleware");
@@ -269,7 +269,7 @@ describe("POST /api/v1/metrics/frontend — frontend ingestion", function () {
         // /frontend from 127.0.0.1 can exhaust the window and cause spurious 429s.
         const {
             frontendIngestLimiter,
-        } = require("../../../../src/routes/metrics.route");
+        } = require("../../../../src/routes/metrics.route").default;
         frontendIngestLimiter.flushAll();
 
         vi.spyOn(MetricsService, "ingestFrontendMetrics").mockResolvedValue();

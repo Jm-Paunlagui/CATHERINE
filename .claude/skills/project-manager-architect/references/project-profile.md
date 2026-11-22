@@ -20,7 +20,7 @@ Lower sources are hints for *where to look*. They are never evidence for a defec
 **This is not theoretical — both verified in this repo:**
 
 - `Backend/src/constants/responses/index.js` emits **five** keys on success: `status, code, message, requestId, data`; `sendError` adds `title`. `Backend/CLAUDE.md` once documented four keys; as of the 2026-11-05 doctor run it documents five (success) and six (error) and matches the code. The lesson stands — the doc *was* stale for a while, and anything typed, asserted, or reviewed against the four-key shape is wrong.
-- `Backend/server.js` sits at the **surface root**, not `Backend/src/server.js`. Grepping the intuitive path finds nothing and reads as a missing boot invariant that is actually present.
+- `Backend/server.ts` sits at the **surface root**, not `Backend/src/server.ts`. Grepping the intuitive path finds nothing and reads as a missing boot invariant that is actually present.
 
 An agent that reports a defect on the strength of this file, without opening the code, is producing a false positive.
 
@@ -49,7 +49,7 @@ An agent that reports a defect on the strength of this file, without opening the
 | - | - |
 | Stack | Node.js, Express **v5.2**, CommonJS, class-based OOP |
 | Database | OracleDB **6.10** through the in-house `oracle-mongo-wrapper` — confirmed at `Backend/src/config/adapters/oracle.js` and used across `Backend/src/models/` |
-| Entry point | `Backend/server.js` — **surface root, not `src/`** |
+| Entry point | `Backend/server.ts` — **surface root, not `src/`** |
 | App assembly | `Backend/src/app.js` — the middleware chain, numbered in comments |
 | Authority doc | `Backend/CLAUDE.md` |
 | Source layout | `src/{app.js, config, constants, controllers, middleware, models, routes, services, utils}` |
@@ -111,7 +111,7 @@ The `memory/` directory has its own index at `memory/MEMORY.md`. Those files are
 
 Facts agents need in order to *find* things. Verify before reporting on any of them.
 
-- Backend boot order: `server.js` requires `./src/utils/encodingPolyfill` first, then sizes the libuv thread pool, before any async I/O.
+- Backend boot order: `server.ts` imports `./src/config/bootEnv` first (libuv thread pool size, `.env`, `TZ`) and `./src/config/bootSecrets` second (`validateSecrets`), before any other module evaluates.
 - The middleware chain in `Backend/src/app.js` is numbered in comments — 13 numbered steps plus `3a`, `3b`, `4a`, `5a` at profiling time. **Read the numbers from the file**; do not assume a count.
 - **Frontend test categories** (`test:integration`, `test:security`, `test:performance`, `test:reliability`, `test:chaos`) each have a matching directory under `Frontend/test/`. When adding a category, create the directory the existing script already expects rather than inventing a new path.
 - The root `ReadMe.md` is not a technical authority. The two CLAUDE.md files are.

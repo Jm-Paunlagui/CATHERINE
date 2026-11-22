@@ -1,6 +1,6 @@
 {
     "name": "catherine-backend",
-    "version": "1.0.0-dev.51",
+    "version": "1.0.0-dev.53",
     "description": "CATHERINE Template — Production-grade Express 5 + OracleDB backend with JWT auth, RBAC, audit logging, exact-decimal money, and observability.",
     "homepage": "https://github.com/Jm-Paunlagui/NodeExpress-Template#readme",
     "bugs": {
@@ -23,22 +23,23 @@
     "license": "Apache-2.0",
     "author": "Jm-Paunlagui",
     "type": "commonjs",
-    "main": "server.js",
+    "main": "server.ts",
     "engines": {
         "bun": ">=1.4.5"
     },
     "packageManager": "bun@1.4.5",
     "scripts": {
-        "prepare": "bun scripts/install-git-hooks.js",
-        "audit:changelog-release": "bun scripts/verify-changelog-release.js",
-        "start": "bun server.js",
+        "prepare": "bun scripts/install-git-hooks.ts",
+        "audit:changelog-release": "bun scripts/verify-changelog-release.ts",
+        "start": "bun server.ts",
         "lint": "bun --bun eslint .",
         "lint:fix": "bun --bun eslint . --fix",
-        "db:seed:template": "bun scripts/seed-template.js",
-        "changelog:dump": "bun scripts/dump-changelog.js",
-        "changelog:seed": "bun scripts/seed-changelog.js",
-        "build": "bun scripts/build.js",
-        "build:host": "bun scripts/build.js --target=host",
+        "typecheck": "tsc -p .",
+        "db:seed:template": "bun scripts/seed-template.ts",
+        "changelog:dump": "bun scripts/dump-changelog.ts",
+        "changelog:seed": "bun scripts/seed-changelog.ts",
+        "build": "bun scripts/build.ts",
+        "build:host": "bun scripts/build.ts --target=host",
         "test": "bun --bun vitest run",
         "test:watch": "bun --bun vitest",
         "test:coverage": "bun --bun vitest run --coverage",
@@ -83,16 +84,33 @@
         "uuid": "^11.1.1"
     },
     "bin": {
-        "catherine_backend": "./server.js"
+        "catherine_backend": "./server.ts"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.5",
+        "@types/archiver": "^6",
+        "@types/blob-stream": "^0.1.33",
+        "@types/body-parser": "^1.19.6",
+        "@types/bun": "^1.4.5",
+        "@types/compression": "^1.8.1",
+        "@types/cookie-parser": "^1.4.10",
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.6",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/multer": "^2.3.0",
+        "@types/node": "^26.6.6",
+        "@types/nodemailer": "^8.0.2",
+        "@types/oracledb": "^26.0.1",
+        "@types/pdfkit": "^0.17.7",
+        "@types/supertest": "^7.2.1",
         "@vitest/coverage-istanbul": "^4.1.12",
         "@vitest/coverage-v8": "^4.1.12",
         "@vitest/ui": "^4.1.12",
         "eslint": "^9.39.5",
         "globals": "^17.12.0",
         "supertest": "^7.2.2",
+        "typescript": "~6.0",
+        "typescript-eslint": "^8.73.0",
         "vitest": "^4.1.12"
     },
     "overrides": {

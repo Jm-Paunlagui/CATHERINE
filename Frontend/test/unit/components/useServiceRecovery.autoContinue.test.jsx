@@ -16,7 +16,7 @@ import { serviceRecoveryNavigation, useServiceRecovery } from "../../../src/comp
 import { AUTO_CONTINUE_PATHS } from "../../../src/components/shared/serverStatus/useServiceRecovery";
 import { SERVER_STATUS_KIND as K, _resetServerStatusForTests, reportServerStatus } from "../../../src/utils/serverStatus.js";
 import { apiUrl } from "../../helpers/msw/api.js";
-import { server } from "../../helpers/msw/server.js";
+import { server } from "../../helpers/msw/server.ts";
 
 /** Sample unattended route a project might register. */
 const BOARD = "/wall/board";

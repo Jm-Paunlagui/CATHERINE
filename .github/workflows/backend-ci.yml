@@ -1,0 +1,50 @@
+# Backend gate for pull requests and pushes to main:
+# type-check, lint and the Vitest suite. No Oracle is needed — the suite
+# stubs the database (test/server/setup.js).
+name: Backend CI
+
+on:
+    pull_request:
+        paths:
+            - "Backend/**"
+            - ".github/workflows/backend-ci.yml"
+    push:
+        branches: [main]
+        paths:
+            - "Backend/**"
+            - ".github/workflows/backend-ci.yml"
+
+permissions:
+    contents: read
+
+concurrency:
+    group: backend-ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        defaults:
+            run:
+                working-directory: Backend
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version-file: Backend/package.json
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Type-check
+              run: bun run typecheck
+
+            - name: Lint
+              run: bun run lint
+
+            - name: Test
+              run: bun run test
+              env:
+                  NODE_ENV: test

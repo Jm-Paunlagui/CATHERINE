@@ -14,15 +14,15 @@
 > rejected: health, CSRF and client error reporting are each too small to carry a document, and all
 > three are cross-cutting infrastructure a reader generally arrives at together.
 >
-> **Verified 2026-10-29 against source** (`routes/health.route.js`, `services/ReadinessService.js`, `services/HealthStreamHub.js`, `config/database.js`, `config/adapters/oracle.js`, `routes/csrf.route.js`, `middleware/security/CsrfMiddleware.js` on both sides, `routes/client.route.js`, `services/ClientService.js`, `middleware/cache/`, `config/demoMode.js`, `config/bootGuard.js`, `app.js`, `server.js`). Test files cited below exist in the repo; **none were run for this revision**, so no pass counts are quoted.
+> **Verified 2026-10-29 against source** (`routes/health.route.js`, `services/ReadinessService.js`, `services/HealthStreamHub.js`, `config/database.js`, `config/adapters/oracle.js`, `routes/csrf.route.js`, `middleware/security/CsrfMiddleware.js` on both sides, `routes/client.route.js`, `services/ClientService.js`, `middleware/cache/`, `config/demoMode.js`, `config/bootGuard.js`, `app.js`, `server.ts`). Test files cited below exist in the repo; **none were run for this revision**, so no pass counts are quoted.
 
-> **Key facts.** (1) `/ready` (`src/services/ReadinessService.js`) is 200 only when **every** pool in `POOL_NAMES` (`appDb`, `appDbBulk`) answers — a saturated `appDbBulk` still counts as up, a saturated `appDb` does not — **and** every `PoolHealthMonitor` circuit breaker is closed. A successful probe closes that pool's breaker at once (`recordProbeSuccess`), so the UI never says "Back online" while `withConnection` still fails fast. Concurrent evaluations share one probe round. (2) **`GET /api/v1/health/stream`** (`src/services/HealthStreamHub.js`, unauthenticated SSE): sends `retry: 3000`, the current `status {ready, cause}` (`cause` is `"database"` or null; no ORA-/NJS- text, CWE-209), then a `status` frame only when the verdict changes, a `heartbeat` every `HEALTH_STREAM_HEARTBEAT_MS` (default 15 s) and `shutdown` on drain; it re-evaluates on every breaker flip and every `HEALTH_STREAM_EVAL_MS` (default 30 s). 429 `TOO_MANY_HEALTH_STREAMS` above `HEALTH_STREAM_MAX_PER_IP` (50) / `HEALTH_STREAM_MAX_TOTAL` (2000); 503 `ServerShuttingDown` while draining. State is per worker. (3) **Detection cadence** (`config/adapters/oracle.js` → `PoolHealthMonitor`): every 30 s, every 5 s while any pool is failing or a stream client is watching; a connectivity error inside `withConnection` (ORA-12541/12514/12170/…, NJS-500/501/503/510/521, DPI-1080, acquire timeout) nudges an immediate check (debounced 250 ms). The UI (`ServerStatusWatch`) keeps the stream open and falls back to polling `/ready` when it is refused. (4) **Demo mode:** with `DEMO_MODE=true` no Oracle pool is opened (`server.js`); see §E.
+> **Key facts.** (1) `/ready` (`src/services/ReadinessService.ts`) is 200 only when **every** pool in `POOL_NAMES` (`appDb`, `appDbBulk`) answers — a saturated `appDbBulk` still counts as up, a saturated `appDb` does not — **and** every `PoolHealthMonitor` circuit breaker is closed. A successful probe closes that pool's breaker at once (`recordProbeSuccess`), so the UI never says "Back online" while `withConnection` still fails fast. Concurrent evaluations share one probe round. (2) **`GET /api/v1/health/stream`** (`src/services/HealthStreamHub.ts`, unauthenticated SSE): sends `retry: 3000`, the current `status {ready, cause}` (`cause` is `"database"` or null; no ORA-/NJS- text, CWE-209), then a `status` frame only when the verdict changes, a `heartbeat` every `HEALTH_STREAM_HEARTBEAT_MS` (default 15 s) and `shutdown` on drain; it re-evaluates on every breaker flip and every `HEALTH_STREAM_EVAL_MS` (default 30 s). 429 `TOO_MANY_HEALTH_STREAMS` above `HEALTH_STREAM_MAX_PER_IP` (50) / `HEALTH_STREAM_MAX_TOTAL` (2000); 503 `ServerShuttingDown` while draining. State is per worker. (3) **Detection cadence** (`config/adapters/oracle.js` → `PoolHealthMonitor`): every 30 s, every 5 s while any pool is failing or a stream client is watching; a connectivity error inside `withConnection` (ORA-12541/12514/12170/…, NJS-500/501/503/510/521, DPI-1080, acquire timeout) nudges an immediate check (debounced 250 ms). The UI (`ServerStatusWatch`) keeps the stream open and falls back to polling `/ready` when it is refused. (4) **Demo mode:** with `DEMO_MODE=true` no Oracle pool is opened (`server.ts`); see §E.
 >
 > **Server vs database.** The UI's reachability probe (`Frontend/src/components/shared/serverStatus/serverStatus.api.js`) reads only `GET /api/v1/health/ready`: 200 = healthy; 503 `ServerShuttingDown` = restarting; a 503 API envelope with `ServiceUnavailableError` or `data.ready === false` = **the database is down** (the server answers; `/health/live` stays 200); no API envelope or a network error = **the server is down**.
 >
-> **Request intake.** A `Content-Encoding: br` body is refused 415 (`middleware/parsing/BodyParserMiddleware.js`); a multipart field name with an array index above 100 is refused (`src/constants/multipart.js` → `MULTIPART_FIELD_LIMITS.fieldArrayIndexLimit`); the JSON body limit is `BODY_LIMIT` (default `10mb`).
+> **Request intake.** A `Content-Encoding: br` body is refused 415 (`middleware/parsing/BodyParserMiddleware.js`); a multipart field name with an array index above 100 is refused (`src/constants/multipart.ts` → `MULTIPART_FIELD_LIMITS.fieldArrayIndexLimit`); the JSON body limit is `BODY_LIMIT` (default `10mb`).
 >
-> **Draining.** While draining, the legacy `GET /api/v1/health` answers **200** `{ uptime, timestamp, database: "draining" }` from memory with no Oracle borrow, and `/ready` answers 503 `ServerShuttingDown` with `Retry-After` from `SHUTDOWN_RETRY_AFTER_SEC` (`src/constants/shutdownGate.js`, 5 s) — §A.2, §A.3, §A.5.
+> **Draining.** While draining, the legacy `GET /api/v1/health` answers **200** `{ uptime, timestamp, database: "draining" }` from memory with no Oracle borrow, and `/ready` answers 503 `ServerShuttingDown` with `Retry-After` from `SHUTDOWN_RETRY_AFTER_SEC` (`src/constants/shutdownGate.ts`, 5 s) — §A.2, §A.3, §A.5.
 >
 > **Out of scope.** `/api/v1/dev-docs/*` and the other admin route families have their own documents.
 
@@ -66,7 +66,7 @@ sequenceDiagram
 
 The liveness probe is a pure process check — it never contacts the database, ensuring it remains responsive even during pool exhaustion.
 
-The readiness probe probes every named pool from `POOL_NAMES` (`src/config/database.js` — `appDb` and the bulk/export pool `appDbBulk`) concurrently via `db.withConnection()` (`ReadinessService.evaluate`). Every pool must answer **and** every pool's breaker must be closed. **`READINESS_GATING_POOLS`** (`["appDb"]`) only decides which pools may **not** be saturated: `appDbBulk` is a load-shedding bulkhead with a bounded `queueMax`, so an `NJS-076` saturation there is the bulkhead working as designed and counts as up. Gating on it would let an export or purge burst 503 `/ready` and make the load balancer drop the **whole** service while interactive `appDb` is healthy. `database.js` throws at module load if a gating pool name is not a registered pool (fail-closed on a typo).
+The readiness probe probes every named pool from `POOL_NAMES` (`src/config/database.ts` — `appDb` and the bulk/export pool `appDbBulk`) concurrently via `db.withConnection()` (`ReadinessService.evaluate`). Every pool must answer **and** every pool's breaker must be closed. **`READINESS_GATING_POOLS`** (`["appDb"]`) only decides which pools may **not** be saturated: `appDbBulk` is a load-shedding bulkhead with a bounded `queueMax`, so an `NJS-076` saturation there is the bulkhead working as designed and counts as up. Gating on it would let an export or purge burst 503 `/ready` and make the load balancer drop the **whole** service while interactive `appDb` is healthy. `database.js` throws at module load if a gating pool name is not a registered pool (fail-closed on a typo).
 
 **Draining.** Once a stop has begun (`InFlightTaskRegistry.isShuttingDown()` is true), `/ready` answers **503** with `error.type: "ServerShuttingDown"` and `data: { ready: false, draining: true }` straight away. It does **not** probe any pool: a load balancer and the UI's "server is restarting" banner only need the 503, and the pools are about to close. The shutdown gate (`ShutdownGateMiddleware`, app.js step 3b) refuses every other route with 503 `ServerShuttingDown` + `Retry-After: 5`, but lets `/api/v1/health*` and OPTIONS through, so `/live` and `/ready` still answer during the drain. The `/ready` draining 503 sends `Retry-After: 5` (the same `SHUTDOWN_RETRY_AFTER_SEC` as the gate's own 503), and the legacy `GET /api/v1/health` answers 200 with `database: "draining"` instead of borrowing a pool connection for every monitor poll.
 
@@ -209,12 +209,12 @@ The React frontend uses the health endpoints in two places:
 
 > **Q:** What does `/ready` answer while the server is stopping?
 > **A:** 503 `ServerShuttingDown` with `data: { ready: false, draining: true }` and `Retry-After: 5`, at once, with no pool probe. The shutdown gate lets `/health*` through, so the probe still answers. The UI's server status banner reads this as "restarting" and keeps probing until `/ready` answers 200.
-> **Evidence:** source only — `Backend/src/routes/health.route.js` (`InFlightTaskRegistry.isShuttingDown()` branch), `Backend/src/middleware/security/ShutdownGateMiddleware.js`.
+> **Evidence:** source only — `Backend/src/routes/health.route.ts` (`InFlightTaskRegistry.isShuttingDown()` branch), `Backend/src/middleware/security/ShutdownGateMiddleware.ts`.
 > _Status: no test in this repo._ (`Backend/test/server/reliability/graceful-shutdown.test.js` covers SIGTERM and in-flight draining, not the `/ready` body.)
 
 > **Q:** What does the legacy `GET /api/v1/health` answer while the server is stopping?
 > **A:** 200 `{ uptime, timestamp, database: "draining" }`, from memory. It does not borrow an Oracle connection, so a monitor polling it during the drain adds no pool load.
-> **Evidence:** source only — `Backend/src/routes/health.route.js` (`GET /`).
+> **Evidence:** source only — `Backend/src/routes/health.route.ts` (`GET /`).
 > _Status: no test in this repo._
 
 > **Q:** Does the legacy endpoint leak sensitive info?
@@ -224,7 +224,7 @@ The React frontend uses the health endpoints in two places:
 
 > **Q:** Does `/health/stream` cap concurrent connections?
 > **A:** Yes, per source. `HealthStreamHub.canAccept(ip)` refuses with 429 `TOO_MANY_HEALTH_STREAMS` above `HEALTH_STREAM_MAX_PER_IP` (50) or `HEALTH_STREAM_MAX_TOTAL` (2000); while draining it answers 503 `ServerShuttingDown`.
-> **Evidence:** source only — `Backend/src/routes/health.route.js`, `Backend/src/services/HealthStreamHub.js`.
+> **Evidence:** source only — `Backend/src/routes/health.route.ts`, `Backend/src/services/HealthStreamHub.ts`.
 > _Status: no test in this repo._
 
 ---
@@ -529,9 +529,9 @@ The pipeline is intentionally auth-gated — anonymous visitors' pre-auth render
 | `POST /api/v1/client/errors`    | Authenticated (any role) | Required (global) | Global default      | Ingest frontend ErrorBoundary reports          |
 | `POST /api/v1/client/help-miss` | Authenticated (any role) | Required (global) | 20 / 60 s (per-route) | Record a Help-search zero-result event (telemetry) |
 
-**Controller** (`src/controllers/ClientController.js`) — thin `catchAsync`-wrapped layer. `logError` delegates to `ClientService.logError(req.body, req.user)`; `logHelpMiss` delegates to `ClientService.logHelpMiss(req.body, req.user)` and returns `HELP_SEARCH_MISS_LOGGED`.
+**Controller** (`src/controllers/ClientController.ts`) — thin `catchAsync`-wrapped layer. `logError` delegates to `ClientService.logError(req.body, req.user)`; `logHelpMiss` delegates to `ClientService.logHelpMiss(req.body, req.user)` and returns `HELP_SEARCH_MISS_LOGGED`.
 
-**Service** (`src/services/ClientService.js`):
+**Service** (`src/services/ClientService.ts`):
 - **`logError`** — destructures `message`, `stack`, `componentStack`, `url`, `userAgent`, `timestamp` from payload. Logs via `logger.error()` with structured meta. Falls back to `"unknown"` for userId. **Never throws.**
 - **`logHelpMiss`** — records a zero-result Help search so the misses can be mined to grow the frontend synonym table. The `query` is **truncated to 120 chars** and stripped of newlines/control chars (`[\u0000-\u001f\u007f]`) before logging — a log-injection defense (CWE-117) so a crafted query cannot forge fake log lines or bloat the log. A **blank query is dropped** (nothing actionable); `surface` is kept only when it is `"assistant"` or `"center"`, else `"unknown"`. Logged at warning level via `clientMessages.HELP_SEARCH_MISS`. Rate-limited to **20 requests / 60 s** via a dedicated `helpMissLimiter` (`RateLimiterMiddleware`, label `RateLimit:help-miss`) so one user hammering search cannot flood the log.
 
@@ -583,7 +583,7 @@ The pipeline is intentionally auth-gated — anonymous visitors' pre-auth render
 
 > **Q:** Are XSS payloads in the error message reflected in the response?
 > **A:** No. The payload is logged server-side only and never included in the response body.
-> **Evidence:** source only — `Backend/src/controllers/ClientController.js` (fixed success message), `Backend/src/services/ClientService.js`. `Backend/test/server/integration/client/client-errors.test.js` → `"response shape matches { status, code, message, data } contract"` pins the shape but sends no XSS payload.
+> **Evidence:** source only — `Backend/src/controllers/ClientController.ts` (fixed success message), `Backend/src/services/ClientService.ts`. `Backend/test/server/integration/client/client-errors.test.js` → `"response shape matches { status, code, message, data } contract"` pins the shape but sends no XSS payload.
 > **Gap:** no test sends an XSS string and asserts it is absent from the body.
 > _Status: not run for this revision._
 
@@ -595,7 +595,7 @@ The pipeline is intentionally auth-gated — anonymous visitors' pre-auth render
 
 > **Q:** Does the service handle null/undefined payloads gracefully?
 > **A:** Yes. Destructuring with defaults handles missing fields. Falls back to `"unknown"` for userId.
-> **Evidence:** source only — `Backend/src/services/ClientService.js` (`payload ?? {}`, `user?.userId ?? "unknown"`).
+> **Evidence:** source only — `Backend/src/services/ClientService.ts` (`payload ?? {}`, `user?.userId ?? "unknown"`).
 > **Gap:** no `ClientService` unit test; `logHelpMiss` truncation/control-char stripping is also untested.
 > _Status: no test in this repo._
 
@@ -669,8 +669,8 @@ Titled `Modal`s and `Drawer`s are named by their titles. The title-less modals p
 > `flush`/`del`/`delByPattern`/`delWhere` bump it, and swap in a fresh `SingleFlight` so later readers do not join
 > the old load. The old value is still returned to the callers that were already waiting, so no request fails
 > because of the guard.
-> **Evidence:** source only — `Backend/src/middleware/cache/CacheStore.js` (`_generation`, `_invalidateInFlight`,
-> `getOrSet`), `Backend/src/middleware/cache/CacheMiddleware.js` (`read`, generation captured at MISS).
+> **Evidence:** source only — `Backend/src/middleware/cache/CacheStore.ts` (`_generation`, `_invalidateInFlight`,
+> `getOrSet`), `Backend/src/middleware/cache/CacheMiddleware.ts` (`read`, generation captured at MISS).
 > **Regression controls** (normal caching still works): `Backend/test/server/unit/middleware/cache/cacheStore.chaos.test.js`
 > → `"50 simultaneous getOrSet() calls on a missing key: all callers get a valid (non-undefined) result"`, `"second call
 > with same key after a successful load hits the cache — loader called only once"`, `"set() and get() continue to work
@@ -700,7 +700,7 @@ Titled `Modal`s and `Drawer`s are named by their titles. The title-less modals p
 
 Which Oracle schema a process connects to is decided by configuration. Backend only; no route, no UI.
 
-## E.1. Connection settings — `APP_DB_*` (`src/config/database.js`)
+## E.1. Connection settings — `APP_DB_*` (`src/config/database.ts`)
 
 There is **one** credential set and **two** pools built from it (`appDbCredentials`):
 
@@ -713,15 +713,15 @@ There is **one** credential set and **two** pools built from it (`appDbCredentia
 - ⚠ Despite its name, `DB_APP_SERVICE_NAME` is used as the Oracle **SID** (`CONNECT_DATA=(SID=…)`); `.env.example` documents this.
 - **Adding a connection:** add env vars, add one entry to `connections`, call `withConnection("yourKey", …)`. `POOL_NAMES` is derived from the keys, so `/ready` picks it up automatically.
 - **Fail closed:** `getConnectionConfig` throws on an unknown name; a `READINESS_GATING_POOLS` entry that is not a registered pool throws at module load.
-- Config files never call `dotenv` themselves; `server.js` (and each standalone script) loads `.env` once.
+- Config files never call `dotenv` themselves; `server.ts` (and each standalone script) loads `.env` once.
 
-## E.2. Demo mode — `DEMO_MODE` (`src/config/demoMode.js`)
+## E.2. Demo mode — `DEMO_MODE` (`src/config/demoMode.ts`)
 
 `isDemoMode()` is the single source of truth: `String(process.env.DEMO_MODE).toLowerCase() === "true"`, read as a
 function (not a cached constant) so it reflects `process.env` after `dotenv` loads and tests can toggle it.
 
 - **`DEMO_MODE=true`** — zero database setup. Authentication, audit logs, admin management and changelog are served
-  from in-memory fixtures (`src/models/demo/demoStore.js`); the refresh-token store is in memory too. `server.js`
+  from in-memory fixtures (`src/models/demo/demoStore.ts`); the refresh-token store is in memory too. `server.ts`
   skips `db.initializePools()`, logs `serverMessages.DEMO_MODE_POOLS_SKIPPED` and still announces boot. No Oracle
   pool is opened at boot; what `/ready` reports in demo mode is not verified (see §E.5).
 - **`DEMO_MODE=false` / unset** — the normal path: `appDb` / `appDbBulk` against the SQL schema in `Backend/sql/`.
@@ -755,8 +755,8 @@ live-database test gate and no write-capable seed-script guard in this repo.
 > **Evidence (UI):** none — backend-only.
 
 > **Q:** Does `DEMO_MODE=true` open any Oracle pool, and is it refused in production?
-> **A:** Per source, no pool is opened (`server.js` skips `db.initializePools()`), and `bootGuard` records a violation for `DEMO_MODE=true` with `NODE_ENV=production`. The in-memory refresh-token store behaves like the table (rotation, reuse detection, revoke, purge, unique `JTI_HASH`).
-> **Evidence:** source only — `Backend/server.js`, `Backend/src/config/demoMode.js`, `Backend/src/config/bootGuard.js`. `Backend/test/server/unit/models/authRefreshTokenDemo.test.js` → `"rotate: first wins, replay is 'reused', unknown is 'absent'"`, `"insert rejects a duplicate JTI_HASH like UQ_TARTD_JTI_HASH"`. _Status: not run for this revision._
+> **A:** Per source, no pool is opened (`server.ts` skips `db.initializePools()`), and `bootGuard` records a violation for `DEMO_MODE=true` with `NODE_ENV=production`. The in-memory refresh-token store behaves like the table (rotation, reuse detection, revoke, purge, unique `JTI_HASH`).
+> **Evidence:** source only — `Backend/server.ts`, `Backend/src/config/demoMode.ts`, `Backend/src/config/bootGuard.ts`. `Backend/test/server/unit/models/authRefreshTokenDemo.test.js` → `"rotate: first wins, replay is 'reused', unknown is 'absent'"`, `"insert rejects a duplicate JTI_HASH like UQ_TARTD_JTI_HASH"`. _Status: not run for this revision._
 > **Gap:** no test for the `bootGuard` DEMO_MODE rule or for what `/ready` answers in demo mode (`ReadinessService` still probes `POOL_NAMES`, so it is expected to report not-ready — unverified).
 > **Evidence (UI):** none — backend-only.
 

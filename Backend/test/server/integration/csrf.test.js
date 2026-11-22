@@ -1,7 +1,7 @@
 "use strict";
 
 const request = require("supertest");
-const app = require("../../../src/app");
+const app = require("../../../src/app").default;
 
 describe("CSRF Integration", function () {
     let agent;

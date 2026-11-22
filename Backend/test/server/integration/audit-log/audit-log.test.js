@@ -28,9 +28,9 @@
  */
 
 const request = require("supertest");
-const app = require("../../../../src/app");
+const app = require("../../../../src/app").default;
 const { signToken } = require("../../helpers/auth");
-const AuditLogService = require("../../../../src/services/AuditLogService");
+const AuditLogService = require("../../../../src/services/AuditLogService").default;
 
 // ── Token factories ───────────────────────────────────────────────────────────
 

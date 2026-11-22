@@ -9,7 +9,7 @@
  * (an in-memory, append-only rate table), which is exactly where the resolution
  * logic lives — no Oracle required.
  *
- * The demo fixture (src/models/demo/demoStore.js) ships two USD windows:
+ * The demo fixture (src/models/demo/demoStore.ts) ships two USD windows:
  *   USD  56.25000000  effective 2026-01-01 … 2026-06-30
  *   USD  58.10000000  effective 2026-07-01 … (open)
  * so a June date must resolve to 56.25 even though a newer 58.10 row exists.

@@ -88,7 +88,7 @@ commit date across the source paths its **section** is mapped to
 
 The mapping is deliberately coarse — section-level, not per file.
 
-Current map (`Backend/src/services/DevDocsService.js`):
+Current map (`Backend/src/services/DevDocsService.ts`):
 
 | Section | Sources |
 |---|---|
@@ -103,7 +103,7 @@ Current map (`Backend/src/services/DevDocsService.js`):
 > which cannot speak to it. The `> **Verified …**` blocks in each document's
 > header remain the authoritative record of what was re-checked.
 >
-> A build step (`scripts/build-devdocs-freshness.js`, run by `bun run build`)
+> A build step (`scripts/build-devdocs-freshness.ts`, run by `bun run build`)
 > precomputes the freshness index for the compiled exe, where git is unavailable.
 
 **When you update a doc, add a `Verified` block** to its header blockquote in

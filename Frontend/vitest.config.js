@@ -36,7 +36,7 @@ export default mergeConfig(
             // Tests must never inherit a developer's .env API target — that
             // would point the suite at a REAL backend. Pin the base URL to a
             // fixed MSW-intercepted origin (deliberately NOT the dev backend
-            // port); keep this in lockstep with test/helpers/msw/server.js.
+            // port); keep this in lockstep with test/helpers/msw/server.ts.
             env: { VITE_API_BASE_URL: "http://localhost:3000/api/v1/" },
             setupFiles: ["test/helpers/setup.js"],
             pool: "forks",

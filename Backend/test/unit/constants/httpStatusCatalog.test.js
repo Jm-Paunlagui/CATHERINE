@@ -28,7 +28,7 @@ const {
     sendSuccess,
 } = require("../../../src/constants/responses");
 // OraCode.js exports the map itself (module.exports = ORA_MAP), not a named field.
-const ORA_MAP = require("../../../src/middleware/errorHandling/OraCode");
+const ORA_MAP = require("../../../src/middleware/errorHandling/OraCode").default;
 const {
     NJS_MAP,
     TRANSIENT_STRING_PATTERNS,
@@ -38,14 +38,14 @@ const SRC_ROOT = path.join(__dirname, "..", "..", "..", "src");
 
 /* ─── Source scanning helpers ────────────────────────────────────────────────── */
 
-/** Collect every .js file under src/, skipping node_modules. O(f) in file count. */
+/** Collect every .ts file under src/, skipping node_modules. O(f) in file count. */
 function collectSourceFiles(dir, acc = []) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) {
             if (entry.name === "node_modules") continue;
             collectSourceFiles(full, acc);
-        } else if (entry.name.endsWith(".js")) {
+        } else if (entry.name.endsWith(".ts")) {
             acc.push(full);
         }
     }

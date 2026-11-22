@@ -12,13 +12,13 @@
  * path had never rendered a pool name at all.
  */
 
-const { AlertNotifierService } = require("../../../src/services/AlertNotifierService");
-const SharedTransporter = require("../../../src/services/email/SharedTransporter");
-const RecipientResolver = require("../../../src/services/email/RecipientResolver");
-const MetricsService = require("../../../src/services/MetricsService");
-const AdminModel = require("../../../src/models/admin.model");
-const ServerAlertLogModel = require("../../../src/models/serverAlertLog.model");
-const ServerAlertAckModel = require("../../../src/models/serverAlertAck.model");
+const { AlertNotifierService } = require("../../../src/services/AlertNotifierService").default;
+const SharedTransporter = require("../../../src/services/email/SharedTransporter").default;
+const RecipientResolver = require("../../../src/services/email/RecipientResolver").default;
+const MetricsService = require("../../../src/services/MetricsService").default;
+const AdminModel = require("../../../src/models/admin.model").default;
+const ServerAlertLogModel = require("../../../src/models/serverAlertLog.model").default;
+const ServerAlertAckModel = require("../../../src/models/serverAlertAck.model").default;
 const { MetricsStore } = require("../../../src/middleware/metrics");
 
 const XSS_POOL = `appDb"><script>alert(1)</script><img src=x onerror=alert(2)>`;
