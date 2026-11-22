@@ -18,7 +18,7 @@ const {
 // Minimal fake CacheStore capturing the ops applied to it.
 function fakeStore() {
     return {
-        ops: [],
+        ops: [] as unknown[][],
         del(keys) {
             this.ops.push(["del", keys]);
         },
@@ -215,7 +215,7 @@ describe("ClusterCacheSync", function () {
         it("ignores non-cache-sync messages on the primary", function () {
             const w2 = {
                 id: 2,
-                sent: [],
+                sent: [] as unknown[],
                 send(m) {
                     this.sent.push(m);
                 },

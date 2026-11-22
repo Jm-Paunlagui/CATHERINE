@@ -37,13 +37,13 @@ function setEnv(vars) {
         if (v === undefined) {
             delete process.env[k];
         } else {
-            process.env[k] = v;
+            process.env[k] = v as string;
         }
     }
     return () => {
         for (const [k, v] of Object.entries(saved)) {
             if (v === undefined) delete process.env[k];
-            else process.env[k] = v;
+            else process.env[k] = v as string;
         }
     };
 }
@@ -376,10 +376,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                         tripleDesHash,
                     );
                 expect(matched).toBe(true);
-                expect(newHash).toMatch(
-                    /^\$argon2id\$/,
-                    "newHash should be argon2id for transparent migration",
-                );
+                expect(newHash, "newHash should be argon2id for transparent migration").toMatch(/^\$argon2id\$/);
             } finally {
                 restore();
             }

@@ -35,7 +35,7 @@ const HEAD_END = "\r\n\r\n";
 function stubPools() {
     return vi
         .spyOn(db, "withConnection")
-        .mockImplementation(async (_name, cb) => cb({ execute: vi.fn().mockResolvedValue({}) }));
+        .mockImplementation(async (_name, cb: any) => cb({ execute: vi.fn().mockResolvedValue({}) }));
 }
 
 /** Starts `app` on an ephemeral loopback port. */

@@ -62,7 +62,7 @@ function makeRefreshToken(overrides: Record<string, any> = {}, { secret, expires
         jti: randomUUID(),
         ...overrides,
     };
-    const opts = payload.exp === undefined ? { expiresIn } : {};
+    const opts = (payload as { exp?: number }).exp === undefined ? { expiresIn } : {};
     return jwt.sign(payload, secret ?? process.env.JWT_SECRET, { algorithm: "HS256", ...opts });
 }
 

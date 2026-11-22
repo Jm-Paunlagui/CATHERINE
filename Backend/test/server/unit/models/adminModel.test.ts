@@ -29,7 +29,7 @@ const ORIGINAL_DEMO_MODE = process.env.DEMO_MODE;
 /** A fake QueryBuilder chain that records every call and resolves `result`. */
 function fakeQuery(result) {
     const q = {
-        calls: [],
+        calls: [] as unknown[][],
         project: vi.fn(function (p) { q.calls.push(["project", p]); return q; }),
         sort: vi.fn(function (s) { q.calls.push(["sort", s]); return q; }),
         limit: vi.fn(function (n) { q.calls.push(["limit", n]); return q; }),
@@ -52,7 +52,7 @@ function mockGuardTransaction(lockedRows) {
     const session = { collection: vi.fn(() => txCol) };
     const txSpy = vi
         .spyOn(Transaction.prototype, "withTransaction")
-        .mockImplementation(async (fn) => fn(session));
+        .mockImplementation(async (fn: any) => fn(session));
     return { txSpy, session, txCol, query };
 }
 
@@ -155,7 +155,7 @@ describe("AdminModel — Oracle path (DEMO_MODE=false)", function () {
             const execute = vi.fn().mockResolvedValue({ rows });
             const spy = vi
                 .spyOn(config, "withConnection")
-                .mockImplementation(async (_name, cb) => cb({ execute }));
+                .mockImplementation(async (_name, cb: any) => cb({ execute }));
             return { execute, spy };
         }
 

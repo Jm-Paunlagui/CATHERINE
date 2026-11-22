@@ -34,7 +34,7 @@
         "start": "bun server.ts",
         "lint": "bun --bun eslint .",
         "lint:fix": "bun --bun eslint . --fix",
-        "typecheck": "tsc -p .",
+        "typecheck": "tsc -p . && tsc -p tsconfig.test.json",
         "db:seed:template": "bun scripts/seed-template.ts",
         "changelog:dump": "bun scripts/dump-changelog.ts",
         "changelog:seed": "bun scripts/seed-changelog.ts",

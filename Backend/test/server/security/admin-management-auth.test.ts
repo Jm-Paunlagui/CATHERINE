@@ -61,7 +61,7 @@ async function getCsrfToken() {
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 
-const ADMIN_ROUTES = [{ method: "get", path: "/api/v1/admin-management" }];
+const ADMIN_ROUTES: Array<{ method: string; path: string; query?: string }> = [{ method: "get", path: "/api/v1/admin-management" }];
 
 const ADMIN_MUTATING_ROUTES = [
     {

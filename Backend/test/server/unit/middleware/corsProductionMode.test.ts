@@ -43,12 +43,12 @@ function setEnv(vars) {
     for (const [k, v] of Object.entries(vars)) {
         saved[k] = process.env[k];
         if (v === undefined) delete process.env[k];
-        else process.env[k] = v;
+        else process.env[k] = v as string;
     }
     return () => {
         for (const [k, v] of Object.entries(saved)) {
             if (v === undefined) delete process.env[k];
-            else process.env[k] = v;
+            else process.env[k] = v as string;
         }
     };
 }

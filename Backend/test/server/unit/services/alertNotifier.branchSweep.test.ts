@@ -53,7 +53,7 @@ describe("AlertNotifierService — branch sweep", function () {
             vi.spyOn(ServerNotificationService, "isEnabled").mockReturnValue(true);
             vi.spyOn(logger, "onLevel").mockReturnValue(() => {});
             vi.spyOn(svc, "_hydrateAcks").mockResolvedValue(undefined as never);
-            const si = vi.spyOn(global, "setInterval").mockReturnValue(7);
+            const si = vi.spyOn(global, "setInterval").mockReturnValue(7 as never);
             vi.spyOn(global, "clearInterval").mockImplementation(() => {});
 
             expect(svc.start()).toEqual({ started: true });
@@ -64,7 +64,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("_onCriticalLog arms the digest window with a handle lacking unref", function () {
-            const st = vi.spyOn(global, "setTimeout").mockReturnValue(9);
+            const st = vi.spyOn(global, "setTimeout").mockReturnValue(9 as never);
             svc._onCriticalLog({ level: "CRITICAL", message: "x", meta: {}, requestId: null, timestamp: new Date().toISOString() });
             expect(svc._criticalWindowTimer).toBe(9);
             expect(st).toHaveBeenCalledWith(expect.any(Function), svc._digestWindowMs());
@@ -72,7 +72,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("_raceBudget resolves 'done' when work wins and the timer has no unref", async function () {
-            vi.spyOn(global, "setTimeout").mockReturnValue(5);
+            vi.spyOn(global, "setTimeout").mockReturnValue(5 as never);
             vi.spyOn(global, "clearTimeout").mockImplementation(() => {});
             await expect(svc._raceBudget(Promise.resolve(), 100)).resolves.toBe("done");
         });
@@ -84,7 +84,7 @@ describe("AlertNotifierService — branch sweep", function () {
         it("notifyCriticalNow and notifyLifecycleNow still resolve with handle lacking unref", async function () {
             vi.spyOn(ServerNotificationService, "isEnabled").mockReturnValue(true);
             vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true, notificationId: "n1" });
-            vi.spyOn(global, "setTimeout").mockReturnValue(3);
+            vi.spyOn(global, "setTimeout").mockReturnValue(3 as never);
 
             await expect(svc.notifyCriticalNow({ message: "boom" })).resolves.toMatchObject({ sent: true });
             await expect(
@@ -93,7 +93,7 @@ describe("AlertNotifierService — branch sweep", function () {
         });
 
         it("_armRetentionSweep is idempotent and tolerates a handle lacking unref", function () {
-            const si = vi.spyOn(global, "setInterval").mockReturnValue(11);
+            const si = vi.spyOn(global, "setInterval").mockReturnValue(11 as never);
             svc._armRetentionSweep();
             svc._armRetentionSweep();
             expect(si).toHaveBeenCalledTimes(1);
@@ -260,7 +260,7 @@ describe("AlertNotifierService — branch sweep", function () {
 
         it("ingest storm past the 200-event cap counts overflow and warns once", function () {
             svc._running = true;
-            vi.spyOn(global, "setTimeout").mockReturnValue(1);
+            vi.spyOn(global, "setTimeout").mockReturnValue(1 as never);
             for (let n = 0; n < 203; n++) svc._onCriticalLog({ ...ev, message: `m${n}` });
             expect(svc._criticalBuffer).toHaveLength(200);
             expect(svc._criticalOverflowInWindow).toBe(3);

@@ -230,7 +230,7 @@ describe("FileLease", () => {
                 throw Object.assign(new Error("perm"), { code: "EPERM" });
             });
             expect(a._isStale(fresh, info)).toBe(false);
-            process.kill.mockImplementation(() => {
+            vi.mocked(process.kill).mockImplementation(() => {
                 throw Object.assign(new Error("srch"), { code: "ESRCH" });
             });
             expect(a._isStale(fresh, info)).toBe(true);

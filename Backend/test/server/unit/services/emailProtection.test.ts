@@ -18,7 +18,7 @@ const { requestContext } = require("../../../../src/utils/requestContext");
  * @returns {Error}
  */
 function smtpError({ code, responseCode, message }: Record<string, any> = {}) {
-    const err = new Error(message ?? "simulated SMTP failure");
+    const err: Error & { code?: string; responseCode?: number } = new Error(message ?? "simulated SMTP failure");
     if (code) err.code = code;
     if (responseCode) err.responseCode = responseCode;
     return err;

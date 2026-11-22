@@ -130,7 +130,7 @@ describe("ScopedSsePoller — cache purge happens BEFORE the update broadcast (8
 
     it("onChange (purge) is called strictly before the client is told 'update'", async function () {
         const order: any[] = [];
-        let cursor = "sig-0";
+        let cursor: string | null = "sig-0";
         const poller = new ScopedSsePoller({
             name: "t",
             pollIntervalMs: 1000,
@@ -159,7 +159,7 @@ describe("ScopedSsePoller — cache purge happens BEFORE the update broadcast (8
     });
 
     it("a null cursor (gate closed / no rows) never counts as a change", async function () {
-        let cursor = "sig-0";
+        let cursor: string | null = "sig-0";
         const changes: any[] = [];
         const poller = new ScopedSsePoller({
             name: "t",

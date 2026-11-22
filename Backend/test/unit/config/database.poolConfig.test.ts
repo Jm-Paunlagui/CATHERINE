@@ -98,10 +98,7 @@ describe("database.js — appDb pool configuration", function () {
     it("DB-P-02: poolMin defaults to 5 when APP_POOL_MIN is not set", function () {
         delete process.env.APP_POOL_MIN;
         const { connections } = freshRequire();
-        expect(connections.appDb.poolMin).toBe(
-            5,
-            "poolMin must default to 5 when APP_POOL_MIN is absent",
-        );
+        expect(connections.appDb.poolMin, "poolMin must default to 5 when APP_POOL_MIN is absent").toBe(5);
     });
 
     // ── DB-P-03 ───────────────────────────────────────────────────────────────
@@ -109,10 +106,7 @@ describe("database.js — appDb pool configuration", function () {
     it("DB-P-03: poolMax defaults to 20 when APP_POOL_MAX is not set", function () {
         delete process.env.APP_POOL_MAX;
         const { connections } = freshRequire();
-        expect(connections.appDb.poolMax).toBe(
-            20,
-            "poolMax must default to 20 when APP_POOL_MAX is absent",
-        );
+        expect(connections.appDb.poolMax, "poolMax must default to 20 when APP_POOL_MAX is absent").toBe(20);
     });
 
     // ── DB-P-04 ───────────────────────────────────────────────────────────────
@@ -120,10 +114,7 @@ describe("database.js — appDb pool configuration", function () {
     it("DB-P-04: poolMin reads APP_POOL_MIN env var when set", function () {
         process.env.APP_POOL_MIN = "10";
         const { connections } = freshRequire();
-        expect(connections.appDb.poolMin).toBe(
-            10,
-            "poolMin must equal the parsed APP_POOL_MIN value",
-        );
+        expect(connections.appDb.poolMin, "poolMin must equal the parsed APP_POOL_MIN value").toBe(10);
     });
 
     // ── DB-P-05 ───────────────────────────────────────────────────────────────
@@ -131,10 +122,7 @@ describe("database.js — appDb pool configuration", function () {
     it("DB-P-05: poolMax reads APP_POOL_MAX env var when set", function () {
         process.env.APP_POOL_MAX = "40";
         const { connections } = freshRequire();
-        expect(connections.appDb.poolMax).toBe(
-            40,
-            "poolMax must equal the parsed APP_POOL_MAX value",
-        );
+        expect(connections.appDb.poolMax, "poolMax must equal the parsed APP_POOL_MAX value").toBe(40);
     });
 
     // ── DB-P-06 ───────────────────────────────────────────────────────────────
@@ -164,9 +152,6 @@ describe("database.js — appDb pool configuration", function () {
         // be documented in .env.example and this test documents the exact behaviour.
         process.env.APP_POOL_MIN = "0";
         const { connections } = freshRequire();
-        expect(connections.appDb.poolMin).toBe(
-            5,
-            "APP_POOL_MIN=0 should fall back to default 5 due to falsy-branch (0 || 5)",
-        );
+        expect(connections.appDb.poolMin, "APP_POOL_MIN=0 should fall back to default 5 due to falsy-branch (0 || 5)").toBe(5);
     });
 });

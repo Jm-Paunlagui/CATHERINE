@@ -25,7 +25,7 @@ const { REQUEST_ERRORS } = require("../../../../src/constants/errors");
 const IP = "127.0.0.1";
 
 function mockReq({ method = "GET", path = "/api/v1/health/stream", headers, omitHeaders = false }: Record<string, any> = {}) {
-    const req = {
+    const req: Record<string, any> = {
         ip: IP,
         path,
         originalUrl: path,
@@ -39,7 +39,7 @@ function mockReq({ method = "GET", path = "/api/v1/health/stream", headers, omit
 function mockRes({ withSetHeader = true }: Record<string, any> = {}) {
     let _status, _body;
     const _headers: Record<string, any> = {};
-    const res = {
+    const res: Record<string, any> = {
         _headers,
         get _status() {
             return _status;
