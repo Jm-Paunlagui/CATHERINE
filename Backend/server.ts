@@ -178,7 +178,7 @@ if (ENABLE_CLUSTERING && IS_PRIMARY) {
     // live workers / the leader lazily, so it can be built before it.
     const { ClusterRpcHub } = (require("./src/utils/cluster/ClusterRpcHub") as typeof import("./src/utils/cluster/ClusterRpcHub"));
     const { PrimaryStateServices } = (require("./src/utils/cluster/PrimaryStateServices") as typeof import("./src/utils/cluster/PrimaryStateServices"));
-    let supervisor: any = null;
+    let supervisor: import("./src/utils/cluster/ClusterSupervisor").ClusterSupervisor | null = null;
     const rpcHub = new ClusterRpcHub({
         cluster,
         logger,
@@ -248,7 +248,7 @@ function bootWorker() {
             return "unknown";
         }
     })();
-    let serverRunMarker: any = null;
+    let serverRunMarker: InstanceType<typeof import("./src/utils/lifecycle/ServerRunMarker").default> | null = null;
     if (IS_CRON_LEADER_AT_BOOT) {
         const ServerRunMarker = (require("./src/utils/lifecycle/ServerRunMarker") as typeof import("./src/utils/lifecycle/ServerRunMarker")).default;
         const { SERVER_RUN_MARKER } = (require("./src/constants/serverRunMarker") as typeof import("./src/constants/serverRunMarker"));
@@ -380,10 +380,10 @@ function bootWorker() {
 
     // ─── Server creation ──────────────────────────────────────────────────
 
-    let server: any;
+    let server: http.Server;
 
     if (USE_HTTPS) {
-        const https = require("https");
+        const https = require("https") as typeof import("https");
         // certs/ sits next to the compiled exe, or next to server.ts in a
         // source run (APP_ROOT covers both).
         const certDir = path.join(APP_ROOT, "certs");
@@ -529,7 +529,9 @@ function bootWorker() {
                 const { VERDICTS } = SERVER_RUN_MARKER;
                 const bootedAtMs = Date.now();
                 const { verdict, previous, cause } = serverRunMarker.readPrevious();
-                const iso = (ms: any) => (Number.isFinite(ms) ? new Date(ms).toISOString() : "unknown");
+                // CLEAN / UNCLEAN / HANDOVER always carry the previous record; FIRST_BOOT and UNREADABLE do not read it.
+                const prev: Partial<import("./src/utils/lifecycle/ServerRunMarker").RunRecord> = previous ?? {};
+                const iso = (ms: unknown) => (typeof ms === "number" && Number.isFinite(ms) ? new Date(ms).toISOString() : "unknown");
                 if (verdict === VERDICTS.FIRST_BOOT && cause) {
                     logger.notice(serverMessages.RUN_MARKER_FOREIGN_HOST(serverRunMarker.filePath));
                 } else if (verdict === VERDICTS.FIRST_BOOT) {
@@ -537,10 +539,10 @@ function bootWorker() {
                 } else if (verdict === VERDICTS.CLEAN) {
                     logger.info(
                         serverMessages.RUN_MARKER_PREVIOUS_CLEAN(
-                            previous.pid,
-                            previous.exitCode,
-                            previous.stopReason,
-                            iso(previous.stoppedAt),
+                            prev.pid,
+                            prev.exitCode,
+                            prev.stopReason,
+                            iso(prev.stoppedAt),
                         ),
                     );
                 } else if (verdict === VERDICTS.UNCLEAN) {
@@ -548,16 +550,16 @@ function bootWorker() {
                     // critical would send a second one through the critical tap.
                     logger.error(
                         serverMessages.RUN_MARKER_UNCLEAN(
-                            previous.pid,
-                            previous.state,
-                            iso(previous.lastHeartbeatAt),
-                            Number.isFinite(previous.lastHeartbeatAt)
-                                ? Math.round((bootedAtMs - previous.lastHeartbeatAt) / 1000)
+                            prev.pid,
+                            prev.state,
+                            iso(prev.lastHeartbeatAt),
+                            typeof prev.lastHeartbeatAt === "number" && Number.isFinite(prev.lastHeartbeatAt)
+                                ? Math.round((bootedAtMs - prev.lastHeartbeatAt) / 1000)
                                 : "unknown",
                         ),
                     );
                 } else if (verdict === VERDICTS.HANDOVER) {
-                    logger.notice(serverMessages.RUN_MARKER_HANDOVER(previous.pid));
+                    logger.notice(serverMessages.RUN_MARKER_HANDOVER(prev.pid));
                 } else {
                     logger.warning(serverMessages.RUN_MARKER_UNREADABLE(serverRunMarker.filePath, cause));
                 }
@@ -688,7 +690,7 @@ function bootWorker() {
         // How far ahead timers are armed; the interval sweep re-arms long before it runs out.
         const BACKUP_TIMER_HORIZON_MS = 26 * 60 * 60 * 1000;
 
-        let _backupTimers: any[] = [];
+        let _backupTimers: ReturnType<typeof setTimeout>[] = [];
         // Only the latest arm installs timers, and old ones are cleared after
         // the event list is fetched (two overlapping arms would duplicate them).
         let _backupArmGeneration = 0;
@@ -830,8 +832,8 @@ function bootWorker() {
     // Shared across gracefulShutdown calls so a crash that arrives DURING a
     // long stop (f) can pull the wait and the failsafe in.
     let phaseDeadline = 0;
-    let teardownHandle: any = null;
-    let failsafeTimer: any = null;
+    let teardownHandle: ReturnType<typeof import("./src/utils/shutdown/TeardownSequence").preCloseTeardown> | null = null;
+    let failsafeTimer: ReturnType<typeof setTimeout> | null = null;
     let failsafeFireAt = 0;
     let shutdownT0 = 0;
 
@@ -1167,7 +1169,7 @@ function bootWorker() {
     // The idle watchdog fires its hook on EVERY termination; only a cut made
     // while the process is stopping belongs in the shutdown "requests cut"
     // email, so the shutdown state is checked here.
-    RequestWatchdog.setShutdownHook((entry: unknown) => {
+    RequestWatchdog.setShutdownHook((entry) => {
         if (isShuttingDown) teardownHandle?.recordIdleCut(entry);
     });
 

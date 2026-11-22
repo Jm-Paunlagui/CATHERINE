@@ -478,7 +478,7 @@ class ServerRunMarker {
      * only those whose `pendingKey` is in `keys`). Never throws.
      * @param {string[]} [keys]
      */
-    clearPendingUnclean(keys: string[]) {
+    clearPendingUnclean(keys?: string[]) {
         try {
             if (this._pendingUnclean === undefined) return;
             // No keys: everything was reported. Keys: drop only the entries that were sent.
@@ -497,7 +497,7 @@ class ServerRunMarker {
      * is in `keys`). Mirrors clearPendingUnclean. Never throws.
      * @param {string[]} [keys]
      */
-    clearPendingLeaderLost(keys: string[]) {
+    clearPendingLeaderLost(keys?: string[]) {
         try {
             if (this._pendingLeaderLost === undefined) return;
             const keep = Array.isArray(keys) ? this._pendingLeaderLost.filter((e: unknown) => !keys.includes(pendingKey(e))) : [];
