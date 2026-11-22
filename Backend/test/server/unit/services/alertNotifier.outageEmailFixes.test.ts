@@ -81,13 +81,13 @@ describe("OF-2 — critical channel KV for metric digests", function () {
             [{ level: "CRITICAL", message: "pool down", meta: {}, requestId: null, timestamp: "2026-11-03T06:32:05.672Z" }],
             "",
         );
-        expect(send.mock.calls[0][1].kv.firstEventAt).toBe("Nov 3, 2026, 2:32:05 PM UTC+08:00");
+        expect((send.mock.calls as any[])[0][1].kv.firstEventAt).toBe("Nov 3, 2026, 2:32:05 PM UTC+08:00");
     });
 
     it("the poll digest passes the event count through", async function () {
         const send = vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true });
         await notifier._dispatchMetricDigest(CRIT, [{ alert: DOWN_ALERT, key: "ORACLE_POOL_DOWN::appDb", transitionType: "FIRED" }], {}, false);
-        expect(send.mock.calls[0][1].kv).toMatchObject({ eventCount: 1 });
+        expect((send.mock.calls as any[])[0][1].kv).toMatchObject({ eventCount: 1 });
     });
 });
 

@@ -224,7 +224,7 @@ describe("ServerNotificationService.sendChannelDigest — guard rails", function
         expect(result).toEqual({ sent: false, reason: "unknown-channel" });
         expect(sendMail).not.toHaveBeenCalled();
         expect(warnSpy).toHaveBeenCalled();
-        const [, meta] = warnSpy.mock.calls[warnSpy.mock.calls.length - 1];
+        const [, meta] = (warnSpy.mock.calls as any[])[warnSpy.mock.calls.length - 1];
         expect(meta._noNotify).toBe(true);
     });
 
@@ -244,7 +244,7 @@ describe("ServerNotificationService.sendChannelDigest — guard rails", function
         expect(result).toEqual({ sent: false, reason: "no-recipients" });
         expect(sendMail).not.toHaveBeenCalled();
         expect(warnSpy).toHaveBeenCalled();
-        const [, meta] = warnSpy.mock.calls[warnSpy.mock.calls.length - 1];
+        const [, meta] = (warnSpy.mock.calls as any[])[warnSpy.mock.calls.length - 1];
         expect(meta._noNotify).toBe(true);
         // no-recipients is not a transporter-level delivery failure — no SMTP
         // attempt occurred, so no delivery outcome is recorded for it.
@@ -305,7 +305,7 @@ describe("ServerNotificationService.sendChannelDigest — content + delivery out
             "SMTP connection refused",
         );
         expect(warnSpy).toHaveBeenCalled();
-        const [, meta] = warnSpy.mock.calls[warnSpy.mock.calls.length - 1];
+        const [, meta] = (warnSpy.mock.calls as any[])[warnSpy.mock.calls.length - 1];
         expect(meta._noNotify).toBe(true); // R1b loop guard
     });
 

@@ -39,7 +39,7 @@ const SRC_ROOT = path.join(__dirname, "..", "..", "..", "src");
 /* ─── Source scanning helpers ────────────────────────────────────────────────── */
 
 /** Collect every .ts file under src/, skipping node_modules. O(f) in file count. */
-function collectSourceFiles(dir, acc = []) {
+function collectSourceFiles(dir, acc: any[] = []) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) {

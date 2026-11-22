@@ -151,7 +151,7 @@ describe("AdminModel — Oracle path (DEMO_MODE=false)", function () {
     });
 
     describe("search", function () {
-        function mockSearchConnection(rows = []) {
+        function mockSearchConnection(rows: any[] = []) {
             const execute = vi.fn().mockResolvedValue({ rows });
             const spy = vi
                 .spyOn(config, "withConnection")
@@ -225,7 +225,7 @@ describe("AdminModel — Oracle path (DEMO_MODE=false)", function () {
             await AdminModel.setEmail("alice", "  alice@example.com ");
 
             expect(upd).toHaveBeenCalledTimes(1);
-            const [filter, update] = upd.mock.calls[0];
+            const [filter, update] = (upd.mock.calls as any[])[0];
             expect(filter).toEqual({ USERNAME: "alice" });
             expect(update.$set.EMAIL).toBe("alice@example.com");
             expect(update.$set.UPDATED_AT).toBeInstanceOf(Date);
@@ -237,7 +237,7 @@ describe("AdminModel — Oracle path (DEMO_MODE=false)", function () {
                 .spyOn(OracleCollection.prototype, "updateOne")
                 .mockResolvedValue({ modifiedCount: 1 });
             await AdminModel.setEmail("alice", "   ");
-            expect(upd.mock.calls[0][1].$set.EMAIL).toBeNull();
+            expect((upd.mock.calls as any[])[0][1].$set.EMAIL).toBeNull();
         });
     });
 

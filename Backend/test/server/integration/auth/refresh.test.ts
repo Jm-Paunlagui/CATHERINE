@@ -89,7 +89,7 @@ describe("POST /api/v1/auth/refresh — integration", function () {
     let csrf;
 
     /** POST with CSRF header + cookie and any extra cookie pairs. */
-    function post(extraCookies = [], { withCsrf = true } = {}) {
+    function post(extraCookies: any[] = [], { withCsrf = true } = {}) {
         const cookies = [...csrf.cookies, ...extraCookies];
         const req = request(app).post(ROUTE).set("Cookie", cookies.join("; "));
         return withCsrf ? req.set("x-csrf-token", csrf.token) : req;

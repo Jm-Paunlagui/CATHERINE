@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 /**
  * @fileoverview Gap 3 â€” the database dies DURING a graceful shutdown.

@@ -322,7 +322,7 @@ describe("AlertNotifierService — branch sweep", function () {
             dispatch.mockClear();
             await svc._runPollTick();
             expect(dispatch).toHaveBeenCalledTimes(1);
-            expect(dispatch.mock.calls[0][1][0]).toMatchObject({ key: "HIGH_HEAP::global", transitionType: "ESCALATED" });
+            expect((dispatch.mock.calls as any[])[0][1][0]).toMatchObject({ key: "HIGH_HEAP::global", transitionType: "ESCALATED" });
         });
 
         it("same severity inside the cooldown is not re-sent; after the cooldown it is RENOTIFIED", async function () {
@@ -335,7 +335,7 @@ describe("AlertNotifierService — branch sweep", function () {
             svc._alertStates.get("HIGH_HEAP::global").lastNotifiedAt = Date.now() - svc._cooldownMs() - 1;
             await svc._runPollTick();
             expect(dispatch).toHaveBeenCalledTimes(1);
-            expect(dispatch.mock.calls[0][1][0].transitionType).toBe("RENOTIFIED");
+            expect((dispatch.mock.calls as any[])[0][1][0].transitionType).toBe("RENOTIFIED");
         });
 
         it("a valid ack suppresses the cooldown re-notify and logs it", async function () {
@@ -361,7 +361,7 @@ describe("AlertNotifierService — branch sweep", function () {
                 await svc._runPollTick();
                 dispatch.mockClear();
                 await svc._runPollTick();
-                const recoveries = dispatch.mock.calls.filter((c) => c[3] === true);
+                const recoveries = (dispatch.mock.calls as any[]).filter((c) => c[3] === true);
                 expect(recoveries).toHaveLength(1);
                 expect(recoveries[0][0]).toBe("server-system-notification");
                 expect(recoveries[0][1].map((e) => e.key).sort()).toEqual(["EVENT_LOOP_LAG::global", "HIGH_HEAP::global"]);
@@ -393,7 +393,7 @@ describe("AlertNotifierService — branch sweep", function () {
             const [, payload] = ServerNotificationService.sendChannelDigest.mock.calls[0];
             expect(payload.rows).toEqual([{ rule: "UNKNOWN_RULE", scope: "global", description: "", severity: "warning" }]);
             expect(payload.severity).toBe("WARNING");
-            const [logRows] = write.mock.calls[0];
+            const [logRows] = (write.mock.calls as any[])[0];
             expect(logRows[0]).toMatchObject({
                 rule: "UNKNOWN_RULE", transition: "RENOTIFIED", description: null, notificationId: "n-9", emailStatus: "SENT",
             });
@@ -409,7 +409,7 @@ describe("AlertNotifierService — branch sweep", function () {
             );
             const [, payload] = ServerNotificationService.sendChannelDigest.mock.calls[0];
             expect(payload.rows[0]).toMatchObject({ rule: "HIGH_LATENCY", scope: "/r" });
-            expect(write.mock.calls[0][0][0].rule).toBe("HIGH_LATENCY");
+            expect((write.mock.calls as any[])[0][0][0].rule).toBe("HIGH_LATENCY");
         });
 
         it("a critical alert makes the digest CRITICAL", async function () {
@@ -436,7 +436,7 @@ describe("AlertNotifierService — branch sweep", function () {
             expect(payload.rows[0]).toEqual({
                 rule: "UNKNOWN_RULE", scope: "global", description: "Recovered - no longer firing.", severity: "resolved",
             });
-            const [logRows] = write.mock.calls[0];
+            const [logRows] = (write.mock.calls as any[])[0];
             expect(logRows[0]).toMatchObject({
                 transition: "RECOVERED", rule: "UNKNOWN_RULE", description: "Recovered - no longer firing.", severity: "RESOLVED",
             });
@@ -447,7 +447,7 @@ describe("AlertNotifierService — branch sweep", function () {
             ServerNotificationService.sendChannelDigest.mockResolvedValueOnce({ sent: false, reason: "smtp", cause: "ECONNREFUSED" });
             const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             await svc._dispatchMetricDigest("server-system-notification", [{ alert: { rule: "R" }, key: "R::global" }], {}, false);
-            expect(write.mock.calls[0][0][0]).toMatchObject({ emailStatus: "FAILED", emailError: "ECONNREFUSED", notificationId: null });
+            expect((write.mock.calls as any[])[0][0][0]).toMatchObject({ emailStatus: "FAILED", emailError: "ECONNREFUSED", notificationId: null });
             expect(svc._emailStatusFor({ sent: false, reason: "disabled" })).toBe("DISABLED");
         });
     });
@@ -516,7 +516,7 @@ describe("AlertNotifierService — branch sweep", function () {
             const send = vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true });
             vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             await svc._dispatchCriticalDigest([], "", 3);
-            const [, payload] = send.mock.calls[0];
+            const [, payload] = (send.mock.calls as any[])[0];
             expect(payload.kv.eventCount).toBe(3);
             expect(payload.kv.firstEventAt).toMatch(/ UTC[+-]\d{2}:\d{2}$/);
             expect(payload.summary).toContain("3 crit/alert/emerg");
@@ -536,7 +536,7 @@ describe("AlertNotifierService — branch sweep", function () {
             const write = vi.spyOn(svc, "_writeAlertLogRows").mockResolvedValue(undefined as never);
             const ev = { level: "ALERT", message: "m", meta: { function: "f", file: "a.js", line: 4 }, requestId: "r1", timestamp: "2026-01-01T00:00:00Z" };
             await svc._dispatchCriticalDigest([ev], "", 0);
-            const row = write.mock.calls[0][0][0];
+            const row = (write.mock.calls as any[])[0][0][0];
             expect(row).toMatchObject({ transition: "FIRED", emailStatus: "FAILED", emailError: "bad", rule: "ALERT" });
             expect(row.details.callsite).toBe("f @ a.js:4");
             expect(row.details.requestId).toBe("r1");
@@ -825,9 +825,9 @@ describe("AlertNotifierService — branch sweep", function () {
             const fwd = vi.spyOn(svc, "_forwardToLeader").mockResolvedValue({ ok: true });
             await svc.acknowledge("A::global", 12, "z".repeat(700));
             expect(fwd.mock.calls[0][1]).toMatchObject({ alertKey: "A::global", ackedBy: "12" });
-            expect(fwd.mock.calls[0][1].note).toHaveLength(500);
+            expect((fwd.mock.calls as any[])[0][1].note).toHaveLength(500);
             await svc.acknowledge("A::global", 12);
-            expect(fwd.mock.calls[1][1].note).toBeNull();
+            expect((fwd.mock.calls as any[])[1][1].note).toBeNull();
         });
 
         it("unacknowledge and getStatus forward without touching local state", async function () {
@@ -907,7 +907,7 @@ describe("AlertNotifierService — branch sweep", function () {
         ])("test email on %s names the requester and uses the right row/kv shape", async function (channel, user, who, rowKey) {
             const send = vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true, notificationId: "t" });
             await expect(svc.sendTestNotification(channel, user)).resolves.toMatchObject({ sent: true });
-            const [ch, payload] = send.mock.calls[0];
+            const [ch, payload] = (send.mock.calls as any[])[0];
             expect(ch).toBe(channel);
             expect(payload.summary).toContain(who);
             expect(payload.rows[0]).toHaveProperty(rowKey);

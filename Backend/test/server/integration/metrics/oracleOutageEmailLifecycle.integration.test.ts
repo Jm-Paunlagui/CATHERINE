@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 /**
  * oracleOutageEmailLifecycle.integration.test.js â€” a whole Oracle outage, from
@@ -256,7 +256,7 @@ describe("OG5 â€” alert-log rows queued during the outage (gap 5)", functio
         await notifier._writeAlertLogRows(rows);
         expect(notifier._alertLogQueue).toHaveLength(500);
         expect(notifier._alertLogQueue[0].alertKey).toBe("K5");
-        const drop = warn.mock.calls.find(([msg]) => /dropped 5 oldest/.test(msg));
+        const drop = (warn.mock.calls as any[]).find(([msg]) => /dropped 5 oldest/.test(msg));
         expect(drop).toBeDefined();
         expect(drop[1]).toMatchObject({ _noNotify: true });
     });

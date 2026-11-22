@@ -80,7 +80,7 @@ describe("R2 - an unclean restart whose email failed", function () {
         const c = marker({ runId: "C", pid: 300 });
         const ok = notifier();
         await boot(c, ok.n);
-        const sent = ok.alertNotifier.notifyLifecycleNow.mock.calls.map(([p]) => `${p.severity} ${p.headline} ${p.summary}`).join(" | ");
+        const sent = (ok.alertNotifier.notifyLifecycleNow.mock.calls as any[]).map(([p]) => `${p.severity} ${p.headline} ${p.summary}`).join(" | ");
         expect(sent, "run A's unclean restart was never emailed").toMatch(/without a clean shutdown/i);
     });
 });
@@ -146,7 +146,7 @@ describe("R10 - a clock that went backwards", function () {
         const { n, alertNotifier } = notifier();
         const previous = { state: "RUNNING", pid: 9, version: "2.1.3", bootedAt: clock - 3_600_000, lastHeartbeatAt: clock + 10 * 60_000 };
         await n.announce({ verdict: "UNCLEAN", previous, current: { pid: 1, version: "2.1.3", bootedAtMs: clock }, lastStartNoticeAt: null, nowMs: clock });
-        expect(alertNotifier.notifyLifecycleNow.mock.calls[0][0].summary).not.toMatch(/down under a minute/);
+        expect((alertNotifier.notifyLifecycleNow.mock.calls as any[])[0][0].summary).not.toMatch(/down under a minute/);
     });
 });
 
@@ -198,7 +198,7 @@ describe("review of ff794a36 - M: several unreported unclean restarts", function
         const d = marker({ runId: "D", pid: 400 });
         const ok = notifier();
         await boot(d, ok.n);
-        const pids = ok.alertNotifier.notifyLifecycleNow.mock.calls
+        const pids = (ok.alertNotifier.notifyLifecycleNow.mock.calls as any[])
             .map(([p]) => p.summary)
             .filter((s) => /without running its shutdown sequence/.test(s))
             .map((s) => Number((/PID (\d+)/.exec(s) || [])[1]));
@@ -221,7 +221,7 @@ describe("R3 - a cron-leader worker that died while RUNNING", function () {
         const previous = { state: "RUNNING", pid: 41, version: "2.1.3", runId: "cluster-run", lastHeartbeatAt: clock - 20_000 };
         const res = await n.announce({ verdict: "HANDOVER", previous, current: { pid: 42, version: "2.1.3", bootedAtMs: clock }, lastStartNoticeAt: clock - 60_000, nowMs: clock });
         expect(res).toMatchObject({ sent: true, event: "leader-lost" });
-        const p = alertNotifier.notifyLifecycleNow.mock.calls[0][0];
+        const p = (alertNotifier.notifyLifecycleNow.mock.calls as any[])[0][0];
         expect(p.severity).toBe("WARNING");
         expect(p.headline).toMatch(/Cron-leader worker restarted unexpectedly/);
         expect(p.summary).toMatch(/PID 41/);
@@ -264,7 +264,7 @@ describe("R7 - the cluster primary vanished while the cron leader was stopping c
         const { n, alertNotifier } = notifier();
         const { res } = await boot(marker(), n);
         expect(res).toMatchObject({ sent: true, event: "started" });
-        const p = alertNotifier.notifyLifecycleNow.mock.calls[0][0];
+        const p = (alertNotifier.notifyLifecycleNow.mock.calls as any[])[0][0];
         expect(p.severity).toBe("WARNING");
         expect(p.summary).toContain("cluster primary disappeared");
         expect(p.summary).not.toContain("reported when it happened");
