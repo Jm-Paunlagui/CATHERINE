@@ -30,8 +30,26 @@ interface ClassifiedError {
     retryAfterSec?: number;
 }
 
+/**
+ * The fields the handler reads from a thrown value. Anything can be thrown, so
+ * every field is optional and each read checks it (AppError, Oracle/NJS errors,
+ * body-parser and multer errors all fit this shape).
+ */
+type HandledError = Error & {
+    type?: string;
+    status?: number;
+    statusCode?: number;
+    code?: string;
+    retryAfterSec?: number;
+    reasons?: string[];
+    originalError?: unknown;
+    isOperational?: boolean;
+    hint?: string;
+    details?: unknown;
+};
+
 class ErrorHandlerMiddleware {
-    declare _cors: any;
+    declare _cors: Pick<typeof import("../security/CorsMiddleware").defaultCors, "applyToErrorResponse">;
     /**
      * @param {object} [options]
      * @param {{ applyToErrorResponse: Function }} [options.cors] - CORS policy
@@ -47,7 +65,9 @@ class ErrorHandlerMiddleware {
 
     // ─── Main handler ──────────────────────────────────────────────────────────
 
-    handle(err: any, req: Request, res: Response, _next: unknown) {
+    handle(thrown: unknown, req: Request, res: Response, _next: unknown) {
+        // Anything can be thrown; every field read below is optional (see HandledError).
+        const err = thrown as HandledError;
         // The request watchdog already answered (504) or destroyed this
         // response. The handler's late error (ERR_HTTP_HEADERS_SENT, or the
         // RequestStalledError thrown by a later DB call) must not be logged as
@@ -150,7 +170,7 @@ class ErrorHandlerMiddleware {
      *   4. HTTP-level framework errors (body-parser, multer)
      *   5. Fallback generic 500
      */
-    _classify(err: any): ClassifiedError {
+    _classify(err: HandledError): ClassifiedError {
         // 1. AppError — already operational and classified
         if (err.isOperational) {
             return {
@@ -289,7 +309,7 @@ class ErrorHandlerMiddleware {
      * client message. The raw DB message (with SQL / binds) is stored in
      * rawMessage for the logger — it is never sent to the client.
      */
-    _classifyOracle(err: any) {
+    _classifyOracle(err: HandledError) {
         const match = err.message.match(/ORA-(\d+)/);
         const code = match ? parseInt(match[1], 10) : 0;
         const known = ORA_MAP[code];
@@ -308,7 +328,7 @@ class ErrorHandlerMiddleware {
      * client message. The raw driver message is stored in rawMessage for the
      * logger — it is never sent to the client.
      */
-    _classifyNjs(err: any) {
+    _classifyNjs(err: HandledError) {
         const match = err.message.match(/NJS-(\d+)/);
         const code = match ? parseInt(match[1], 10) : 0;
         const known = NJS_MAP[code];
@@ -364,7 +384,7 @@ class ErrorHandlerMiddleware {
         const MAX_CAPTURE_BYTES = 64 * 1024; // 64 KiB cap
         const oldWrite = res.write;
         const oldEnd = res.end;
-        const chunks: any[] = [];
+        const chunks: Buffer[] = [];
         let totalBytes = 0;
         let capped = false;
 
