@@ -69,7 +69,7 @@ describe("RateLimiterMiddleware", function () {
             }));
 
         it("responds 429 after exceeding max requests", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const limiter = new RateLimiterMiddleware({
                 max: 2,
@@ -113,7 +113,7 @@ describe("RateLimiterMiddleware", function () {
         }));
 
         it("bypasses OPTIONS requests", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const limiter = new RateLimiterMiddleware({
                 max: 1,

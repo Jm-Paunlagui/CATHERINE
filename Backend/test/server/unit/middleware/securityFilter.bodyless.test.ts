@@ -65,7 +65,7 @@ function mockRes({ withSetHeader = true } = {}) {
 }
 
 /** Runs the filter once; returns { res, next } with `next` a vi.fn. */
-function run(filter, reqOpts, resOpts) {
+function run(filter, reqOpts, resOpts?) {
     const req = mockReq(reqOpts);
     const res = mockRes(resOpts);
     const next = vi.fn();

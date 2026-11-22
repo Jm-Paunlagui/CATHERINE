@@ -46,7 +46,7 @@ function marker({ runId = "run", pid = 4242, fsImpl = fs } = {}) {
         hostname: "HOST1",
     });
 }
-function notifier(send) {
+function notifier(send?) {
     const alertNotifier = { notifyLifecycleNow: vi.fn(send ?? (async () => ({ sent: true }))) };
     return { n: new StartupNotifier({ alertNotifier, logger: { warning: noop, info: noop }, tzOffsetMinutes: () => 480 }), alertNotifier };
 }

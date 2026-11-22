@@ -36,6 +36,10 @@ function cloneRows(rows) {
  * In-memory multi-table store with declared identity columns and unique keys.
  */
 class FakeOracleStore {
+    declare tables: Map<any, any>;
+    declare stats: any;
+    declare _failNextTx: number;
+    declare _connHook: any;
     /**
      * @param {Record<string, { idColumn?: string, unique?: string[][] }>} schema
      *   Per-table config: idColumn (IDENTITY column to auto-assign) and unique
@@ -124,6 +128,8 @@ class FakeOracleStore {
  * transaction wrapper commits/rolls back via the store snapshot.
  */
 class FakeOracleConnection {
+    declare store: any;
+    declare _failOn: any;
     constructor(store) {
         this.store = store;
         /** Optional chaos predicate: (kind, sql) => boolean; throws when true. */

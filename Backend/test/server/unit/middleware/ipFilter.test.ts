@@ -28,7 +28,7 @@ describe("IpFilterMiddleware", function () {
             }));
 
         it("blocks an IP not on the allowlist", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const filter = new IpFilterMiddleware({
                 enabled: true,
@@ -62,7 +62,7 @@ describe("IpFilterMiddleware", function () {
             }));
 
         it("blocks an IP outside the CIDR range", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const filter = new IpFilterMiddleware({
                 enabled: true,

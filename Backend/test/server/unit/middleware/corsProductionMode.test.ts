@@ -54,7 +54,7 @@ function setEnv(vars) {
 }
 
 /** Re-requires CorsMiddleware with a clean module cache. */
-function freshCors(opts) {
+function freshCors(opts?) {
     const key =
         require.resolve("../../../../src/middleware/security/CorsMiddleware");
     delete require.cache[key];
@@ -80,7 +80,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         });
 
         it("allows 192.168.x.x private network origin in development", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(
@@ -95,7 +95,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("allows .vpn intranet origin in development", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(
@@ -110,7 +110,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("allows .local origin in development", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(mockReq("http://mypc.local:8080"), mockRes(), (err) => {
@@ -121,7 +121,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("allows 10.x.x.x origin in development", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(mockReq("http://10.0.1.100:4000"), mockRes(), (err) => {
@@ -145,7 +145,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         });
 
         it("BLOCKS 192.168.x.x private network origin in production", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(
@@ -161,7 +161,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("BLOCKS .vpn intranet origin in production", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(
@@ -176,7 +176,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("BLOCKS .local origin in production", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(mockReq("http://mypc.local:8080"), mockRes(), (err) => {
@@ -187,7 +187,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("BLOCKS 10.x.x.x origin in production", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(mockReq("http://10.0.1.100:4000"), mockRes(), (err) => {
@@ -198,7 +198,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("STILL allows localhost origin in production (safe loopback)", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(mockReq("http://localhost:5173"), mockRes(), (err) => {
@@ -209,7 +209,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("STILL allows 127.0.0.1 origin in production (safe loopback)", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(mockReq("http://127.0.0.1:3000"), mockRes(), (err) => {
@@ -220,7 +220,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("STILL allows explicit CORS_ORIGINS entry in production", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const origOrigins = process.env.CORS_ORIGINS;
             process.env.CORS_ORIGINS = "https://app.example.com";
@@ -253,7 +253,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
         });
 
         it("allows 192.168.x.x when opt-in flag is set in production", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(
@@ -268,7 +268,7 @@ describe("CorsMiddleware — production mode (CWE-942)", function () {
             }));
 
         it("allows .vpn when opt-in flag is set in production", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = freshCors();
             cors.handle(

@@ -138,7 +138,7 @@ describe("shutdown gate - performance", function () {
             restoreMocks();
         });
 
-        async function fire(method, path, body) {
+        async function fire(method, path, body?) {
             const t0 = process.hrtime.bigint();
             let r = request(app)[method.toLowerCase()](path);
             if (body) r = r.set("Content-Type", "application/json").send(body);
@@ -159,7 +159,7 @@ describe("shutdown gate - performance", function () {
         }
 
         /** Same burst shape, NOT draining, on a path that never touches a pool: the socket-cost yardstick. */
-        async function baselineP95(method, body) {
+        async function baselineP95(method, body?) {
             vi.spyOn(InFlightTaskRegistry, "isShuttingDown").mockReturnValue(false);
             const { results, p95 } = await burst(CONCURRENCY, () => fire(method, BASELINE_PATH, body));
             // One uniform, non-5xx answer (GET -> 404; a malformed POST is refused earlier in the chain,

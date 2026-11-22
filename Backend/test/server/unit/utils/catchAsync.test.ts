@@ -39,7 +39,7 @@ describe("catchAsync", function () {
     });
 
     it("calls next() with the error when the async function rejects", () => new Promise<void>((resolve, reject) => {
-        const done = (e) => e ? reject(e) : resolve();
+        const done = (e?) => e ? reject(e) : resolve();
 
         const error = new Error("test failure");
 
@@ -55,7 +55,7 @@ describe("catchAsync", function () {
         }));
 
     it("does not call next() when the async function resolves", () => new Promise<void>((resolve, reject) => {
-        const done = (e) => e ? reject(e) : resolve();
+        const done = (e?) => e ? reject(e) : resolve();
 
         const wrapped = catchAsync(async (req, res) => {
             res.json({ ok: true });
@@ -77,7 +77,7 @@ describe("catchAsync", function () {
         }));
 
     it("handles synchronous functions that return a value", () => new Promise<void>((resolve, reject) => {
-        const done = (e) => e ? reject(e) : resolve();
+        const done = (e?) => e ? reject(e) : resolve();
 
         const wrapped = catchAsync((req, res) => {
             res.json({ sync: true });
@@ -96,7 +96,7 @@ describe("catchAsync", function () {
         }));
 
     it("forwards synchronous throws to next()", () => new Promise<void>((resolve, reject) => {
-        const done = (e) => e ? reject(e) : resolve();
+        const done = (e?) => e ? reject(e) : resolve();
 
         const error = new Error("sync throw");
         const wrapped = catchAsync(() => {

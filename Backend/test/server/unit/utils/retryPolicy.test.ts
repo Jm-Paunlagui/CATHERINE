@@ -12,7 +12,7 @@ const {
 const { logger } = require("../../../../src/utils/logger");
 const { requestContext } = require("../../../../src/utils/requestContext");
 
-function oraError(code, message) {
+function oraError(code, message?) {
     return new Error(
         message ?? `ORA-${String(code).padStart(5, "0")}: simulated`,
     );

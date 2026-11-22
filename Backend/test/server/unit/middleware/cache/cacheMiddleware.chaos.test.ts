@@ -120,7 +120,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
 
     describe("read() — keyFn throws", function () {
         it("calls next() without error when keyFn throws (BYPASS behaviour)", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             const badKey = () => {
@@ -138,7 +138,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
             }));
 
         it("does not set any X-Cache header when keyFn throws", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             const mw = CacheMiddleware.read(store, () => {
@@ -162,7 +162,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
     describe("read() — bypass methods", function () {
         ["POST", "PUT", "PATCH", "DELETE"].forEach((method) => {
             it(`${method} request always calls next() and never reads cache or sets X-Cache`, () => new Promise<void>((resolve, reject) => {
-                const done = (e) => e ? reject(e) : resolve();
+                const done = (e?) => e ? reject(e) : resolve();
 
                 const store = makeStore();
                 store.set("should-be-ignored", { cached: true });
@@ -182,7 +182,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
         });
 
         it("GET method proceeds through normal HIT/MISS logic (not bypassed)", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             store.set("the-key", { ok: true });
@@ -212,7 +212,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
 
     describe("read() — HIT path", function () {
         it("responds immediately with cached value and does NOT call next()", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             const payload = { status: "success", data: [1, 2, 3] };
@@ -236,7 +236,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
             }));
 
         it("X-Cache header is 'HIT' on cache hit", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             store.set("h-key", "data");
@@ -253,7 +253,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
             }));
 
         it("X-Cache-Key header matches the key returned by keyFn", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             const KEY = "myapp:users:page=1";
@@ -278,7 +278,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
 
     describe("read() — MISS path", function () {
         it("calls next() on MISS and sets X-Cache: MISS header", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore(); // empty store
             const mw = CacheMiddleware.read(store, () => "miss-key");
@@ -292,7 +292,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
             }));
 
         it("stores the response in cache after controller calls res.json() with 200", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             const KEY = "miss-then-store";
@@ -313,7 +313,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
             }));
 
         it("second request after MISS is a HIT (cache was populated)", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             const KEY = "two-requests";
@@ -350,7 +350,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
     describe("read() — error responses never cached", function () {
         [400, 401, 403, 404, 422, 500, 503].forEach((status) => {
             it(`${status} response from controller is NOT stored in cache`, () => new Promise<void>((resolve, reject) => {
-                const done = (e) => e ? reject(e) : resolve();
+                const done = (e?) => e ? reject(e) : resolve();
 
                 const store = makeStore();
                 const KEY = `err-${status}`;
@@ -370,7 +370,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
         });
 
         it("subsequent GET after an error response is still a MISS (error was not cached)", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             const KEY = "persisted-miss";
@@ -400,7 +400,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
 
     describe("read() — setHeaders: false", function () {
         it("no X-Cache or X-Cache-Key header on HIT when setHeaders: false", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore();
             store.set("no-header-key", "value");
@@ -425,7 +425,7 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
             }));
 
         it("no X-Cache or X-Cache-Key header on MISS when setHeaders: false", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const store = makeStore(); // empty
             const mw = CacheMiddleware.read(store, () => "empty", {

@@ -59,7 +59,7 @@ async function it(label, fn) {
         failed++;
     }
 }
-function assert(cond, msg) {
+function assert(cond, msg?) {
     if (!cond) throw new Error(msg || "Assertion failed");
 }
 

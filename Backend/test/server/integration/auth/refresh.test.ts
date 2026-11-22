@@ -72,7 +72,7 @@ function signCookie(value, secret = process.env.COOKIE_SECRET) {
 }
 
 /** Cookie pair for a signed refresh cookie. */
-function refreshCookie(token, secret) {
+function refreshCookie(token, secret?) {
     return `${COOKIE_NAMES.REFRESH}=${encodeURIComponent(signCookie(token, secret))}`;
 }
 

@@ -208,7 +208,7 @@ describe("ClusterCacheSync — multi-worker convergence + chaos", function () {
     // ── initPrimary relay tolerates a dead worker (w.send throws) ───────────
     it("initPrimary keeps relaying to healthy workers when one worker's send throws", function () {
         const received = new Map();
-        const mkWorker = (id, broken) => ({
+        const mkWorker = (id, broken?) => ({
             id,
             send(m) {
                 if (broken) throw new Error(`worker ${id} is dead`);

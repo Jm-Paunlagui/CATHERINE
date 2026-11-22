@@ -66,7 +66,7 @@ describe("CorsMiddleware", function () {
         }
 
         it("allows requests with no origin (same-origin)", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
             cors.handle(mockReq(null), mockRes(), (err) => {
@@ -77,7 +77,7 @@ describe("CorsMiddleware", function () {
             }));
 
         it("allows an explicitly listed origin", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware({
                 origins: ["https://myapp.com"],
@@ -91,7 +91,7 @@ describe("CorsMiddleware", function () {
             }));
 
         it("allows a private network origin via default patterns", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
             const res = mockRes();
@@ -103,7 +103,7 @@ describe("CorsMiddleware", function () {
             }));
 
         it("allows localhost origin via default patterns", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
             const res = mockRes();
@@ -115,7 +115,7 @@ describe("CorsMiddleware", function () {
             }));
 
         it("blocks a public origin not in the allowlist", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware({ origins: [] });
             const res = mockRes();
@@ -128,7 +128,7 @@ describe("CorsMiddleware", function () {
             }));
 
         it("allows .local domains via default patterns", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
             cors.handle(mockReq("http://mypc.local:8080"), mockRes(), (err) => {
@@ -139,7 +139,7 @@ describe("CorsMiddleware", function () {
             }));
 
         it("allows .vpn domains via default patterns", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
             cors.handle(
@@ -154,7 +154,7 @@ describe("CorsMiddleware", function () {
             }));
 
         it("allows 10.x.x.x private network via default patterns", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
             cors.handle(mockReq("http://10.0.1.100:4000"), mockRes(), (err) => {
@@ -165,7 +165,7 @@ describe("CorsMiddleware", function () {
             }));
 
         it("allows 172.16-31.x.x private network via default patterns", () => new Promise<void>((resolve, reject) => {
-            const done = (e) => e ? reject(e) : resolve();
+            const done = (e?) => e ? reject(e) : resolve();
 
             const cors = new CorsMiddleware();
             cors.handle(mockReq("http://172.20.0.5:3001"), mockRes(), (err) => {

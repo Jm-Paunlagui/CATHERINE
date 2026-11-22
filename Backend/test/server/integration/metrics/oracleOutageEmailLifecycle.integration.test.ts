@@ -83,7 +83,7 @@ afterEach(function () {
     RecipientResolver.invalidate();
 });
 
-async function poll(pool, payload) {
+async function poll(pool, payload?) {
     if (payload) store.recordPoolStats(pool, payload);
     await notifier._pollTick();
 }
