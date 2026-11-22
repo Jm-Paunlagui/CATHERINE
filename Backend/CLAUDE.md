@@ -1099,7 +1099,7 @@ Compiled-exe rules:
 
 ```bash
 bun run typecheck   # tsc -p . — must stay at zero errors
-bun run lint        # .ts files go through typescript-eslint (eslint.config.js BLOCK 1b)
+bun run lint        # .ts files go through typescript-eslint (eslint.config.ts BLOCK 1b)
 ```
 
 Rules:
@@ -1270,7 +1270,7 @@ vi (built-in)      — spies, stubs, fakes (replaces sinon)
 ```
 
 `describe`, `it`, `expect`, `vi`, and the `beforeAll`/`afterAll`/`beforeEach`/`afterEach`
-hooks are injected globally via `globals: true` in `vitest.config.js` — no per-file imports.
+hooks are injected globally via `globals: true` in `vitest.config.mts` — no per-file imports.
 
 Install (all dev-only):
 
@@ -1278,7 +1278,7 @@ Install (all dev-only):
 bun add -d vitest @vitest/coverage-v8 supertest
 ```
 
-The runner is configured by `vitest.config.js` at the Backend root:
+The runner is configured by `vitest.config.mts` at the Backend root:
 
 - `pool: "forks"`, `fileParallelism: false` — each test file runs in its own child
   process, sequentially, because the suite mutates shared in-memory middleware state.

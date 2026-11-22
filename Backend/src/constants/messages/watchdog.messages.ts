@@ -63,7 +63,7 @@ const watchdogMessages = {
      * @returns {string}
      */
     WATCHDOG_BURST_ALERT: (count: number, windowMs: number, topRoutes: Array<[string, number]>, topSources: Array<[string, number]>, more: number): string => {
-        const fmt = (list: any) => list.map(([k, n]: any) => `${k} x${n}`).join(", ") || "none";
+        const fmt = (list: Array<[string, number]>) => list.map(([k, n]) => `${k} x${n}`).join(", ") || "none";
         return (
             `WATCHDOG_BURST_ALERT — ${count} request(s) cut by the watchdog in the last ${Math.round(windowMs / 1000)}s on pid ${process.pid}. ` +
             `Top routes: ${fmt(topRoutes)}. Last progress sources: ${fmt(topSources)}.` +

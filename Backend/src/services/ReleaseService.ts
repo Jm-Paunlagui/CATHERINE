@@ -47,7 +47,9 @@ const STAGE_LABEL: Record<string, string> = {
  * @param {string} v
  * @returns {{ major: number, minor: number, patch: number, stage: string, iter: number }}
  */
-function parseVersion(v: string): { major: number; minor: number; patch: number; stage: string; iter: number; } {
+type ParsedVersion = { major: number; minor: number; patch: number; stage: string; iter: number };
+
+function parseVersion(v: string): ParsedVersion {
     const [core, pre] = String(v ?? "0.0.0").split("-");
     const [major = 0, minor = 0, patch = 0] = core.split(".").map(Number);
     let stage = "stable";
@@ -71,7 +73,7 @@ function parseVersion(v: string): { major: number; minor: number; patch: number;
  * @param {object} b parsed version
  * @returns {number} <0 if a<b, 0 if equal, >0 if a>b
  */
-function compareVersion(a: Record<string, any>, b: Record<string, any>): number {
+function compareVersion(a: ParsedVersion, b: ParsedVersion): number {
     if (a.major !== b.major) return a.major - b.major;
     if (a.minor !== b.minor) return a.minor - b.minor;
     if (a.patch !== b.patch) return a.patch - b.patch;
@@ -92,7 +94,7 @@ function coreStr(p: Record<string, unknown>): string {
  * @param {"patch"|"minor"|"major"} bump
  * @returns {{ major: number, minor: number, patch: number }}
  */
-function bumpCore(p: Record<string, any>, bump: "patch" | "minor" | "major"): { major: number; minor: number; patch: number; } {
+function bumpCore(p: Pick<ParsedVersion, "major" | "minor" | "patch">, bump: "patch" | "minor" | "major"): { major: number; minor: number; patch: number; } {
     if (bump === "major") return { major: p.major + 1, minor: 0, patch: 0 };
     if (bump === "minor") return { major: p.major, minor: p.minor + 1, patch: 0 };
     return { major: p.major, minor: p.minor, patch: p.patch + 1 };
@@ -125,7 +127,7 @@ class ReleaseService {
      * @returns {object|null} parsed version
      * @private
      */
-    static _top(): Record<string, any> | null {
+    static _top(): ParsedVersion | null {
         const entries = ChangelogModel.listAll();
         if (!entries.length) return null;
         let top = parseVersion(entries[0].version);
@@ -143,8 +145,8 @@ class ReleaseService {
      * @returns {{ patch: object, minor: object, major: object }}
      * @private
      */
-    static _openDrafts(base: Record<string, unknown>): { patch: Record<string, unknown>; minor: Record<string, unknown>; major: Record<string, unknown>; } {
-        const mk = (bump: any) => {
+    static _openDrafts(base: Pick<ParsedVersion, "major" | "minor" | "patch">): { patch: Record<string, unknown>; minor: Record<string, unknown>; major: Record<string, unknown>; } {
+        const mk = (bump: "patch" | "minor" | "major") => {
             const c = bumpCore(base, bump);
             return draft(
                 `${coreStr(c)}-dev.1`,

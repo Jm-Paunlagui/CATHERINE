@@ -32,7 +32,7 @@ const clusterMessages = {
     CLUSTER_SF_UNBLOCK_DEGRADED: (ip: unknown, reason: unknown) =>
         `CLUSTER_SF_UNBLOCK_DEGRADED - unblock of ${ip} could not reach the primary (${reason}); cleared on this worker only.`,
 
-    CLUSTER_METRICS_PARTIAL: (responded: unknown, expected: unknown, missing: any) =>
+    CLUSTER_METRICS_PARTIAL: (responded: unknown, expected: unknown, missing: unknown[]) =>
         `CLUSTER_METRICS_PARTIAL - metrics merged from ${responded}/${expected} workers (missing: ${missing.join(",") || "none"}).`,
 
     CLUSTER_RPC_HANDLER_FAILED: (method: unknown, err: unknown) =>

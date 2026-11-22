@@ -38,7 +38,11 @@ const MAX_DESCRIBED_BINDS: number = 40;
  * @param {number} [depth=0] - Recursion depth guard.
  * @returns {string} A value-free shape description, e.g. `<string:11>`.
  */
-function describeBindValue(v: any, depth: number = 0): string {
+/** The message of a thrown value (anything can be thrown; non-objects have none). */
+const messageOf = (err: unknown): unknown =>
+  err !== null && typeof err === "object" && "message" in err ? err.message : undefined;
+
+function describeBindValue(v: unknown, depth: number = 0): string {
   if (v === null) return "<null>";
   if (v === undefined) return "<undefined>";
   if (Buffer.isBuffer(v)) return `<buffer:${v.length}>`;
@@ -49,8 +53,9 @@ function describeBindValue(v: any, depth: number = 0): string {
   if (typeof v === "boolean") return "<boolean>";
   if (typeof v === "object") {
     if (depth > 0) return "<object>";
-    if ("val" in v || "dir" in v) {
-      return `<bind dir:${v.dir ?? "IN"} ${describeBindValue(v.val, depth + 1)}>`;
+    if (v !== null && ("val" in v || "dir" in v)) {
+      const bind = v as { dir?: unknown; val?: unknown }; // an oracledb bind definition object
+      return `<bind dir:${bind.dir ?? "IN"} ${describeBindValue(bind.val, depth + 1)}>`;
     }
     return "<object>";
   }
@@ -67,7 +72,7 @@ function describeBindValue(v: any, depth: number = 0): string {
  * @returns {string} e.g. `"3 bind(s): where_GID=<string:11>, where_CUTOFF_ID=<number>"`,
  *   `"0 bind(s)"`, or `"<none>"`.
  */
-function describeBinds(binds: Record<string, any> | Array<unknown> | null | undefined): string {
+function describeBinds(binds: unknown): string {
   if (binds === null || typeof binds !== "object") return "<none>";
 
   const entries = Array.isArray(binds)
@@ -89,16 +94,16 @@ function describeBinds(binds: Record<string, any> | Array<unknown> | null | unde
 
 const oracleMongoWrapperMessages = {
   // ── Error formatter ──────────────────────────────────────────────────────
-  wrapError: (scope: unknown, err: any, sql: unknown, binds?: unknown) =>
-    `[${scope}] ${err.message}\nSQL: ${sql}${binds !== undefined ? `\nBinds: ${describeBinds(binds)}` : ""}`,
+  wrapError: (scope: unknown, err: unknown, sql: unknown, binds?: unknown) =>
+    `[${scope}] ${messageOf(err)}\nSQL: ${sql}${binds !== undefined ? `\nBinds: ${describeBinds(binds)}` : ""}`,
 
   // ── Privilege / DCL ──────────────────────────────────────────────────────
-  INSUFFICIENT_PRIVILEGES: (scope: unknown, requiredPrivilege: unknown, err: any, sql: unknown) =>
-    `[${scope}] Insufficient privileges. ${requiredPrivilege}\nOriginal: ${err.message}\nSQL: ${sql}`,
-  DCL_GRANT_INSUFFICIENT: (err: any, sql: unknown) =>
-    `[OracleDCL.grant] Insufficient privileges to GRANT. Requires GRANT OPTION or DBA role.\nOriginal: ${err.message}\nSQL: ${sql}`,
-  DCL_REVOKE_INSUFFICIENT: (err: any, sql: unknown) =>
-    `[OracleDCL.revoke] Insufficient privileges to REVOKE. Requires GRANT OPTION or DBA role.\nOriginal: ${err.message}\nSQL: ${sql}`,
+  INSUFFICIENT_PRIVILEGES: (scope: unknown, requiredPrivilege: unknown, err: unknown, sql: unknown) =>
+    `[${scope}] Insufficient privileges. ${requiredPrivilege}\nOriginal: ${messageOf(err)}\nSQL: ${sql}`,
+  DCL_GRANT_INSUFFICIENT: (err: unknown, sql: unknown) =>
+    `[OracleDCL.grant] Insufficient privileges to GRANT. Requires GRANT OPTION or DBA role.\nOriginal: ${messageOf(err)}\nSQL: ${sql}`,
+  DCL_REVOKE_INSUFFICIENT: (err: unknown, sql: unknown) =>
+    `[OracleDCL.revoke] Insufficient privileges to REVOKE. Requires GRANT OPTION or DBA role.\nOriginal: ${messageOf(err)}\nSQL: ${sql}`,
 
   // ── Privilege requirement descriptions ───────────────────────────────────
   PRIV_PLAN_TABLE: "Requires SELECT on PLAN_TABLE and EXECUTE on DBMS_XPLAN.",

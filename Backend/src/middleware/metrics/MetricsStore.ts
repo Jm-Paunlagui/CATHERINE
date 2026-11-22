@@ -272,12 +272,96 @@ const internalProcess = process as NodeJS.Process & {
     _getActiveRequests?: () => unknown[];
 };
 
+/** Per-route RED counters plus the latency/timestamp rings. */
+interface RouteEntry {
+  count: number;
+  redirectCount: number;
+  notModifiedCount: number;
+  clientErrorCount: number;
+  serverErrorCount: number;
+  durations: number[];
+  timestamps: number[];
+}
+
+/** Per-pool query counters plus the latency ring. */
+interface DbQueryEntry {
+  queryCount: number;
+  errorCount: number;
+  totalMs: number;
+  durations: number[];
+}
+
+/** Latest saturation reading for one pool (see recordPoolStats). */
+interface PoolStatsEntry {
+  connectionsInUse: number;
+  connectionsOpen: number;
+  poolMax: number;
+  queueLength: number;
+  utilization: number;
+  capacity: number;
+  healthy: boolean;
+  consecutiveFailures: number;
+  updatedAt: string;
+}
+
+/** One process's full metrics report (getSnapshot), and the shape the cluster merge produces. */
+/** RED metrics for one route label. */
+type RouteRedSnapshot = { count: number; redirectCount: number; notModifiedCount: number; clientErrorCount: number; serverErrorCount: number; errorRate: number; clientErrorRate: number; availability: number; p50: number; p95: number; p99: number; avgMs: number; window: { windowMs: number; count: number; p99: number; }; };
+
+/** One Oracle pool's query and saturation figures. */
+type OraclePoolSnapshot = { queryCount: number; errorCount: number; avgMs: number; p95Ms: number; poolUtilization: number | null; connectionsInUse: number | null; connectionsOpen: number | null; poolMax: number | null; queueLength: number | null; capacity: number | null; healthy: boolean | null; consecutiveFailures: number | null; /** Cluster merge only: workers whose pool reported unhealthy. */ unhealthyWorkers?: number; };
+
+/** Process-wide request totals, rates and apdex. */
+type TotalsSnapshot = { requestsTotal: number; successTotal: number; redirectsTotal: number; notModifiedTotal: number; clientErrorsTotal: number; serverErrorsTotal: number; errorsTotal: number; errorRate: number; clientErrorRate: number; availability: number; apdex: number; window: { windowMs: number; requests: number; clientErrors: number; serverErrors: number; serviced: number; errorRate: number; availability: number; }; };
+
+/** GC pause figures for one collection kind. */
+type GcKindStats = { count: number; pauseMs: number };
+
+/** Process health: CPU, heap, event loop, GC and handles. */
+type SystemSnapshot = {
+  cpu: { user: number; system: number; percent: number };
+  memory: { heapUsed: number; heapTotal: number; heapSizeLimit: number; rss: number; external: number; arrayBuffers: number };
+  eventLoopLag: number;
+  gc: {
+    collections: number;
+    pauseMs: number;
+    overheadPct: number;
+    major: GcKindStats;
+    minor: GcKindStats;
+    incremental: GcKindStats;
+    weakcb: GcKindStats;
+    recent: { sampleCount: number; avgPauseMs: number; maxPauseMs: number; p95PauseMs: number };
+  };
+  memoryTrend: HeapTrend;
+  handles: number;
+  requests: number;
+  /** Cluster merge only: one row per worker that answered. */
+  workers?: Array<{ workerId: number; pid: number | null; isLeader: boolean; uptime: number; cpuPct: number; heapUsed: number; heapSizeLimit: number; rss: number; eventLoopLag: number }>;
+};
+
+/**
+ * One process's full metrics report (getSnapshot). The cluster merge returns the same
+ * shape (plus `cluster`), so every consumer — summary, alert rules, alert emails — reads one type.
+ */
+type MetricsSnapshot = {
+  timestamp: string;
+  uptime: number;
+  red: Record<string, RouteRedSnapshot>;
+  system: SystemSnapshot;
+  dependencies: { oracle: Record<string, OraclePoolSnapshot>; smtp: SmtpDependencySnapshot };
+  totals: TotalsSnapshot;
+  frontendVitals: Array<unknown>;
+  frontendErrors: Array<unknown>;
+  notifications: Record<string, NotificationDelivery>;
+  watchdog: { terminated: number; byRoute: Record<string, number> };
+};
+
 class MetricsStore {
   declare _backgroundProbes: boolean;
   declare _prevCpuUsage: NodeJS.CpuUsage;
   declare _prevGcPauseMs: number;
-  declare _gcPauses: any[];
-  declare _heapBaselines: any[];
+  declare _gcPauses: number[];
+  declare _heapBaselines: Array<{ ts: number; heapUsed: number }>;
   declare _system: {
       cpu: { user: number; system: number; percent: number; }; memory: { heapUsed: number; heapTotal: number; heapSizeLimit: number; rss: number; external: number; arrayBuffers: number; }; eventLoopLag: number; gc: {
           collections: number; // lifetime total across all kinds (back-compat)
@@ -290,15 +374,15 @@ class MetricsStore {
   declare _frontendVitals: unknown[];
   declare _watchdog: { terminated: number; byRoute: Map<string, number>; };
   declare _notifications: Map<string, NotificationDelivery>;
-  declare _oraclePoolStats: Map<any, any>;
-  declare _oracle: Map<unknown, any>;
-  declare _errorWindow: Map<any, any>;
+  declare _oraclePoolStats: Map<string, PoolStatsEntry>;
+  declare _oracle: Map<string, DbQueryEntry>;
+  declare _errorWindow: Map<number, { total: number; client: number; server: number }>;
   declare _serverErrorsTotal: number;
   declare _clientErrorsTotal: number;
   declare _notModifiedTotal: number;
   declare _redirectsTotal: number;
   declare _requestsTotal: number;
-  declare _routes: Map<any, any>;
+  declare _routes: Map<string, RouteEntry>;
   /**
    * @param {object} [options]
    * @param {boolean} [options.backgroundProbes] - Run the recurring system
@@ -990,22 +1074,11 @@ class MetricsStore {
    *   frontendErrors: Array
    * }}
    */
-  getSnapshot(): {
-      timestamp: string;
-      uptime: number;
-      red: { [s: string]: { count: number; clientErrorCount: number; serverErrorCount: number; errorRate: number; clientErrorRate: number; availability: number; p50: number; p95: number; p99: number; avgMs: number; window: { windowMs: number; count: number; p99: number; }; }; };
-      system: { cpu: Record<string, unknown>; memory: Record<string, unknown>; eventLoopLag: number; gc: Record<string, unknown>; memoryTrend: HeapTrend; handles: number; requests: number; };
-      dependencies: { oracle: { [s: string]: { queryCount: number; errorCount: number; avgMs: number; p95Ms: number; poolUtilization: number | null; connectionsInUse: number | null; connectionsOpen: number | null; poolMax: number | null; queueLength: number | null; capacity: number | null; healthy: boolean | null; consecutiveFailures: number | null; }; }; smtp: SmtpDependencySnapshot; };
-      totals: { requestsTotal: number; successTotal: number; redirectsTotal: number; notModifiedTotal: number; clientErrorsTotal: number; serverErrorsTotal: number; errorsTotal: number; errorRate: number; clientErrorRate: number; availability: number; apdex: number; window: { windowMs: number; requests: number; clientErrors: number; serverErrors: number; serviced: number; errorRate: number; availability: number; }; };
-      frontendVitals: Array<unknown>;
-      frontendErrors: Array<unknown>;
-      notifications: Record<string, NotificationDelivery>;
-      watchdog: { terminated: number; byRoute: Record<string, number> };
-  } {
+  getSnapshot(): MetricsSnapshot {
     // Build RED metrics per route. Apdex is accumulated globally in the same
     // pass over each route's duration ring buffer — O(total samples), no extra
     // allocation beyond the per-route sort already needed for percentiles.
-    const red: Record<string, any> = {};
+    const red: MetricsSnapshot["red"] = {};
     const apdexT = APDEX_THRESHOLD_MS;
     let apdexSatisfied = 0; // d ≤ T
     let apdexTolerating = 0; // T < d ≤ 4T
@@ -1061,7 +1134,7 @@ class MetricsStore {
     // and live pool saturation (recordPoolStats). Either source may be absent:
     // recordDbQuery is optional instrumentation, while pool stats arrive from the
     // adapter's 30 s health poll. A pool appears here as soon as either reports.
-    const oracleDeps: Record<string, any> = {};
+    const oracleDeps: ReturnType<MetricsStore["getSnapshot"]>["dependencies"]["oracle"] = {};
     const oracleNames = new Set([
       ...this._oracle.keys(),
       ...this._oraclePoolStats.keys(),
@@ -1187,7 +1260,7 @@ class MetricsStore {
    *
    * @returns {{ snapshot: object, extras: { routeSketches: object, routeWindowSketches: object, oracleSketches: object, oracleTotalMs: object, apdexCounts: { satisfied: number, tolerating: number, samples: number } } }}
    */
-  getMergeableSnapshot(): { snapshot: Record<string, unknown>; extras: { routeSketches: Record<string, unknown>; routeWindowSketches: Record<string, unknown>; oracleSketches: Record<string, unknown>; oracleTotalMs: Record<string, unknown>; apdexCounts: { satisfied: number; tolerating: number; samples: number; }; }; } {
+  getMergeableSnapshot(): { snapshot: MetricsSnapshot; extras: { routeSketches: Record<string, unknown>; routeWindowSketches: Record<string, unknown>; oracleSketches: Record<string, unknown>; oracleTotalMs: Record<string, unknown>; apdexCounts: { satisfied: number; tolerating: number; samples: number; }; }; } {
     // Lazy: metricsMerge requires this module for computeRates.
     const { buildQuantileSketch } = (require("./metricsMerge") as typeof import("./metricsMerge"));
     const snapshot = this.getSnapshot();
@@ -1233,4 +1306,5 @@ class MetricsStore {
 
 const metricsStore = new MetricsStore();
 
+export type { MetricsSnapshot, RouteRedSnapshot, OraclePoolSnapshot, TotalsSnapshot, SystemSnapshot, SmtpDependencySnapshot, NotificationDelivery, HeapTrend };
 export { MetricsStore, metricsStore, computeRates, calcPercentile, linRegSlope, GC_KIND, REDIRECT_MIN_STATUS, NOT_MODIFIED_STATUS, CLIENT_ERROR_MIN_STATUS, SERVER_ERROR_MIN_STATUS, APDEX_THRESHOLD_MS, LATENCY_WINDOW_MS };

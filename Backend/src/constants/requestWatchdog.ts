@@ -114,7 +114,7 @@ function _clamp(raw: string | undefined, fallback: number, min: number, max: num
  * @returns {{ defaultMs: number, longMs: number, warnings: Array<{ name: string, raw: string, applied: number }> }}
  */
 function resolveIdleLimits(env: NodeJS.ProcessEnv = process.env): { defaultMs: number; longMs: number; warnings: Array<{ name: string; raw: string; applied: number; }>; } {
-    const warnings: any[] = [];
+    const warnings: Array<{ name: string; raw: string; applied: number }> = [];
     const specs: Array<[string, number, number]> = [
         ["REQUEST_IDLE_TIMEOUT_MS", DEFAULT_IDLE_MS, DEFAULT_IDLE_MAX_MS],
         ["REQUEST_IDLE_TIMEOUT_LONG_MS", LONG_IDLE_MS, LONG_IDLE_MAX_MS],
@@ -164,9 +164,9 @@ function normalizePath(url: string | undefined): string {
     return p;
 }
 
-function _matches(rules: any, method: unknown, path: unknown) {
+function _matches(rules: ReadonlyArray<{ method: string | null; path: RegExp }>, method: unknown, path: string) {
     return rules.some(
-        (r: any) => (r.method === null || r.method === method) && r.path.test(path),
+        (r) => (r.method === null || r.method === method) && r.path.test(path),
     );
 }
 

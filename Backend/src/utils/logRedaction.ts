@@ -125,7 +125,7 @@ const TOKEN_PREFIX = Object.freeze({
 });
 
 /** Lazily-derived, memoised HKDF key. See module docblock. */
-let _cachedKey: any = null;
+let _cachedKey: Buffer | null = null;
 
 /**
  * Derives (once) and returns the HMAC key used for pseudonymisation.
@@ -289,7 +289,7 @@ function identifierClassOf(key: unknown): string | undefined {
  * Digit strings and integers only; anything else goes through the normal
  * scrub (arrays element by element).
  */
-function scrubIdentifierValue(value: unknown, klass: any, state: any, depth: any): unknown {
+function scrubIdentifierValue(value: unknown, klass: string, state: { nodes: number }, depth: number): unknown {
     if (typeof value === "number" && Number.isInteger(value) && value >= 10) {
         return pseudonymize(klass, String(value));
     }
@@ -354,13 +354,14 @@ function scrubOverBudget(value: unknown): unknown {
  * with raw addresses. An Error's non-enumerable `message` / `stack` are
  * copied back non-enumerable, scrubbed.
  */
-function scrubInstance(value: any, state: unknown, depth: any) {
+function scrubInstance(value: object, state: { nodes: number }, depth: number) {
+    const src = value as Record<string, unknown>; // read reflectively: own enumerable keys of an arbitrary instance
     const copy = Object.create(Object.getPrototypeOf(value));
     if (value instanceof Error) {
         for (const key of ["message", "stack"] as const) {
-            if (typeof value[key] === "string") {
+            if (typeof src[key] === "string") {
                 Object.defineProperty(copy, key, {
-                    value: scrubString(value[key]),
+                    value: scrubString(src[key]),
                     enumerable: false,
                     writable: true,
                     configurable: true,
@@ -369,13 +370,13 @@ function scrubInstance(value: any, state: unknown, depth: any) {
         }
     }
     for (const key of Object.keys(value)) {
-        copy[key] = scrubChild(key, value[key], state, depth + 1);
+        copy[key] = scrubChild(key, src[key], state, depth + 1);
     }
     return copy;
 }
 
 /** Scrubs one keyed child, honouring identifier-named keys and the budget. */
-function scrubChild(key: unknown, child: unknown, state: any, depth: any) {
+function scrubChild(key: unknown, child: unknown, state: { nodes: number }, depth: number) {
     if (state.nodes >= MAX_NODES) return scrubOverBudget(child);
     state.nodes += 1;
     const klass = identifierClassOf(key);
@@ -385,7 +386,7 @@ function scrubChild(key: unknown, child: unknown, state: any, depth: any) {
 }
 
 /** @returns {boolean} Whether `value` is a plain `{}`/`Object.create(null)` object. */
-function isPlainObject(value: unknown): boolean {
+function isPlainObject(value: unknown): value is Record<string, unknown> {
     if (value === null || typeof value !== "object") return false;
     const proto = Object.getPrototypeOf(value);
     return proto === Object.prototype || proto === null;
@@ -411,7 +412,7 @@ function isPlainObject(value: unknown): boolean {
  * @param {number} [depth]
  * @returns {*}
  */
-function scrubValue(value: any, state: { nodes: number; } = { nodes: 0 }, depth: number = 0): unknown {
+function scrubValue(value: unknown, state: { nodes: number; } = { nodes: 0 }, depth: number = 0): unknown {
     if (typeof value === "string") return scrubString(value);
 
     if (Array.isArray(value)) {

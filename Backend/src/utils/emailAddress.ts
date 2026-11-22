@@ -70,13 +70,15 @@ function maskAddress(raw: unknown): string | null {
  * @param {object|null|undefined} row - an account row
  * @returns {string|null}
  */
-function credentialAddressOf(row: Record<string, any> | null | undefined): string | null {
+function credentialAddressOf(row: object | null | undefined): string | null {
     if (!row) return null;
-    if (Object.prototype.hasOwnProperty.call(row, "_CREDENTIAL_EMAIL")) {
-        return row._CREDENTIAL_EMAIL;
+    // Any account row shape (AdminRow, UserRow, a raw driver row); only these keys are read.
+    const r = row as { _CREDENTIAL_EMAIL?: string | null; EMAIL?: unknown; email?: unknown };
+    if (Object.prototype.hasOwnProperty.call(r, "_CREDENTIAL_EMAIL")) {
+        return r._CREDENTIAL_EMAIL ?? null;
     }
     // Lower-case key: some driver/cache paths hand back lower-cased column names.
-    return singleAddress(row.EMAIL ?? row.email ?? null);
+    return singleAddress(r.EMAIL ?? r.email ?? null);
 }
 
 export { singleAddress, maskAddress, credentialAddressOf };

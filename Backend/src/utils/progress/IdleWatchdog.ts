@@ -35,10 +35,20 @@ const SWEEP_MS = 5000;
 /** A tick later than this many sweep periods is an event-loop stall. */
 const STALL_FACTOR = 3;
 
+type Scope = import("./ProgressScope").ProgressScope;
+
+/** One registered request scope. */
+interface WatchEntry {
+    scope: Scope;
+    onIdle: (scope: Scope, idleMs: number) => void;
+    probe: ((scope: Scope) => void) | null;
+    fired: boolean;
+}
+
 class IdleWatchdog {
-    declare _lastSweepAt: any;
-    declare _timer: any;
-    declare _entries: Map<unknown, any>;
+    declare _lastSweepAt: number | null;
+    declare _timer: ReturnType<typeof setInterval> | null;
+    declare _entries: Map<object, WatchEntry>;
     declare _now: () => number;
     declare _stallFactor: number;
     declare _sweepMs: number;
@@ -80,7 +90,7 @@ class IdleWatchdog {
      * @returns {() => void} dispose (idempotent)
      */
     register(scope: import("./ProgressScope").ProgressScope, onIdle: (scope: import("./ProgressScope").ProgressScope, idleMs: number) => void, { probe = null }: { probe?: ((scope: import("./ProgressScope").ProgressScope) => void) | null; } = {}): () => void {
-        const key: Record<string, unknown> = {};
+        const key = {};
         this._entries.set(key, { scope, onIdle, probe, fired: false });
         return () => {
             this._entries.delete(key);

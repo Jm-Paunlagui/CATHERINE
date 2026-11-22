@@ -154,7 +154,9 @@ function isLatin9Encodable(ch: string): boolean {
  * @example
  * normalizeText("Building — 2nd Floor"); // "Building - 2nd Floor"
  */
-function normalizeText(value: unknown): any {
+function normalizeText(value: string): string;
+function normalizeText<T>(value: T): T;
+function normalizeText(value: unknown): unknown {
     if (typeof value !== "string" || value.length === 0) return value;
 
     let out = "";

@@ -13,13 +13,13 @@ const uploadMessages = {
      * silently disappeared between the request and the response — the exact
      * class of defect this module exists to make impossible.
      */
-    LEDGER_UNBALANCED: (feature: unknown, counts: any) =>
+    LEDGER_UNBALANCED: (feature: unknown, counts: { total: number; inserted: number; updated: number; skipped: number; failed: number; pending: number; unaccounted?: number }) =>
         `[UploadOutcome:${feature}] LEDGER UNBALANCED — ${counts.unaccounted} row(s) unaccounted for. ` +
         `total=${counts.total} inserted=${counts.inserted} updated=${counts.updated} ` +
         `skipped=${counts.skipped} failed=${counts.failed} pending=${counts.pending}`,
 
     /** Routine per-batch ledger trace. */
-    LEDGER_BALANCED: (feature: unknown, counts: any) =>
+    LEDGER_BALANCED: (feature: unknown, counts: { total: number; inserted: number; updated: number; skipped: number; failed: number; pending: number; unaccounted?: number }) =>
         `[UploadOutcome:${feature}] ledger balanced — ` +
         `total=${counts.total} inserted=${counts.inserted} updated=${counts.updated} ` +
         `skipped=${counts.skipped} failed=${counts.failed} pending=${counts.pending}`,

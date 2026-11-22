@@ -126,6 +126,46 @@ const COMPARISON_OPS: Record<string, string> = {
 };
 
 // ─── _parseFieldExpr ────────────────────────────────────────────
+/** Units `$now` arithmetic accepts, with the NUMTODSINTERVAL unit each maps to. */
+const NOW_UNITS: Readonly<Record<string, string>> = Object.freeze({ days: "DAY", hours: "HOUR", minutes: "MINUTE", seconds: "SECOND" });
+
+/**
+ * Server-time operand: `{ $now: true }` is SYSTIMESTAMP; `{ $now: { minus: { days: 7 } } }`
+ * (and `plus`, with days / hours / minutes / seconds) shifts it by bound
+ * NUMTODSINTERVAL amounts, so the comparison uses the DATABASE clock, never the app's.
+ *
+ *   { CREATED_AT: { $lt: { $now: { minus: { days: 30 } } } } }
+ *   → "CREATED_AT" < SYSTIMESTAMP - NUMTODSINTERVAL(:where_CREATED_AT_now_0, 'DAY')
+ *
+ * Amounts are bound (never interpolated); unknown keys or non-finite / negative
+ * amounts throw instead of guessing.
+ */
+function _nowExpr(field: string, spec: unknown, binds: Record<string, unknown>, counter: Record<string, any>): string {
+  if (spec === true || (spec && typeof spec === "object" && Object.keys(spec).length === 0)) return "SYSTIMESTAMP";
+  if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
+    throw new TypeError(`$now on "${field}" must be true or { minus | plus: { days, hours, minutes, seconds } }`);
+  }
+  let sql = "SYSTIMESTAMP";
+  for (const [dir, amounts] of Object.entries(spec as Record<string, unknown>)) {
+    const sign = dir === "minus" ? "-" : dir === "plus" ? "+" : null;
+    if (!sign) throw new TypeError(`$now on "${field}": unknown key "${dir}" (use minus or plus)`);
+    if (!amounts || typeof amounts !== "object" || Array.isArray(amounts)) {
+      throw new TypeError(`$now.${dir} on "${field}" must be an object of units`);
+    }
+    for (const [unit, n] of Object.entries(amounts as Record<string, unknown>)) {
+      const oracleUnit = NOW_UNITS[unit];
+      if (!oracleUnit) throw new TypeError(`$now.${dir} on "${field}": unknown unit "${unit}" (use days, hours, minutes or seconds)`);
+      if (typeof n !== "number" || !Number.isFinite(n) || n < 0) {
+        throw new TypeError(`$now.${dir}.${unit} on "${field}" must be a finite, non-negative number`);
+      }
+      const bname = counter.next(`where_${field}_now`);
+      binds[bname] = n;
+      sql += ` ${sign} NUMTODSINTERVAL(:${bname}, '${oracleUnit}')`;
+    }
+  }
+  return sql;
+}
+
 /**
  * Converts a SINGLE field's filter expression into an SQL condition string.
  *
@@ -205,6 +245,8 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
           counter,
         );
         conditions.push(`${qField} ${COMPARISON_OPS[op]} ${subExpr}`);
+      } else if (val && typeof val === "object" && !Array.isArray(val) && !(val instanceof Date) && "$now" in val) {
+        conditions.push(`${qField} ${COMPARISON_OPS[op]} ${_nowExpr(field, val.$now, binds, counter)}`);
       } else {
         const bname = counter.next(`where_${field}`);
         binds[bname] = val;

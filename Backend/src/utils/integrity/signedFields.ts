@@ -55,13 +55,14 @@ import { Money } from "../money";
  * @param {*} v
  * @returns {string}
  */
-function canonicalMoney(v: any): string {
+function canonicalMoney(v: unknown): string {
     if (v === null || v === undefined || v === "") return Money.zero().toStorage();
     // Accept a string or Oracle-number-as-string; a bare JS number is coerced to
     // its string form first (the money-safe fetchTypeHandler means money
     // columns already arrive as strings, so this path is the belt to that braces).
     const asStr = typeof v === "number" ? String(v) : v;
-    return Money.from(asStr).toStorage();
+    // Money.from validates at runtime and throws on anything that is not a money string.
+    return Money.from(asStr as string | bigint).toStorage();
 }
 
 /**

@@ -30,6 +30,8 @@ import { validateArgs, validateResult, validateTopic, isPlainObject } from "./ip
 
 const METHOD_SET: ReadonlySet<string> = new Set(Object.values(CLUSTER_RPC_METHODS));
 const E = CLUSTER_RPC_ERROR_CODES;
+type RpcErrorCode = (typeof E)[keyof typeof E];
+const isRpcErrorCode = (v: unknown): v is RpcErrorCode => (Object.values(E) as unknown[]).includes(v);
 const KNOWN_STATUS = new Set(Object.values(HTTP_STATUS));
 
 /** Error thrown by `call()`; `code` is one of CLUSTER_RPC_ERROR_CODES. */
@@ -57,12 +59,11 @@ class ClusterRpcError extends Error {
  * @description Holds the pending-call table and handler registries of one worker.
  */
 class ClusterRpcClient {
-    /** @type {Map<string, {resolve: Function, reject: Function, timer: any, method: string}>} */
-    #pending: Map<string, { resolve: ((...args: unknown[]) => unknown); reject: ((...args: unknown[]) => unknown); timer: any; method: string; }> = new Map();
+    #pending: Map<string, { resolve: ((...args: unknown[]) => unknown); reject: ((...args: unknown[]) => unknown); timer: ReturnType<typeof setTimeout>; method: string; }> = new Map();
     /** @type {Map<string, Function>} */
-    #handlers: Map<string, ((...args: any[]) => unknown)> = new Map();
+    #handlers: Map<string, (args: Record<string, unknown>) => unknown> = new Map();
     /** @type {Map<string, Function>} */
-    #topics: Map<string, ((...args: any[]) => unknown)> = new Map();
+    #topics: Map<string, (payload: Record<string, unknown>) => void> = new Map();
     #active = false;
     #isLeader = false;
     #seq = 0;
@@ -128,8 +129,9 @@ class ClusterRpcClient {
      * @param {string} method
      * @param {(args: object) => any} fn
      */
-    handle(method: string, fn: (args: Record<string, any>) => unknown) {
-        this.#handlers.set(method, fn);
+    handle<A extends Record<string, unknown> = Record<string, unknown>>(method: string, fn: (args: A) => unknown) {
+        // Args reach the handler only after validateArgs ran this method's validator, so `A` is its output shape.
+        this.#handlers.set(method, fn as (args: Record<string, unknown>) => unknown);
     }
 
     /**
@@ -138,8 +140,9 @@ class ClusterRpcClient {
      * @param {string} topic
      * @param {(payload: object) => void} fn
      */
-    onTopic(topic: string, fn: (payload: Record<string, any>) => void) {
-        this.#topics.set(topic, fn);
+    onTopic<P extends Record<string, unknown> = Record<string, unknown>>(topic: string, fn: (payload: P) => void) {
+        // Payloads reach the listener only after validateTopic ran this topic's validator, so `P` is its output shape.
+        this.#topics.set(topic, fn as (payload: Record<string, unknown>) => void);
     }
 
     /**
@@ -233,7 +236,7 @@ class ClusterRpcClient {
         }
     }
 
-    #onResponse(msg: any) {
+    #onResponse(msg: Record<string, unknown>) {
         if (typeof msg.id !== "string") return;
         const p = this.#pending.get(msg.id);
         if (!p) return;
@@ -248,7 +251,7 @@ class ClusterRpcClient {
             return;
         }
         const e = isPlainObject(msg.error) ? msg.error : {};
-        const code = Object.values(E).includes(e.code) ? e.code : E.HANDLER_ERROR;
+        const code = isRpcErrorCode(e.code) ? e.code : E.HANDLER_ERROR;
         const text = typeof e.message === "string" ? e.message.slice(0, CLUSTER_RPC_LIMITS.MAX_ERROR_MESSAGE) : "error";
         const a = e.appError;
         const appError =
@@ -262,8 +265,9 @@ class ClusterRpcClient {
         p.reject(new ClusterRpcError(code, text, appError));
     }
 
-    #onCall(msg: any) {
-        const { callId, method } = msg;
+    #onCall(msg: Record<string, unknown>) {
+        const { callId } = msg;
+        const method = typeof msg.method === "string" ? msg.method : "";
         if (typeof callId !== "string" || callId.length > CLUSTER_RPC_LIMITS.MAX_ID_LENGTH) return;
         const reply = (ok: boolean, result?: unknown, error?: unknown) => {
             const out: { cmd: string; callId: string; ok: boolean; result?: unknown; error?: unknown } = { cmd: CLUSTER_IPC.RPC_RETURN, callId, ok };
@@ -279,7 +283,7 @@ class ClusterRpcClient {
                 });
             }
         };
-        const fn = typeof method === "string" && METHOD_SET.has(method) ? this.#handlers.get(method) : undefined;
+        const fn = METHOD_SET.has(method) ? this.#handlers.get(method) : undefined;
         if (!fn) return reply(false, undefined, { code: E.REJECTED, message: "no handler" });
         const args = validateArgs(method, msg.args === undefined || msg.args === null ? {} : msg.args);
         if (!args.ok) return reply(false, undefined, { code: E.REJECTED, message: args.reason });
@@ -301,10 +305,11 @@ class ClusterRpcClient {
             );
     }
 
-    #onBroadcast(msg: any) {
-        const fn = typeof msg.topic === "string" ? this.#topics.get(msg.topic) : undefined;
-        if (!fn) return;
-        const v = validateTopic(msg.topic, msg.payload);
+    #onBroadcast(msg: Record<string, unknown>) {
+        const topic = typeof msg.topic === "string" ? msg.topic : null;
+        const fn = topic !== null ? this.#topics.get(topic) : undefined;
+        if (!fn || topic === null) return;
+        const v = validateTopic(topic, msg.payload);
         if (!v.ok) return;
         try {
             fn(v.value);

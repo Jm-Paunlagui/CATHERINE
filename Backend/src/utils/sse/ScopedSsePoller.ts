@@ -82,10 +82,23 @@ const DEFAULT_POLL_INTERVAL_MS = 5_000;
 /** Default consecutive-error bulkhead threshold. */
 const DEFAULT_MAX_POLL_ERRORS = 5;
 
+type LogLevel = "info" | "notice" | "warning" | "error";
+
+/** One shared poll scope: every connection watching the same key, plus its cursor state. */
+type SseScope = {
+    key: string;
+    /** Opaque to the poller; handed back to readCursor / onChange (see the header). */
+    meta: Record<string, unknown>;
+    cursor: unknown;
+    connections: Set<import("express").Response>;
+    pollCount: number;
+    pollErrors: number;
+};
+
 class ScopedSsePoller {
-    declare _pollInterval: any;
-    declare _scopes: Map<any, any>;
-    declare logger: Record<string, unknown> | null;
+    declare _pollInterval: ReturnType<typeof setInterval> | null;
+    declare _scopes: Map<string, SseScope>;
+    declare logger: Partial<Record<LogLevel, (message: unknown) => unknown>> | null;
     declare onChange: (scope: Record<string, unknown>) => void;
     declare readCursor: (scope: Record<string, unknown>) => Promise<string | null>;
     declare maxPollErrors: number;
@@ -229,7 +242,7 @@ class ScopedSsePoller {
      * `close()` returned from {@link open}, wired to `req.on("close")`.
      * @private
      */
-    _safeSend(res: any, eventName: unknown, payload: unknown) {
+    _safeSend(res: import("express").Response, eventName: unknown, payload: unknown) {
         try {
             res.write(`event: ${eventName}\n`);
             res.write(`data: ${JSON.stringify(payload)}\n\n`);
@@ -240,14 +253,15 @@ class ScopedSsePoller {
     }
 
     /** @private */
-    _broadcast(scope: any, eventName: unknown, payload: unknown) {
+    _broadcast(scope: SseScope, eventName: unknown, payload: unknown) {
         for (const res of scope.connections) this._safeSend(res, eventName, payload);
     }
 
     /** @private */
-    _log(level: any, message: unknown) {
-        if (this.logger && typeof this.logger[level] === "function") {
-            this.logger[level](message);
+    _log(level: LogLevel, message: unknown) {
+        const fn = this.logger?.[level];
+        if (typeof fn === "function") {
+            fn.call(this.logger, message);
         }
     }
 
@@ -260,7 +274,7 @@ class ScopedSsePoller {
      * @param {object} scope
      * @returns {Promise<void>}
      */
-    async _pollScope(key: string, scope: Record<string, any>): Promise<void> {
+    async _pollScope(key: string, scope: SseScope): Promise<void> {
         const ts = new Date().toISOString();
         try {
             const newCursor = await this.readCursor(scope);

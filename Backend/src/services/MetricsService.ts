@@ -12,6 +12,15 @@ import { logger } from "../utils/logger";
 import { metricsMessages, clusterMessages } from "../constants/messages";
 import { clusterRpc } from "../utils/cluster/ClusterRpcClient";
 import { mergeMetricsSnapshots } from "../middleware/metrics/metricsMerge";
+import type { ClusterMetricsSnapshot } from "../middleware/metrics/metricsMerge";
+import type { MetricsSnapshot, RouteRedSnapshot } from "../middleware/metrics/MetricsStore";
+
+/**
+ * What the alert rules read: a full (or cluster-merged) snapshot. Blocks the rules guard
+ * (`snap.totals?.window`) are optional; `red` (latency rule) and `system` (heap, event-loop,
+ * GC rules) are read directly, so they are required.
+ */
+type AlertInput = Partial<ClusterMetricsSnapshot> & Pick<MetricsSnapshot, "red" | "system">;
 import { CLUSTER_RPC_METHODS, CLUSTER_RPC_TIMEOUTS, CLUSTER_RPC_LIMITS } from "../constants/clusterIpc";
 
 /**
@@ -185,12 +194,9 @@ function latencyThresholdFor(route: string): number {
 
 
 /** Snapshot shapes as MetricsStore.getSnapshot() declares them (merged cluster snapshots share them). */
-type StoreSnapshot = ReturnType<import("../middleware/metrics/MetricsStore").MetricsStore["getSnapshot"]>;
-type RouteMetrics = StoreSnapshot["red"][string];
-type PoolDependency = StoreSnapshot["dependencies"]["oracle"][string];
 class MetricsService {
     /** Shared in-flight/just-finished cluster gather (see getClusterSnapshot). */
-    static #clusterShare: { at: number; promise: Promise<Record<string, unknown>> } | null = null;
+    static #clusterShare: { at: number; promise: Promise<ClusterMetricsSnapshot> } | null = null;
     static #lastPartialLogAt = -Infinity;
 
     // ========================================
@@ -203,7 +209,7 @@ class MetricsService {
      * @returns {object} Full metrics snapshot (see MetricsStore.getSnapshot)
      * @throws {AppError} 503 if snapshot retrieval fails unexpectedly
      */
-    static getSnapshot(): Record<string, any> {
+    static getSnapshot(): MetricsSnapshot {
         try {
             return metricsStore.getSnapshot();
         } catch (err) {
@@ -224,7 +230,7 @@ class MetricsService {
      *
      * @returns {Promise<object>|object} merged snapshot (see MetricsStore.getSnapshot)
      */
-    static getClusterSnapshot(): Promise<Record<string, any>> | Record<string, unknown> {
+    static getClusterSnapshot(): Promise<ClusterMetricsSnapshot> | MetricsSnapshot {
         if (!clusterRpc.active) return MetricsService.getSnapshot();
         const share = MetricsService.#clusterShare;
         if (share && Date.now() - share.at < CLUSTER_RPC_TIMEOUTS.METRICS_SHARE_MS) return share.promise;
@@ -234,7 +240,7 @@ class MetricsService {
     }
 
     /** Never rejects: degrades to the local snapshot. */
-    static async #gatherCluster() {
+    static async #gatherCluster(): Promise<ClusterMetricsSnapshot> {
         try {
             const r = await clusterRpc.call(
                 "all",
@@ -269,12 +275,12 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot (the controller passes the cluster one)
      * @returns {{ totals: object, topSlowRoutes: Array, alertCount: number, uptime: number }}
      */
-    static getSummary(snapshot: Record<string, any> | null = null): { totals: Record<string, unknown>; topSlowRoutes: Array<RouteMetrics & { route: string }>; alertCount: number; uptime: number; system: { heapUsedMb: number; heapTotalMb: number; heapLimitMb: number; eventLoopLag: number } } {
+    static getSummary(snapshot: MetricsSnapshot | null = null): { totals: MetricsSnapshot["totals"]; topSlowRoutes: Array<RouteRedSnapshot & { route: string }>; alertCount: number; uptime: number; system: { heapUsedMb: number; heapTotalMb: number; heapLimitMb: number; eventLoopLag: number } } {
         snapshot = snapshot || MetricsService.getSnapshot();
         const alerts = MetricsService.evaluateAlerts(snapshot);
 
         // Top 5 routes by p95 latency descending
-        const topSlowRoutes = Object.entries(snapshot.red as Record<string, RouteMetrics>)
+        const topSlowRoutes = Object.entries(snapshot.red)
             .map(([route, m]) => ({ route, ...m }))
             .sort((a, b) => b.p95 - a.p95)
             .slice(0, 5);
@@ -319,14 +325,14 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
      * @returns {string[]} Alert keys to hold; `"*"` holds every active key not seen this tick
      */
-    static evaluateAlertHolds(snapshot: Record<string, unknown> | null = null): string[] {
-        const snap = snapshot || MetricsService.getSnapshot();
+    static evaluateAlertHolds(snapshot: AlertInput | null = null): string[] {
+        const snap: AlertInput = snapshot || MetricsService.getSnapshot();
         const holds = [];
         const win = snap.totals?.window;
         if (!win || win.serviced < ERROR_RATE_MIN_SAMPLES) {
             holds.push("HIGH_ERROR_RATE::global");
         }
-        for (const [route, m] of Object.entries((snap.red ?? {}) as Record<string, RouteMetrics>)) {
+        for (const [route, m] of Object.entries(snap.red ?? {})) {
             const w = m?.window;
             if (
                 w &&
@@ -380,8 +386,8 @@ class MetricsService {
      * @param {object} [snapshot] - Optional pre-fetched snapshot; fetches fresh if omitted
      * @returns {Array<{ rule: string, severity: string, value: number, route?: string, pool?: string }>}
      */
-    static evaluateAlerts(snapshot: Record<string, unknown> | null = null): Array<{ rule: string; severity: string; value: number; route?: string; pool?: string; }> {
-        const snap = snapshot || MetricsService.getSnapshot();
+    static evaluateAlerts(snapshot: AlertInput | null = null): Array<{ rule: string; severity: string; value: number; route?: string; pool?: string; }> {
+        const snap: AlertInput = snapshot || MetricsService.getSnapshot();
         const alerts = [];
 
         // Rule 1 — high SERVER-error rate over the last 5 minutes (5xx-only;
@@ -410,7 +416,7 @@ class MetricsService {
                     errorRate,
                     windowServerErrors: win.serverErrors,
                     windowServiced: win.serviced,
-                    serverErrorsTotal: snap.totals.serverErrorsTotal,
+                    serverErrorsTotal: snap.totals?.serverErrorsTotal,
                     // Double-notify guard: this alert is already
                     // delivered via its mapped channel by AlertNotifierService's metrics
                     // poll — the critical logger tap must not double-notify it.
@@ -422,7 +428,7 @@ class MetricsService {
         // Rule 2 — per-route p99 latency spike, read over the last 5 minutes
         // (`window`), never the lifetime ring: a lifetime p99 keeps one slow call
         // as the p99 forever and the alert could never recover.
-        for (const [route, m] of Object.entries(snap.red as Record<string, RouteMetrics>)) {
+        for (const [route, m] of Object.entries(snap.red)) {
             const w = m?.window;
             if (!w || w.count < LATENCY_MIN_SAMPLES) continue;
             // Per-route threshold — a bulk upload/issuance/export is measured
@@ -554,7 +560,7 @@ class MetricsService {
 
         // Rule 7 — Oracle connection-pool saturation (USE method). poolUtilization
         // is null until the adapter's health poll first reports, so guard the type.
-        const oracleDeps = (snap.dependencies?.oracle ?? {}) as Record<string, PoolDependency>;
+        const oracleDeps = snap.dependencies?.oracle ?? {};
         for (const [poolName, dep] of Object.entries(oracleDeps)) {
             const util = dep.poolUtilization;
             if (typeof util !== "number" || util <= POOL_SATURATION_WARNING_THRESHOLD) {
@@ -724,7 +730,7 @@ class MetricsService {
      * @param {Array} payload - Array of frontend metric events from the client
      * @throws {AppError} 400 on validation failure
      */
-    static async ingestFrontendMetrics(payload: Array<any>) {
+    static async ingestFrontendMetrics(payload: unknown) {
         if (!Array.isArray(payload)) {
             throw new AppError(METRICS_ERRORS.INVALID_PAYLOAD, 400, {
                 type: "ValidationError",
@@ -749,15 +755,18 @@ class MetricsService {
         let vitalCount = 0;
         let errorCount = 0;
 
-        for (const event of payload) {
-            if (!event || typeof event !== "object") continue;
+        for (const item of payload as unknown[]) {
+            if (!item || typeof item !== "object") continue;
+            const event = item as Record<string, unknown>;
+            // A client-supplied context object; anything else stores as {} as before.
+            const context = (event.context || {}) as Record<string, unknown>;
 
             if (event.type === "vital") {
                 metricsStore.recordFrontendVital(
                     String(event.name || "UNKNOWN").slice(0, 200),
                     Number(event.value) || 0,
                     String(event.rating || "unknown"),
-                    event.context || {},
+                    context,
                 );
                 vitalCount++;
                 logger.debug(metricsMessages.FRONTEND_INGESTED(1), {
@@ -769,7 +778,7 @@ class MetricsService {
                 metricsStore.recordFrontendError(
                     String(event.message || "").slice(0, 500),
                     String(event.stack || "").slice(0, 2000),
-                    event.context || {},
+                    context,
                 );
                 errorCount++;
                 logger.notice(metricsMessages.FRONTEND_INGESTED(1), {

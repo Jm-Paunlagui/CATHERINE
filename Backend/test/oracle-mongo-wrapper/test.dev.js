@@ -15,7 +15,7 @@
  * SETUP:
  *   This is a STANDALONE real-DB e2e script for the embedded oracle-mongo-wrapper
  *   library — it is intentionally EXCLUDED from the root Vitest suite
- *   (see vitest.config.js → exclude "test/oracle-mongo-wrapper/**"). It keeps its
+ *   (see vitest.config.mts → exclude "test/oracle-mongo-wrapper/**"). It keeps its
  *   own mocha+chai toolchain so the root Backend dependency tree stays free of
  *   mocha/chai (the pair flagged by `bun audit`).
  *

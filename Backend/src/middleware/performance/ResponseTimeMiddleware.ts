@@ -16,11 +16,21 @@ import type { NextFunction, Request, Response } from "express";
 import { logger } from "../../utils/logger";
 import { captureRouteLabel, resolveRouteLabel, shouldRecordRouteMetrics } from "../../utils/routeLabel";
 
+/** Running timings for one route label. */
+interface RouteTiming {
+  count: number;
+  totalTime: number;
+  minTime: number;
+  maxTime: number;
+  slowCount: number;
+  verySlowCount: number;
+}
+
 class ResponseTimeMiddleware {
-  declare _metrics: Map<any, any>;
-  declare _verySlowThreshold: any;
-  declare _slowThreshold: any;
-  constructor(options: Record<string, unknown> = {}) {
+  declare _metrics: Map<string, RouteTiming>;
+  declare _verySlowThreshold: number;
+  declare _slowThreshold: number;
+  constructor(options: { slowThreshold?: number; verySlowThreshold?: number } = {}) {
     this._slowThreshold = options.slowThreshold ?? 1000;
     this._verySlowThreshold = options.verySlowThreshold ?? 3000;
     this._metrics = new Map();

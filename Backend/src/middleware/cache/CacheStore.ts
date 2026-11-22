@@ -17,6 +17,17 @@ import { cacheMessages } from "../../constants/messages/cache.messages";
 import { SingleFlight } from "./SingleFlight";
 import { ClusterCacheSync } from "./ClusterCacheSync";
 
+/** One store's stats snapshot (see stats()). */
+interface CacheStoreStats {
+  name: string;
+  keys: number;
+  hits: number;
+  misses: number;
+  hitRate: number;
+  ttl: number;
+  maxKeys: number;
+}
+
 class CacheStore {
   declare _generation: number;
   declare _flight: SingleFlight;
@@ -70,6 +81,7 @@ class CacheStore {
    * @param {string} key
    * @returns {*}
    */
+  // A store holds whatever its callers put in it, so a read is untyped by design.
   get(key: string): any {
     const value = this._store.get(key);
     this._log(value !== undefined ? "HIT" : "MISS", key);
@@ -225,7 +237,7 @@ class CacheStore {
    * Returns a snapshot of store statistics and current key count.
    * @returns {Object}
    */
-  stats(): Record<string, unknown> {
+  stats(): CacheStoreStats {
     const raw = this._store.getStats();
     const keys = this._store.keys().length;
     const hits = raw.hits ?? 0;
@@ -268,9 +280,10 @@ class CacheStore {
     this._flight = new SingleFlight();
   }
 
-  _log(event: any, key: unknown) {
+  _log(event: string, key: unknown) {
     logger.debug(`[Cache:${this._name}] ${event.padEnd(7)} ${key}`);
   }
 }
 
 export { CacheStore };
+export type { CacheStoreStats };

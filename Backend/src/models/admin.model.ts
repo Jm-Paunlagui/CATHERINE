@@ -83,6 +83,23 @@ function buildSignedFields(row: Record<string, unknown>): Record<string, unknown
     };
 }
 
+/** One T_ADMINS_DEV row as PROJECTION reads it (sql/01_schema.sql section 2). */
+export type AdminRow = {
+    ID: number;
+    USERNAME: string;
+    PASSWORD: string;
+    EMAIL: string | null;
+    ROLE: string;
+    IS_ACTIVE: string;
+    CAN_RECEIVE_SRV_CRIT?: string;
+    CAN_RECEIVE_SRV_DEPS?: string;
+    CAN_RECEIVE_SRV_RED?: string;
+    CAN_RECEIVE_SRV_SYS?: string;
+    SYSSIGNATURE?: string | null;
+    CREATED_AT: Date;
+    UPDATED_AT: Date;
+};
+
 const PROJECTION = {
     ID: 1,
     USERNAME: 1,
@@ -114,8 +131,8 @@ const SERVER_NOTIFY_FLAG_COLUMNS = Object.freeze({
     "server-system-notification": "CAN_RECEIVE_SRV_SYS",
 });
 
-let _db: any = null;
-let _col: any = null;
+let _db: ReturnType<typeof createDb> | null = null;
+let _col: InstanceType<typeof OracleCollection> | null = null;
 /** Lazily resolves the appDb interface (never called in DEMO_MODE). */
 function db() {
     if (!_db) _db = createDb("appDb");
@@ -134,7 +151,7 @@ function col() {
  * @param {object|null|undefined} session - Transaction session or null
  * @returns {OracleCollection}
  */
-function writeCol(session: Record<string, any> | null | undefined): OracleCollection {
+function writeCol(session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null | undefined): OracleCollection {
     return session ? session.collection(TABLE) : col();
 }
 
@@ -150,12 +167,12 @@ class AdminModel {
      * @param {string} username
      * @returns {Promise<object|null>}
      */
-    static async findByUsername(username: string): Promise<Record<string, any> | null> {
+    static async findByUsername(username: string): Promise<AdminRow | null> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return admins.find((a) => a.USERNAME === username) ?? null;
         }
-        return col().find({ USERNAME: username }).project(PROJECTION).next();
+        return col().find({ USERNAME: username }).project(PROJECTION).next<AdminRow>();
     }
 
     /**
@@ -164,7 +181,7 @@ class AdminModel {
      * @param {number|string} id
      * @returns {Promise<object|null>}
      */
-    static async findById(id: number | string): Promise<Record<string, unknown> | null> {
+    static async findById(id: number | string): Promise<AdminRow | null> {
         const numericId = Number(id);
         if (id === null || id === undefined || id === "" || !Number.isFinite(numericId)) {
             return null;
@@ -173,7 +190,7 @@ class AdminModel {
             const { admins } = await demo.accounts();
             return admins.find((a) => Number(a.ID) === numericId) ?? null;
         }
-        return col().find({ ID: numericId }).project(PROJECTION).next();
+        return col().find({ ID: numericId }).project(PROJECTION).next<AdminRow>();
     }
 
     /**
@@ -242,8 +259,8 @@ class AdminModel {
         }
 
         const d = db();
-        const res = await d.withConnection((conn: any) =>
-            conn.execute(
+        const res = await d.withConnection((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
+            conn.execute<{ ID: number; USERNAME: string; EMAIL: string | null; ROLE: string; IS_ACTIVE: string }>(
                 SEARCH_SQL,
                 { q: `%${escapeLike(needle.toUpperCase())}%`, lim },
                 { outFormat: d.oracledb.OUT_FORMAT_OBJECT },
@@ -257,7 +274,7 @@ class AdminModel {
      * Includes PASSWORD + SYSSIGNATURE so callers can verify integrity.
      * @returns {Promise<Array<object>>}
      */
-    static async findAll(): Promise<Array<Record<string, any>>> {
+    static async findAll(): Promise<AdminRow[]> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return [...admins].sort((a, b) =>
@@ -268,7 +285,7 @@ class AdminModel {
             .find({})
             .project(PROJECTION)
             .sort({ USERNAME: 1 })
-            .toArray();
+            .toArray<AdminRow>();
     }
 
     /**
@@ -335,8 +352,8 @@ class AdminModel {
     static async withLastSuperAdminGuard<T>(excludeId: number | string, fn: (session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null) => Promise<T>): Promise<T> {
         const targetId = Number(excludeId);
 
-        const assertNotLast = (rows: any) => {
-            const ids = rows.map((r: any) => Number(r.ID));
+        const assertNotLast = (rows: Array<{ ID: unknown }>) => {
+            const ids = rows.map((r) => Number(r.ID));
             if (ids.includes(targetId) && ids.every((id: unknown) => id === targetId)) {
                 logger.warning(adminMessages.ADMIN_LAST_SUPER_ADMIN_BLOCKED(excludeId));
                 throw new AppError(ADMIN_ERRORS.LAST_ACTIVE_SUPER_ADMIN, HTTP_STATUS.CONFLICT, {
@@ -360,7 +377,7 @@ class AdminModel {
                 .find({ ROLE: "SUPER_ADMIN", IS_ACTIVE: "Y" })
                 .project({ ID: 1 })
                 .forUpdate(true)
-                .toArray();
+                .toArray<{ ID: number }>();
             assertNotLast(rows ?? []);
             return fn(session);
         });
@@ -427,7 +444,7 @@ class AdminModel {
         if (numericIds.length === 0) return new Map();
 
         try {
-            let rows;
+            let rows: Array<{ ID: number; USERNAME: string }>;
             if (isDemoMode()) {
                 const { admins } = await demo.accounts();
                 rows = admins.filter((a) => numericIds.includes(Number(a.ID)));
@@ -435,10 +452,10 @@ class AdminModel {
                 rows = await col()
                     .find({ ID: { $in: numericIds } })
                     .project({ ID: 1, USERNAME: 1 })
-                    .toArray();
+                    .toArray<{ ID: number; USERNAME: string }>();
             }
             return new Map(
-                (rows ?? []).map((r: any) => [Number(r.ID), r.USERNAME ?? null]),
+                (rows ?? []).map((r) => [Number(r.ID), r.USERNAME]), // USERNAME is NOT NULL
             );
         } catch {
             return new Map();

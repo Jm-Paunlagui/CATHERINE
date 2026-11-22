@@ -263,7 +263,7 @@ class RecursiveCTEResult {
     return this;
   }
 
-  _buildSQL(colNames = []) {
+  _buildSQL(colNames: string[] = []) {
     const { anchor, recursive } = this._def;
     const allBinds: Record<string, unknown> = {};
 
@@ -352,12 +352,12 @@ class RecursiveCTEResult {
     // Fetch column names from anchor table to build CTE column alias list
     const anchorTableName = this._def.anchor.tableName;
     const colNames = await this._db.withConnection(async (conn: DbConnection) => {
-      const result = await conn.execute(
+      const result = await conn.execute<{ COLUMN_NAME: string }>(
         `SELECT COLUMN_NAME FROM USER_TAB_COLUMNS WHERE TABLE_NAME = UPPER(:t) ORDER BY COLUMN_ID`,
         { t: anchorTableName },
         { outFormat: this._db.oracledb.OUT_FORMAT_OBJECT },
       );
-      return result.rows.map((r: { COLUMN_NAME: string }) => r.COLUMN_NAME);
+      return (result.rows ?? []).map((r) => r.COLUMN_NAME);
     });
 
     const { sql, binds } = this._buildSQL(colNames);

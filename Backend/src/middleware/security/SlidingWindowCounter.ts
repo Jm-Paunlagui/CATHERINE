@@ -152,7 +152,7 @@ class SlidingWindowCounter {
     }
 
     /** @returns {object} NodeCache stats */
-    getStats(): Record<string, any> {
+    getStats(): import("node-cache").Stats {
         return this._store.getStats();
     }
 

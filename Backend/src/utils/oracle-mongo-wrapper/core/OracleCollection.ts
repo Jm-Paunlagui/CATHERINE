@@ -109,6 +109,32 @@ function _deepClone(value: unknown): unknown {
  * deleteOne. An empty filter yields no WHERE from parseFilter, so appending
  * "AND ROWNUM = 1" would produce invalid SQL ("… t0  AND ROWNUM = 1").
  */
+/**
+ * RETURNING clause for a statement that may touch MANY rows (updateMany / deleteMany).
+ * Each column gets an array out-bind; node-oracledb fills it with one value per row.
+ * Values come back as strings (the driver's default OUT type), like updateOne's RETURNING.
+ */
+function _multiRowReturning(cols: string[] | undefined, oracledb: { BIND_OUT: number }): { sql: string; outBinds: Record<string, unknown> } {
+    if (!cols || cols.length === 0) return { sql: "", outBinds: {} };
+    const outBinds: Record<string, unknown> = {};
+    for (const c of cols) outBinds[`out_${c}`] = { dir: oracledb.BIND_OUT };
+    return {
+        sql: ` RETURNING ${cols.map(quoteIdentifier).join(", ")} INTO ${cols.map((c) => `:out_${c}`).join(", ")}`,
+        outBinds,
+    };
+}
+
+/** Zips the per-column out-bind arrays of a multi-row RETURNING into one object per affected row. */
+function _returnedRows(cols: string[], outBinds: unknown): Array<Record<string, unknown>> {
+    const ob = (outBinds ?? {}) as Record<string, unknown>;
+    const columns = cols.map((c) => {
+        const v = ob[`out_${c}`];
+        return Array.isArray(v) ? v : v === undefined ? [] : [v];
+    });
+    const n = Math.max(0, ...columns.map((v) => v.length));
+    return Array.from({ length: n }, (_, i) => Object.fromEntries(cols.map((c, k) => [c, columns[k][i] ?? null])));
+}
+
 function _firstRowWhere(whereClause: string): string {
     return whereClause ? `${whereClause} AND ROWNUM = 1` : "WHERE ROWNUM = 1";
 }
@@ -145,7 +171,7 @@ type BulkWriteOp = {
 };
 
 class OracleCollection {
-    declare _conn: Record<string, unknown> | null;
+    declare _conn: import("../db").DbConnection | null;
     declare db: WrapperDb;
     declare tableName: string;
     /**
@@ -176,7 +202,7 @@ class OracleCollection {
      * @param {Function} fn - async (conn) => result
      * @returns {Promise<*>} Whatever fn returns
      */
-    // `conn` is the untyped connection boundary (see withConnection in config/adapters/oracle.ts).
+    // Runs on the session connection when there is one, else borrows a pooled one.
     async _execute<T>(fn: (conn: DbConnection) => T | Promise<T>): Promise<T> {
         if (this._conn) return fn(this._conn);
         return this.db.withConnection(fn);
@@ -241,11 +267,11 @@ class OracleCollection {
             const { whereClause, binds } = parseFilter(filter);
             const sql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} FETCH FIRST 1 ROW ONLY`;
             try {
-                const result = await conn.execute(sql, binds, {
+                const result = await conn.execute<T>(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                     autoCommit: !this._conn,
                 });
-                return result.rows[0] ?? null;
+                return (result.rows ?? [])[0] ?? null;
             } catch (err) {
                 throw new Error(
                     MSG.wrapError("OracleCollection.findOne", err, sql, binds),
@@ -358,22 +384,22 @@ class OracleCollection {
                         );
                     }
 
-                    const afterResult = await conn.execute(
+                    const afterResult = await conn.execute<T>(
                         selectSql,
                         filterBinds,
                         {
                             outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                         },
                     );
-                    return afterResult.rows[0] ?? null;
+                    return (afterResult.rows ?? [])[0] ?? null;
                 }
             }
 
             // Standard path: SELECT first to get the before-document
-            const found = await conn.execute(selectSql, filterBinds, {
+            const found = await conn.execute<T & Record<string, unknown>>(selectSql, filterBinds, {
                 outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
             });
-            const beforeDoc = found.rows[0] ?? null;
+            const beforeDoc = (found.rows ?? [])[0] ?? null;
 
             if (!beforeDoc && options.upsert) {
                 // Upsert: insert
@@ -394,14 +420,14 @@ class OracleCollection {
                 });
 
                 if (options.returnDocument === "after") {
-                    const afterResult = await conn.execute(
+                    const afterResult = await conn.execute<T>(
                         selectSql,
                         filterBinds,
                         {
                             outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                         },
                     );
-                    return afterResult.rows[0] ?? null;
+                    return (afterResult.rows ?? [])[0] ?? null;
                 }
                 return null;
             }
@@ -434,10 +460,10 @@ class OracleCollection {
                 const { whereClause: afterWhere, binds: afterBinds } =
                     parseFilter(afterFilter);
                 const afterSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${afterWhere} FETCH FIRST 1 ROW ONLY`;
-                const afterResult = await conn.execute(afterSql, afterBinds, {
+                const afterResult = await conn.execute<T>(afterSql, afterBinds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 });
-                return afterResult.rows[0] ?? null;
+                return (afterResult.rows ?? [])[0] ?? null;
             }
 
             return beforeDoc;
@@ -463,10 +489,10 @@ class OracleCollection {
             // Include ROWID so we can delete by exact row address
             const selectSql = `SELECT t0.*, t0.ROWID AS "MIRA_RID_" FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} FETCH FIRST 1 ROW ONLY`;
 
-            const found = await conn.execute(selectSql, binds, {
+            const found = await conn.execute<T & Record<string, unknown>>(selectSql, binds, {
                 outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
             });
-            const doc = found.rows[0] ?? null;
+            const doc = (found.rows ?? [])[0] ?? null;
             if (!doc) return null;
 
             // Delete by exact ROWID — no subquery needed
@@ -519,10 +545,10 @@ class OracleCollection {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const selectSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause} FETCH FIRST 1 ROW ONLY`;
 
-            const found = await conn.execute(selectSql, filterBinds, {
+            const found = await conn.execute<T & Record<string, unknown>>(selectSql, filterBinds, {
                 outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
             });
-            const beforeDoc = found.rows[0] ?? null;
+            const beforeDoc = (found.rows ?? [])[0] ?? null;
             if (!beforeDoc) return null;
 
             // Build SET from replacement (exclude ID/primary key)
@@ -557,10 +583,10 @@ class OracleCollection {
                     beforeDoc.ID != null ? { ID: beforeDoc.ID } : filter;
                 const { whereClause: aw, binds: ab } = parseFilter(afterFilter);
                 const afterSql = `SELECT * FROM ${quoteIdentifier(this.tableName)} t0 ${aw} FETCH FIRST 1 ROW ONLY`;
-                const afterResult = await conn.execute(afterSql, ab, {
+                const afterResult = await conn.execute<T>(afterSql, ab, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 });
-                return afterResult.rows[0] ?? null;
+                return (afterResult.rows ?? [])[0] ?? null;
             }
             return beforeDoc;
         });
@@ -588,7 +614,7 @@ class OracleCollection {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                     autoCommit: !this._conn,
                 });
-                return Number(result.rows[0].CNT);
+                return Number((result.rows ?? [])[0].CNT);
             } catch (err) {
                 throw new Error(
                     MSG.wrapError(
@@ -629,7 +655,7 @@ class OracleCollection {
                         autoCommit: !this._conn,
                     },
                 );
-                return Number(result.rows[0]?.NUM_ROWS ?? 0);
+                return Number((result.rows ?? [])[0]?.NUM_ROWS ?? 0);
             } catch (err) {
                 throw new Error(
                     MSG.wrapError(
@@ -667,7 +693,7 @@ class OracleCollection {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                     autoCommit: !this._conn,
                 });
-                return result.rows.map((r: Record<string, unknown>) => r[field]);
+                return (result.rows ?? []).map((r: Record<string, unknown>) => r[field]);
             } catch (err) {
                 throw new Error(
                     MSG.wrapError("OracleCollection.distinct", err, sql, binds),
@@ -881,7 +907,7 @@ class OracleCollection {
             const sql = `INSERT INTO ${quoteIdentifier(this.tableName)} (${cols.map(quoteIdentifier).join(", ")}) VALUES (${placeholders})${returningSql}`;
 
             // Build bind arrays for executeMany
-            const bindDefs: Record<string, unknown> = {};
+            const bindDefs: Record<string, import("oracledb").BindDefinition> = {};
             cols.forEach((c, i) => {
                 // Scan all documents for a non-null sample to determine the type
                 let sampleVal = null;
@@ -939,7 +965,7 @@ class OracleCollection {
 
                 const response: { acknowledged: boolean; insertedCount: number; insertedIds: unknown[]; returning?: Record<string, number | null>[]; batchErrors?: Array<{ offset: number; message: string }> } = {
                     acknowledged: true,
-                    insertedCount: result.rowsAffected,
+                    insertedCount: result.rowsAffected ?? 0,
                     insertedIds: [],
                 };
 
@@ -1042,7 +1068,7 @@ class OracleCollection {
         const sql = `UPDATE ${quoteIdentifier(this.tableName)} SET ${setClause} WHERE ${whereClause}`;
 
         // Bind definitions: same type-scan approach as insertMany.
-        const bindDefs: Record<string, unknown> = {};
+        const bindDefs: Record<string, import("oracledb").BindDefinition> = {};
         const defFor = (col: string) => {
             let sampleVal = null;
             for (const row of rows) {
@@ -1099,7 +1125,7 @@ class OracleCollection {
                 });
                 return {
                     acknowledged: true,
-                    modifiedCount: result.rowsAffected,
+                    modifiedCount: result.rowsAffected ?? 0,
                 };
             } catch (err) {
                 throw new Error(
@@ -1196,8 +1222,8 @@ class OracleCollection {
 
                 const response: { acknowledged: boolean; matchedCount: number; modifiedCount: number; returning?: Record<string, unknown> } = {
                     acknowledged: true,
-                    matchedCount: result.rowsAffected > 0 ? 1 : 0,
-                    modifiedCount: result.rowsAffected,
+                    matchedCount: (result.rowsAffected ?? 0) > 0 ? 1 : 0,
+                    modifiedCount: result.rowsAffected ?? 0,
                 };
                 if (returningCols.length > 0 && result.outBinds) {
                     response.returning = {};
@@ -1230,7 +1256,8 @@ class OracleCollection {
      *
      * @param {Object} filter - Which rows to update (e.g. { status: "trial" })
      * @param {Object} update - Update operators (e.g. { $set: { status: "expired" } })
-     * @param {Object} [_options] - returning (array of column names)
+     * @param {{ returning?: string[] }} [options] - `returning`: columns to read back from EVERY updated row
+     *   (`result.returning`, one object per row, values as strings)
      * @returns {Promise<{ acknowledged, matchedCount, modifiedCount }>}
      *
      * @example
@@ -1241,21 +1268,23 @@ class OracleCollection {
      *   );
      *   console.log(`Updated ${result.modifiedCount} users`);
      */
-    async updateMany(filter: Record<string, unknown>, update: Record<string, unknown>, _options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number;  }> {
+    async updateMany(filter: Record<string, unknown>, update: Record<string, unknown>, options: ReturningOption = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number; returning?: Array<Record<string, unknown>> }> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const { setClause, binds: updateBinds } = parseUpdate(update);
-            const allBinds = mergeBinds(filterBinds, updateBinds);
+            const ret = _multiRowReturning(options.returning, this.db.oracledb);
+            const allBinds = { ...mergeBinds(filterBinds, updateBinds), ...ret.outBinds };
 
-            const sql = `UPDATE ${quoteIdentifier(this.tableName)} t0 ${setClause} ${whereClause}`;
+            const sql = `UPDATE ${quoteIdentifier(this.tableName)} t0 ${setClause} ${whereClause}${ret.sql}`;
             try {
                 const result = await conn.execute(sql, allBinds, {
                     autoCommit: !this._conn,
                 });
                 return {
                     acknowledged: true,
-                    matchedCount: result.rowsAffected,
-                    modifiedCount: result.rowsAffected,
+                    matchedCount: result.rowsAffected ?? 0,
+                    modifiedCount: result.rowsAffected ?? 0,
+                    ...(options.returning?.length ? { returning: _returnedRows(options.returning, result.outBinds) } : {}),
                 };
             } catch (err) {
                 throw new Error(
@@ -1309,8 +1338,8 @@ class OracleCollection {
                 });
                 return {
                     acknowledged: true,
-                    matchedCount: result.rowsAffected > 0 ? 1 : 0,
-                    modifiedCount: result.rowsAffected,
+                    matchedCount: (result.rowsAffected ?? 0) > 0 ? 1 : 0,
+                    modifiedCount: result.rowsAffected ?? 0,
                 };
             } catch (err) {
                 throw new Error(
@@ -1454,7 +1483,7 @@ class OracleCollection {
                 });
                 const response: { acknowledged: boolean; deletedCount: number; returning?: Record<string, unknown> } = {
                     acknowledged: true,
-                    deletedCount: result.rowsAffected,
+                    deletedCount: result.rowsAffected ?? 0,
                 };
                 if (returningCols.length > 0 && result.outBinds) {
                     response.returning = {};
@@ -1486,6 +1515,8 @@ class OracleCollection {
      * Use an empty filter {} to delete all rows (like TRUNCATE).
      *
      * @param {Object} filter - Which rows to delete
+     * @param {{ limit?: number, returning?: string[] }} [options] - `limit`: delete at most this many matching rows (batch purges);
+     *   `returning`: columns to read back from EVERY deleted row (`result.returning`, one object per row, values as strings)
      * @returns {Promise<{ acknowledged, deletedCount }>}
      *
      * @example
@@ -1493,17 +1524,31 @@ class OracleCollection {
      *   const result = await users.deleteMany({ status: "inactive" });
      *   console.log(`Deleted ${result.deletedCount} users`);
      */
-    async deleteMany(filter: Record<string, unknown>): Promise<{ acknowledged: boolean; deletedCount: number;  }> {
+    async deleteMany(filter: Record<string, unknown>, options: ReturningOption & { limit?: number } = {}): Promise<{ acknowledged: boolean; deletedCount: number; returning?: Array<Record<string, unknown>> }> {
+        const { limit } = options;
+        if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
+            throw new TypeError(`deleteMany: limit must be a positive integer, got ${String(limit)}`);
+        }
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
-            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause}`;
+            // A bounded delete removes at most `limit` matching rows (batch purges); parseFilter
+            // parenthesises every OR, so appending AND ROWNUM cannot change the filter's meaning.
+            let where = whereClause;
+            if (limit !== undefined) {
+                binds.del_limit = limit;
+                where = whereClause ? `${whereClause} AND ROWNUM <= :del_limit` : "WHERE ROWNUM <= :del_limit";
+            }
+            const ret = _multiRowReturning(options.returning, this.db.oracledb);
+            Object.assign(binds, ret.outBinds);
+            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} t0 ${where}${ret.sql}`;
             try {
                 const result = await conn.execute(sql, binds, {
                     autoCommit: !this._conn,
                 });
                 return {
                     acknowledged: true,
-                    deletedCount: result.rowsAffected,
+                    deletedCount: result.rowsAffected ?? 0,
+                    ...(options.returning?.length ? { returning: _returnedRows(options.returning, result.outBinds) } : {}),
                 };
             } catch (err) {
                 throw new Error(
@@ -1680,15 +1725,15 @@ class OracleCollection {
     async dropIndexes(): Promise<{ acknowledged: boolean; dropped: string[];  }> {
         return this._execute(async (conn) => {
             const sql = `SELECT INDEX_NAME FROM USER_INDEXES WHERE TABLE_NAME = UPPER(:tbl) AND INDEX_TYPE <> 'LOB' AND INDEX_NAME NOT IN (SELECT CONSTRAINT_NAME FROM USER_CONSTRAINTS WHERE TABLE_NAME = UPPER(:tbl2) AND CONSTRAINT_TYPE = 'P')`;
-            const result = await conn.execute(
+            const result = await conn.execute<{ INDEX_NAME: string }>(
                 sql,
                 { tbl: this.tableName, tbl2: this.tableName },
                 {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 },
             );
-            const dropped = [];
-            for (const row of result.rows) {
+            const dropped: string[] = [];
+            for (const row of result.rows ?? []) {
                 try {
                     await conn.execute(
                         `DROP INDEX ${quoteIdentifier(row.INDEX_NAME)}`,
@@ -1711,7 +1756,7 @@ class OracleCollection {
     async getIndexes(): Promise<Array<{ indexName: string; columns: string[]; unique: boolean; type: string;  }>> {
         return this._execute(async (conn) => {
             const sql = `SELECT i.INDEX_NAME, i.UNIQUENESS, i.INDEX_TYPE, ic.COLUMN_NAME, ic.COLUMN_POSITION FROM USER_INDEXES i JOIN USER_IND_COLUMNS ic ON i.INDEX_NAME = ic.INDEX_NAME WHERE i.TABLE_NAME = UPPER(:tbl) ORDER BY i.INDEX_NAME, ic.COLUMN_POSITION`;
-            const result = await conn.execute(
+            const result = await conn.execute<{ INDEX_NAME: string; UNIQUENESS: string; INDEX_TYPE: string; COLUMN_NAME: string }>(
                 sql,
                 { tbl: this.tableName },
                 {
@@ -1720,7 +1765,7 @@ class OracleCollection {
             );
 
             const indexMap: Record<string, { indexName: string; columns: string[]; unique: boolean; type: string }> = {};
-            for (const row of result.rows) {
+            for (const row of result.rows ?? []) {
                 if (!indexMap[row.INDEX_NAME]) {
                     indexMap[row.INDEX_NAME] = {
                         indexName: row.INDEX_NAME,
@@ -1742,14 +1787,14 @@ class OracleCollection {
     async reIndex(): Promise<{ acknowledged: boolean;  }> {
         return this._execute(async (conn) => {
             const sql = `SELECT INDEX_NAME FROM USER_INDEXES WHERE TABLE_NAME = UPPER(:tbl) AND INDEX_TYPE <> 'LOB'`;
-            const result = await conn.execute(
+            const result = await conn.execute<{ INDEX_NAME: string }>(
                 sql,
                 { tbl: this.tableName },
                 {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 },
             );
-            for (const row of result.rows) {
+            for (const row of result.rows ?? []) {
                 try {
                     await conn.execute(
                         `ALTER INDEX ${quoteIdentifier(row.INDEX_NAME)} REBUILD`,
@@ -2116,12 +2161,12 @@ class OracleCollection {
                 );
             } else {
                 // No columns specified — exclude identity columns to avoid ORA-32795
-                const colResult = await conn.execute(
+                const colResult = await conn.execute<{ COLUMN_NAME: string }>(
                     `SELECT COLUMN_NAME FROM USER_TAB_COLUMNS WHERE TABLE_NAME = UPPER(:t) AND (IDENTITY_COLUMN IS NULL OR IDENTITY_COLUMN = 'NO') ORDER BY COLUMN_ID`,
                     { t: targetTable },
                     { outFormat: this.db.oracledb.OUT_FORMAT_OBJECT },
                 );
-                const cols: string[] = colResult.rows.map((r: { COLUMN_NAME: string }) => r.COLUMN_NAME);
+                const cols: string[] = (colResult.rows ?? []).map((r) => r.COLUMN_NAME);
                 if (cols.length > 0) {
                     colList = `(${cols.map(quoteIdentifier).join(", ")})`;
                     const colSelectList = cols.map(quoteIdentifier).join(", ");
@@ -2140,7 +2185,7 @@ class OracleCollection {
                 });
                 return {
                     acknowledged: true,
-                    insertedCount: result.rowsAffected,
+                    insertedCount: result.rowsAffected ?? 0,
                 };
             } catch (err) {
                 throw new Error(
@@ -2229,7 +2274,7 @@ class OracleCollection {
                 });
                 return {
                     acknowledged: true,
-                    modifiedCount: result.rowsAffected,
+                    modifiedCount: result.rowsAffected ?? 0,
                 };
             } catch (err) {
                 throw new Error(

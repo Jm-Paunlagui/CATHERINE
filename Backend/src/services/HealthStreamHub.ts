@@ -75,12 +75,12 @@ class HealthStreamHub {
     declare HealthStreamHub: typeof HealthStreamHub;
     declare _pending: boolean;
     declare _evaluating: boolean;
-    declare _unsubs: any[];
-    declare _evalTimer: any;
-    declare _heartbeat: any;
-    declare _last: any;
-    declare _perIp: Map<unknown, any>;
-    declare _clients: Map<any, any>;
+    declare _unsubs: Array<() => void>;
+    declare _evalTimer: ReturnType<typeof setInterval> | null;
+    declare _heartbeat: ReturnType<typeof setInterval> | null;
+    declare _last: { ready: boolean; cause: "database" | null } | null;
+    declare _perIp: Map<string, number>;
+    declare _clients: Map<import("express").Response, { ip: string; teardown: () => void }>;
     constructor() {
         /** @type {Map<import('express').Response, { ip: string, teardown: () => void }>} */
         this._clients = new Map();
@@ -161,7 +161,7 @@ class HealthStreamHub {
             // Only a check that contradicts the last verdict is worth a fresh
             // evaluation: a failure while "ready", or a success while "not ready".
             this._unsubs.push(
-                db.onPoolHealthCheck(({ ok }: any) => {
+                db.onPoolHealthCheck(({ ok }) => {
                     if (!this._last || this._last.ready !== ok) this._requestEvaluate();
                 }),
             );
@@ -184,8 +184,8 @@ class HealthStreamHub {
                 // listener already gone
             }
         }
-        clearInterval(this._heartbeat);
-        clearInterval(this._evalTimer);
+        clearInterval(this._heartbeat ?? undefined);
+        clearInterval(this._evalTimer ?? undefined);
         this._heartbeat = this._evalTimer = null;
         // Nobody was watching, so the last verdict may be stale by the next open.
         this._last = null;
@@ -235,7 +235,7 @@ class HealthStreamHub {
     }
 
     /** Writes and flushes; a dead socket is torn down, never thrown. */
-    _write(res: any, chunk: unknown) {
+    _write(res: import("express").Response, chunk: string) {
         try {
             res.write(chunk);
             if (typeof res.flush === "function") res.flush();

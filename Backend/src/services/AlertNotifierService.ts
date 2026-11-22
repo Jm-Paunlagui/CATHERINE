@@ -187,11 +187,11 @@ type CriticalRecord = { level: string; message: string; meta: Record<string, unk
 type DrainResult = { events: number; outcome: "error" | "empty" | "done" | "timeout" | "skipped" };
 type Timer = ReturnType<typeof setTimeout>;
 /**
- * The snapshot the alert rules ran against: MetricsStore.getSnapshot() OR the cluster
- * merge (metricsMerge), whose route rows are not typed the same yet. Kept `any` until
- * the two shapes are unified (plans/ts-conversion-open-items.md).
+ * The snapshot the alert rules ran against: MetricsStore.getSnapshot() or the cluster merge
+ * (same shape plus `cluster`). Partial: the digest and detail builders read every block
+ * defensively, so a missing one only blanks its fields.
  */
-type AlertSnapshot = Record<string, any>;
+type AlertSnapshot = Partial<import("../middleware/metrics/metricsMerge").ClusterMetricsSnapshot>;
 /** One transition queued for a channel digest: an active alert, or a recovered state. */
 type MetricEvent = { alert?: MetricAlert; state?: AlertState; key: string; transitionType?: AlertLogRow["transition"] | null };
 
@@ -843,7 +843,7 @@ class AlertNotifierService {
      * @param {boolean} isRecovery
      * @returns {Promise<void>}
      */
-    async _dispatchMetricDigest(channel: string, events: MetricEvent[], snapshot: Record<string, unknown>, isRecovery: boolean): Promise<void> {
+    async _dispatchMetricDigest(channel: string, events: MetricEvent[], snapshot: AlertSnapshot, isRecovery: boolean): Promise<void> {
         const rows = events.map(({ alert, state }) => {
             const source = alert || state?.lastAlert || {};
             return {
@@ -1012,7 +1012,7 @@ class AlertNotifierService {
         }
 
         if (channel === "server-dependencies-notification") {
-            const pools = Object.values((snapshot?.dependencies?.oracle ?? {}) as Record<string, { poolUtilization?: number | null }>);
+            const pools = Object.values(snapshot?.dependencies?.oracle ?? {});
             const alertingPoolCount = pools.filter(
                 (p) => typeof p.poolUtilization === "number" && p.poolUtilization > 0.8,
             ).length;
@@ -1023,8 +1023,8 @@ class AlertNotifierService {
         }
 
         if (channel === "server-red-metrics-notification") {
-            const totals = snapshot?.totals ?? {};
-            const entries = Object.entries((snapshot?.red ?? {}) as Record<string, { p95: number }>);
+            const totals: Partial<import("../middleware/metrics/MetricsStore").TotalsSnapshot> = snapshot?.totals ?? {};
+            const entries = Object.entries(snapshot?.red ?? {});
             let topRoute = "n/a";
             let topRouteP95 = "n/a";
             if (entries.length) {
@@ -1043,7 +1043,7 @@ class AlertNotifierService {
         }
 
         if (channel === "server-system-notification") {
-            const mem = snapshot?.system?.memory ?? {};
+            const mem: Partial<import("../middleware/metrics/MetricsStore").SystemSnapshot["memory"]> = snapshot?.system?.memory ?? {};
             const heapUsedMb = Math.round((mem.heapUsed ?? 0) / 1024 / 1024);
             const heapLimitMb = Math.round((mem.heapSizeLimit ?? 0) / 1024 / 1024);
             const heapPct = heapLimitMb ? `${((heapUsedMb / heapLimitMb) * 100).toFixed(1)}%` : "n/a";
@@ -1865,7 +1865,7 @@ class AlertNotifierService {
      * @param {string} [note]
      * @returns {Promise<object>}
      */
-    async _acknowledgeLocal(alertKey: string, ackedBy: string | number, note: string): ReturnType<AlertNotifierService["acknowledge"]> {
+    async _acknowledgeLocal(alertKey: string, ackedBy: string | number, note: string | null): ReturnType<AlertNotifierService["acknowledge"]> {
         if (!alertKey || typeof alertKey !== "string") {
             throw new AppError(NOTIFICATION_ERRORS.ALERT_KEY_REQUIRED, 400, {
                 type: "ValidationError",

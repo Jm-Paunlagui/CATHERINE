@@ -124,12 +124,12 @@ type MetricDigestRow = { rule: string; scope?: string; description: string; seve
 class ServerNotificationService {
     declare DETAILS_NOTE: Readonly<{ ALERT_TAB: "Full details are in the server logs and the Logging & Observability alert tab."; LOGS_ONLY: "Full details are in the server logs."; }>;
     declare ServerNotificationService: typeof ServerNotificationService;
-    declare _recentSends: any[];
+    declare _recentSends: Array<{ channel: string; notificationId: string | null; sent: boolean; headline: string; reason: string | null; at: string }>;
     declare _assetsDir: string;
     declare _templateDir: string;
     declare _transporter: import("nodemailer").Transporter<import("nodemailer").SentMessageInfo, import("nodemailer").TransportOptions>;
     declare maskEmail: typeof maskEmail;
-    declare CHANNELS: any;
+    declare CHANNELS: readonly string[];
     constructor() {
         // CWE-400: SharedTransporter carries explicit connect/greeting/socket
         // timeouts — never a new transporter per service (established rule).
@@ -203,7 +203,7 @@ class ServerNotificationService {
         // With the database answering it is left out (an admin whose opt-in address
         // differs from it was emailed twice); with the database down, or with
         // nobody opted in, it is the only recipient.
-        let dbOptIns: any[] = [];
+        let dbOptIns: string[] = [];
         let dbUp = false;
         try {
             ({ dbUp, emails: dbOptIns } = await RecipientResolver.getDbRecipientsWithState(channel));
@@ -554,7 +554,7 @@ class ServerNotificationService {
      * @param {{ headline: string, summary: string, rows: Array<object>, throttleNote: string }} opts
      * @returns {string}
      */
-    _buildPlainText({ headline, summary, rows, throttleNote }: { headline: string; summary: string; rows: Array<Record<string, any>>; throttleNote: string; }): string {
+    _buildPlainText({ headline, summary, rows, throttleNote }: { headline: string; summary: string; rows: Array<Partial<Record<string, string | null>>>; throttleNote: string; }): string {
         const lines = [`[${process.env.APP_NAME || "CATHERINE"}] ${headline}`, "", summary || "", ""];
         for (const row of rows) {
             if (row.level) {

@@ -10,9 +10,9 @@ import { logger } from "../../utils/logger";
 import { getStatusTitle } from "../../constants/responses";
 
 class IpFilterMiddleware {
-  declare _allowedIps: any;
-  declare _enabled: unknown;
-  constructor(options: Record<string, unknown> = {}) {
+  declare _allowedIps: string[];
+  declare _enabled: boolean;
+  constructor(options: { enabled?: boolean; allowedIps?: string[] } = {}) {
     this._enabled = options.enabled ?? process.env.ENABLE_IP_FILTER === "true";
     this._allowedIps =
       options.allowedIps ??
@@ -27,7 +27,7 @@ class IpFilterMiddleware {
     if (!this._enabled || this._allowedIps.length === 0) return next();
 
     const clientIp = IpFilterMiddleware.extractClientIp(req);
-    const allowed = this._allowedIps.some((entry: any) =>
+    const allowed = this._allowedIps.some((entry) =>
       entry.includes("/")
         ? IpFilterMiddleware.ipInCidr(clientIp, entry)
         : clientIp === entry,
@@ -51,7 +51,7 @@ class IpFilterMiddleware {
     next();
   }
 
-  static ipInCidr(ip: unknown, cidr: any) {
+  static ipInCidr(ip: string, cidr: string) {
     const [range, bits] = cidr.split("/");
     const mask = bits ? ~((1 << (32 - parseInt(bits, 10))) - 1) : 0xffffffff;
     const ipNum = IpFilterMiddleware.ipToNum(ip);
@@ -59,15 +59,15 @@ class IpFilterMiddleware {
     return (ipNum & mask) === (rangeNum & mask);
   }
 
-  static ipToNum(ip: any) {
+  static ipToNum(ip: string): number {
     return (
       ip
         .split(".")
-        .reduce((acc: any, octet: any) => (acc << 8) + parseInt(octet, 10), 0) >>> 0
+        .reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0
     );
   }
 
-  static extractClientIp(req: any) {
+  static extractClientIp(req: { ip?: string; socket?: { remoteAddress?: string } }): string {
     let ip = req.ip || req.socket?.remoteAddress || "unknown";
     if (ip.startsWith("::ffff:")) ip = ip.slice(7);
     return ip;

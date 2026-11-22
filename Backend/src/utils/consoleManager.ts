@@ -1,7 +1,7 @@
 import { logger } from "./logger";
 
 class ConsoleManager {
-    declare clearIntervalId: any;
+    declare clearIntervalId: ReturnType<typeof setInterval> | null;
     declare isInitialized: boolean;
     declare lastClearDate: string;
     constructor() {

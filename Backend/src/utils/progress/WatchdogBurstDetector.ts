@@ -43,8 +43,8 @@ const TOP_N = 5;
 
 class WatchdogBurstDetector {
     declare _sinceAlert: number;
-    declare _lastAlertAt: any;
-    declare _entries: any[];
+    declare _lastAlertAt: number | null;
+    declare _entries: Array<{ t: number; route: string; source: string }>;
     declare _emit: (message: string, meta: Record<string, unknown>) => void;
     declare _now: () => number;
     declare _windowMs: number;
@@ -107,8 +107,8 @@ class WatchdogBurstDetector {
             }
             if (this._entries.length < this._burst) return false;
 
-            const top = (key: any) => {
-                const counts = new Map();
+            const top = (key: "route" | "source") => {
+                const counts = new Map<string, number>();
                 for (const e of this._entries) counts.set(e[key], (counts.get(e[key]) ?? 0) + 1);
                 return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, TOP_N);
             };

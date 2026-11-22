@@ -41,7 +41,7 @@ function isReportedSend(res: { sent?: boolean; reason?: string; } | null | undef
 }
 
 /** Stop reasons whose stop sent its own email at the time (shutdown started / crash / forced exit). */
-const ANNOUNCED_STOP_REASONS = new Set([STOP_REASONS.SIGNAL, STOP_REASONS.CRASH, STOP_REASONS.FORCED_EXIT]);
+const ANNOUNCED_STOP_REASONS: ReadonlySet<string> = new Set([STOP_REASONS.SIGNAL, STOP_REASONS.CRASH, STOP_REASONS.FORCED_EXIT]);
 
 /**
  * True when the previous run's stop emailed AFTER the last "Server started" notice, so the
@@ -50,10 +50,10 @@ const ANNOUNCED_STOP_REASONS = new Set([STOP_REASONS.SIGNAL, STOP_REASONS.CRASH,
  * @param {number} lastStartNoticeAt - epoch ms
  * @returns {boolean}
  */
-function announcedStopSince(previous: Record<string, any> | null | undefined, lastStartNoticeAt: number): boolean {
-    if (!previous || !ANNOUNCED_STOP_REASONS.has(previous.stopReason)) return false;
+function announcedStopSince(previous: import("./ServerRunMarker").RunRecord | null | undefined, lastStartNoticeAt: number): boolean {
+    if (!previous || previous.stopReason === undefined || !ANNOUNCED_STOP_REASONS.has(previous.stopReason)) return false;
     const stopAt = Number.isFinite(previous.stoppingAt) ? previous.stoppingAt : previous.stoppedAt;
-    return Number.isFinite(stopAt) && stopAt >= lastStartNoticeAt;
+    return typeof stopAt === "number" && Number.isFinite(stopAt) && stopAt >= lastStartNoticeAt;
 }
 
 
@@ -90,18 +90,18 @@ class StartupNotifier {
      * @param {number} p.nowMs
      * @returns {Promise<{sent: boolean, reason?: string, event?: string}>}
      */
-    async announce({ verdict, previous, current, lastStartNoticeAt, nowMs }: { verdict: string; previous: Record<string, unknown> | null; current: { pid: number; version: string; bootedAtMs: number; }; lastStartNoticeAt: number | null; nowMs: number; }): Promise<{ sent: boolean; reason?: string; event?: string; uncleanReported?: boolean; reportedKeys?: string[]; leaderLostReported?: boolean; reportedLeaderLostKeys?: string[]; }> {
+    async announce({ verdict, previous, current, lastStartNoticeAt, nowMs }: { verdict: string; previous: import("./ServerRunMarker").RunRecord | null; current: { pid: number; version: string; bootedAtMs: number; }; lastStartNoticeAt: number | null; nowMs: number; }): Promise<{ sent: boolean; reason?: string; event?: string; uncleanReported?: boolean; reportedKeys?: string[]; leaderLostReported?: boolean; reportedLeaderLostKeys?: string[]; }> {
         // `uncleanReported`: every unclean restart known to this boot was emailed;
         // `reportedKeys`: the pendingKey of each one that was, so the caller clears
         // only those. Notifications switched off counts
         // as reported: nothing should be sent "late" when mail is re-enabled (L-c).
         let uncleanReported = true;
-        const reportedKeys: any[] = [];
+        const reportedKeys: string[] = [];
         // Same for cron-leader losses: `reportedLeaderLostKeys` are the ones now emailed.
         let leaderLostReported = true;
-        const reportedLeaderLostKeys: any[] = [];
+        const reportedLeaderLostKeys: string[] = [];
         const done = isReportedSend;
-        const tag = (res: any) => ({ ...res, uncleanReported, reportedKeys, leaderLostReported, reportedLeaderLostKeys });
+        const tag = <R extends object>(res: R) => ({ ...res, uncleanReported, reportedKeys, leaderLostReported, reportedLeaderLostKeys });
         try {
             // Unclean restarts from EARLIER boots whose email failed at the time
             // (always older than this boot's own verdict, so always sent first).
@@ -176,8 +176,8 @@ class StartupNotifier {
      * @param {number} ms
      * @returns {string}
      */
-    #fmt(ms: number): string {
-        if (!Number.isFinite(ms)) return "an unknown time";
+    #fmt(ms: number | null | undefined): string {
+        if (typeof ms !== "number" || !Number.isFinite(ms)) return "an unknown time";
         const off = this._tzOffsetMinutes();
         const d = new Date(ms + off * 60_000);
         const h24 = d.getUTCHours();
@@ -192,12 +192,12 @@ class StartupNotifier {
         );
     }
 
-    #uncleanPayload(previous: any, current: any, { late = false }: { late?: boolean } = {}): LifecyclePayload {
-        const p = previous ?? {};
+    #uncleanPayload(previous: Partial<import("./ServerRunMarker").RunRecord> | null, current: { pid: number; version: string; bootedAtMs: number }, { late = false }: { late?: boolean } = {}): LifecyclePayload {
+        const p: Partial<import("./ServerRunMarker").RunRecord> = previous ?? {};
         const lastAlive = p.lastHeartbeatAt;
         // A late report (email failed at the time) cannot know when that run came back;
         // a negative gap means the clock changed. Neither claims a downtime.
-        const downMs = !late && Number.isFinite(lastAlive) ? current.bootedAtMs - lastAlive : NaN;
+        const downMs = !late && typeof lastAlive === "number" && Number.isFinite(lastAlive) ? current.bootedAtMs - lastAlive : NaN;
         const down = !Number.isFinite(downMs) || downMs < 0
             ? "an unknown time"
             : downMs < 60_000
@@ -241,8 +241,8 @@ class StartupNotifier {
         };
     }
 
-    #leaderLostPayload(previous: any, current: any, { late = false }: { late?: boolean } = {}): LifecyclePayload {
-        const p = previous ?? {};
+    #leaderLostPayload(previous: Partial<import("./ServerRunMarker").RunRecord> | null, current: { pid: number; version: string; bootedAtMs: number }, { late = false }: { late?: boolean } = {}): LifecyclePayload {
+        const p: Partial<import("./ServerRunMarker").RunRecord> = previous ?? {};
         return {
             severity: "WARNING",
             headline: `Cron-leader worker restarted unexpectedly on ${os.hostname()}`,
@@ -267,8 +267,8 @@ class StartupNotifier {
         };
     }
 
-    #startedPayload(verdict: unknown, previous: any, current: any): LifecyclePayload {
-        const p = previous ?? {};
+    #startedPayload(verdict: unknown, previous: import("./ServerRunMarker").RunRecord | null, current: { pid: number; version: string; bootedAtMs: number }): LifecyclePayload {
+        const p: Partial<import("./ServerRunMarker").RunRecord> = previous ?? {};
         let desc;
         let severity: LifecyclePayload["severity"] = "NOTICE";
         if (verdict === VERDICTS.FIRST_BOOT) {
@@ -306,9 +306,9 @@ class StartupNotifier {
         };
     }
 
-    #warn(event: unknown, err: any) {
+    #warn(event: unknown, err: unknown) {
         try {
-            this._logger.warning(serverMessages.STARTUP_NOTIFY_FAILED(event, err?.message ?? String(err)), {
+            this._logger.warning(serverMessages.STARTUP_NOTIFY_FAILED(event, err instanceof Error ? err.message : String(err)), {
                 _noNotify: true,
             });
         } catch {

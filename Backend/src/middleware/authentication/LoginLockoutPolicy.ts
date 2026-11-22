@@ -32,6 +32,9 @@ const DEFAULT_LOCKOUT_MULTIPLIER = 2;
 const DEFAULT_MAX_LOCKOUT_CYCLES = 3;
 const DEFAULT_RETRY_DECREMENT = 1;
 
+/** One account's lockout counters (persisted per user). */
+type LockoutState = { cycles: number; currentMax: number; failCount: number; lockUntil: number | null };
+
 class LoginLockoutPolicy {
     declare retryDecrement: number;
     declare maxLockoutCycles: number;
@@ -86,7 +89,7 @@ class LoginLockoutPolicy {
      *
      * @returns {{cycles: number, currentMax: number, failCount: number, lockUntil: number|null}}
      */
-    initial(): { cycles: number; currentMax: number; failCount: number; lockUntil: number | null; } {
+    initial(): LockoutState {
         return {
             cycles: 0,
             currentMax: this.maxAttempts,
@@ -104,7 +107,7 @@ class LoginLockoutPolicy {
      * @param {number} now - epoch ms
      * @returns {{state: object, changed: boolean, locked: boolean, retryAfter?: number, hrReset?: boolean}}
      */
-    evaluate(state: Record<string, any>, now: number): { state: Record<string, unknown>; changed: boolean; locked: boolean; retryAfter?: number; hrReset?: boolean; } {
+    evaluate(state: LockoutState, now: number): { state: LockoutState; changed: boolean; locked: boolean; retryAfter?: number; hrReset?: boolean; } {
         if (state.lockUntil && now < state.lockUntil) {
             return {
                 state,
@@ -140,7 +143,7 @@ class LoginLockoutPolicy {
      * @param {number} now - epoch ms
      * @returns {{state: object, failCount: number, currentMax: number, cycles: number, engaged: boolean, ignored: boolean, lockDurationMs: number|null}}
      */
-    fail(state: Record<string, any>, now: number): { state: Record<string, unknown>; failCount: number; currentMax: number; cycles: number; engaged: boolean; ignored: boolean; lockDurationMs: number | null; } {
+    fail(state: LockoutState, now: number): { state: LockoutState; failCount: number; currentMax: number; cycles: number; engaged: boolean; ignored: boolean; lockDurationMs: number | null; } {
         if (state.lockUntil && now < state.lockUntil) {
             return {
                 state,
@@ -191,3 +194,4 @@ class LoginLockoutPolicy {
 }
 
 export { LoginLockoutPolicy };
+export type { LockoutState };

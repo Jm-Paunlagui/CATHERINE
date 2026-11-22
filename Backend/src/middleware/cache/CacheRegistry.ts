@@ -31,7 +31,7 @@ import { CacheStore } from "./CacheStore";
 import { logger } from "../../utils/logger";
 
 class CacheRegistry {
-  declare _stores: Map<any, any>;
+  declare _stores: Map<string, import("./CacheStore").CacheStore>;
   constructor() {
     /** @type {Map<string, CacheStore>} */
     this._stores = new Map();
@@ -132,7 +132,7 @@ class CacheRegistry {
    * Returns a stats snapshot for every registered store.
    * @returns {Object[]}
    */
-  statsAll(): Record<string, any>[] {
+  statsAll(): import("./CacheStore").CacheStoreStats[] {
     return [...this._stores.values()].map((s) => s.stats());
   }
 

@@ -31,8 +31,8 @@ import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
 const _db = createDb("appDb");
 
 /** Lazily-built OracleCollection cache (one per physical table). */
-const _collections = new Map();
-function _col(name: any) {
+const _collections = new Map<string, InstanceType<typeof OracleCollection>>();
+function _col(name: string) {
     let c = _collections.get(name);
     if (!c) {
         c = new OracleCollection(name, _db);
@@ -145,8 +145,8 @@ class IntegrityModel {
                         .limit(1000)
                         .toArray();
                     const opts = (rows ?? [])
-                        .filter((r: any) => r[def.column] != null)
-                        .map((r: any) => ({
+                        .filter((r) => r[def.column] != null)
+                        .map((r) => ({
                             value: String(r[def.column]),
                             label: r[labelCol] ? `#${r[def.column]} · ${r[labelCol]}` : `#${r[def.column]}`,
                         }));
@@ -161,7 +161,7 @@ class IntegrityModel {
                     { $sort: { [def.column]: 1 } },
                 ]);
                 const opts = (rows ?? [])
-                    .map((r: any) => r[def.column])
+                    .map((r) => r[def.column])
                     .filter((v: unknown) => v != null && v !== "")
                     .map((v: unknown) => ({ value: String(v), label: String(v) }));
                 return [fk, opts];

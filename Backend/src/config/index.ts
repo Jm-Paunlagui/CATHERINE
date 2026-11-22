@@ -17,7 +17,7 @@
 
 
 
-function _loadAdapter(engine: any) {
+function _loadAdapter(engine: string) {
   switch (engine.toLowerCase()) {
     case "oracle":
       return (require("./adapters/oracle") as typeof import("./adapters/oracle"));

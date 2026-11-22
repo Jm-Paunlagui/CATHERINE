@@ -72,15 +72,15 @@ function _todayManilaDateStr() {
 }
 
 // Lazy-loaded to avoid hard dependency at startup
-let _ExcelJS: any = null;
-let _archiverMod: any = null;
+let _ExcelJS: typeof import("exceljs") | null = null;
+let _archiverMod: typeof import("archiver") | null = null;
 
 const _getExcelJS = () => {
-    if (!_ExcelJS) _ExcelJS = require("exceljs");
+    if (!_ExcelJS) _ExcelJS = require("exceljs") as typeof import("exceljs");
     return _ExcelJS;
 };
 const _getArchiver = () => {
-    if (!_archiverMod) _archiverMod = require("archiver");
+    if (!_archiverMod) _archiverMod = require("archiver") as typeof import("archiver");
     return _archiverMod;
 };
 
@@ -151,7 +151,7 @@ class AuditLogService {
     static FINAL_FLUSH_TIMEOUT_MS = 2000;
 
     /** @type {object[]} */
-    static _pending: Record<string, unknown>[] = [];
+    static _pending: import("../models/audit.log.model").AuditRecord[] = [];
 
     /** @type {NodeJS.Timeout|null} */
     static _flushTimer: NodeJS.Timeout | null = null;
@@ -170,7 +170,7 @@ class AuditLogService {
      * @param {object} record - The audit log record to persist.
      * @returns {Promise<void>}
      */
-    static async insertAsync(record: Record<string, unknown>): Promise<void> {
+    static async insertAsync(record: import("../models/audit.log.model").AuditRecord): Promise<void> {
         AuditLogService._pending.push(record);
 
         if (
@@ -607,7 +607,7 @@ class AuditLogService {
         // timestamp ties so legacy second-precision lines never render as
         // Incoming → Complete → FUNC.
         const TS_RE = /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)\]/;
-        const _phaseRank = (line: any) => {
+        const _phaseRank = (line: string) => {
             if (line.includes("[Incoming Request]")) return 0;
             if (line.includes("[Request Complete]")) return 2;
             return 1; // [Handling Request] and [FUNC] lines
@@ -998,7 +998,7 @@ class AuditLogService {
         };
         sheet1.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
 
-        rows.forEach((row: any) => {
+        rows.forEach((row) => {
             // Real date cell in LOCAL time, not a UTC ISO string: the audit
             // trail is read against the operator's own clock, and a raw
             // `toISOString()` reported every event 8 hours early under
@@ -1012,7 +1012,11 @@ class AuditLogService {
                 RESPONSE_TIME_MS: row.RESPONSE_TIME_MS ?? 0,
                 CLIENT_IP: row.CLIENT_IP ?? "",
             });
-            setDateTimeCell(added.getCell("CREATED_AT"), row.CREATED_AT);
+            const createdAt = row.CREATED_AT;
+            setDateTimeCell(
+                added.getCell("CREATED_AT"),
+                createdAt instanceof Date || typeof createdAt === "string" || typeof createdAt === "number" ? createdAt : null,
+            );
         });
 
         // ── Sheet 2: Summary ──
@@ -1042,7 +1046,7 @@ class AuditLogService {
         ];
         summaryRows.forEach((r) => sheet2.addRow(r));
 
-        return workbook.xlsx.writeBuffer();
+        return Buffer.from(await workbook.xlsx.writeBuffer()); // exceljs declares its own Buffer type
     }
 
     /**
@@ -1093,23 +1097,23 @@ class AuditLogService {
         }
 
         // ── Phase detection helpers (mirrors frontend detectPhase) ──
-        const _detectPhase = (line: any) => {
+        const _detectPhase = (line: string) => {
             if (line.includes("[Incoming Request]")) return "Incoming";
             if (line.includes("[Request Complete]")) return "Complete";
             if (line.includes("[Handling Request]")) return "Handling";
             return "Function";
         };
-        const _extractTimestamp = (line: any) => {
+        const _extractTimestamp = (line: string) => {
             const m = line.match(
                 /\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?)\]/,
             );
             return m ? m[1] : "";
         };
-        const _extractMessage = (line: any) => {
+        const _extractMessage = (line: string) => {
             const idx = line.lastIndexOf("] - ");
             return idx !== -1 ? line.slice(idx + 4) : line;
         };
-        const _extractLocation = (line: any) => {
+        const _extractLocation = (line: string) => {
             const m = line.match(/\[([^\]]+\s@\s[^\]]+:\d+)\]/);
             return m ? m[1] : "";
         };
@@ -1167,7 +1171,7 @@ class AuditLogService {
             });
         }
 
-        return workbook.xlsx.writeBuffer();
+        return Buffer.from(await workbook.xlsx.writeBuffer()); // exceljs declares its own Buffer type
     }
 
     /**
@@ -1202,9 +1206,9 @@ class AuditLogService {
         const archiver = _getArchiver();
 
         return new Promise((resolve, reject) => {
-            const chunks: any[] = [];
+            const chunks: Buffer[] = [];
             const pass = new PassThrough();
-            pass.on("data", (chunk: unknown) => chunks.push(chunk));
+            pass.on("data", (chunk: Buffer) => chunks.push(chunk));
             pass.on("end", () => resolve(Buffer.concat(chunks)));
             pass.on("error", reject);
 

@@ -43,6 +43,20 @@ Each bug was reproduced against eMeal.API's own wrapper on the local Oracle 19c,
 
 ### Missing features
 
+**Built in CATHERINE (2026-11-22)** — the four that CATHERINE's own statements need; unit-tested
+(`test/server/unit/utils/oracleWrapperFeatures.test.js`) and verified on Oracle 19c in rolled-back transactions:
+
+| ID | API | CATHERINE statement migrated |
+|---|---|---|
+| G6 | `{ col: { $lt: { $now: { minus: { days: n } } } } }` (`plus`, days / hours / minutes / seconds; amounts bound via `NUMTODSINTERVAL`) | `serverAlertLog.purgeOlderThan` |
+| G10 | `new Transaction(db).withReadOnlyTransaction(fn)` (`SET TRANSACTION READ ONLY` first, always rolled back) | `DataPurgeModel.streamAllTables` |
+| G11 | `deleteMany(filter, { limit })` (`AND ROWNUM <= :del_limit`) | `AuthRefreshTokenModel.purgeExpired` |
+| G17 | `updateMany` / `deleteMany` `{ returning: [cols] }` → `result.returning`, one object per row (values as strings) | `AuthRefreshTokenModel.revokeUser` |
+
+**Deferred (YAGNI)** — G5, G7, G8, G9, G12, G13, G14, G15, G16 serve only eMeal statements, and eMeal is not
+adopting the wrapper yet. Build each when a caller needs it.
+
+
 | ID | Feature | Shape suggestion |
 |---|---|---|
 | G5 | Column-to-column comparison in a filter, and a column expression in `$set` | filter `{ DOWNLOAD_COUNT: { $lt: { $col: "MAX_DOWNLOADS" } } }`; update `{ $set: { A: { $expr: … } } }` covering `GREATEST(col - 1, 0)`, `NVL(a, b)`, `CASE` |

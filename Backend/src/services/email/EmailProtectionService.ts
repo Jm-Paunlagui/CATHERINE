@@ -137,8 +137,9 @@ function envInt(name: string, fallbackValue: number): number {
  * @param {*} err
  * @returns {string|null}
  */
-function extractSmtpErrorCode(err: any): string | null {
-    if (!err || typeof err !== "object") return null;
+function extractSmtpErrorCode(thrown: unknown): string | null {
+    if (!thrown || typeof thrown !== "object") return null;
+    const err = thrown as { responseCode?: unknown; code?: unknown }; // nodemailer SMTP error fields
     if (err.responseCode !== undefined && err.responseCode !== null) {
         return String(err.responseCode);
     }
@@ -233,6 +234,8 @@ class EmailProtectionService {
         });
 
         let primaryAttempts = 0;
+        // nodemailer's `to` (a string, an address object or a list), passed through as-is to
+        // the result and logs; `any` so its existing string | null consumers are unchanged.
         let primaryRecipient: any = null;
         let primaryCause = null;
         let primaryErrorCode = null;
@@ -336,7 +339,7 @@ class EmailProtectionService {
             };
         }
 
-        let fallbackRecipients: any[] = [];
+        let fallbackRecipients: string[] = [];
         let resolveError = null;
         try {
             fallbackRecipients = (await fallback.resolveRecipients()) ?? [];

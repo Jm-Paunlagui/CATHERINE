@@ -274,7 +274,7 @@ class DataPurgeController {
 
         // Derive aggregate disk usage from the index entries.
         const totalSizeBytes = archives.reduce(
-            (sum: unknown, a) => sum + (a.sizeBytes ?? 0),
+            (sum: number, a) => sum + (a.sizeBytes ?? 0),
             0,
         );
 

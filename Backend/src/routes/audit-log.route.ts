@@ -63,9 +63,11 @@ import { CacheMiddleware, CacheKeyBuilder, registry } from "../middleware/cache"
 // ── Cache store ───────────────────────────────────────────────────────────────
 const auditStore = registry.resolve("auditLog");
 
+type AuthUser = import("../types/express").AuthUser;
+
 // ── Access predicates (inline, consistent with original file style) ───────────
-const isAdminOrSuperAdmin = (user: any) => ["ADMIN", "SUPER_ADMIN"].includes(user.role);
-const isSuperAdmin        = (user: any) => user.role === "SUPER_ADMIN";
+const isAdminOrSuperAdmin = (user: AuthUser) => ["ADMIN", "SUPER_ADMIN"].includes(user.role);
+const isSuperAdmin        = (user: AuthUser) => user.role === "SUPER_ADMIN";
 
 // ── Static-segment routes must precede /:requestId/logs ──────────────────────
 // Express matches routes in declaration order. /stats, /export/excel, and

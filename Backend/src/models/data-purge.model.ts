@@ -143,7 +143,7 @@ class DataPurgeModel {
      * const counts = await DataPurgeModel.countRows(["T_AUDIT_LOGS_DEV", "T_SERVER_ALERT_ACK_DEV"]);
      */
     static async countRows(tables: string[], highWater: Record<string, string> = {}): Promise<Record<string, number>> {
-        const counts: Record<string, any> = {};
+        const counts: Record<string, number> = {};
         await Promise.all(
             (tables ?? []).map(async (table) => {
                 const entry = _requireEntry(table, "countRows");
@@ -332,17 +332,12 @@ class DataPurgeModel {
         try {
             // Long-hold multi-table read-only stream — routed to the appDbBulk
             // pool so it cannot starve interactive traffic on the appDb pool.
-            return await db.withConnection("appDbBulk", async (conn) => {
-                // MUST be the first statement issued on this connection —
-                // Oracle only accepts SET TRANSACTION as the first statement
-                // of a transaction (ORA-01453 otherwise). Every table read
-                // below therefore shares this one read-only transaction/SCN.
-                await conn.execute("SET TRANSACTION READ ONLY");
-
+            // One read-only transaction: every table below is read at the same SCN.
+            return await new Transaction(_bulkDb).withReadOnlyTransaction(async (session) => {
                 const perTable: Record<string, number> = {};
                 for (const entry of entries) {
                     perTable[entry.table] = await DataPurgeModel._streamRowsOnConnection(
-                        conn,
+                        session,
                         entry,
                         { pageSize, onBatch: (rows) => onBatch(entry.table, rows) },
                         "streamAllTables",
@@ -423,7 +418,7 @@ class DataPurgeModel {
      * @returns {Promise<number>} Total rows streamed for this table.
      * @private
      */
-    static async _streamRowsOnConnection(conn: import('oracledb').Connection, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
+    static async _streamRowsOnConnection(conn: Pick<import('../utils/oracle-mongo-wrapper/db').DbConnection, "execute">, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
         const outFormat = { outFormat: _db.oracledb.OUT_FORMAT_OBJECT };
         const pageSize = typeof opts.pageSize === "number" && Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
         const onBatch = typeof opts.onBatch === "function" ? opts.onBatch : () => {};
@@ -477,7 +472,7 @@ class DataPurgeModel {
         // on a Lob object serialises to "{}", silently losing the content.
         // fetchInfo forces the driver to return a plain JS string instead —
         // same sanctioned pattern as serverAlertLog.model.js.
-        const fetchInfo: Record<string, any> = {};
+        const fetchInfo: Record<string, { type: import("oracledb").DbType | number }> = {};
         for (const col of clobColumns) fetchInfo[col] = { type: _db.oracledb.STRING };
 
         const whereClause = whereColumns ? `WHERE ${whereColumns.map((c) => `"${c}" = :whereValue`).join(" OR ")}` : "";
@@ -574,7 +569,7 @@ class DataPurgeModel {
      */
     static async purgeTables(tableNames: string[], onStep: (table: string, deletedCount: number) => void = () => {}, highWater: Record<string, string> = {}): Promise<{ totalDeleted: number; perTable: Array<{ table: string; deletedCount: number; }>; }> {
         const orderedEntries = getDeleteOrder(tableNames);
-        const perTable: any[] = [];
+        const perTable: Array<{ table: string; deletedCount: number }> = [];
         let totalDeleted = 0;
 
         // Long-hold multi-table purge — routed through the appDbBulk pool so a
@@ -651,14 +646,14 @@ class DataPurgeModel {
      * );
      * // returning[i].ID -> the NEW identity value Oracle assigned to remappedRows[i]
      */
-    static async insertRestoreBatch(table: string, rows: Record<string, any>[], session: import('../utils/oracle-mongo-wrapper/Transaction').Session): Promise<{ insertedCount: number; returning: Array<Record<string, number | null>>; }> {
+    static async insertRestoreBatch(table: string, rows: Record<string, unknown>[], session: import('../utils/oracle-mongo-wrapper/Transaction').Session): Promise<{ insertedCount: number; returning: Array<Record<string, number | null>>; }> {
         const entry = _requireEntry(table, "insertRestoreBatch");
         if (!Array.isArray(rows) || rows.length === 0) {
             return { insertedCount: 0, returning: [] };
         }
 
         const outFormat = { outFormat: _db.oracledb.OUT_FORMAT_OBJECT };
-        const colResult = await session.execute(
+        const colResult = await session.execute<{ COLUMN_NAME: string; DATA_TYPE: string }>(
             `SELECT COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLUMNS WHERE TABLE_NAME = :tableName`,
             { tableName: entry.table },
             outFormat,
@@ -669,7 +664,7 @@ class DataPurgeModel {
                 `DataPurgeModel.insertRestoreBatch: USER_TAB_COLUMNS returned no columns for "${entry.table}" — verify the app database user (appDb/appDbBulk pools) has read access and the table name is correct.`,
             );
         }
-        const typeByCol = new Map(columnRows.map((r: any) => [r.COLUMN_NAME, r.DATA_TYPE]));
+        const typeByCol = new Map<string, string>(columnRows.map((r) => [r.COLUMN_NAME, r.DATA_TYPE]));
 
         const virtualSet = new Set(entry.virtualColumns);
         const identifierSet = new Set(entry.identifierColumns);
@@ -691,7 +686,7 @@ class DataPurgeModel {
                 const dataType = typeByCol.get(col);
                 if (dataType === "DATE" || (typeof dataType === "string" && dataType.startsWith("TIMESTAMP"))) {
                     // A canonical FF6 string ("2026-10-06T12:34:56.123456", no zone) parses as local time, like the driver binds it.
-                    out[col] = new Date(rawVal);
+                    out[col] = new Date(rawVal as string | number | Date); // the archive's canonical timestamp value
                 } else if (dataType === "NUMBER" && !identifierSet.has(col)) {
                     out[col] = typeof rawVal === "number" ? rawVal : Number(rawVal);
                 } else {

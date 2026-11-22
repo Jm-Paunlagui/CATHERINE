@@ -124,16 +124,17 @@ class IdempotencyMiddleware {
      * @returns {string}
      * @private
      */
-    static _canonicalise(value: any): string {
+    static _canonicalise(value: unknown): string {
         if (value === null || typeof value !== "object") {
             return JSON.stringify(value ?? null);
         }
         if (Array.isArray(value)) {
             return `[${value.map((v) => IdempotencyMiddleware._canonicalise(v)).join(",")}]`;
         }
-        const keys = Object.keys(value).sort();
+        const obj = value as Record<string, unknown>;
+        const keys = Object.keys(obj).sort();
         const parts = keys.map(
-            (k) => `${JSON.stringify(k)}:${IdempotencyMiddleware._canonicalise(value[k])}`,
+            (k) => `${JSON.stringify(k)}:${IdempotencyMiddleware._canonicalise(obj[k])}`,
         );
         return `{${parts.join(",")}}`;
     }

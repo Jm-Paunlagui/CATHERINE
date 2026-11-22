@@ -30,7 +30,7 @@ import { logger } from "../../utils/logger";
  * @param {RegExp[]} [override] - Explicit override (used in tests / custom instances)
  * @returns {RegExp[]}
  */
-function buildDynamicPatterns(override: RegExp[]): RegExp[] {
+function buildDynamicPatterns(override?: RegExp[]): RegExp[] {
   if (override !== undefined) return override;
 
   const isProduction = process.env.NODE_ENV === "production";
@@ -73,11 +73,23 @@ function buildDynamicPatterns(override: RegExp[]): RegExp[] {
   return safePatterns;
 }
 
+/** Constructor overrides; each falls back to the env / built-in default. */
+interface CorsOptionsOverride {
+  origins?: string[];
+  patterns?: RegExp[];
+  credentials?: boolean;
+  methods?: string[];
+  allowedHeaders?: string[];
+  exposedHeaders?: string[];
+  maxAge?: number;
+  optionsSuccessStatus?: number;
+}
+
 class CorsMiddleware {
   declare _cors: (req: cors.CorsRequest, res: { statusCode?: number | undefined; setHeader(key: string, value: string): unknown; end(): unknown; }, next: (err?: unknown) => unknown) => void;
   declare _dynamicPatterns: RegExp[];
-  declare _explicitOrigins: any;
-  constructor(options: Record<string, any> = {}) {
+  declare _explicitOrigins: string[];
+  constructor(options: CorsOptionsOverride = {}) {
     this._explicitOrigins =
       options.origins ??
       (process.env.CORS_ORIGINS

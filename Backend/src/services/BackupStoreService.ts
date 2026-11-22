@@ -129,11 +129,34 @@ const BACKUP_LEASE_NAME = ".backup-run.lease";
 const ARCHIVE_ID_PATTERN = /^[A-Za-z0-9_:-]+$/;
 
 
-/** One table's entry in a backup manifest. */
-type ManifestTableState = { state: "INCLUDED" | "UNCHANGED"; rows: number; sha256: string; sourceArchiveId?: string };
+/** One table in an archive: its data is in this archive, or unchanged since sourceArchiveId. */
+type BackupTableState =
+    | { state: "INCLUDED"; rows: number; sha256: string }
+    | { state: "UNCHANGED"; rows: number; sha256: string; sourceArchiveId: string };
+
+/**
+ * One archive in the on-disk index: its manifest.json fields plus where the file is.
+ * Manifest fields are read as unknown unless named here (BackupArchiveService writes them).
+ */
+type BackupManifest = Record<string, unknown> & {
+    archiveId: string;
+    createdAt: string;
+    mode?: "FULL" | "INCREMENTAL" | string;
+    trigger?: string;
+    /** Incremental chain position; absent / null on a FULL that starts no chain. */
+    chain?: { baseArchiveId: string | null; generation: number } | null;
+    /** Per-table state: INCLUDED (data in this archive) or UNCHANGED (taken from sourceArchiveId). */
+    tables?: Record<string, BackupTableState>;
+};
+/** An index entry: the manifest plus where the file is. */
+type BackupIndexEntry = BackupManifest & { filename: string; path: string; sizeBytes: number };
+
+/** What a finished backup run resolves to (runBackup's declared result). */
+type BackupRunResult = Awaited<ReturnType<typeof BackupStoreService.runBackup>>;
+
 class BackupStoreService {
     /** @type {Array<object>|null} */
-    static _indexCache: Array<Record<string, unknown>> | null = null;
+    static _indexCache: BackupIndexEntry[] | null = null;
     /** @type {number} */
     static _indexCacheAt: number = 0;
     declare static INDEX_CACHE_TTL_MS: number;
@@ -380,7 +403,7 @@ class BackupStoreService {
      * @param {boolean} [opts.force=false] - Bypass the TTL cache and re-read the directory now.
      * @returns {Promise<Array<object>>} Every field of each archive's manifest, plus `filename`/`path`/`sizeBytes`.
      */
-    static async _loadIndex({ force = false }: { force?: boolean; } = {}): Promise<Array<Record<string, any>>> {
+    static async _loadIndex({ force = false }: { force?: boolean; } = {}): Promise<BackupIndexEntry[]> {
         const now = Date.now();
         if (
             !force &&
@@ -393,7 +416,7 @@ class BackupStoreService {
         const startedAt = Date.now();
         const dir = await BackupStoreService._ensureDir();
 
-        let filenames: any[];
+        let filenames: string[];
         try {
             filenames = await fsPromises.readdir(dir);
         } catch (err) {
@@ -404,7 +427,7 @@ class BackupStoreService {
         // mid-write is structurally invisible here, no extra filtering needed.
         const zipFilenames = filenames.filter((f) => f.endsWith(".zip"));
 
-        const entries = [];
+        const entries: BackupIndexEntry[] = [];
         for (const filename of zipFilenames) {
             const filePath = path.join(dir, filename);
             try {
@@ -418,7 +441,7 @@ class BackupStoreService {
                 const manifestText = await manifestEntry.async("string");
                 const manifest = JSON.parse(manifestText);
                 entries.push({
-                    ...manifest,
+                    ...(manifest as BackupManifest), // manifest.json written by BackupArchiveService
                     filename,
                     path: filePath,
                     sizeBytes: stat.size,
@@ -473,7 +496,7 @@ class BackupStoreService {
      *
      * @returns {Promise<Array<object>>}
      */
-    static async listArchives(): Promise<Array<Record<string, any>>> {
+    static async listArchives(): Promise<BackupIndexEntry[]> {
         const BackupVoteModel: typeof import("../models/backup-vote.model").default = (require("../models/backup-vote.model") as typeof import("../models/backup-vote.model")).default;
 
         const index = await BackupStoreService._loadIndex();
@@ -509,7 +532,7 @@ class BackupStoreService {
      * @returns {Promise<object>}
      * @throws {AppError} 400 invalid id, 404 not found.
      */
-    static async getArchive(archiveIdRaw: string): Promise<Record<string, any>> {
+    static async getArchive(archiveIdRaw: string): Promise<BackupIndexEntry> {
         const archiveId = BackupStoreService._validateArchiveId(archiveIdRaw);
         const index = await BackupStoreService._loadIndex();
         const entry = index.find((e) => e.archiveId === archiveId);
@@ -609,7 +632,7 @@ class BackupStoreService {
      * @returns {Promise<boolean>}
      * @private
      */
-    static async _verifyArchiveFile(entry: Record<string, any>): Promise<boolean> {
+    static async _verifyArchiveFile(entry: BackupIndexEntry): Promise<boolean> {
         try {
             const buffer = await fsPromises.readFile(entry.path);
             return await BackupStoreService._verifyZipBuffer(buffer);
@@ -633,7 +656,7 @@ class BackupStoreService {
      * @returns {object|null}
      * @private
      */
-    static _chainHead(index: Array<Record<string, any>>): Record<string, any> | null {
+    static _chainHead(index: BackupIndexEntry[]): BackupIndexEntry | null {
         const candidates = index.filter(
             (e) => e.trigger !== "PURGE" && e.chain,
         );
@@ -667,7 +690,7 @@ class BackupStoreService {
      *   forcedFullReason: string|null,
      * }>}
      */
-    static async _decideChain({ trigger, index }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; index: Array<Record<string, unknown>>; }): Promise<{
+    static async _decideChain({ trigger, index }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; index: BackupIndexEntry[]; }): Promise<{
         mode: "FULL" | "INCREMENTAL";
         chain: { baseArchiveId: string; generation: number; } | null;
         previousTableState: Record<string, { sha256: string; sourceArchiveId: string; }>;
@@ -709,7 +732,7 @@ class BackupStoreService {
         // present and signature-valid — its own file (INCLUDED tables live
         // there) plus every distinct sourceArchiveId an UNCHANGED table names.
         const referencedIds = new Set([head.archiveId]);
-        for (const state of Object.values((head.tables ?? {}) as Record<string, ManifestTableState>)) {
+        for (const state of Object.values(head.tables ?? {})) {
             if (state.state === "UNCHANGED" && state.sourceArchiveId)
                 referencedIds.add(state.sourceArchiveId);
         }
@@ -736,8 +759,8 @@ class BackupStoreService {
             }
         }
 
-        const previousTableState: Record<string, any> = {};
-        for (const [table, state] of Object.entries((head.tables ?? {}) as Record<string, ManifestTableState>)) {
+        const previousTableState: Record<string, { sha256: string; sourceArchiveId: string }> = {};
+        for (const [table, state] of Object.entries(head.tables ?? {})) {
             previousTableState[table] = {
                 sha256: state.sha256,
                 sourceArchiveId:
@@ -750,7 +773,8 @@ class BackupStoreService {
         return {
             mode: "INCREMENTAL",
             chain: {
-                baseArchiveId: head.chain.baseArchiveId,
+                // A scheduled-chain head always carries chain with a base id (BackupArchiveService sets it).
+                baseArchiveId: head.chain!.baseArchiveId!,
                 generation: nextGeneration,
             },
             previousTableState,
@@ -812,7 +836,7 @@ class BackupStoreService {
      * @returns {Promise<any>}
      * @private
      */
-    static _withRunBackupLock(fn: () => Promise<unknown>): Promise<any> {
+    static _withRunBackupLock<T>(fn: () => Promise<T>): Promise<T> {
         const waiterScope = currentScope();
         const queued = BackupStoreService._runLockDepth > 0;
         BackupStoreService._runLockDepth += 1;
@@ -852,7 +876,7 @@ class BackupStoreService {
      * Scope whose progress a queued caller follows: the holder's caller scope
      * while it takes the lease, then the guarded backup scope. @type {object|null} @private
      */
-    static _runHolderScope: Record<string, any> | null = null;
+    static _runHolderScope: import("../utils/progress/ProgressScope").ProgressScope | null = null;
 
     // ─── Orchestration — build ONE archive right now and store it ─────────────
 
@@ -878,7 +902,7 @@ class BackupStoreService {
      * @param {Date} [params.at] - Defaults to `new Date()`. Override in tests for determinism — `archiveId`/filename are second-granularity, so two real calls within the same wall-clock second would otherwise collide.
      * @returns {Promise<{
      *   archiveId: string, filename: string, path: string, sizeBytes: number,
-     *   mode: "FULL"|"INCREMENTAL", chain: {baseArchiveId:string,generation:number}|null,
+     *   mode: "FULL"|"INCREMENTAL", chain: {baseArchiveId:string|null,generation:number}|null,
      *   totalRows: number, tableCount: number, includedCount: number, unchangedCount: number,
      *   forcedFullReason: string|null,
      * }>}
@@ -905,7 +929,7 @@ class BackupStoreService {
         at = new Date(),
     }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; event?: string | null; eventId?: number | string | null; tables: string[]; requestId?: string | null; createdBy?: number | string | null; at?: Date; }): Promise<{
         archiveId: string; filename: string; path: string; sizeBytes: number;
-        mode: "FULL" | "INCREMENTAL"; chain: { baseArchiveId: string; generation: number; } | null;
+        mode: "FULL" | "INCREMENTAL"; chain: { baseArchiveId: string | null; generation: number; } | null;
         totalRows: number; tableCount: number; includedCount: number; unchangedCount: number;
         forcedFullReason: string | null;
     }> {
@@ -981,7 +1005,7 @@ class BackupStoreService {
             return stall.error;
         };
         /** Shared with `_runBackupLocked`: its publish promise survives the cut. */
-        const state = { publishing: null };
+        const state: { publishing: Promise<BackupRunResult> | null } = { publishing: null };
 
         return BackupStoreService._withRunBackupLock(async () => {
             const dir = await BackupStoreService._ensureDir();
@@ -1059,14 +1083,14 @@ class BackupStoreService {
      * @throws {Error} `err` when nothing (usable) was published.
      * @private
      */
-    static async _resolveCut({ err, stall, state, archiveId, trigger, filePath }: { err: Error; stall: { idleMs: number; lastSource: string; }; state: { publishing: Promise<Record<string, unknown>> | null; }; archiveId: string; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; filePath: string; }): Promise<Record<string, any>> {
-        let result = null;
+    static async _resolveCut({ err, stall, state, archiveId, trigger, filePath }: { err: Error; stall: { idleMs: number; lastSource: string; }; state: { publishing: Promise<BackupRunResult> | null; }; archiveId: string; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; filePath: string; }): Promise<BackupRunResult> {
+        let result: BackupRunResult | null = null;
         if (state.publishing) {
-            let timer;
+            let timer: ReturnType<typeof setTimeout> | undefined;
             try {
                 result = await Promise.race([
                     state.publishing.catch(() => null),
-                    new Promise((resolve) => {
+                    new Promise<null>((resolve) => {
                         timer = setTimeout(() => resolve(null), BackupStoreService.CUT_SETTLE_MS);
                         timer.unref?.();
                     }),
@@ -1118,7 +1142,11 @@ class BackupStoreService {
         archiveId,
         signal,
         state = { publishing: null },
-    }: Record<string, any>): Promise<Record<string, unknown>> {
+    }: Parameters<typeof BackupStoreService.runBackup>[0] & {
+        archiveId: string;
+        signal?: AbortSignal;
+        state?: { publishing: Promise<BackupRunResult> | null };
+    }): Promise<BackupRunResult> {
         await BackupStoreService._sweepStaleParts();
         const index = await BackupStoreService._loadIndex({ force: true });
         const decision = await BackupStoreService._decideChain({
@@ -1273,10 +1301,11 @@ class BackupStoreService {
             DEFAULT_XLSX_ROW_CAP;
         const tableNames = Object.keys(entry.tables ?? {});
         const dataBuffers: Record<string, unknown> = {};
-        const rowsByTableForXlsx: Record<string, any> = {};
+        const rowsByTableForXlsx: Record<string, Record<string, unknown>[]> = {};
 
+        const tables = entry.tables ?? {};
         for (const table of tableNames) {
-            const state = entry.tables[table];
+            const state = tables[table];
             const ownerArchiveId =
                 state.state === "INCLUDED"
                     ? entry.archiveId
@@ -1372,7 +1401,7 @@ class BackupStoreService {
         }
 
         const tableRowCounts = Object.fromEntries(
-            tableNames.map((t) => [t, entry.tables[t].rows]),
+            tableNames.map((t) => [t, tables[t].rows]),
         );
 
         const manifest = {
@@ -1388,8 +1417,8 @@ class BackupStoreService {
                     t,
                     {
                         state: "INCLUDED",
-                        rows: entry.tables[t].rows,
-                        sha256: entry.tables[t].sha256,
+                        rows: tables[t].rows,
+                        sha256: tables[t].sha256,
                     },
                 ]),
             ),
@@ -1549,7 +1578,7 @@ class BackupStoreService {
      */
     static async _zipFiles(files: Record<string, Buffer>): Promise<Buffer> {
         return new Promise((resolve, reject) => {
-            const chunks: any[] = [];
+            const chunks: Buffer[] = [];
             const pass = new PassThrough();
             pass.on("data", (chunk) => chunks.push(chunk));
             pass.on("end", () => resolve(Buffer.concat(chunks)));
@@ -1600,7 +1629,7 @@ class BackupStoreService {
         const dependents = index
             .filter((e) => e.archiveId !== archiveId)
             .filter((e) =>
-                Object.values((e.tables ?? {}) as Record<string, ManifestTableState>).some(
+                Object.values(e.tables ?? {}).some(
                     (s) =>
                         s.state === "UNCHANGED" &&
                         s.sourceArchiveId === archiveId,
@@ -1671,7 +1700,7 @@ class BackupStoreService {
         const chainHealth: { valid: boolean; missing: string[]; invalid: string[] } = { valid: true, missing: [], invalid: [] };
         if (entry.tables) {
             const referencedIds = new Set<string>();
-            for (const state of Object.values(entry.tables as Record<string, ManifestTableState>)) {
+            for (const state of Object.values(entry.tables ?? {})) {
                 if (state.state === "UNCHANGED" && state.sourceArchiveId) {
                     referencedIds.add(state.sourceArchiveId);
                 }
@@ -1734,5 +1763,6 @@ export default __default;
 // at a temp directory without mutating process.env for the whole suite.
 __default.DEFAULT_BACKUP_DIR = DEFAULT_BACKUP_DIR;
 export { DEFAULT_BACKUP_DIR };
+export type { BackupIndexEntry, BackupManifest, BackupTableState };
 __default.INDEX_CACHE_TTL_MS = INDEX_CACHE_TTL_MS;
 export { INDEX_CACHE_TTL_MS };

@@ -303,16 +303,16 @@ class AdminAccessEmailService {
     }
 
     /** @private */
-    static _buildHtml(vars: any) {
+    static _buildHtml(vars: ReturnType<typeof AdminAccessEmailService._buildVars>) {
         const template = fs.readFileSync(TEMPLATE_PATH, "utf8");
         return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
             if (!Object.prototype.hasOwnProperty.call(vars, key)) return match;
-            return _escapeHtml(vars[key]);
+            return _escapeHtml(vars[key as keyof typeof vars]); // own key, checked just above
         });
     }
 
     /** @private */
-    static _buildPlainText(vars: any) {
+    static _buildPlainText(vars: ReturnType<typeof AdminAccessEmailService._buildVars>) {
         const lines = [
             vars.headline,
             "",

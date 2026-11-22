@@ -1,5 +1,6 @@
-// vitest.config.js
-// CJS project — Vitest natively supports both CJS (require) and ESM test files.
+// vitest.config.mts
+// .mts: the package is CommonJS, so an ESM config needs the module extension.
+// Vitest runs both CJS (require) and ESM test files; the tests stay .js.
 // globals: true → describe/it/expect/vi/beforeAll/afterAll/beforeEach/afterEach
 // are injected globally; no import needed in .test.js files.
 // pool: "forks" → each test file runs in its own Node child process (required for
@@ -7,9 +8,9 @@
 // fileParallelism: false → test files run sequentially; the suite exercises
 // shared in-memory middleware state that is not safe to run concurrently.
 
-const { defineConfig } = require("vitest/config");
+import { defineConfig } from "vitest/config";
 
-module.exports = defineConfig({
+export default defineConfig({
     test: {
         globals: true,
         environment: "node",

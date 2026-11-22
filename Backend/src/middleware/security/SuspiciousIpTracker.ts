@@ -135,7 +135,7 @@ class SuspiciousIpTracker {
      * @returns {{ip: string, blockedUntil: number}[]} active blocks
      */
     blocksSnapshot(now: number = Date.now(), limit: number = Infinity): { ip: string; blockedUntil: number; }[] {
-        const out: any[] = [];
+        const out: { ip: string; blockedUntil: number; }[] = [];
         if (limit <= 0) return out;
         for (const [ip, r] of this.records) {
             if (r.blockedUntil > now) {

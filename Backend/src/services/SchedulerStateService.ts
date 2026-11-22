@@ -148,4 +148,5 @@ class SchedulerStateService {
     }
 }
 
+export type { SchedulerOutcome };
 export default SchedulerStateService;

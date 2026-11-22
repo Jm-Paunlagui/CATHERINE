@@ -272,7 +272,8 @@ class BackupScheduleService {
         const index = await BackupStoreService.listArchives();
 
         /** @type {Map<string, object[]>} */
-        const chains: Map<string, Record<string, any>[]> = new Map();
+        // A chain whose base was lost has baseArchiveId null; those members group under null.
+        const chains: Map<string | null, import("./BackupStoreService").BackupIndexEntry[]> = new Map();
         for (const entry of index) {
             if (entry.trigger === "PURGE" || !entry.chain) continue;
             const key = entry.chain.baseArchiveId;

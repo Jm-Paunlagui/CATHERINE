@@ -238,15 +238,15 @@ class BackupEmailService {
      * @private
      */
     static async _resolveRecipientEmails(adminId: number | string): Promise<string[]> {
-        let admins: any[] = [];
+        let admins: Awaited<ReturnType<typeof AdminModel.findAll>> = [];
         try {
             admins = await AdminModel.findAll();
         } catch (err) {
             logger.warning(backupEmailMessages.RECIPIENT_LOOKUP_FAILED(err));
         }
 
-        const seen = new Set();
-        const emails = [];
+        const seen = new Set<string>();
+        const emails: string[] = [];
         for (const admin of admins) {
             const isActor = String(admin.ID) === String(adminId);
             const isActiveSuperAdmin =
@@ -332,7 +332,7 @@ class BackupEmailService {
         scopeLabel,
         tableCount,
         rowCount,
-    }: Record<string, any>): string {
+    }: { adminId: number | string; requestId: string | null; scopeLabel: string; tableCount: number; rowCount: number }): string {
         const template = fs.readFileSync(TEMPLATE_PATH, "utf8");
         const firedAt = BackupEmailService._formatLocalTime();
 

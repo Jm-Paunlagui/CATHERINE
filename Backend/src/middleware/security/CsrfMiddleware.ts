@@ -16,21 +16,21 @@ const TOKEN_TTL_MS = 5 * 60 * 1000;
 const TOKEN_SIZE = 64;
 
 class CsrfMiddleware {
-  declare handle: any;
-    declare statusHandler: (req: any, res: any) => void;
-    declare refreshHandler: (req: any, res: any) => unknown;
-    declare tokenHandler: (req: any, res: any) => void;
+  declare handle: (req: Request, res: Response, next: NextFunction) => unknown;
+    declare statusHandler: (req: Request, res: Response) => void;
+    declare refreshHandler: (req: Request, res: Response) => unknown;
+    declare tokenHandler: (req: Request, res: Response) => void;
     declare _doubleCsrfProtection: import("csrf-csrf").DoubleCsrfProtection;
     declare _generateCsrfToken: import("csrf-csrf").CsrfTokenGenerator;
-    declare _secret: any;
-    declare _isSecure: any;
-  constructor(options: Record<string, unknown> = {}) {
+    declare _secret: string;
+    declare _isSecure: boolean;
+  constructor(options: { forceSecure?: boolean; secret?: string } = {}) {
     this._isSecure =
       options.forceSecure ??
       (process.env.NODE_ENV === "production" &&
         process.env.USE_HTTPS === "true");
 
-    this._secret = options.secret ?? process.env.CSRF_SECRET;
+    this._secret = options.secret ?? process.env.CSRF_SECRET ?? ""; // "" fails the check below
 
     // Fail-fast in ALL environments — a missing secret is a configuration error
     // regardless of NODE_ENV.  A dev fallback string is intentionally rejected
@@ -80,7 +80,7 @@ class CsrfMiddleware {
     return this._doubleCsrfProtection;
   }
 
-  _buildTokenResponse(res: any, token: unknown) {
+  _buildTokenResponse(res: Response, token: string) {
     const expiresAt = new Date(Date.now() + TOKEN_TTL_MS).toISOString();
     res.json({
       success: true,
@@ -92,13 +92,13 @@ class CsrfMiddleware {
     });
   }
 
-  _sendError(res: any, statusCode: unknown, message: unknown, error: any) {
+  _sendError(res: Response, statusCode: number, message: string, error: unknown) {
     res.status(statusCode).json({
       success: false,
       message,
       error:
         process.env.NODE_ENV === "development"
-          ? (error?.message ?? String(error))
+          ? (typeof error === "object" && error !== null && "message" in error ? String(error.message) : String(error))
           : undefined,
     });
   }

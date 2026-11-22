@@ -61,7 +61,7 @@ const SSE_MAX_POLL_ERRORS = 5;
 const _auditConnections: Map<string, { res: import('express').Response; lastCreatedAtMs: number | undefined; pollCount: number; connectedAt: string; }> = new Map();
 
 /** setInterval reference for the shared poller. null when idle. */
-let _auditPollInterval: any = null;
+let _auditPollInterval: ReturnType<typeof setInterval> | null = null;
 
 /** Consecutive Oracle failures on the shared poller since it last started. */
 let _consecutivePollErrors = 0;
@@ -220,7 +220,7 @@ const _auditSharedPollTick = async (): Promise<void> => {
                 _safeSend(conn.res, 'error', { message: 'Stream polling failed repeatedly. Please refresh your page.', code: 'POLL_FAILED' });
             }
             _auditConnections.clear();
-            clearInterval(_auditPollInterval);
+            clearInterval(_auditPollInterval ?? undefined);
             _auditPollInterval = null;
         }
     }

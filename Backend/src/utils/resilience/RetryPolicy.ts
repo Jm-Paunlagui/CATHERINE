@@ -168,13 +168,14 @@ const CLASSIFICATION_ATTEMPT_CAPS = Object.freeze({
  * @param {*} err
  * @returns {Array<object>}
  */
-function errorChain(err: any): Array<Record<string, any>> {
-    const chain = [];
-    let current = err;
+function errorChain(err: unknown): Array<Record<string, unknown>> {
+    const chain: Array<Record<string, unknown>> = [];
+    let current: unknown = err;
     let guard = 0;
     while (current && typeof current === "object" && guard < 5) {
-        chain.push(current);
-        current = current.originalError;
+        const link = current as Record<string, unknown>; // a non-null object (loop condition)
+        chain.push(link);
+        current = link.originalError;
         guard += 1;
     }
     return chain;
@@ -188,7 +189,7 @@ function errorChain(err: any): Array<Record<string, any>> {
  * @param {*} err
  * @returns {number|null}
  */
-function extractOraCode(err: any): number | null {
+function extractOraCode(err: Record<string, unknown>): number | null {
     if (typeof err.errorNum === "number") return err.errorNum;
     if (typeof err.message === "string") {
         const match = err.message.match(/ORA-0*(\d+)/i);
@@ -266,7 +267,7 @@ class RetryPolicy {
      *   its classification is exhausted.
      */
     async execute<T>(fn: (attempt: number) => Promise<T>, hooks: { onRetry?: (err: unknown, attempt: number) => Promise<{
-        key: any; resolved: T; 
+        key?: unknown; resolved: T; 
 } | void>; } = {}): Promise<T> {
         let attempt = 0;
          
@@ -441,9 +442,10 @@ class RetryPolicy {
             if (typeof e.code === "string" && TRANSIENT_DB_SYSTEM_CODES.has(e.code)) {
                 return CLASSIFICATIONS.TRANSIENT_DB;
             }
+            const message = e.message;
             if (
-                typeof e.message === "string" &&
-                TRANSIENT_DB_STRING_PATTERNS.some((re) => re.test(e.message))
+                typeof message === "string" &&
+                TRANSIENT_DB_STRING_PATTERNS.some((re) => re.test(message))
             ) {
                 return CLASSIFICATIONS.TRANSIENT_DB;
             }

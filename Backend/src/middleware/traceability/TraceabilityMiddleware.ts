@@ -40,12 +40,12 @@ const SENSITIVE_PATTERNS = [
     "dob",
 ];
 
-function isSensitiveKey(key: any) {
+function isSensitiveKey(key: string) {
     const norm = key.toLowerCase().replace(/[-_\s]/g, "");
     return SENSITIVE_PATTERNS.some((p) => norm.includes(p));
 }
 
-function redactValue(key: unknown, value: unknown) {
+function redactValue(key: string, value: unknown) {
     return isSensitiveKey(key) ? "[REDACTED]" : value;
 }
 
@@ -82,7 +82,7 @@ function redactValue(key: unknown, value: unknown) {
  * @returns {*} A redacted copy. Primitives are returned unchanged.
  * @throws {TypeError} On a circular reference.
  */
-function deepRedact(value: unknown, depth: number = 0, seen: WeakSet<Record<string, any>> = new WeakSet()): unknown {
+function deepRedact(value: unknown, depth: number = 0, seen: WeakSet<object> = new WeakSet()): unknown {
     // Depth cap: a malicious or accidental deeply-nested payload must not turn
     // a log line into a stack overflow. 8 is far past any real request shape.
     if (depth > 8) return "[MAX_DEPTH]";
@@ -114,8 +114,8 @@ function deepRedact(value: unknown, depth: number = 0, seen: WeakSet<Record<stri
 }
 
 class TraceabilityMiddleware {
-    declare _excludedUrls: any;
-    constructor(options: Record<string, unknown> = {}) {
+    declare _excludedUrls: string[];
+    constructor(options: { excludedUrls?: string[] } = {}) {
         this._excludedUrls = options.excludedUrls ?? [
             ...(process.env.LOG_EXCLUDE_HEALTH === "true" ? ["/health"] : []),
             ...(process.env.LOG_EXCLUDE_URLS
@@ -135,7 +135,7 @@ class TraceabilityMiddleware {
     _shouldLog(req: import('express').Request): boolean {
         if (req.method === "OPTIONS") return false;
         const url = req.originalUrl || req.url;
-        return !this._excludedUrls.some((u: any) => url.includes(u.trim()));
+        return !this._excludedUrls.some((u) => url.includes(u.trim()));
     }
 
     /**
@@ -195,7 +195,7 @@ class TraceabilityMiddleware {
         const startTime = Date.now();
         const url = req.originalUrl || req.url;
         const isOptions = req.method === "OPTIONS";
-        const shouldLog = !this._excludedUrls.some((u: any) =>
+        const shouldLog = !this._excludedUrls.some((u) =>
             url.includes(u.trim()),
         );
 
@@ -269,7 +269,7 @@ class TraceabilityMiddleware {
         );
     }
 
-    static createRequestMessage(req: any) {
+    static createRequestMessage(req: import("express").Request) {
         const url = req.originalUrl || req.url;
         let message = `[${req.method} @ ${url}]`;
 

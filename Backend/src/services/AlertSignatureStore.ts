@@ -32,7 +32,7 @@ const STATE_CHANNEL = "server-critical-notification";
 class AlertSignatureStore {
     declare _messages: { readFailed: ((...args: unknown[]) => unknown); writeFailed: ((...args: unknown[]) => unknown); };
     declare _logger: { warning: ((...args: unknown[]) => unknown); };
-    declare _model: { findLatestByAlertKey: ((...args: unknown[]) => any); insertOne: ((...args: unknown[]) => unknown); };
+    declare _model: Pick<typeof ServerAlertLogModel, "findLatestByAlertKey" | "insertOne">;
     declare _rule: string;
     /**
      * @param {object} deps
@@ -42,7 +42,7 @@ class AlertSignatureStore {
      * @param {{readFailed: Function, writeFailed: Function}} deps.messages -
      *   (scopeKey, cause, label) => string, from the module's constants/messages file.
      */
-    constructor({ rule, model = ServerAlertLogModel, logger, messages }: { rule: string; model?: { findLatestByAlertKey: ((...args: any[]) => unknown); insertOne: ((...args: any[]) => unknown); }; logger: { warning: ((...args: unknown[]) => unknown); }; messages: { readFailed: ((...args: unknown[]) => unknown); writeFailed: ((...args: unknown[]) => unknown); }; }) {
+    constructor({ rule, model = ServerAlertLogModel, logger, messages }: { rule: string; model?: Pick<typeof ServerAlertLogModel, "findLatestByAlertKey" | "insertOne">; logger: { warning: ((...args: unknown[]) => unknown); }; messages: { readFailed: ((...args: unknown[]) => unknown); writeFailed: ((...args: unknown[]) => unknown); }; }) {
         this._rule = rule;
         this._model = model;
         this._logger = logger;
@@ -108,7 +108,7 @@ class AlertSignatureStore {
     }
 
     /** @private */
-    async _insert(scopeKey: any, label: unknown, row: any) {
+    async _insert(scopeKey: string, label: unknown, row: Omit<Parameters<typeof ServerAlertLogModel.insertOne>[0], "alertKey" | "rule" | "channel" | "notificationId" | "emailStatus" | "emailError">) {
         try {
             await this._model.insertOne({
                 alertKey: this.alertKey(scopeKey),
@@ -127,9 +127,9 @@ class AlertSignatureStore {
     }
 
     /** @private */
-    _warn(template: any, scopeKey: unknown, err: any, label: unknown) {
+    _warn(template: (...args: unknown[]) => unknown, scopeKey: unknown, err: unknown, label: unknown) {
         try {
-            this._logger.warning(template(scopeKey, err?.message ?? String(err), label));
+            this._logger.warning(template(scopeKey, err !== null && typeof err === "object" && "message" in err ? String(err.message) : String(err), label));
         } catch {
             /* logging must never break the sweep */
         }

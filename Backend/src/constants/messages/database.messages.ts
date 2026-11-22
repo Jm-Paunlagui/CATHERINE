@@ -19,7 +19,7 @@ const databaseMessages = {
     `Transaction rolled back on "${name}": ${reason}`,
   DB_TZ_OFFSET_INVALID: (raw: unknown, fallback: unknown) =>
     `DB_TIMEZONE_OFFSET_MINUTES="${raw}" is not a whole number of minutes between -720 and 840 — using ${fallback}.`,
-  DB_CLOCK_OFFSET_MISMATCH: (dbMin: any, configuredMin: any, appMin: any) =>
+  DB_CLOCK_OFFSET_MISMATCH: (dbMin: number, configuredMin: number, appMin: number) =>
     `Oracle server clock is UTC${fmtOffset(dbMin)} but DB_TIMEZONE_OFFSET_MINUTES says UTC${fmtOffset(configuredMin)} ` +
     `(app process UTC${fmtOffset(appMin)}). Columns stamped by the database (DEFAULT SYSTIMESTAMP, e.g. Alert History "Created") ` +
     `will show the wrong time. Set the database server's time zone to match, or correct DB_TIMEZONE_OFFSET_MINUTES.`,

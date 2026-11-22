@@ -987,10 +987,7 @@ function _bindScope(conn: InstrumentedConnection, scope: import("../../utils/pro
  *   health gate and attempt the acquire regardless of pool health. Reserved for
  *   the readiness probe, whose entire job is to report pool health directly.
  */
-// The callback's `conn` stays untyped on purpose: typing it as oracledb.Connection makes every
-// `result.rows` in the models `unknown[]`. Tracked as "type the connection boundary" in
-// plans/ts-conversion-open-items.md.
-async function withConnection<T>(connectionName: string, callback: (conn: any) => T | Promise<T>, opts: { bypassBreaker?: boolean; } = {}): Promise<T> {
+async function withConnection<T>(connectionName: string, callback: (conn: import("../../utils/oracle-mongo-wrapper/db").DbConnection) => T | Promise<T>, opts: { bypassBreaker?: boolean; } = {}): Promise<T> {
     if (typeof callback !== "function")
         throw new TypeError("withConnection: callback must be a function.");
 
@@ -1081,7 +1078,7 @@ async function withConnection<T>(connectionName: string, callback: (conn: any) =
  * @param {string}   connectionName
  * @param {Function} callback  async (conn) => result
  */
-async function withTransaction<T>(connectionName: string, callback: (conn: any) => T | Promise<T>): Promise<T> {
+async function withTransaction<T>(connectionName: string, callback: (conn: import("../../utils/oracle-mongo-wrapper/db").DbConnection) => T | Promise<T>): Promise<T> {
     return withConnection(connectionName, async (conn) => {
         try {
             const result = await callback(conn);

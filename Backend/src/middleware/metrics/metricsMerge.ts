@@ -24,6 +24,7 @@
  * @author senior-nodejs-engineer
  */
 
+import type { MetricsSnapshot, RouteRedSnapshot, OraclePoolSnapshot, SystemSnapshot, SmtpDependencySnapshot, NotificationDelivery, HeapTrend } from "./MetricsStore";
 import { computeRates } from "./MetricsStore";
 
 /** Probabilities at which each worker's sorted durations are sampled. */
@@ -38,6 +39,10 @@ const BISECT_STEPS = 60;
 
 /** A plain object received over IPC: every field is unknown until read through num() / isObj(). */
 type Obj = Record<string, unknown>;
+/** The merged whole-service report: one worker's snapshot shape plus who answered. */
+type ClusterMetricsSnapshot = MetricsSnapshot & {
+    cluster: { workers: number; responded: number; missing: Array<number | string>; degraded?: boolean };
+};
 /** A worker's quantile sketch (see buildQuantileSketch). */
 type Sketch = { n: number; q: number[] };
 /** A worker part as sent over IPC, once isUsablePart has checked its shape. */
@@ -173,7 +178,7 @@ function mergeRed(snaps: Snapshot[], extrasList: Obj[]) {
             });
         }
     });
-    const out = new Map<string, unknown>();
+    const out = new Map<string, RouteRedSnapshot>();
     for (const [route, entries] of routes) {
         const rows = entries.map((e) => e.r);
         const sketches = entries.map((e) => e.sketch).filter(isSketch);
@@ -277,12 +282,23 @@ function mergeTotals(snaps: Snapshot[], extrasList: Obj[]) {
 
 /** Merges the system block and builds the per-worker list. */
 /** A shallow copy of an object field; anything else is passed through as-is. */
-const copyIfObj = (v: unknown): unknown => (isObj(v) ? { ...v } : v);
+/** A worker's heap trend, read field by field (absent fields read as 0 / false). */
+const heapTrendOf = (v: unknown): HeapTrend => {
+    const t = obj(v);
+    return {
+        sampleCount: num(t.sampleCount),
+        windowMs: num(t.windowMs),
+        growthBytesPerMin: num(t.growthBytesPerMin),
+        firstHeapUsed: num(t.firstHeapUsed),
+        lastHeapUsed: num(t.lastHeapUsed),
+        suspected: t.suspected === true,
+    };
+};
 
 /** Per-pool accumulator while merging dependencies.oracle. */
 type PoolAcc = { rows: Obj[]; sketches: Sketch[]; totalMs: number; haveTotalMs: boolean };
 
-function mergeSystem(parts: UsablePart[]) {
+function mergeSystem(parts: UsablePart[]): SystemSnapshot {
     const sys: SystemSnap[] = parts.map((p) => p.value.snapshot.system);
     const heapRatio = (s: SystemSnap) => num(s.memory.heapUsed) / (num(s.memory.heapSizeLimit) || 1);
     let hottest = 0;
@@ -311,7 +327,14 @@ function mergeSystem(parts: UsablePart[]) {
             system: sumOf(sys.map((s) => num(obj(s.cpu).system))),
             percent: round2(sumOf(sys.map((s) => num(obj(s.cpu).percent)))),
         },
-        memory: { ...sys[hottest].memory },
+        memory: {
+            heapUsed: num(sys[hottest].memory.heapUsed),
+            heapTotal: num(sys[hottest].memory.heapTotal),
+            heapSizeLimit: num(sys[hottest].memory.heapSizeLimit),
+            rss: num(sys[hottest].memory.rss),
+            external: num(sys[hottest].memory.external),
+            arrayBuffers: num(sys[hottest].memory.arrayBuffers),
+        },
         eventLoopLag: maxOf(sys.map((s) => num(s.eventLoopLag))),
         gc: {
             collections: sumOf(sys.map((s) => num(obj(s.gc).collections))),
@@ -328,7 +351,7 @@ function mergeSystem(parts: UsablePart[]) {
                 p95PauseMs: maxOf(recents.map((r) => num(r.p95PauseMs))),
             },
         },
-        memoryTrend: copyIfObj(sys[trendIdx].memoryTrend),
+        memoryTrend: heapTrendOf(sys[trendIdx].memoryTrend),
         handles: sumOf(sys.map((s) => num(s.handles))),
         requests: sumOf(sys.map((s) => num(s.requests))),
         workers: parts.map((p, i) => ({
@@ -367,7 +390,7 @@ function mergeOracle(parts: UsablePart[]) {
             else acc.haveTotalMs = false;
         }
     });
-    const out = new Map<string, unknown>();
+    const out = new Map<string, OraclePoolSnapshot>();
     for (const [name, { rows, sketches, totalMs, haveTotalMs }] of pools) {
         const nonNull = (key: string): number[] => rows.map((r) => r[key]).filter(isFiniteNumber);
         const sumOrNull = (key: string) => {
@@ -401,15 +424,7 @@ function mergeOracle(parts: UsablePart[]) {
 
 /** Merges per-channel notification stats and rebuilds the smtp block from them. */
 /** Per-channel accumulator while merging notification stats. */
-type ChannelAcc = {
-    sent: number;
-    failed: number;
-    consecutiveFailures: number;
-    lastSuccessAt: string | null;
-    lastFailureAt: string | null;
-    lastFailureCause: unknown;
-    suppressedCount: number;
-};
+type ChannelAcc = NotificationDelivery;
 
 function mergeNotifications(snaps: Snapshot[]) {
     const channels = new Map<string, ChannelAcc>();
@@ -438,7 +453,7 @@ function mergeNotifications(snaps: Snapshot[]) {
             const failedAt = isoOrNull(e.lastFailureAt);
             if (failedAt && (!acc.lastFailureAt || failedAt > acc.lastFailureAt)) {
                 acc.lastFailureAt = failedAt;
-                acc.lastFailureCause = e.lastFailureCause ?? null;
+                acc.lastFailureCause = typeof e.lastFailureCause === "string" ? e.lastFailureCause : null;
             }
         }
     }
@@ -450,7 +465,7 @@ function mergeNotifications(snaps: Snapshot[]) {
         lastSuccessAt = latestIso(e.lastSuccessAt, lastSuccessAt);
         lastFailureAt = latestIso(e.lastFailureAt, lastFailureAt);
     }
-    const status = consecutiveFailures >= 3 ? "down" : consecutiveFailures >= 1 ? "degraded" : "up";
+    const status: SmtpDependencySnapshot["status"] = consecutiveFailures >= 3 ? "down" : consecutiveFailures >= 1 ? "degraded" : "up";
     return {
         notifications: Object.fromEntries(channels),
         smtp: { status, consecutiveFailures, lastSuccessAt, lastFailureAt },
@@ -503,7 +518,7 @@ function mergeWatchdog(snaps: Snapshot[]) {
  * @param opts   missing worker ids and the expected worker count
  * @returns merged snapshot; null when no part is usable
  */
-function mergeMetricsSnapshots(parts: unknown[], { missing = [], expected }: { missing?: number[]; expected?: number } = {}) {
+function mergeMetricsSnapshots(parts: unknown[], { missing = [], expected }: { missing?: number[]; expected?: number } = {}): ClusterMetricsSnapshot | null {
     const usable = (Array.isArray(parts) ? parts : []).filter(isUsablePart);
     if (usable.length === 0) return null;
     const skipped = (Array.isArray(parts) ? parts.length : 0) - usable.length;
@@ -533,4 +548,5 @@ function mergeMetricsSnapshots(parts: unknown[], { missing = [], expected }: { m
     };
 }
 
+export type { ClusterMetricsSnapshot };
 export { QUANTILE_GRID, buildQuantileSketch, percentileFromSketches, mergeMetricsSnapshots };
