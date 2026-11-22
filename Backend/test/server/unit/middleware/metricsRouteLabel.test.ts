@@ -82,7 +82,7 @@ function buildApp(fakeStore, rt) {
 
 /** Let the res "finish" handlers run before asserting. */
 function tick() {
-    return new Promise((resolve) => setImmediate(resolve));
+    return new Promise<any>((resolve) => setImmediate(resolve));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

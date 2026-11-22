@@ -333,11 +333,11 @@ describe("review M2 - recipient lookup while the database is the thing that hung
     });
 
     it("a hung opt-in query does not hold the env-floor recipients past a short bound (well under the 5 s send race)", async function () {
-        vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise(() => {}));
+        vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise<any>(() => {}));
         const t0 = Date.now();
         const result = await Promise.race([
             ServerNotificationService.resolveRecipients("server-system-notification"),
-            new Promise((r) => setTimeout(() => r("STILL_WAITING"), 4000)),
+            new Promise<any>((r) => setTimeout(() => r("STILL_WAITING"), 4000)),
         ]);
         expect(result, "resolveRecipients waited on the hung DB query").not.toBe("STILL_WAITING");
         expect(result).toContain("ops-floor@example.invalid");
@@ -347,7 +347,7 @@ describe("review M2 - recipient lookup while the database is the thing that hung
     it("a hung refresh counts as database down: SERVER_NOTIFY_TO only, cached opt-ins not mailed", async function () {
         RecipientResolver._cache = new Map([["server-system-notification", ["optin@example.invalid"]]]);
         RecipientResolver._lastRefreshAt = 0; // stale
-        vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise(() => {}));
+        vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise<any>(() => {}));
         const result = await ServerNotificationService.resolveRecipients("server-system-notification");
         expect(result).toEqual(["ops-floor@example.invalid"]);
     }, 10_000);
@@ -358,7 +358,7 @@ describe("review M2 - recipient lookup while the database is the thing that hung
         expect(RecipientResolver.RecipientResolver.REFRESH_WAIT_MS).toBe(2000);
         RecipientResolver._cache = new Map([["server-system-notification", ["optin@example.invalid"]]]);
         RecipientResolver._lastRefreshAt = 0; // stale -> refresh starts and hangs
-        const hung = vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise(() => {}));
+        const hung = vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise<any>(() => {}));
         const warn = vi.spyOn(appLogger, "warning").mockImplementation(() => {});
         vi.useFakeTimers();
         try {

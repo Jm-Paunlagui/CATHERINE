@@ -18,7 +18,7 @@ const AdminModel = require("../../../../src/models/admin.model").default;
 const { logger } = require("../../../../src/utils/logger");
 const { NOTIFICATION_ERRORS, AppError } = require("../../../../src/constants/errors");
 
-const flush = () => new Promise((resolve) => setImmediate(resolve));
+const flush = () => new Promise<any>((resolve) => setImmediate(resolve));
 
 async function rejection(promise) {
     try {

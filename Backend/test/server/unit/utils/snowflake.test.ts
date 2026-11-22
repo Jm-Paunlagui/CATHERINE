@@ -100,7 +100,7 @@ describe("Snowflake ID Generator", () => {
             const { snowflake } = await freshImport();
             const ids: string[] = [];
             for (let i = 0; i < 5; i++) {
-                await new Promise((r) => setTimeout(r, 2));
+                await new Promise<any>((r) => setTimeout(r, 2));
                 ids.push(snowflake.nextId());
             }
             // Timestamp is the leading segment — cross-ms IDs always sort correctly
@@ -133,7 +133,7 @@ describe("Snowflake ID Generator", () => {
             const { Snowflake } = await freshImport();
             const sf = new Snowflake({ machineId: 0 });
 
-            await new Promise((r) => setTimeout(r, 2));
+            await new Promise<any>((r) => setTimeout(r, 2));
             const id = sf.nextId();
             const info = sf.deconstruct(id);
             expect(info.tail).toBeGreaterThanOrEqual(0);
@@ -252,7 +252,7 @@ describe("Snowflake ID Generator", () => {
             // Generate IDs with 3ms gaps — each should get a fresh random nonce
             const tails = new Set();
             for (let i = 0; i < 10; i++) {
-                await new Promise((r) => setTimeout(r, 3));
+                await new Promise<any>((r) => setTimeout(r, 3));
                 const id = sf.nextId();
                 tails.add(id.split("-")[2]);
             }
@@ -351,7 +351,7 @@ describe("Snowflake ID Generator", () => {
             const { Snowflake } = await freshImport();
             const sf = new Snowflake({ machineId: 42 });
 
-            await new Promise((r) => setTimeout(r, 2)); // fresh ms
+            await new Promise<any>((r) => setTimeout(r, 2)); // fresh ms
             const id = sf.nextId();
             const [ts, mid, seq] = id.split("-");
 

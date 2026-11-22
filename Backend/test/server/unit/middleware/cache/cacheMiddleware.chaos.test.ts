@@ -40,7 +40,7 @@ const {
  * @returns {Promise<void>}
  */
 function flushImmediate() {
-    return new Promise((resolve) => setImmediate(resolve));
+    return new Promise<any>((resolve) => setImmediate(resolve));
 }
 
 /** Unique name counter so each makeStore() call gets a fresh NodeCache. */

@@ -985,7 +985,7 @@ describe("DELETE /api/v1/admin-management/:username", function () {
     });
 
     /** DELETE as SUPER_ADMIN with a backup token unless overridden; body null sends none. */
-    const del = (username = "EMP001", body = { backupToken: BACKUP_TOKEN }, token = superAdminToken()) => {
+    const del = (username = "EMP001", body: any = { backupToken: BACKUP_TOKEN }, token = superAdminToken()) => {
         const req = agent
             .delete(`/api/v1/admin-management/${username}`)
             .set("x-csrf-token", agent._csrfToken);

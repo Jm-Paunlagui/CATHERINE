@@ -350,7 +350,7 @@ describe("SecurityFilterMiddleware (unit)", function () {
 
     describe("clean paths pass through", function () {
         it("allows normal non-whitelisted, non-malicious paths", () =>
-            new Promise((resolve) => {
+            new Promise<any>((resolve) => {
                 const filter = new SecurityFilterMiddleware();
                 filter.handle(
                     mockReq({ path: "/some/custom/endpoint" }),

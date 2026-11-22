@@ -229,7 +229,7 @@ describe("OG5 â€” alert-log rows queued during the outage (gap 5)", functio
         await poll("appDb", failing(3)); // DOWN FIRED row
         await poll("appDb", failing(4));
         await poll("appDb", failing(5)); // DEGRADED RECOVERED row (DOWN replaced it)
-        await new Promise((r) => setImmediate(r));
+        await new Promise<any>((r) => setImmediate(r));
         expect(written).toEqual([]);
         expect(notifier._alertLogQueue.map((r) => r.transition)).toEqual(["FIRED", "FIRED", "RECOVERED"]);
 

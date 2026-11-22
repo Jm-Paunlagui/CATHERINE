@@ -15,7 +15,7 @@
 
 const { mapWithConcurrency } = require("../../../../src/utils/concurrency");
 
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+const delay = (ms) => new Promise<any>((r) => setTimeout(r, ms));
 
 describe("mapWithConcurrency", function () {
     it("returns results in input order despite out-of-order completion", async function () {

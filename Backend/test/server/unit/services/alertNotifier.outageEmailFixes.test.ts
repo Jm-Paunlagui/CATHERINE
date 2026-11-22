@@ -115,7 +115,7 @@ describe("OF-3 — ack hydration retried until the first success", function () {
 
     it("concurrent callers share one in-flight read", async function () {
         let release;
-        const findAll = vi.spyOn(ServerAlertAckModel, "findAll").mockReturnValue(new Promise((r) => { release = r; }));
+        const findAll = vi.spyOn(ServerAlertAckModel, "findAll").mockReturnValue(new Promise<any>((r) => { release = r; }));
         const a = notifier._hydrateAcksShared();
         const b = notifier._hydrateAcksShared();
         expect(a).toBe(b);
@@ -128,7 +128,7 @@ describe("OF-3 — ack hydration retried until the first success", function () {
 describe("OF-4 — bounded wait on a hung ack read", function () {
     it("the DOWN email is still sent after ~2 s when SERVER_ALERT_ACK never answers", async function () {
         vi.useFakeTimers();
-        vi.spyOn(ServerAlertAckModel, "findAll").mockReturnValue(new Promise(() => {}));
+        vi.spyOn(ServerAlertAckModel, "findAll").mockReturnValue(new Promise<any>(() => {}));
         vi.spyOn(MetricsService, "evaluateAlerts").mockReturnValue([DOWN_ALERT]);
         const send = vi.spyOn(ServerNotificationService, "sendChannelDigest").mockResolvedValue({ sent: true });
 

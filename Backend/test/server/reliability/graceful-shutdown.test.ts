@@ -98,7 +98,7 @@ server.listen(0, "127.0.0.1", () => {
 
     // ── Helper: spawn the child and wait for "LISTENING:<port>" ────────────
     function spawnChild(env = {}) {
-        return new Promise((resolve, reject) => {
+        return new Promise<any>((resolve, reject) => {
             const child = fork(CHILD_SCRIPT, [], {
                 stdio: ["pipe", "pipe", "pipe", "ipc"],
                 env: { ...process.env, ...env },
@@ -128,7 +128,7 @@ server.listen(0, "127.0.0.1", () => {
 
     // ── Helper: simple HTTP GET ───────────────────────────────────────────
     function httpGet(port, urlPath = "/") {
-        return new Promise((resolve, reject) => {
+        return new Promise<any>((resolve, reject) => {
             const req = http.get(
                 `http://127.0.0.1:${port}${urlPath}`,
                 (res) => {
@@ -158,7 +158,7 @@ server.listen(0, "127.0.0.1", () => {
         const res = await httpGet(port, "/");
         expect(res.status).toBe(200);
 
-        const exitCode = await new Promise((resolve) => {
+        const exitCode = await new Promise<any>((resolve) => {
             child.on("exit", (code) => resolve(code));
             child.send("shutdown");
         });
@@ -174,7 +174,7 @@ server.listen(0, "127.0.0.1", () => {
         const slowReq = httpGet(port, "/slow");
 
         // Trigger shutdown 50 ms later — while the request is still in-flight
-        await new Promise((r) => setTimeout(r, 50));
+        await new Promise<any>((r) => setTimeout(r, 50));
         child.send("shutdown");
 
         // The slow request should still complete successfully
@@ -183,7 +183,7 @@ server.listen(0, "127.0.0.1", () => {
         expect(JSON.parse(res.body)).toEqual({ ok: true });
 
         // Process should exit cleanly after draining
-        const exitCode = await new Promise((resolve) => {
+        const exitCode = await new Promise<any>((resolve) => {
             child.on("exit", (code) => resolve(code));
         });
         expect(exitCode).toBe(0);
@@ -204,7 +204,7 @@ server.listen(0, "127.0.0.1", () => {
         const res = await httpGet(port, "/");
         expect(res.status).toBe(200);
 
-        const exitCode = await new Promise((resolve) => {
+        const exitCode = await new Promise<any>((resolve) => {
             child.on("exit", (code) => resolve(code));
             child.send("shutdown");
         });

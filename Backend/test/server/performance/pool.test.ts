@@ -24,7 +24,7 @@ describe("DB Pool Performance", function () {
     function fakeConn(delayMs = 0) {
         return {
             execute: vi.fn().mockImplementation(async () => {
-                if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
+                if (delayMs) await new Promise<any>((r) => setTimeout(r, delayMs));
                 return { rows: [{ RESULT: 1 }] };
             }),
             ping: vi.fn().mockResolvedValue(undefined as never),

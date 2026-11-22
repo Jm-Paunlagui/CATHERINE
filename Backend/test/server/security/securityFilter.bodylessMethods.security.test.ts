@@ -41,7 +41,7 @@ function stubPools() {
 /** Starts `app` on an ephemeral loopback port. */
 async function listen(expressApp) {
     const srv = http.createServer(expressApp);
-    await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+    await new Promise<any>((r) => srv.listen(0, "127.0.0.1", r));
     return srv;
 }
 
@@ -56,7 +56,7 @@ async function listen(expressApp) {
  * @returns {Promise<{ statusLine: string, status: number, headers: Record<string,string>, body: any, rawBody: string }>}
  */
 function rawExchange(port, raw, { timeoutMs = 3000, isHead = false } = {}) {
-    return new Promise((resolve, reject) => {
+    return new Promise<any>((resolve, reject) => {
         const socket = net.connect(port, "127.0.0.1");
         let buf = Buffer.alloc(0);
         let settled = false;
@@ -132,7 +132,7 @@ afterEach(async function () {
     defaultSecurityFilter._suspiciousIPs.clear();
     vi.restoreAllMocks();
     server.closeAllConnections?.();
-    await new Promise((r) => server.close(r));
+    await new Promise<any>((r) => server.close(r));
 });
 
 describe("CVE-2026-123864 guard — GET/HEAD with a body is refused at step 2", function () {

@@ -19,7 +19,7 @@ const { parseFilter } = require("../../../../src/utils/oracle-mongo-wrapper/pars
 
 const ORACLEDB = { OUT_FORMAT_OBJECT: 4002, BIND_OUT: 3003, NUMBER: 2010, DATE: 2014, STRING: 2001 };
 
-function recordingConn(result = { rows: [], rowsAffected: 0, outBinds: {} }) {
+function recordingConn(result: any = { rows: [], rowsAffected: 0, outBinds: {} }) {
     const calls: any[] = [];
     return {
         calls,

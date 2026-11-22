@@ -30,7 +30,7 @@ function freshResolver() {
     RecipientResolver._lastRefreshOk = false;
 }
 
-function dbUp(emailsByChannel = { [CH]: [OPT_IN] }) {
+function dbUp(emailsByChannel: any = { [CH]: [OPT_IN] }) {
     vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(async (ch) => emailsByChannel[ch] ?? []);
 }
 
@@ -120,7 +120,7 @@ describe("server alert recipients follow the database state", function () {
 
         vi.restoreAllMocks();
         vi.spyOn(logger, "warning").mockImplementation(() => {});
-        vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise(() => {}));
+        vi.spyOn(AdminModel, "findServerNotifyRecipients").mockImplementation(() => new Promise<any>(() => {}));
         const saved = RecipientResolver.constructor.REFRESH_WAIT_MS;
         RecipientResolver.constructor.REFRESH_WAIT_MS = 20;
         try {

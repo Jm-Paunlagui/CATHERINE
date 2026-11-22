@@ -22,14 +22,14 @@
 const crypto = require("crypto");
 const JSZip = require("jszip");
 
-const DataRestoreService = require("../../../../src/services/DataRestoreService").default;
-const BackupArchiveService = require("../../../../src/services/BackupArchiveService").default;
-const DataPurgeService = require("../../../../src/services/DataPurgeService").default;
-const DataPurgeModel = require("../../../../src/models/data-purge.model").default;
-const AuditLogModel = require("../../../../src/models/audit.log.model").default;
-const { CryptoVault } = require("../../../../src/utils/encryption/CryptoVault");
-const { Transaction } = require("../../../../src/utils/oracle-mongo-wrapper");
-const { PURGE_ERRORS } = require("../../../../src/constants/errors");
+const DataRestoreService = (require("../../../../src/services/DataRestoreService") as typeof import("../../../../src/services/DataRestoreService")).default;
+const BackupArchiveService = (require("../../../../src/services/BackupArchiveService") as typeof import("../../../../src/services/BackupArchiveService")).default;
+const DataPurgeService = (require("../../../../src/services/DataPurgeService") as typeof import("../../../../src/services/DataPurgeService")).default;
+const DataPurgeModel = (require("../../../../src/models/data-purge.model") as typeof import("../../../../src/models/data-purge.model")).default;
+const AuditLogModel = (require("../../../../src/models/audit.log.model") as typeof import("../../../../src/models/audit.log.model")).default;
+const { CryptoVault } = (require("../../../../src/utils/encryption/CryptoVault") as typeof import("../../../../src/utils/encryption/CryptoVault"));
+const { Transaction } = (require("../../../../src/utils/oracle-mongo-wrapper") as typeof import("../../../../src/utils/oracle-mongo-wrapper"));
+const { PURGE_ERRORS } = (require("../../../../src/constants/errors") as typeof import("../../../../src/constants/errors"));
 
 const ADMIN_ID = 7;
 const ALERT_LOG = "T_SERVER_ALERT_LOG_DEV";
@@ -46,11 +46,11 @@ const SOURCE_ROWS = {
 
 /** Feeds SOURCE_ROWS through the model's stream callbacks (both the read-consistent and per-table paths). */
 function stubSourceDatabase() {
-    vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch }) => {
+    vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch } = {}) => {
         const counts: Record<string, any> = {};
         for (const t of tables) {
             const rows = SOURCE_ROWS[t] ?? [];
-            if (rows.length) await onBatch(t, rows.map((r) => ({ ...r })));
+            if (rows.length) await onBatch?.(t, rows.map((r) => ({ ...r })));
             counts[t] = rows.length;
         }
         return counts;
@@ -179,7 +179,7 @@ describe("DataRestoreService — archive round trip", function () {
         });
 
         it("refuses a FULL_SCOPE restore onto a table that still has rows", async function () {
-            DataPurgeModel.countRows.mockImplementation(async (tables) =>
+            vi.mocked(DataPurgeModel.countRows).mockImplementation(async (tables) =>
                 Object.fromEntries(tables.map((t) => [t, t === ALERT_ACK ? 3 : 0])),
             );
             await rejectsWith(DataRestoreService.preview({ zipBuffer: archive }), PURGE_ERRORS.RESTORE_TARGET_NOT_EMPTY);
@@ -194,10 +194,10 @@ describe("DataRestoreService — archive round trip", function () {
         beforeEach(function () {
             inserts = [];
             committed = false;
-            vi.spyOn(DataPurgeService, "findAdminById").mockResolvedValue({ ID: ADMIN_ID, PASSWORD: "stored-hash" });
-            vi.spyOn(CryptoVault, "verifyAdminPassword").mockImplementation(async (plain) => ({ matched: plain === "right" }));
+            vi.spyOn(DataPurgeService, "findAdminById").mockResolvedValue({ ID: ADMIN_ID, PASSWORD: "stored-hash" } as never); // partial admin row
+            vi.spyOn(CryptoVault, "verifyAdminPassword").mockImplementation(async (plain) => ({ matched: plain === "right", newHash: null }));
             vi.spyOn(Transaction.prototype, "withTransaction").mockImplementation(async (fn) => {
-                const result = await fn({ execute: vi.fn() });
+                const result = await fn({ execute: vi.fn() } as never); // session double: no DB calls reach it
                 committed = true;
                 return result;
             });
@@ -250,7 +250,7 @@ describe("DataRestoreService — archive round trip", function () {
         });
 
         it("propagates a failing insert so the transaction rolls back, and writes no audit row", async function () {
-            DataPurgeModel.insertRestoreBatch.mockRejectedValueOnce(new Error("ORA-00001: unique constraint violated"));
+            vi.mocked(DataPurgeModel.insertRestoreBatch).mockRejectedValueOnce(new Error("ORA-00001: unique constraint violated"));
             await expect(
                 DataRestoreService.restore({ zipBuffer: archive, adminId: ADMIN_ID, adminPassword: "right", confirmPhrase: await phrase() }),
             ).rejects.toThrow(/ORA-00001/);
