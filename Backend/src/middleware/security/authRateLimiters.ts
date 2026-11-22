@@ -40,7 +40,7 @@ import { hashJti } from "../../utils/auth/tokenClaims";
 /** Name of the refresh cookie (shared constant; never import AuthService here). */
 const REFRESH_COOKIE = COOKIE_NAMES.REFRESH;
 
-const ipOf = (req: any) => RateLimiterMiddleware.extractIp(req);
+const ipOf = (req: Request) => RateLimiterMiddleware.extractIp(req);
 
 /**
  * Canonical user segment for a login key, or `-` when unusable.
@@ -84,7 +84,7 @@ function changePasswordKey(req: import("express").Request): string {
 }
 
 /** Shared 429 body (unchanged from the former auth limiter; the UI parses it). */
-const onLimit = (req: Request, res: Response, { retryAfter }: any) =>
+const onLimit = (req: Request, res: Response, { retryAfter }: { retryAfter: number }) =>
   res.status(429).json({
     status: "error",
     code: 429,
@@ -96,7 +96,11 @@ const onLimit = (req: Request, res: Response, { retryAfter }: any) =>
     },
   });
 
-const make = (cfg: any, keyBy: unknown, countMode: unknown) =>
+const make = (
+  cfg: { MAX: number; WINDOW_MS: number; LABEL: string },
+  keyBy: import("./RateLimiterMiddleware").KeyGenerator,
+  countMode: NonNullable<import("./RateLimiterMiddleware").RateLimiterOptions["countMode"]>,
+) =>
   new RateLimiterMiddleware({
     max: cfg.MAX,
     windowMs: cfg.WINDOW_MS,

@@ -167,8 +167,10 @@ class ClusterRpcHub {
      * @param {string} method
      * @param {(args: object, ctx: {worker: object}) => any} handler
      */
-    register(method: string, handler: RpcHandler) {
-        this.#handlers.set(method, handler);
+    register<A extends Record<string, unknown> = Record<string, unknown>>(method: string, handler: (args: A, ctx: { worker: HubWorker }) => unknown) {
+        // Args reach a handler only after validateArgs ran this method's ARG_VALIDATORS
+        // entry, so `A` is that validator's output shape.
+        this.#handlers.set(method, handler as RpcHandler);
     }
 
     /** @param {(worker: object) => void} fn called when a worker emits `listening` */
@@ -523,3 +525,4 @@ class ClusterRpcHub {
 }
 
 export { ClusterRpcHub, buildError, METHOD_TARGET };
+export type { HubWorker };

@@ -37,22 +37,39 @@ import { logger } from "../../utils/logger";
  */
 const HEALTH_PATH_RE = /^\/api\/v\d+\/health(\/|$)/;
 
+/** One counted hit: SlidingWindowCounter.hit() plus where it was counted. */
+type HitResult = ReturnType<SlidingWindowCounter["hit"]> & { source: "local" | "shared" };
+type KeyGenerator = (req: Request) => string;
+type RateLimiterOptions = {
+  max?: number;
+  windowMs?: number;
+  /** A named key generator (see keyGenerators) or a custom one. */
+  keyBy?: "ip" | "user" | "apiKey" | "ipAndRoute" | "userAndRoute" | KeyGenerator;
+  skip?: ((req: Request) => boolean) | null;
+  onLimit?: ((req: Request, res: Response, info: HitResult & { retryAfter: number; max: number; windowMs: number }) => unknown) | null;
+  dryRun?: boolean;
+  label?: string;
+  countMode?: "all" | "failures";
+  maxKeys?: number;
+  store?: import("node-cache");
+};
+
 class RateLimiterMiddleware {
-  declare _store: any;
+  declare _store: import("node-cache");
   declare _counter: SlidingWindowCounter;
-  declare _maxKeys: any;
-  declare _countMode: any;
+  declare _maxKeys: number;
+  declare _countMode: "all" | "failures";
   declare _lastStoreFullLog: number;
   declare _lastFallbackLog: number;
   declare _sharedLabel: string;
-  declare _label: any;
-  declare _dryRun: unknown;
-  declare _onLimit: any;
-  declare _skip: any;
-  declare _keyBy: unknown;
-  declare _windowMs: any;
-  declare _max: any;
-  constructor(options: Record<string, any> = {}) {
+  declare _label: string;
+  declare _dryRun: boolean;
+  declare _onLimit: RateLimiterOptions["onLimit"];
+  declare _skip: RateLimiterOptions["skip"];
+  declare _keyBy: NonNullable<RateLimiterOptions["keyBy"]>;
+  declare _windowMs: number;
+  declare _max: number;
+  constructor(options: RateLimiterOptions = {}) {
     this._max =
       options.max ?? parseInt(process.env.RATE_LIMIT_MAX || "100", 10);
     this._windowMs =
@@ -108,7 +125,7 @@ class RateLimiterMiddleware {
    * limit, today's behaviour) and `CLUSTER_RL_FALLBACK` is logged at most once a
    * minute per label. Every rejection reaches `next(err)`; `next` is called once.
    */
-  _handleShared(req: Request, res: Response, next: NextFunction, key: unknown) {
+  _handleShared(req: Request, res: Response, next: NextFunction, key: string) {
     let settled = false;
     const once = (err: unknown) => {
       if (settled) return;
@@ -128,7 +145,7 @@ class RateLimiterMiddleware {
       });
   }
 
-  async _hitShared(key: unknown) {
+  async _hitShared(key: string): Promise<HitResult> {
     const args = {
       label: this._sharedLabel,
       key,
@@ -172,7 +189,7 @@ class RateLimiterMiddleware {
   }
 
   /** Headers, limit refusal and pass log: shared by the local and cluster paths. */
-  _finish(req: Request, res: Response, next: NextFunction, key: unknown, result: any) {
+  _finish(req: Request, res: Response, next: NextFunction, key: string, result: HitResult) {
     this._setHeaders(res, {
       limit: this._max,
       remaining: result.remaining,
@@ -251,7 +268,7 @@ class RateLimiterMiddleware {
    * (fire-and-forget: a lost refund only makes the limit stricter); hits counted
    * locally (single process or fallback) are refunded locally. Never throws.
    */
-  _refund(key: any, result: any) {
+  _refund(key: string, result: HitResult) {
     try {
       if (result.source === "shared") {
         const args = {
@@ -265,7 +282,7 @@ class RateLimiterMiddleware {
         }
         return;
       }
-      this._counter.refund(key, result.bucket, this._windowMs);
+      if (result.bucket !== undefined) this._counter.refund(key, result.bucket, this._windowMs); // no bucket: nothing was reserved
     } catch {
       // Best effort: a failed refund only makes the limit stricter.
     }
@@ -275,7 +292,7 @@ class RateLimiterMiddleware {
     return this._store.getStats();
   }
 
-  clearKey(key: unknown) {
+  clearKey(key: string) {
     const n = this._store.del(key);
     logger.info("Rate Limit Key cleared", { key, deleted: n });
     this._notifyClear(key);
@@ -299,7 +316,7 @@ class RateLimiterMiddleware {
 
   // ── Private helpers ───────────────────────────────────────────────────
 
-  _getKey(req: unknown) {
+  _getKey(req: Request): string {
     if (typeof this._keyBy === "function") return this._keyBy(req);
     return (
       RateLimiterMiddleware.keyGenerators[this._keyBy as keyof typeof RateLimiterMiddleware.keyGenerators] ??
@@ -307,7 +324,7 @@ class RateLimiterMiddleware {
     )(req);
   }
 
-  _slidingWindowCounter(key: any) {
+  _slidingWindowCounter(key: string): HitResult {
     try {
       return { ...this._counter.hit(key, this._max, this._windowMs), source: "local" };
     } catch (err) {
@@ -335,7 +352,7 @@ class RateLimiterMiddleware {
     logger.warning(middlewareMessages.RATE_LIMIT_STORE_FULL(this._label));
   }
 
-  _setHeaders(res: any, { limit, remaining, resetAt, windowMs }: any) {
+  _setHeaders(res: Response, { limit, remaining, resetAt, windowMs }: { limit: number; remaining: number; resetAt: number; windowMs: number }) {
     const resetSec = Math.ceil(resetAt / 1000);
     const windowSec = Math.ceil(windowMs / 1000);
     res.setHeader("RateLimit-Limit", limit);
@@ -373,20 +390,20 @@ class RateLimiterMiddleware {
   }
 
   static keyGenerators = {
-    ip: (req: any) => `rl:ip:${RateLimiterMiddleware.extractIp(req)}`,
-    user: (req: any) =>
+    ip: (req: Request) => `rl:ip:${RateLimiterMiddleware.extractIp(req)}`,
+    user: (req: Request) =>
       req.user?.sub
         ? `rl:user:${req.user.sub}`
         : `rl:ip:${RateLimiterMiddleware.extractIp(req)}`,
-    apiKey: (req: any) => {
+    apiKey: (req: Request) => {
       const key = req.headers["x-api-key"];
       return key
         ? `rl:apikey:${key}`
         : `rl:ip:${RateLimiterMiddleware.extractIp(req)}`;
     },
-    ipAndRoute: (req: any) =>
+    ipAndRoute: (req: Request) =>
       `rl:ip+route:${RateLimiterMiddleware.extractIp(req)}:${req.route?.path || req.path}`,
-    userAndRoute: (req: any) => {
+    userAndRoute: (req: Request) => {
       const id = req.user?.sub || RateLimiterMiddleware.extractIp(req);
       return `rl:user+route:${id}:${req.route?.path || req.path}`;
     },
@@ -450,11 +467,12 @@ class RateLimiterGroup {
   }
 
   /** @returns {Object<string, object>} NodeCache stats keyed by member label */
-  getStats(): { [s: string]: Record<string, unknown>; } {
-    const out: Record<string, any> = {};
+  getStats(): Record<string, import("node-cache").Stats> {
+    const out: Record<string, import("node-cache").Stats> = {};
     for (const m of this._members) out[m._label] = m.getStats();
     return out;
   }
 }
 
+export type { KeyGenerator, RateLimiterOptions };
 export { RateLimiterMiddleware, RateLimiterGroup, defaultRateLimiter, burstRateLimiter, perRouteRateLimiter, credentialEmailRateLimiter };
