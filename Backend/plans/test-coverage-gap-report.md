@@ -6,6 +6,11 @@ Standard: 6-category matrix (unit, integration, performance, chaos, security, re
 architecture and runtime models (`src/constants/architectureModel.ts`, `src/constants/runtimeModel.ts`, validated by
 `src/utils/systemMap.ts`), gated by `coverage.thresholds` in `vitest.config.mts`.
 
+> **Update 2026-11-23:** `vitest.requireToImport.mts` (new) fixes most of the under-count below. After it: statements 36.87%,
+> branches 34.07%, functions 43.56%, lines 38.03% (all still FAIL). Ten test files opt out via `NATIVE_REQUIRE_ONLY` (src has ~65 lazy
+> native `require()` calls, so a Vite-loaded test and src would hold different module instances). The tables below show the
+> original measurement.
+
 ## 1. Coverage vs gate
 
 Run result: 103 test files, 1613 tests, **all passed**. Coverage gate: **FAILED on all four metrics**

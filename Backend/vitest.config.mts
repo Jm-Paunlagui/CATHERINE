@@ -9,8 +9,10 @@
 // shared in-memory middleware state that is not safe to run concurrently.
 
 import { defineConfig } from "vitest/config";
+import { requireToImport } from "./vitest.requireToImport.mjs";
 
 export default defineConfig({
+    plugins: [requireToImport()],
     test: {
         globals: true,
         environment: "node",
