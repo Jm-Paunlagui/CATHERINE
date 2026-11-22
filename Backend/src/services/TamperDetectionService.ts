@@ -81,11 +81,13 @@ class TamperDetectionService {
      * @param {object} row - must carry ROW_HASH and every signed column
      * @returns {Promise<boolean>} true = intact, false = tampered
      */
-    static verifyRow(domain: string, row: Record<string, any>): Promise<boolean> {
+    static verifyRow(domain: string, row: object): Promise<boolean> {
+        // Any signed row type (SystemConfigRow, a domain row); fields are read by column name.
+        const r = row as Record<string, unknown>;
         return CryptoVault.verifyRecord(
             domain,
-            TamperDetectionService.buildSignedFields(domain, row),
-            row.ROW_HASH,
+            TamperDetectionService.buildSignedFields(domain, r),
+            r.ROW_HASH as string | null | undefined,
         );
     }
 
@@ -97,7 +99,7 @@ class TamperDetectionService {
      * @param {object} row
      * @returns {Promise<boolean>}
      */
-    static verifySystemConfigRow(row: Record<string, any>): Promise<boolean> {
+    static verifySystemConfigRow(row: object): Promise<boolean> {
         return TamperDetectionService.verifyRow("T_SYSTEM_CONFIG", row);
     }
 

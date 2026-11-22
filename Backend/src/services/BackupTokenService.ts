@@ -151,7 +151,7 @@ class BackupTokenService {
      * if (!result.valid) throw new AppError(PURGE_ERRORS.BACKUP_TOKEN_INVALID, HTTP_STATUS.UNAUTHORIZED);
      */
     static async verify(token: string): Promise<{ valid: true; payload: {
-        jti: any; scopeHash: string; rowCounts: Record<string, number>; adminId: number | string; issuedAt: number; expiresAt: number; 
+        jti: string; scopeHash: string; rowCounts: Record<string, number>; adminId: number | string; issuedAt: number; expiresAt: number; 
 }; } |
     { valid: false; reason: "malformed" | "tampered" | "expired"; }> {
         if (typeof token !== "string" || token.length === 0 || !token.includes(".")) {

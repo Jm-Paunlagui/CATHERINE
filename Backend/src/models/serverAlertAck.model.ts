@@ -72,8 +72,18 @@ function col() {
     return _col;
 }
 
+/** One SERVER_ALERT_ACK row. */
+type AlertAckRow = {
+    ALERT_KEY: string;
+    ACKED_BY: number;
+    ACKED_AT: Date;
+    EXPIRES_AT: Date;
+    SEVERITY_AT_ACK: "WARNING" | "CRITICAL";
+    NOTE: string | null;
+};
+
 /** @type {Map<string, object>} DEMO_MODE store, keyed by ALERT_KEY. */
-const _demoAcks: Map<string, Record<string, unknown>> = new Map();
+const _demoAcks: Map<string, AlertAckRow> = new Map();
 
 class ServerAlertAckModel {
     declare static resolveTableName: () => string;
@@ -131,9 +141,9 @@ class ServerAlertAckModel {
      * @param {string} alertKey
      * @returns {Promise<object|null>}
      */
-    static async findOne(alertKey: string): Promise<Record<string, unknown> | null> {
+    static async findOne(alertKey: string): Promise<AlertAckRow | null> {
         if (isDemoMode()) return _demoAcks.get(alertKey) ?? null;
-        return col().findOne({ ALERT_KEY: alertKey });
+        return col().findOne<AlertAckRow>({ ALERT_KEY: alertKey });
     }
 
     /**
@@ -142,9 +152,9 @@ class ServerAlertAckModel {
      *
      * @returns {Promise<object[]>}
      */
-    static async findAll(): Promise<Record<string, any>[]> {
+    static async findAll(): Promise<AlertAckRow[]> {
         if (isDemoMode()) return [..._demoAcks.values()];
-        return col().find({}).toArray();
+        return col().find({}).toArray<AlertAckRow>();
     }
 }
 

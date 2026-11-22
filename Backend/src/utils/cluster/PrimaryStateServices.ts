@@ -41,7 +41,7 @@ const TOPIC = CLUSTER_TOPICS;
 class PrimaryStateServices {
     declare _hub: import("./ClusterRpcHub").ClusterRpcHub;
     declare _revoked: RevokedSessionSet;
-    declare _counters: Map<any, any>;
+    declare _counters: Map<string, SlidingWindowCounter>;
     declare _lockout: LoginLockoutState;
     declare _ipTracker: SuspiciousIpTracker;
     declare _sched: Map<unknown, unknown>;

@@ -54,7 +54,7 @@ class DevDocsController {
         const payload = {
             sections: sections.map((section) => ({
                 name: section.name,
-                docs: section.docs.map((doc: any) => ({
+                docs: section.docs.map((doc) => ({
                     id: doc.id,
                     title: doc.title,
                     sizeBytes: doc.sizeBytes,

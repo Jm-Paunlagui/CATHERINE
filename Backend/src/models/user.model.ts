@@ -65,7 +65,7 @@ class UserModel {
      * Returns all users ordered by USERNAME (PASSWORD excluded).
      * @returns {Promise<object[]>}
      */
-    static async findAll(): Promise<Record<string, any>[]> {
+    static async findAll(): Promise<Omit<UserRow, "PASSWORD">[]> {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             return users
@@ -85,7 +85,7 @@ class UserModel {
                 UPDATED_AT: 1,
             })
             .sort({ USERNAME: 1 })
-            .toArray();
+            .toArray<Omit<UserRow, "PASSWORD">>();
     }
 
     /**

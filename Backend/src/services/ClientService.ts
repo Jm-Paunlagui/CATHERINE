@@ -33,7 +33,7 @@ class ClientService {
      * @param {object} [user]                 - Authenticated user (req.user); may be undefined.
      * @returns {Promise<void>}
      */
-    static async logError(payload: { message: string; stack?: string; componentStack?: string; url?: string; userAgent?: string; timestamp?: string; }, user: Record<string, any> | undefined): Promise<void> {
+    static async logError(payload: { message: string; stack?: string; componentStack?: string; url?: string; userAgent?: string; timestamp?: string; }, user: import("../types/express").AuthUser | undefined): Promise<void> {
         const { message, stack, componentStack, url, userAgent, timestamp } =
             payload ?? {};
 

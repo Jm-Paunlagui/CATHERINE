@@ -65,7 +65,7 @@ const resilienceMessages = {
      *   record (e.g. a TRXN_ID), when the `onRetry` hook or its resolved value exposes one.
      * @returns {string}
      */
-    IDEMPOTENT_RESOLVE: (label: string, key: string | number | null): string =>
+    IDEMPOTENT_RESOLVE: (label: string, key: unknown): string =>
         `[${label}] Idempotency probe found a prior committed result — ack-lost recovery${key ? ` (key=${key})` : ""}, retry loop short-circuited`,
 
     /**

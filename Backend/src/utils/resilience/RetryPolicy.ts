@@ -267,7 +267,7 @@ class RetryPolicy {
      *   its classification is exhausted.
      */
     async execute<T>(fn: (attempt: number) => Promise<T>, hooks: { onRetry?: (err: unknown, attempt: number) => Promise<{
-        key: any; resolved: T; 
+        key?: unknown; resolved: T; 
 } | void>; } = {}): Promise<T> {
         let attempt = 0;
          

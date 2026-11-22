@@ -574,7 +574,7 @@ class BackupArchiveService {
         requestId = null,
     }: { tables: string[]; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; event?: string | null; eventId?: number | string | null; mode: "FULL" | "INCREMENTAL"; archiveId: string; chain?: { baseArchiveId: string; generation: number; } | null; previousTableState?: Record<string, { sha256: string; sourceArchiveId: string; }>; createdBy?: number | string | null; requestId?: string | null; }): Promise<{
         zipBuffer: Buffer;
-        manifest: Record<string, unknown>;
+        manifest: Record<string, unknown> & { mode: "FULL" | "INCREMENTAL"; chain: { baseArchiveId: string | null; generation: number } | null };
         archiveId: string;
         totalRows: number;
         tableCount: number;

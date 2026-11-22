@@ -151,6 +151,9 @@ type BackupManifest = Record<string, unknown> & {
 /** An index entry: the manifest plus where the file is. */
 type BackupIndexEntry = BackupManifest & { filename: string; path: string; sizeBytes: number };
 
+/** What a finished backup run resolves to (runBackup's declared result). */
+type BackupRunResult = Awaited<ReturnType<typeof BackupStoreService.runBackup>>;
+
 class BackupStoreService {
     /** @type {Array<object>|null} */
     static _indexCache: BackupIndexEntry[] | null = null;
@@ -833,7 +836,7 @@ class BackupStoreService {
      * @returns {Promise<any>}
      * @private
      */
-    static _withRunBackupLock(fn: () => Promise<unknown>): Promise<any> {
+    static _withRunBackupLock<T>(fn: () => Promise<T>): Promise<T> {
         const waiterScope = currentScope();
         const queued = BackupStoreService._runLockDepth > 0;
         BackupStoreService._runLockDepth += 1;
@@ -899,7 +902,7 @@ class BackupStoreService {
      * @param {Date} [params.at] - Defaults to `new Date()`. Override in tests for determinism — `archiveId`/filename are second-granularity, so two real calls within the same wall-clock second would otherwise collide.
      * @returns {Promise<{
      *   archiveId: string, filename: string, path: string, sizeBytes: number,
-     *   mode: "FULL"|"INCREMENTAL", chain: {baseArchiveId:string,generation:number}|null,
+     *   mode: "FULL"|"INCREMENTAL", chain: {baseArchiveId:string|null,generation:number}|null,
      *   totalRows: number, tableCount: number, includedCount: number, unchangedCount: number,
      *   forcedFullReason: string|null,
      * }>}
@@ -926,7 +929,7 @@ class BackupStoreService {
         at = new Date(),
     }: { trigger: "SCHEDULED" | "MANUAL" | "PURGE"; event?: string | null; eventId?: number | string | null; tables: string[]; requestId?: string | null; createdBy?: number | string | null; at?: Date; }): Promise<{
         archiveId: string; filename: string; path: string; sizeBytes: number;
-        mode: "FULL" | "INCREMENTAL"; chain: { baseArchiveId: string; generation: number; } | null;
+        mode: "FULL" | "INCREMENTAL"; chain: { baseArchiveId: string | null; generation: number; } | null;
         totalRows: number; tableCount: number; includedCount: number; unchangedCount: number;
         forcedFullReason: string | null;
     }> {
@@ -1002,7 +1005,7 @@ class BackupStoreService {
             return stall.error;
         };
         /** Shared with `_runBackupLocked`: its publish promise survives the cut. */
-        const state = { publishing: null };
+        const state: { publishing: Promise<BackupRunResult> | null } = { publishing: null };
 
         return BackupStoreService._withRunBackupLock(async () => {
             const dir = await BackupStoreService._ensureDir();
@@ -1080,8 +1083,8 @@ class BackupStoreService {
      * @throws {Error} `err` when nothing (usable) was published.
      * @private
      */
-    static async _resolveCut({ err, stall, state, archiveId, trigger, filePath }: { err: Error; stall: { idleMs: number; lastSource: string; }; state: { publishing: Promise<Record<string, unknown>> | null; }; archiveId: string; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; filePath: string; }): Promise<Record<string, unknown>> {
-        let result: Record<string, unknown> | null = null;
+    static async _resolveCut({ err, stall, state, archiveId, trigger, filePath }: { err: Error; stall: { idleMs: number; lastSource: string; }; state: { publishing: Promise<BackupRunResult> | null; }; archiveId: string; trigger: "SCHEDULED" | "MANUAL" | "PURGE"; filePath: string; }): Promise<BackupRunResult> {
+        let result: BackupRunResult | null = null;
         if (state.publishing) {
             let timer: ReturnType<typeof setTimeout> | undefined;
             try {
@@ -1142,8 +1145,8 @@ class BackupStoreService {
     }: Parameters<typeof BackupStoreService.runBackup>[0] & {
         archiveId: string;
         signal?: AbortSignal;
-        state?: { publishing: Promise<Record<string, unknown>> | null };
-    }): Promise<Record<string, unknown>> {
+        state?: { publishing: Promise<BackupRunResult> | null };
+    }): Promise<BackupRunResult> {
         await BackupStoreService._sweepStaleParts();
         const index = await BackupStoreService._loadIndex({ force: true });
         const decision = await BackupStoreService._decideChain({

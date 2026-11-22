@@ -79,8 +79,8 @@ class HealthStreamHub {
     declare _evalTimer: ReturnType<typeof setInterval> | null;
     declare _heartbeat: ReturnType<typeof setInterval> | null;
     declare _last: { ready: boolean; cause: "database" | null } | null;
-    declare _perIp: Map<unknown, any>;
-    declare _clients: Map<any, any>;
+    declare _perIp: Map<string, number>;
+    declare _clients: Map<import("express").Response, { ip: string; teardown: () => void }>;
     constructor() {
         /** @type {Map<import('express').Response, { ip: string, teardown: () => void }>} */
         this._clients = new Map();

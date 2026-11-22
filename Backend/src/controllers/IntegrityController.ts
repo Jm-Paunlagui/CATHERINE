@@ -30,13 +30,14 @@ const FILTER_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{0,39}$/;
  * Parses a calendar/ISO date from a query value. Returns null when absent,
  * throws a 400 AppError when present but unparseable.
  *
- * @param {string|undefined} raw
+ * @param {unknown} raw
  * @param {string} field
  * @returns {Date|null}
  */
-function _parseDate(raw: string | undefined, field: string): Date | null {
+function _parseDate(raw: unknown, field: string): Date | null {
     if (raw == null || raw === "") return null;
-    const d = new Date(raw);
+    // Query strings, or a body's string / epoch number / Date; anything else is stringified as before.
+    const d = typeof raw === "number" || raw instanceof Date ? new Date(raw) : new Date(String(raw));
     if (isNaN(d.getTime())) {
         throw new AppError(INTEGRITY_ERRORS.INVALID_DATE_RANGE, HTTP_STATUS.BAD_REQUEST, {
             type: "ValidationError",
@@ -57,7 +58,7 @@ class IntegrityController {
      * @param {object} src - req.query (and/or req.body)
      * @returns {object} `{ [filterKey]: string, from: Date|null, to: Date|null }`
      */
-    static parseFilters(src: Record<string, any> = {}): Record<string, unknown> {
+    static parseFilters(src: Record<string, unknown> = {}): Record<string, unknown> {
         const from = _parseDate(src.from, "from");
         const to = _parseDate(src.to, "to");
         if (from && to && from.getTime() > to.getTime()) {

@@ -47,7 +47,7 @@ class SystemConfigService {
      * @param {string} key
      * @returns {Promise<object|null>} the raw row, or null on any unhappy path
      */
-    static async getRaw(key: string): Promise<Record<string, any> | null> {
+    static async getRaw(key: string): Promise<Awaited<ReturnType<typeof SystemConfigModel.findByKey>>> {
         let row;
         try {
             row = await SystemConfigModel.findByKey(key);
