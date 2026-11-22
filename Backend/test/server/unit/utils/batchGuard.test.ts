@@ -17,7 +17,7 @@ function oraError(code) {
     return new Error(`ORA-${String(code).padStart(5, "0")}: simulated`);
 }
 
-function makePolicy(overrides = {}) {
+function makePolicy(overrides: Record<string, any> = {}) {
     return new RetryPolicy({
         maxAttempts: 3,
         baseDelayMs: 1,

@@ -14,7 +14,7 @@ const ACCESS_CLAIMS = Object.freeze({
   iss: TOKEN_ISSUER,
 });
 
-function signToken(payload = {}, expiresIn = "1h") {
+function signToken(payload: Record<string, any> = {}, expiresIn = "1h") {
   return jwt.sign(
     { sub: "test-user", userLevel: 1, ...ACCESS_CLAIMS, ...payload },
     process.env.JWT_SECRET || "test-secret",

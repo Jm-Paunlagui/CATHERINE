@@ -45,7 +45,7 @@ class FakeOracleStore {
      *   Per-table config: idColumn (IDENTITY column to auto-assign) and unique
      *   key column groups (each group is an array of column names).
      */
-    constructor(schema = {}) {
+    constructor(schema: Record<string, { idColumn?: string; unique?: string[][] }> = {}) {
         /** @type {Map<string, { rows: object[], nextId: number, idColumn: string|null, unique: string[][] }>} */
         this.tables = new Map();
         for (const [name, cfg] of Object.entries(schema)) {
@@ -112,10 +112,10 @@ class FakeOracleStore {
                 keyCols.every((c) => r[c] === candidate[c]),
             );
             if (clash) {
-                const err = new Error(
-                    `ORA-00001: unique constraint violated (${keyCols.join(",")})`,
+                const err = Object.assign(
+                    new Error(`ORA-00001: unique constraint violated (${keyCols.join(",")})`),
+                    { ora: 1 },
                 );
-                err.ora = 1;
                 throw err;
             }
         }
@@ -181,7 +181,7 @@ class FakeOracleConnection {
     }
 
     // ── conn.execute (single statement) ─────────────────────────────────────
-    async execute(sql, binds = {}, _opts = {}) {
+    async execute(sql, binds: Record<string, any> = {}, _opts: Record<string, any> = {}) {
         this.store.stats.execute++;
         this._maybeFail("execute", sql);
 
@@ -232,7 +232,7 @@ class FakeOracleConnection {
     }
 
     // ── conn.executeMany (bulk) ──────────────────────────────────────────────
-    async executeMany(sql, bindRows, opts = {}) {
+    async executeMany(sql, bindRows, opts: Record<string, any> = {}) {
         this.store.stats.executeMany++;
         this._maybeFail("executeMany", sql);
 
@@ -277,7 +277,7 @@ class FakeOracleConnection {
             });
 
             this.store.stats.insert += affected;
-            const result = { rowsAffected: affected };
+            const result: { rowsAffected: number; outBinds?: unknown[]; batchErrors?: unknown[] } = { rowsAffected: affected };
             if (parsed.returningCol) result.outBinds = outBinds;
             if (opts.batchErrors) result.batchErrors = batchErrors;
             return result;

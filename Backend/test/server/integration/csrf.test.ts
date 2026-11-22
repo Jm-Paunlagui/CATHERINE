@@ -15,7 +15,8 @@ describe("CSRF Integration", function () {
             const res = await agent.get("/api/v1/csrf/token");
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
-            expect(res.body.token).toEqual(expect.any(String)).with.length.greaterThan(0);
+            expect(res.body.token).toEqual(expect.any(String));
+            expect(res.body.token.length).toBeGreaterThan(0);
         });
 
         it("returns cookieName, headerName, expiresIn, expiresAt", async function () {

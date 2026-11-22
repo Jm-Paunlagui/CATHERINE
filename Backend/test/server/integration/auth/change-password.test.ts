@@ -186,9 +186,8 @@ describe("PATCH /api/v1/auth/change-password", function () {
 
         expect(res.status).toBe(400);
         expectErrorShape(res.body);
-        expect(res.body.error.details)
-            .toBeInstanceOf(Array)
-            .with.lengthOf.at.least(2);
+        expect(res.body.error.details).toBeInstanceOf(Array);
+        expect(res.body.error.details.length).toBeGreaterThanOrEqual(2);
     });
 
     // ─── 3. Unauthenticated ───────────────────────────────────────────────────

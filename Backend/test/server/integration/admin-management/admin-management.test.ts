@@ -124,7 +124,8 @@ describe("GET /api/v1/admin-management", function () {
 
         expect(res.status).toBe(200);
         expectSuccessShape(res.body);
-        expect(res.body.data).toBeInstanceOf(Array).with.lengthOf(1);
+        expect(res.body.data).toBeInstanceOf(Array);
+        expect(res.body.data).toHaveLength(1);
         expect(listStub).toHaveBeenCalledTimes(1);
     });
 
@@ -183,7 +184,8 @@ describe("GET /api/v1/admin-management", function () {
             .get("/api/v1/admin-management")
             .set("Authorization", `Bearer ${superAdminToken()}`);
         expect(res.status).toBe(200);
-        expect(res.body.data).toBeInstanceOf(Array).with.lengthOf(0);
+        expect(res.body.data).toBeInstanceOf(Array);
+        expect(res.body.data).toHaveLength(0);
     });
 });
 

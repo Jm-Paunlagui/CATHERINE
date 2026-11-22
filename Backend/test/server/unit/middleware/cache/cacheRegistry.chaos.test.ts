@@ -206,7 +206,8 @@ describe("CacheRegistry — chaos / edge-case unit tests", function () {
             reg.register("stats-3", {});
 
             const all = reg.statsAll();
-            expect(all).toBeInstanceOf(Array).with.lengthOf(3);
+            expect(all).toBeInstanceOf(Array);
+            expect(all).toHaveLength(3);
         });
 
         it("each stats object has name, keys, hits, misses, and hitRate properties", function () {
@@ -304,7 +305,8 @@ describe("CacheRegistry — chaos / edge-case unit tests", function () {
             reg.register("rpt-c", {});
 
             const { stores } = reg.report();
-            expect(stores).toBeInstanceOf(Array).with.lengthOf(3);
+            expect(stores).toBeInstanceOf(Array);
+            expect(stores).toHaveLength(3);
         });
     });
 

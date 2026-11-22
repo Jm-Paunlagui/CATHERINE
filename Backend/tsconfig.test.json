@@ -9,5 +9,9 @@
         // into src/ are still errors.
         "noImplicitAny": false
     },
-    "include": ["test/**/*.ts", "src/types/**/*.d.ts"]
+    "include": ["test/**/*.ts", "src/types/**/*.d.ts"],
+    // The oracle-mongo-wrapper harness is a hand-run mocha+chai suite against a real
+    // Oracle, with its own package.json so mocha/chai stay out of this dependency tree
+    // (see its header); its types live there, not here.
+    "exclude": ["test/oracle-mongo-wrapper/**"]
 }

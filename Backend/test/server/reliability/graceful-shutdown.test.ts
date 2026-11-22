@@ -97,7 +97,7 @@ server.listen(0, "127.0.0.1", () => {
     });
 
     // ── Helper: spawn the child and wait for "LISTENING:<port>" ────────────
-    function spawnChild(env = {}) {
+    function spawnChild(env: Record<string, any> = {}) {
         return new Promise<any>((resolve, reject) => {
             const child = fork(CHILD_SCRIPT, [], {
                 stdio: ["pipe", "pipe", "pipe", "ipc"],

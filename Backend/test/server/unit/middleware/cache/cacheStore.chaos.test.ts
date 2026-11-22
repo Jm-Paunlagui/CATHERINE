@@ -49,7 +49,7 @@ function sleep(ms) {
  * @returns {CacheStore}
  */
 let _storeSeq = 0;
-function makeStore(options = {}) {
+function makeStore(options: Record<string, any> = {}) {
     return new CacheStore(`chaos-test-${++_storeSeq}`, options);
 }
 

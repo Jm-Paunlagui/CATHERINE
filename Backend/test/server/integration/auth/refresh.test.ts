@@ -52,7 +52,7 @@ const MOCK_REFRESH_RESULT = {
 };
 
 /** Refresh JWT with the full claim set AuthService.refresh requires. */
-function makeRefreshToken(overrides = {}, { secret, expiresIn = "7d" } = {}) {
+function makeRefreshToken(overrides: Record<string, any> = {}, { secret, expiresIn = "7d" } = {}) {
     const payload = {
         sub: "10001",
         type: TOKEN_TYPES.REFRESH,

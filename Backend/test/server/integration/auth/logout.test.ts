@@ -19,7 +19,7 @@ const { HTTP_STATUS } = require("../../../../src/constants");
 
 // ─── Token factory ────────────────────────────────────────────────────────────
 
-function adminToken(overrides = {}) {
+function adminToken(overrides: Record<string, any> = {}) {
     return signToken({
         userId: "10001",
         userLevel: 2,

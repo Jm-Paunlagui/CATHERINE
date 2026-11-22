@@ -36,7 +36,7 @@ function makeStore() {
     });
 }
 
-function makeLockout(opts = {}) {
+function makeLockout(opts: Record<string, any> = {}) {
     return new LoginLockoutMiddleware({ store: makeStore(), ...opts });
 }
 

@@ -22,7 +22,7 @@ afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true });
 });
 
-const opts = (extra = {}) => ({ dir, name: NAME, staleMs: 60_000, pollMs: 10, heartbeatMs: 20, ...extra });
+const opts = (extra: Record<string, any> = {}) => ({ dir, name: NAME, staleMs: 60_000, pollMs: 10, heartbeatMs: 20, ...extra });
 const leasePath = () => path.join(dir, NAME);
 const sleep = (ms) => new Promise<any>((r) => setTimeout(r, ms));
 

@@ -45,7 +45,7 @@ function flushImmediate() {
 
 /** Unique name counter so each makeStore() call gets a fresh NodeCache. */
 let _storeSeq = 0;
-function makeStore(opts = {}) {
+function makeStore(opts: Record<string, any> = {}) {
     return new CacheStore(`mw-chaos-${++_storeSeq}`, opts);
 }
 

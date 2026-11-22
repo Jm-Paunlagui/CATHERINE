@@ -4,7 +4,7 @@ const {
     SecurityFilterMiddleware,
 } = require("../../../../src/middleware/security/SecurityFilterMiddleware");
 
-function mockReq(options = {}) {
+function mockReq(options: Record<string, any> = {}) {
     const path = options.path || "/test";
     return {
         ip: options.ip || "127.0.0.1",

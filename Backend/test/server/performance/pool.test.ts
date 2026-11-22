@@ -34,7 +34,7 @@ describe("DB Pool Performance", function () {
         };
     }
 
-    function fakePool(opts = {}) {
+    function fakePool(opts: Record<string, any> = {}) {
         const allConns: any[] = [];
         const pool = {
             poolMin: opts.poolMin ?? 2,
