@@ -426,7 +426,7 @@ Base path `/api/v1/data-purge`. Every route: `authenticate` → `requireSuperAdm
 | Fail-closed registry | Module-load self-check + per-call pool assertion | CWE-1188 |
 | Audit trail | Post-commit audit row survives purging `T_AUDIT_LOGS_DEV`; `logger.alert` on commit and lockout ack | CWE-778 |
 | Sensitive archives | `.env.example` warns archives hold password hashes — keep `DB_BACKUP_DIR` outside served paths | CWE-538 |
-| Self-lockout | `acknowledgeLockout` required when `T_ADMINS_DEV` is in scope; recovery = `bun run db:seed:template` (`Backend/scripts/seed-template.js`) | — |
+| Self-lockout | `acknowledgeLockout` required when `T_ADMINS_DEV` is in scope; recovery = `bun run db:seed:template` (`Backend/scripts/seed-template.ts`) | — |
 
 **Residual risks.** `/backup` (a heavy table stream), `/backups/:id/download` and `/backups/:id/verify` are not behind the strict limiter. The limiter keys by IP (`keyBy` default `"ip"` in `RateLimiterMiddleware`), not by user. The vote-request TOCTOU from §6.6 remains open.
 

@@ -166,7 +166,7 @@ function mergeBinds(a: Record<string, unknown>, b: Record<string, unknown>): Rec
  *
  *   buildOrderBy(null)  // → ""  (no sorting)
  */
-function buildOrderBy(sortSpec: Record<string, unknown>): string {
+function buildOrderBy(sortSpec: Record<string, unknown> | null | undefined): string {
   if (
     !sortSpec ||
     typeof sortSpec !== "object" ||
@@ -218,7 +218,7 @@ function buildOrderBy(sortSpec: Record<string, unknown>): string {
  *   buildProjection(null)
  *   // → { columns: '*', isExclusion: false, excludedCols: [] }
  */
-function buildProjection(projection: Record<string, unknown>): { columns: string; isExclusion: boolean; excludedCols: string[]; } {
+function buildProjection(projection: Record<string, unknown> | null | undefined): { columns: string; isExclusion: boolean; excludedCols: string[]; } {
   if (
     !projection ||
     typeof projection !== "object" ||

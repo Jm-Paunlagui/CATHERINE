@@ -961,4 +961,5 @@ class AuthService {
     }
 }
 
+export type { RefreshRecord };
 export default AuthService;

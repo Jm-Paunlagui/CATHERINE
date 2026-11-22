@@ -921,7 +921,7 @@ class AdminManagementService {
      * @throws {AppError} 409 LAST_ACTIVE_SUPER_ADMIN
      * @private
      */
-    static async _withSuperAdminGuard<T>(existing: Record<string, any>, fn: (session: Record<string, unknown> | null) => Promise<T>): Promise<T> {
+    static async _withSuperAdminGuard<T>(existing: Record<string, any>, fn: (session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null) => Promise<T>): Promise<T> {
         if (existing.ROLE !== "SUPER_ADMIN" || String(existing.IS_ACTIVE ?? "Y") !== "Y") {
             return fn(null);
         }

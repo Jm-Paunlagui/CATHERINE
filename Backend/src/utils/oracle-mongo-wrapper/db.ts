@@ -57,7 +57,7 @@ import { oracleMongoWrapperMessages as MSG } from "../../constants/messages";
  *   // Use it with OracleSchema:
  *   const schema = new OracleSchema(db);
  */
-function createDb(connectionName: string = "appDb"): Record<string, any> {
+function createDb(connectionName: string = "appDb") {
   if (!connectionName || typeof connectionName !== "string") {
     throw new TypeError(MSG.CREATEDB_INVALID_CONNECTION_NAME);
   }
@@ -81,7 +81,7 @@ function createDb(connectionName: string = "appDb"): Record<string, any> {
      *     return result.rows;
      *   });
      */
-    withConnection: (callback: ((...args: unknown[]) => unknown)): Promise<unknown> =>
+    withConnection: <T>(callback: (conn: DbConnection) => T | Promise<T>): Promise<T> =>
       config.withConnection(connectionName, callback),
 
     /**
@@ -93,7 +93,7 @@ function createDb(connectionName: string = "appDb"): Record<string, any> {
      * @param {Function} callback - async (conn) => result
      * @returns {Promise<*>} Whatever your callback returns
      */
-    withTransaction: (callback: ((...args: unknown[]) => unknown)): Promise<unknown> =>
+    withTransaction: <T>(callback: (conn: DbConnection) => T | Promise<T>): Promise<T> =>
       config.withTransaction(connectionName, callback),
 
     /**
@@ -126,4 +126,16 @@ function createDb(connectionName: string = "appDb"): Record<string, any> {
   };
 }
 
+/**
+ * The connection a wrapper method receives from withConnection / withTransaction.
+ * Deliberately untyped: typing it as oracledb.Connection makes every `result.rows`
+ * `unknown[]`, so the wrapper's row handling is typed first (plans/ts-conversion-open-items.md,
+ * "Type the connection boundary"). One alias, so that change is one line.
+ */
+type DbConnection = any;
+
 export { createDb };
+/** The db handle createDb() returns. */
+type WrapperDb = ReturnType<typeof createDb>;
+
+export type { DbConnection, WrapperDb };

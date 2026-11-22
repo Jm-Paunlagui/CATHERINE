@@ -685,6 +685,15 @@ describe("AlertNotifierService — branch sweep", function () {
             expect(upsert).not.toHaveBeenCalled();
         });
 
+        it("an unexpected status (e.g. INFO) -> 400 ALERT_NOT_ACTIVE, never reaches CK_SAA_SEVERITY", async function () {
+            const upsert = vi.spyOn(ServerAlertAckModel, "upsert").mockResolvedValue();
+            svc._alertStates.set("HIGH_HEAP::global", { status: "INFO" });
+            const err = await rejection(svc.acknowledge("HIGH_HEAP::global", 1));
+            expect(err.statusCode).toBe(400);
+            expect(err.message).toBe(NOTIFICATION_ERRORS.ALERT_NOT_ACTIVE);
+            expect(upsert).not.toHaveBeenCalled();
+        });
+
         it("a persist failure is a 502 and nothing is cached in memory", async function () {
             vi.spyOn(ServerAlertAckModel, "upsert").mockRejectedValue("ora-down");
             svc._alertStates.set("HIGH_HEAP::global", { status: "CRITICAL" });

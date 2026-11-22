@@ -12,12 +12,17 @@ Branch `backend-rewrite-to-typescript` (PR #4, open, not merged). Status as of 2
 
 ## 2. Follow-up PRs (after merge)
 
-- [ ] **G18:** `updateOne({})`, `replaceOne({})` and `deleteOne({})` build `… t0  AND ROWNUM = 1`, which is invalid SQL. See `oracle-wrapper-gap-inventory.md`.
-- [ ] **Remaining `any`:** 550 `: any`, 172 `Record<string, any>`, 49 `any[]`, 1 `as any`. Most of it is in `metricsMerge.ts` (71), `OracleCollection.ts` (24), `AlertNotifierService.ts` (24), `ClusterRpcHub.ts` (23) and `oracle.ts` (22). The wrapper's filter operands may stay `any`; the rest is typeable debt.
-- [ ] **Port to TypeScript:** `scripts/` (7 files), `test/` (109 files) and the root configs (`eslint.config.js`, `vitest*.config.js`). This removes `require(...).default` from tests.
+- [x] **G18:** `updateOne({})`, `replaceOne({})` and `deleteOne({})` build `… t0  AND ROWNUM = 1`, which is invalid SQL. See `oracle-wrapper-gap-inventory.md`.
+- [ ] **Remaining `any`:** 410 `: any`, 141 `Record<string, any>` (was 550 / 172). Done: `metricsMerge.ts`, `AlertNotifierService.ts`, `ClusterRpcHub.ts`, `ClusterSupervisor.ts`, `config/adapters/oracle.ts`, `OracleCollection.ts` (4 left, all the `conn` boundary). Next: the files with the most remaining (`grep -rcE ':\s*any\b|Record<string, any>' src | sort -t: -k2 -rn`).
+- [ ] **Type the connection boundary:** `withConnection`'s callback `conn` is untyped; typing it as `oracledb.Connection` makes every `result.rows` in the models `unknown[]`, so models need row types first.
+- [ ] **Unify the two metrics snapshot shapes:** the cluster merge (`metricsMerge`) and `MetricsStore.getSnapshot()` should share one type, then `AlertNotifierService`'s `AlertSnapshot = Record<string, any>` can become that type.
+- [ ] **Port to TypeScript:** ~~`scripts/` (7 files)~~ done, `test/` (109 files) and the root configs (`eslint.config.js`, `vitest*.config.js`). This removes `require(...).default` from tests.
 - [ ] **Frontend** TypeScript conversion (not started).
 - [ ] **TypeScript 7** once typescript-eslint supports it (currently pinned `~6.0`).
 - [ ] **Wrapper backlog G5–G17** (`oracle-wrapper-gap-inventory.md`).
+
+- [ ] **Type the audit record:** one type shared by `AuditLogMiddleware._buildRecord`, `AuditLogModel.insert/insertBatch` and `demoStore.auditInsert` (each takes `any` / `Record<string, unknown>` today).
+- [ ] **Restore has almost no tests:** `DataRestoreService` (archive verify, preflight allow-list, FK remap, re-sign) is covered only by the `_returnedIdentity` unit test. It handles uploaded archives, so it needs integration tests.
 
 ## Known flaky tests
 

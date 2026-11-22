@@ -88,7 +88,7 @@ class SystemConfigModel {
     static async findByKey(key: string): Promise<SystemConfigRow | null> {
         if (isDemoMode()) {
             const row = demo.systemConfig().get(String(key));
-            return row ? ({ ...row } as SystemConfigRow) : null;
+            return row ? { ...row } : null;
         }
         return _config.find({ CONFIG_KEY: String(key) }).next<SystemConfigRow>();
     }
@@ -137,6 +137,12 @@ class SystemConfigModel {
             store.set(k, {
                 CONFIG_KEY: k,
                 DESCRIPTION: prev?.DESCRIPTION ?? null,
+                // setFields always carries these four; the defaults only satisfy the row type.
+                CONFIG_VALUE: value,
+                VALUE_TYPE: valueType,
+                UPDATED_BY: null,
+                UPDATED_AT: new Date(),
+                ROW_HASH: null,
                 ...setFields,
             });
             return k;

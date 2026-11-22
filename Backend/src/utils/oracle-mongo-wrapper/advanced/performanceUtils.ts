@@ -36,6 +36,7 @@
  * ============================================================================
  */
 
+import type { DbConnection } from "../db";
 import type { QueryBuilder } from "../core/QueryBuilder";
 import { quoteIdentifier } from "../utils";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
@@ -84,7 +85,7 @@ function createPerformance(db: Record<string, any>): Record<string, unknown> {
      * @returns {Promise<Array>}
      */
     async explainPlan(queryBuilderOrSQL: QueryBuilder | string): Promise<Array<unknown>> {
-      return db.withConnection(async (conn: any) => {
+      return db.withConnection(async (conn: DbConnection) => {
         let sql;
         let binds: Record<string, unknown> = {};
 
@@ -133,7 +134,7 @@ function createPerformance(db: Record<string, any>): Record<string, unknown> {
      * @returns {Promise<void>}
      */
     async analyze(tableName: string): Promise<void> {
-      return db.withConnection(async (conn: any) => {
+      return db.withConnection(async (conn: DbConnection) => {
         const sql = `BEGIN DBMS_STATS.GATHER_TABLE_STATS(USER, UPPER(:tbl), CASCADE => TRUE); END;`;
         try {
           await conn.execute(sql, { tbl: tableName }, { autoCommit: true });
@@ -156,7 +157,7 @@ function createPerformance(db: Record<string, any>): Record<string, unknown> {
      * @returns {Promise<{ acknowledged: boolean }>}
      */
     async createMaterializedView(name: string, queryBuilderOrSQL: QueryBuilder | string, options: { refreshMode?: "fast" | "complete" | "force"; refreshOn?: "commit" | "demand"; buildMode?: "immediate" | "deferred"; orReplace?: boolean } = {}): Promise<{ acknowledged: boolean; }> {
-      return db.withConnection(async (conn: any) => {
+      return db.withConnection(async (conn: DbConnection) => {
         let selectSql;
         let binds: Record<string, unknown> = {};
 
@@ -236,7 +237,7 @@ function createPerformance(db: Record<string, any>): Record<string, unknown> {
      * @returns {Promise<void>}
      */
     async refreshMaterializedView(name: string, mode: string = "complete"): Promise<void> {
-      return db.withConnection(async (conn: any) => {
+      return db.withConnection(async (conn: DbConnection) => {
         const modeChar = { fast: "F", complete: "C", force: "?" }[mode] || "C";
         const sql = `BEGIN DBMS_MVIEW.REFRESH(:mvName, :mvMode); END;`;
         try {
@@ -262,7 +263,7 @@ function createPerformance(db: Record<string, any>): Record<string, unknown> {
      * @returns {Promise<{ acknowledged: boolean }>}
      */
     async dropMaterializedView(name: string): Promise<{ acknowledged: boolean; }> {
-      return db.withConnection(async (conn: any) => {
+      return db.withConnection(async (conn: DbConnection) => {
         const sql = `DROP MATERIALIZED VIEW ${quoteIdentifier(name)}`;
         try {
           await conn.execute(sql, {}, { autoCommit: true });

@@ -996,7 +996,7 @@ class MetricsStore {
       red: { [s: string]: { count: number; clientErrorCount: number; serverErrorCount: number; errorRate: number; clientErrorRate: number; availability: number; p50: number; p95: number; p99: number; avgMs: number; window: { windowMs: number; count: number; p99: number; }; }; };
       system: { cpu: Record<string, unknown>; memory: Record<string, unknown>; eventLoopLag: number; gc: Record<string, unknown>; memoryTrend: HeapTrend; handles: number; requests: number; };
       dependencies: { oracle: { [s: string]: { queryCount: number; errorCount: number; avgMs: number; p95Ms: number; poolUtilization: number | null; connectionsInUse: number | null; connectionsOpen: number | null; poolMax: number | null; queueLength: number | null; capacity: number | null; healthy: boolean | null; consecutiveFailures: number | null; }; }; smtp: SmtpDependencySnapshot; };
-      totals: { requestsTotal: number; clientErrorsTotal: number; serverErrorsTotal: number; errorRate: number; clientErrorRate: number; availability: number; };
+      totals: { requestsTotal: number; successTotal: number; redirectsTotal: number; notModifiedTotal: number; clientErrorsTotal: number; serverErrorsTotal: number; errorsTotal: number; errorRate: number; clientErrorRate: number; availability: number; apdex: number; window: { windowMs: number; requests: number; clientErrors: number; serverErrors: number; serviced: number; errorRate: number; availability: number; }; };
       frontendVitals: Array<unknown>;
       frontendErrors: Array<unknown>;
       notifications: Record<string, NotificationDelivery>;

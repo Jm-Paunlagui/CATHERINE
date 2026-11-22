@@ -371,11 +371,11 @@ Old entries with a `summary` field (pre-structured format) are auto-migrated to 
 
 Version comparison follows SemVer 2.0.0: pre-release versions (`-dev.1`, `-alpha.1`, etc.) have lower precedence than the bare release (`1.20.0-rc.1 < 1.20.0`). Within pre-release, stages are ordered by the ladder (`dev < alpha < beta < rc`), then by iteration number.
 
-**Date order equals version order.** Inside one core version, entries sorted by `displayDate` then `createdAt` must never step back in version (no `-alpha.3` dated after `-beta.1`). `scripts/verify-changelog-release.js` (`bun run audit:changelog-release`) fails such a changelog; the `.githooks/pre-push` hook (installed by `bun install` through `scripts/install-git-hooks.js`) runs it on every pushed tag, and `.github/workflows/verify-changelog-release.yml` runs it on tag push (needs the repository secret `CHANGELOG_ENCRYPTION_KEY`).
+**Date order equals version order.** Inside one core version, entries sorted by `displayDate` then `createdAt` must never step back in version (no `-alpha.3` dated after `-beta.1`). `scripts/verify-changelog-release.ts` (`bun run audit:changelog-release`) fails such a changelog; the `.githooks/pre-push` hook (installed by `bun install` through `scripts/install-git-hooks.ts`) runs it on every pushed tag, and `.github/workflows/verify-changelog-release.yml` runs it on tag push (needs the repository secret `CHANGELOG_ENCRYPTION_KEY`).
 
 ### Maintenance scripts — dump → seed
 
-The app writes the store only through `ChangelogService` → `ChangelogModel` (the CRUD routes above). Two offline scripts in `Backend/scripts/` exist for capturing and re-seeding it, wired as `bun run changelog:dump` and `bun run changelog:seed`. Each reads the same key `ChangelogModel` uses (`CHANGELOG_ENCRYPTION_KEY`, else `DATA_SIGNING_SECRET`) from `.env`. (`scripts/seed-template.js` is unrelated — it seeds the demo accounts.)
+The app writes the store only through `ChangelogService` → `ChangelogModel` (the CRUD routes above). Two offline scripts in `Backend/scripts/` exist for capturing and re-seeding it, wired as `bun run changelog:dump` and `bun run changelog:seed`. Each reads the same key `ChangelogModel` uses (`CHANGELOG_ENCRYPTION_KEY`, else `DATA_SIGNING_SECRET`) from `.env`. (`scripts/seed-template.ts` is unrelated — it seeds the demo accounts.)
 
 | Step | Script | Reads | Writes |
 |---|---|---|---|

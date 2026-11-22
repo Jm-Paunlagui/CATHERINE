@@ -34,6 +34,7 @@
  * ============================================================================
  */
 
+import type { DbConnection } from "../db";
 import type { QueryBuilder } from "../core/QueryBuilder";
 import { quoteIdentifier } from "../utils";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
@@ -61,13 +62,11 @@ class SetResultBuilder {
    */
   constructor(qb1: QueryBuilder, qb2: QueryBuilder, operator: string) {
     // Validate column counts if projections are set
-    if (qb1._projection && qb2._projection) {
-      const count1 = Object.keys(qb1._projection).filter(
-        (k) => qb1._projection[k] === 1,
-      ).length;
-      const count2 = Object.keys(qb2._projection).filter(
-        (k) => qb2._projection[k] === 1,
-      ).length;
+    const p1 = qb1._projection;
+    const p2 = qb2._projection;
+    if (p1 && p2) {
+      const count1 = Object.keys(p1).filter((k) => p1[k] === 1).length;
+      const count2 = Object.keys(p2).filter((k) => p2[k] === 1).length;
       if (count1 !== count2) {
         throw new Error(MSG.SET_OP_COLUMN_COUNT_MISMATCH);
       }
@@ -175,7 +174,7 @@ class SetResultBuilder {
     const conn = this._qb1._conn;
     const { sql, binds } = this._buildSQL();
 
-    const exec = async (connection: any) => {
+    const exec = async (connection: DbConnection) => {
       try {
         // On a session connection, committing would end the caller's
         // transaction (and release its locks); only a pooled conn commits.

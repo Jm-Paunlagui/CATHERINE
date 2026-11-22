@@ -1075,7 +1075,7 @@ deliberately; do not inherit a default.
 
 Bun is the runtime, package manager and test runner (`engines.bun`, `packageManager`). `bun server.ts` runs the API; `bun run test` runs Vitest under Bun (`bun --bun vitest`). Never `bun test` — that is Bun's own runner and skips Vitest.
 
-Compile into a standalone Windows executable with `bun build --compile` (`scripts/build.js`):
+Compile into a standalone Windows executable with `bun build --compile` (`scripts/build.ts`):
 
 ```bash
 bun run build        # dist/catherine-backend.exe (bun-windows-x64; cross-compiles from macOS/Linux)
@@ -1085,7 +1085,7 @@ bun run build:host   # dist/catherine-backend for this machine — smoke-test a 
 Compiled-exe rules:
 
 1. **Never read a file relative to `__dirname`.** `bun build --compile` bakes the BUILD machine's absolute `__dirname` into the binary, so on the server it points at nothing. Resolve every on-disk path through `src/utils/runtimePaths.ts` (`APP_ROOT` = exe folder when compiled, Backend folder otherwise; `appPath(...)`).
-2. `scripts/build.js` stages beside the exe: `src/utils/email-templates/`, `src/generated/`, `node_modules/oracledb/build/Release/` (Thick binary, passed as `initOracleClient({ binaryDir })`) and `prebuilds/<platform-arch>/` (argon2, found by node-gyp-build's exe-relative lookup). It fails the build if any stages nothing. A new on-disk asset must be added to `ASSET_DIRS` there.
+2. `scripts/build.ts` stages beside the exe: `src/utils/email-templates/`, `src/generated/`, `node_modules/oracledb/build/Release/` (Thick binary, passed as `initOracleClient({ binaryDir })`) and `prebuilds/<platform-arch>/` (argon2, found by node-gyp-build's exe-relative lookup). It fails the build if any stages nothing. A new on-disk asset must be added to `ASSET_DIRS` there.
 3. The source map is embedded (`--sourcemap=inline`) so log call-sites read `src/...:line`, not `root/catherine-backend:line`.
 4. `Intl` output differs between engines (JavaScriptCore writes "Nov 3, 2026 at 2:32 PM"; V8 "Nov 3, 2026, 2:32 PM"). Never use `dateStyle`/`timeStyle` for text that tests or emails depend on — use `formatUtcStamp` or `formatToParts`.
 5. `src/utils/consoleManager.ts` sets the process title for the exe window.
@@ -1095,7 +1095,7 @@ Compiled-exe rules:
 
 ## TypeScript
 
-`server.ts` and every file under `src/` are TypeScript ES modules (`import`/`export`), type-checked under `strict`. Bun runs them directly; `tsc` only type-checks (`noEmit`). `scripts/` and `test/` are still CommonJS JavaScript and load `src` with `require()`.
+`server.ts`, every file under `src/` and every CLI tool under `scripts/` are TypeScript ES modules (`import`/`export`), type-checked under `strict`. Bun runs them directly; `tsc` only type-checks (`noEmit`). `test/` is still CommonJS JavaScript and loads `src` with `require()`. A script that reads `.env` imports `src/config/bootEnv.ts` first (rule 7); `__dirname` is `import.meta.dir` and the run-as-main check is `import.meta.main`.
 
 ```bash
 bun run typecheck   # tsc -p . — must stay at zero errors

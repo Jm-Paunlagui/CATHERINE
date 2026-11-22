@@ -71,7 +71,7 @@ const PURGE_SQL = `DELETE FROM ${TABLE}
  * @param {object} rec
  * @returns {object} bind object for INSERT_SQL
  */
-function insertBinds(rec: Record<string, any>): Record<string, unknown> {
+function insertBinds(rec: DemoInsert): Record<string, unknown> {
     return {
         hash: rec.jtiHash,
         fid: rec.familyId,
@@ -89,7 +89,7 @@ function insertBinds(rec: Record<string, any>): Record<string, unknown> {
  * @param {object} rec
  * @returns {object}
  */
-function demoRow(rec: Record<string, any>): Record<string, unknown> {
+function demoRow(rec: DemoInsert): import("./demo/demoStore").DemoRefreshRow {
     return {
         JTI_HASH: rec.jtiHash,
         FAMILY_ID: rec.familyId,
@@ -108,7 +108,10 @@ function demoRow(rec: Record<string, any>): Record<string, unknown> {
  * Demo insert honouring UQ_TARTD_JTI_HASH (a duplicate hash is rejected).
  * @param {object} rec
  */
-function demoInsert(rec: Record<string, unknown>) {
+/** What insert() records in demo mode. */
+type DemoInsert = { jtiHash: string; familyId: string; userKey: string; roleSource: string; issuedAtMs: number; expiresAtMs: number };
+
+function demoInsert(rec: DemoInsert) {
     const rows = demo.refreshTokens();
     if (rows.some((r) => r.JTI_HASH === rec.jtiHash)) {
         throw new Error("ORA-00001: unique constraint (UQ_TARTD_JTI_HASH) violated");
@@ -142,7 +145,7 @@ class AuthRefreshTokenModel {
      *   per-process registry vouches for it; see RefreshTokenService)
      * @returns {Promise<{outcome: "ok"|"reused"|"revoked"|"absent"}>}
      */
-    static async rotate({ oldHash, next, now, allowAbsent }: { oldHash: string; next: Record<string, unknown>; now: Date; allowAbsent: boolean; }): Promise<{ outcome: "ok" | "reused" | "revoked" | "absent"; }> {
+    static async rotate({ oldHash, next, now, allowAbsent }: { oldHash: string; next: DemoInsert; now: Date; allowAbsent: boolean; }): Promise<{ outcome: "ok" | "reused" | "revoked" | "absent"; }> {
         if (isDemoMode()) {
             // Synchronous body: no await between check and mutation, so two
             // concurrent rotations of the same token cannot both win.
@@ -274,8 +277,8 @@ class AuthRefreshTokenModel {
             ),
         );
         return (res?.rows ?? [])
-            .filter((r: any) => typeof r.FAMILY_ID === "string" && r.REVOKED_AT instanceof Date)
-            .map((r: any) => ({ familyId: r.FAMILY_ID, revokedAt: r.REVOKED_AT }));
+            .filter((r: { FAMILY_ID?: unknown; REVOKED_AT?: unknown }): r is { FAMILY_ID: string; REVOKED_AT: Date } => typeof r.FAMILY_ID === "string" && r.REVOKED_AT instanceof Date)
+            .map((r: { FAMILY_ID: string; REVOKED_AT: Date }) => ({ familyId: r.FAMILY_ID, revokedAt: r.REVOKED_AT }));
     }
 
     /**

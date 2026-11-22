@@ -65,6 +65,7 @@
  * ============================================================================
  */
 
+import type { DbConnection } from "../db";
 import { quoteIdentifier, buildOrderBy, buildProjection } from "../utils";
 import { parseFilter } from "../parsers/filterParser";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
@@ -79,6 +80,16 @@ interface ProjectionSubquery {
 /** Lock options accepted by {@link QueryBuilder.forUpdate}. */
 type ForUpdateOptions = { of?: string[]; wait?: number; nowait?: boolean; skipLocked?: boolean };
 type ForUpdateMode = boolean | "nowait" | "skip locked" | ForUpdateOptions;
+/** Initial cursor options (what OracleCollection.find() passes through). */
+type QueryBuilderOptions = {
+    sort?: Record<string, unknown>;
+    limit?: number;
+    skip?: number;
+    projection?: Record<string, unknown>;
+    forUpdate?: ForUpdateMode;
+    sample?: { percentage: number; seed?: number };
+    asOf?: { scn?: number | string; timestamp?: string };
+};
 
 /**
  * The FOR UPDATE clause for a lock mode. Throws on an unknown mode so a typo
@@ -107,15 +118,15 @@ function _forUpdateClause(mode: unknown): string {
 
 class QueryBuilder {
     declare _terminated: boolean;
-    declare _asOf: any;
-    declare _sample: any;
+    declare _asOf: { scn?: number | string; timestamp?: string } | null;
+    declare _sample: { percentage: number; seed?: number } | null;
     declare _forUpdate: unknown;
-    declare _projection: any;
+    declare _projection: Record<string, unknown> | null;
     declare _skip: unknown;
     declare _limit: unknown;
-    declare _sort: any;
+    declare _sort: Record<string, unknown> | null;
     declare _conn: Record<string, unknown> | null;
-    declare db: Record<string, any>;
+    declare db: import("../db").WrapperDb;
     declare filter: Record<string, unknown>;
     declare tableName: string;
     /**
@@ -127,7 +138,7 @@ class QueryBuilder {
      * @param {Object} [conn] - Raw connection (if inside a transaction/session)
      * @param {Object} [options] - Initial options: sort, limit, skip, projection, etc.
      */
-    constructor(tableName: string, filter: Record<string, unknown>, db: Record<string, unknown>, conn: Record<string, unknown> | null = null, options: Record<string, unknown> = {}) {
+    constructor(tableName: string, filter: Record<string, unknown>, db: import("../db").WrapperDb, conn: import("../db").DbConnection | null = null, options: QueryBuilderOptions = {}) {
         this.tableName = tableName;
         this.filter = filter || {};
         this.db = db;
@@ -392,8 +403,8 @@ class QueryBuilder {
      * where a filter value is itself a Promise that needs to be awaited.
      */
     async _resolveFilterPromises() {
-        const resolve = async (obj: any): Promise<unknown> => {
-            if (obj && typeof obj.then === "function") return await obj;
+        const resolve = async (obj: unknown): Promise<unknown> => {
+            if (obj && typeof obj === "object" && "then" in obj && typeof obj.then === "function") return await obj;
             if (Array.isArray(obj)) return Promise.all(obj.map(resolve));
             if (obj && typeof obj === "object" && !(obj instanceof Date)) {
                 const result: Record<string, unknown> = {};
@@ -414,7 +425,7 @@ class QueryBuilder {
      * .toArray(). JavaScript's `await` calls .then() on any thenable object,
      * and this method delegates to .toArray().
      */
-    then(resolve: any, reject: any) {
+    then<R1 = Array<Record<string, unknown>>, R2 = never>(resolve?: ((rows: Array<Record<string, unknown>>) => R1 | PromiseLike<R1>) | null, reject?: ((reason: unknown) => R2 | PromiseLike<R2>) | null): Promise<R1 | R2> {
         return this.toArray().then(resolve, reject);
     }
 
@@ -430,7 +441,7 @@ class QueryBuilder {
         await this._resolveFilterPromises();
         const { sql, binds } = this._buildSQL();
 
-        const fn = async (conn: any) => {
+        const fn = async (conn: DbConnection) => {
             try {
                 const result = await conn.execute(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
@@ -441,7 +452,7 @@ class QueryBuilder {
                 // Handle exclusion projection post-processing
                 const proj = buildProjection(this._projection);
                 if (proj.isExclusion && proj.excludedCols.length > 0) {
-                    rows = rows.map((row: any) => {
+                    rows = rows.map((row: Record<string, unknown>) => {
                         const doc = { ...row };
                         for (const col of proj.excludedCols) {
                             delete doc[col];
@@ -503,12 +514,12 @@ class QueryBuilder {
         const { sql, binds } = this._buildSQL();
         const proj = buildProjection(this._projection);
 
-        const run = (conn: any) =>
+        const run = (conn: DbConnection) =>
             new Promise<void>((resolve, reject) => {
                 const stream = conn.queryStream(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                 });
-                stream.on("data", (row: any) => {
+                stream.on("data", (row: Record<string, unknown>) => {
                     if (proj.isExclusion && proj.excludedCols.length > 0) {
                         for (const col of proj.excludedCols) delete row[col];
                     }
@@ -589,7 +600,7 @@ class QueryBuilder {
         const { whereClause, binds } = parseFilter(this.filter, "t0");
         const sql = `SELECT COUNT(*) AS CNT FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause}`;
 
-        const fn = async (conn: any) => {
+        const fn = async (conn: DbConnection) => {
             try {
                 // Never commit on a session connection: that would end the
                 // caller's transaction and release its row locks mid-flight.
@@ -629,3 +640,4 @@ class QueryBuilder {
 }
 
 export { QueryBuilder };
+export type { ForUpdateMode, QueryBuilderOptions };

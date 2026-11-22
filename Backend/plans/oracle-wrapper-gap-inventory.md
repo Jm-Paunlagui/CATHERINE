@@ -30,7 +30,7 @@ Each bug was reproduced against eMeal.API's own wrapper on the local Oracle 19c,
 
 **eMeal status:** all four defects are proven in eMeal's copy of the wrapper (`src/utils/oracle-mongo-wrapper`). No eMeal code path triggers them today: eMeal never uses `$currentDate`, `.forUpdate()`, or a correlated `deleteMany`, and its one in-transaction `count()` (`menu.model.js:2220`) runs before any write. Porting is a candidate for 2.1.17.
 
-**G18 (found while fixing G3, existed before): open.** `updateOne({})`, `replaceOne({})` and `deleteOne({})` build `… FROM "T" t0  AND ROWNUM = 1`, which is invalid SQL because an empty filter yields no `WHERE`.
+**G18 (found while fixing G3, existed before): fixed.** `updateOne({})`, `replaceOne({})` and `deleteOne({})` built `… FROM "T" t0  AND ROWNUM = 1`. Proven on Oracle 19c (ORA-00907); they now use `WHERE ROWNUM = 1`.
 
 #### Original defect notes
 

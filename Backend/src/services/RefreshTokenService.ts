@@ -59,7 +59,7 @@ class RefreshTokenService {
      * @returns {Promise<void>} resolves only when rotation succeeded
      * @throws {AppError} 401 REFRESH_TOKEN_REVOKED | REFRESH_TOKEN_REUSED
      */
-    static async rotate({ jti, familyId, userId }: { jti: string; familyId: string; userId: string; }, nextRecord: Record<string, any>): Promise<void> {
+    static async rotate({ jti, familyId, userId }: { jti: string; familyId: string; userId: string; }, nextRecord: import("./AuthService").RefreshRecord): Promise<void> {
         const jtiHash = hashJti(jti);
         const nowMs = Date.now();
 
@@ -172,7 +172,7 @@ class RefreshTokenService {
     // ── Internals ────────────────────────────────────────────────────────────
 
     /** Reuse: end the whole family in both tiers, then refuse. Never returns. */
-    static async #onReuse(userId: any, familyId: any) {
+    static async #onReuse(userId: string, familyId: string) {
         await RefreshTokenService.revokeFamily(familyId, REFRESH_REVOKE_REASONS.REUSE, {
             bestEffort: true,
         });
@@ -185,7 +185,7 @@ class RefreshTokenService {
     }
 
     /** Revoked / unknown: refuse. Never returns. */
-    static #reject(userId: any, outcome: any) {
+    static #reject(userId: string, outcome: string) {
         logger.warning(authMessages.REFRESH_TOKEN_REJECTED(userId, outcome));
         throw new AppError(AUTH_ERRORS.REFRESH_TOKEN_REVOKED, 401, {
             type: "AuthenticationError",

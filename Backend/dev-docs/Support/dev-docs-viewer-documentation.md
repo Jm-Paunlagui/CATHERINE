@@ -2,7 +2,7 @@
 
 > **Scope:** The **in-app developer documentation viewer** — Support → **Dev Docs** (`/support/dev-docs`). It serves *this corpus* (the `dev-docs/` directory you are reading) to ADMIN and SUPER_ADMIN over an authenticated API: a section tree, one document's raw markdown, and a literal substring search, plus a per-document **freshness** signal derived from git.
 > **Source (FE):** `Frontend/src/features/support/devdocs/` — `DevDocs.view.jsx`, `devdocs.hook.js`, `devdocs.api.js`, `devdocsToc.js`, `devdocs-syntax.css`, and `components/{DocIndexNav,MarkdownDoc,MermaidBlock}.jsx`; the "On this page" rail uses `Frontend/src/components/shared/DocsPage/useScrollSpy.js`. Route registered in `Frontend/src/App.jsx`; nav item in `Frontend/src/components/layout/config/nav.config.jsx`.
-> **Source (BE):** `Backend/src/routes/dev-docs.route.ts`, `src/controllers/DevDocsController.ts`, `src/services/DevDocsService.ts`, `src/constants/messages/devdocs.messages.ts`, `scripts/build-devdocs-freshness.js` (build-time freshness snapshot), `DEV_DOCS_ERRORS` in `src/constants/errors/index.ts`, `DEV_DOCS_*` in `src/constants/responses/index.ts`.
+> **Source (BE):** `Backend/src/routes/dev-docs.route.ts`, `src/controllers/DevDocsController.ts`, `src/services/DevDocsService.ts`, `src/constants/messages/devdocs.messages.ts`, `scripts/build-devdocs-freshness.ts` (build-time freshness snapshot), `DEV_DOCS_ERRORS` in `src/constants/errors/index.ts`, `DEV_DOCS_*` in `src/constants/responses/index.ts`.
 > **Verified 2026-10-29** against the source files above. Corpus today: 13 documents in 3 section folders (`Others`, `Support`, `System Admin`) plus `README.md` under the synthetic `Overview` section. No dedicated test suite for this feature exists in this repo (backend or frontend) — §8 cites source only. No tests were run for this revision.
 >
 > **Related docs:**
@@ -231,7 +231,7 @@ Building the manifest costs one `stat` per document plus **two** `git log` spawn
 
 A `git` failure (no git, not a repo, a shallow clone) yields an **empty index**. Freshness is advisory: it must never fail a documentation read.
 
-**Build-time snapshot.** A deployed exe has no git checkout, so the live index is always empty there — without a fallback every document would read `UNKNOWN` ("Age unknown") in production, exactly where readers are. `bun run build` / `build:host` run `scripts/build-devdocs-freshness.js` **before** the compile step. It calls the same `_commitDateIndex` over the same two pathspecs and writes `src/generated/devDocsFreshness.json` (`{ generatedAt, docs, sources }`, repo-relative path → `YYYY-MM-DD`, sorted keys), which `scripts/build.js` stages beside the exe as `src/generated/`. It is gitignored (`src/generated/` in `Backend/.gitignore`), and it **fails the build** (exit 1) when either index is empty — shipping an exe without dates is the defect it exists to stop.
+**Build-time snapshot.** A deployed exe has no git checkout, so the live index is always empty there — without a fallback every document would read `UNKNOWN` ("Age unknown") in production, exactly where readers are. `bun run build` / `build:host` run `scripts/build-devdocs-freshness.ts` **before** the compile step. It calls the same `_commitDateIndex` over the same two pathspecs and writes `src/generated/devDocsFreshness.json` (`{ generatedAt, docs, sources }`, repo-relative path → `YYYY-MM-DD`, sorted keys), which `scripts/build.ts` stages beside the exe as `src/generated/`. It is gitignored (`src/generated/` in `Backend/.gitignore`), and it **fails the build** (exit 1) when either index is empty — shipping an exe without dates is the defect it exists to stop.
 
 `_resolveDateIndexes()` prefers live git and falls back **per index** to `_loadFreshnessSnapshot()` only when git returns nothing, so a dev checkout never reads a stale snapshot. The snapshot path resolves off `__dirname` on purpose — it lives inside the exe, not beside it. A missing or malformed snapshot degrades to `UNKNOWN` and logs `FRESHNESS_SNAPSHOT_UNAVAILABLE` at warning; it never fails the tree.
 
@@ -450,8 +450,8 @@ The response carries matched corpus lines, never the query itself, and `SEARCH_C
 _Status: no test in this repo._
 
 **Q: Does freshness work on a deployed exe with no git?**
-By design, yes. `_resolveDateIndexes()` prefers live git and falls back per index to `_loadFreshnessSnapshot()` (the build-time `src/generated/devDocsFreshness.json`); when both are missing every document reads `UNKNOWN` and `FRESHNESS_SNAPSHOT_UNAVAILABLE` ("… no git history and no build snapshot …") is logged at warning — never a failed tree. `scripts/build-devdocs-freshness.js` exits 1 if either index is empty, so a normal `bun run build` cannot ship without dates.
-**Evidence:** source only — `DevDocsService._resolveDateIndexes`, `DevDocsService._loadFreshnessSnapshot`, `Backend/scripts/build-devdocs-freshness.js`.
+By design, yes. `_resolveDateIndexes()` prefers live git and falls back per index to `_loadFreshnessSnapshot()` (the build-time `src/generated/devDocsFreshness.json`); when both are missing every document reads `UNKNOWN` and `FRESHNESS_SNAPSHOT_UNAVAILABLE` ("… no git history and no build snapshot …") is logged at warning — never a failed tree. `scripts/build-devdocs-freshness.ts` exits 1 if either index is empty, so a normal `bun run build` cannot ship without dates.
+**Evidence:** source only — `DevDocsService._resolveDateIndexes`, `DevDocsService._loadFreshnessSnapshot`, `Backend/scripts/build-devdocs-freshness.ts`.
 **Gap:** a unit test stubbing `_commitDateIndex` to return nothing and asserting zero `UNKNOWN` documents from a fixture snapshot.
 _Status: no test in this repo._
 
