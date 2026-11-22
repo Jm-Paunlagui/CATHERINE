@@ -67,11 +67,19 @@ class SecurityFilterMiddleware {
     declare _suspiciousIPs: unknown;
     declare _tracker: SuspiciousIpTracker;
     declare _rejectBodyOnBodylessMethods: unknown;
-    declare _blockedMethods: any;
-    declare _methodWhitelistedPaths: any;
-    declare _injectionPatterns: any;
-    declare _maliciousPatterns: any;
-    constructor(options: Record<string, any> = {}) {
+    declare _blockedMethods: ReadonlySet<string>;
+    declare _methodWhitelistedPaths: RegExp[];
+    declare _injectionPatterns: RegExp[];
+    declare _maliciousPatterns: RegExp[];
+    constructor(options: {
+        maliciousPatterns?: RegExp[];
+        injectionPatterns?: RegExp[];
+        methodWhitelistedPaths?: RegExp[];
+        blockedMethods?: ReadonlySet<string>;
+        rejectBodyOnBodylessMethods?: boolean;
+        suspiciousThreshold?: number;
+        blockDurationMs?: number;
+    } = {}) {
         // ── Path-only patterns (checked against req.path) ─────────────────────
         // Known exploit paths, scanner fingerprints, dangerous file extensions.
         this._maliciousPatterns = options.maliciousPatterns ?? [
@@ -360,7 +368,7 @@ class SecurityFilterMiddleware {
         }
 
         // Blocked method check — skip only for health/root paths (not all /api/ paths).
-        const isMethodWhitelisted = this._methodWhitelistedPaths.some((p: any) =>
+        const isMethodWhitelisted = this._methodWhitelistedPaths.some((p) =>
             p.test(reqPath),
         );
         if (!isMethodWhitelisted && this._blockedMethods.has(method)) {
@@ -383,7 +391,7 @@ class SecurityFilterMiddleware {
         }
 
         // Path-only pattern check — scanner fingerprints, exploit paths, file extensions.
-        if (this._maliciousPatterns.some((p: any) => p.test(reqPath))) {
+        if (this._maliciousPatterns.some((p) => p.test(reqPath))) {
             this._trackSuspiciousIP(ip);
             return this._refuse(req, res, 404, "Not Found", "NotFound", () =>
                 logger.warning(
@@ -399,7 +407,7 @@ class SecurityFilterMiddleware {
         // Injection pattern check — scans the FULL URL (path + query string).
         // Catches XSS, SQLi, traversal, and command injection payloads
         // regardless of whether they appear in the path or query parameters.
-        if (this._injectionPatterns.some((p: any) => p.test(fullUrl))) {
+        if (this._injectionPatterns.some((p) => p.test(fullUrl))) {
             this._trackSuspiciousIP(ip);
             return this._refuse(
                 req,
