@@ -13,8 +13,9 @@
 const request = require("supertest");
 const app = require("../../../src/app").default;
 
-const PROTECTED = "/api/v1/auth/login";
-const CREDENTIALS = { userId: "csrf-body-test", password: "wrong-password-1" };
+// A CSRF-protected POST that never touches the database, so the outcome depends on CSRF alone.
+const PROTECTED = "/api/v1/client/errors";
+const CREDENTIALS = { message: "csrf body-token test", source: "test" };
 const isCsrfRefusal = (res) => res.status === 403 && res.body?.code === "CSRF_TOKEN_INVALID";
 
 describe("CSRF token in the request body", function () {
