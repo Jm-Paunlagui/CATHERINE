@@ -106,7 +106,7 @@ class OracleSchema {
    */
   async createTable(tableName: string, columns: Record<string, ColumnSpec>, options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean; }> {
     return this.db.withConnection(async (conn: DbConnection) => {
-      const colDefs = [];
+      const colDefs: string[] = [];
       const constraints: unknown[] = [];
 
       for (const [colName, spec] of Object.entries(columns)) {

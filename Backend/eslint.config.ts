@@ -87,7 +87,7 @@ export default defineConfig([
 
   // BLOCK 4 — test files (vitest globals: true → injected, not imported; environment: node)
   {
-    files: ["test/**/*.js"],
+    files: ["test/**/*.ts"],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -111,10 +111,12 @@ export default defineConfig([
   // does not inject. Add the mocha global set for these two files only so they lint
   // cleanly without touching the (correct, runtime-tested) source.
   {
-    files: ["test/oracle-mongo-wrapper/test.js", "test/oracle-mongo-wrapper/test.dev.js"],
+    files: ["test/oracle-mongo-wrapper/test.ts", "test/oracle-mongo-wrapper/test.dev.ts"],
     languageOptions: {
       globals: { ...globals.node, ...globals.mocha },
     },
+    // chai property assertions (`expect(x).to.be.true`, `.to.exist`) read as bare expressions.
+    rules: { "@typescript-eslint/no-unused-expressions": "off" },
   },
 
   // BLOCK 6 — this one test file is authored as an ES module (top-level `import`
@@ -122,7 +124,7 @@ export default defineConfig([
   // package "type". Parse it as a module here rather than rewriting working test
   // code to CommonJS (which could alter module-isolation behavior it relies on).
   {
-    files: ["test/server/unit/utils/snowflake.test.js"],
+    files: ["test/server/unit/utils/snowflake.test.ts"],
     languageOptions: { sourceType: "module" },
   },
 
@@ -131,7 +133,7 @@ export default defineConfig([
   // hand-run report generators (like scripts/), and console output IS their
   // function. Allow console here for the same reason BLOCK 3 allows it in scripts.
   {
-    files: ["test/encryption/**/*.js", "test/oracle-mongo-wrapper/**/*.js"],
+    files: ["test/encryption/**/*.ts", "test/oracle-mongo-wrapper/**/*.ts"],
     rules: { "no-console": "off" },
   },
 
@@ -141,7 +143,7 @@ export default defineConfig([
   // (the source comments state this explicitly). The console call is the test's
   // designed reporting mechanism, not stray debug logging, so allow it here only.
   {
-    files: ["test/server/chaos/**/*.js"],
+    files: ["test/server/chaos/**/*.ts"],
     rules: { "no-console": "off" },
   },
 ]);

@@ -137,7 +137,7 @@ function parseDetails(raw: string | null): Record<string, unknown> | null {
  * @returns {{ whereSql: string, binds: object }}
  */
 function buildWhere(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}): { whereSql: string; binds: Record<string, unknown>; } {
-    const clauses = [];
+    const clauses: string[] = [];
     const binds: Record<string, unknown> = {};
     if (filters.rule) {
         clauses.push("RULE = :rule");

@@ -66,13 +66,13 @@ const GROUP_LEN = 4;
  */
 function generateTemporaryPassword(randomInt: (max: number) => number = crypto.randomInt): string {
     for (;;) {
-        const chars = [];
+        const chars: string[] = [];
         for (let i = 0; i < GROUPS * GROUP_LEN; i++) {
             chars.push(ALPHABET[randomInt(ALPHABET.length)]);
         }
         const body = chars.join("");
         if (/[A-Z]/.test(body) && /[a-z]/.test(body) && /[0-9]/.test(body)) {
-            const groups = [];
+            const groups: string[] = [];
             for (let g = 0; g < GROUPS; g++) {
                 groups.push(body.slice(g * GROUP_LEN, (g + 1) * GROUP_LEN));
             }

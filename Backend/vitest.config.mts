@@ -1,8 +1,8 @@
 // vitest.config.mts
 // .mts: the package is CommonJS, so an ESM config needs the module extension.
-// Vitest runs both CJS (require) and ESM test files; the tests stay .js.
+// Vitest runs the TypeScript tests (CJS require or ESM import) directly.
 // globals: true → describe/it/expect/vi/beforeAll/afterAll/beforeEach/afterEach
-// are injected globally; no import needed in .test.js files.
+// are injected globally; no import needed in .test.ts files.
 // pool: "forks" → each test file runs in its own Node child process (required for
 // process.env mutation in setup files to be isolated per-suite).
 // fileParallelism: false → test files run sequentially; the suite exercises
@@ -14,22 +14,22 @@ export default defineConfig({
     test: {
         globals: true,
         environment: "node",
-        include: ["test/**/*.test.js"],
+        include: ["test/**/*.test.ts"],
         exclude: [
             // Not a Vitest/mocha test — custom async runner with its own it/assert
-            "test/encryption/cryptosuite.test.js",
+            "test/encryption/cryptosuite.test.ts",
             // Oracle-wrapper dev/sample scripts — not test suites
             "test/oracle-mongo-wrapper/**",
             "node_modules/**",
         ],
         // ── Setup files ─────────────────────────────────────────────────────────
-        // test/server/setup.js → sets process.env + stubs AuditLogService for
+        // test/server/setup.ts → sets process.env + stubs AuditLogService for
         //                        every test file (it runs before module load).
         //
         // Vitest setupFiles run in the test file's context (same process/fork) so
         // process.env mutations land before any module is required by the test.
         setupFiles: [
-            "./test/server/setup.js",
+            "./test/server/setup.ts",
         ],
         coverage: {
             provider: "v8",

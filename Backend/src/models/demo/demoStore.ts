@@ -154,7 +154,7 @@ function _statusFor(i: number) {
 }
 
 function _buildAuditLogs(count = 200) {
-    const rows = [];
+    const rows: Array<import("../audit.log.model").AuditRecord & { ID: number; CREATED_AT: Date }> = [];
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
     // Demo Snowflake IDs: segmented format {timestamp13}-{machine4}-{seq4}.
     // Machine ID 0, sequence = row index. Timestamp derived from CREATED_AT.

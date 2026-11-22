@@ -223,7 +223,7 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
   }
 
   // Operator object: { field: { $gt: 5, $lt: 10 } }
-  const conditions = [];
+  const conditions: string[] = [];
 
   // An operand's shape depends on its operator (Mongo-style DSL), so it stays
   // loosely typed here; each branch below checks what it needs.
@@ -260,7 +260,7 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
         // oversized value lists into OR-joined IN groups of ≤1,000 binds so
         // bulk callers (e.g. 10k-row Excel uploads batching by GID) never hit
         // the cap. Semantics are identical: x IN (a..) OR x IN (b..) ≡ x IN (a..b..).
-        const groups = [];
+        const groups: string[] = [];
         for (let i = 0; i < val.length; i += ORACLE_IN_LIST_MAX) {
           const placeholders = val.slice(i, i + ORACLE_IN_LIST_MAX).map((v) => {
             const bname = counter.next(`where_${field}`);
@@ -279,7 +279,7 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
       } else {
         // Same ORA-01795 cap as $in. De Morgan: NOT(x IN a OR x IN b)
         // ≡ x NOT IN a AND x NOT IN b — so groups join with AND.
-        const groups = [];
+        const groups: string[] = [];
         for (let i = 0; i < val.length; i += ORACLE_IN_LIST_MAX) {
           const placeholders = val.slice(i, i + ORACLE_IN_LIST_MAX).map((v) => {
             const bname = counter.next(`where_${field}`);
@@ -496,7 +496,7 @@ function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, bind
 
   let whereStr = "";
   if (spec.where && Object.keys(spec.where).length > 0) {
-    const subconditions = [];
+    const subconditions: string[] = [];
     for (const [k, v] of Object.entries(spec.where)) {
       if (typeof v === "string" && v.startsWith("$outer.")) {
         const outerCol = v.replace("$outer.", "");
@@ -580,7 +580,7 @@ function parseFilter(filter: Record<string, any>, tableAlias?: string | null, _c
   const counter = _counter || _createCounter();
 
   const binds: Record<string, unknown> = {};
-  const conditions = [];
+  const conditions: string[] = [];
 
   for (const [key, value] of Object.entries(filter)) {
     if (key === "$and") {
@@ -627,7 +627,7 @@ function parseFilter(filter: Record<string, any>, tableAlias?: string | null, _c
     } else if (key === "$exists") {
       // EXISTS subquery: { $exists: { collection, match } }
       const subColl = quoteIdentifier(value.collection);
-      const matchParts = [];
+      const matchParts: string[] = [];
       for (const [mk, mv] of Object.entries(value.match || {})) {
         if (typeof mv === "string" && mv.startsWith("$")) {
           const outerCol = mv.slice(1);
@@ -646,7 +646,7 @@ function parseFilter(filter: Record<string, any>, tableAlias?: string | null, _c
       conditions.push(`EXISTS (SELECT 1 FROM ${subColl}${matchWhere})`);
     } else if (key === "$notExists") {
       const subColl = quoteIdentifier(value.collection);
-      const matchParts = [];
+      const matchParts: string[] = [];
       for (const [mk, mv] of Object.entries(value.match || {})) {
         if (typeof mv === "string" && mv.startsWith("$")) {
           const outerCol = mv.slice(1);

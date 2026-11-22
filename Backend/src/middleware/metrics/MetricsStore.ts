@@ -753,7 +753,7 @@ class MetricsStore {
   #windowedSorted(entry: { durations: number[]; timestamps?: number[]; }, now: number): number[] {
     const cutoff = now - LATENCY_WINDOW_MS;
     const ts = entry.timestamps ?? [];
-    const out = [];
+    const out: number[] = [];
     for (let i = ts.length - 1; i >= 0 && ts[i] > cutoff; i--) {
       out.push(entry.durations[i]);
     }
@@ -1031,8 +1031,8 @@ class MetricsStore {
    */
   #buildSmtpDependencySnapshot(): SmtpDependencySnapshot {
     let consecutiveFailures = 0;
-    let lastSuccessAt = null;
-    let lastFailureAt = null;
+    let lastSuccessAt: string | null = null;
+    let lastFailureAt: string | null = null;
 
     for (const entry of this._notifications.values()) {
       consecutiveFailures = Math.max(consecutiveFailures, entry.consecutiveFailures);

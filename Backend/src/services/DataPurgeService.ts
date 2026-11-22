@@ -383,7 +383,7 @@ class DataPurgeService {
      * //   ]
      */
     static buildFidelityNotes(tables: string[]): string[] {
-        const notes = [];
+        const notes: string[] = [];
         for (const table of tables) {
             const entry = getEntry(table);
             if (!entry) continue;

@@ -52,8 +52,8 @@
         "test:resilience": "bun --bun vitest run test/server/reliability",
         "test:chaos": "bun --bun vitest run chaos",
         "test:purge": "bun --bun vitest run purge dataPurge restore backup adminRevoke",
-        "test:metrics": "bun --bun vitest run test/server/unit/middleware/metricsStore.test.js test/server/unit/middleware/metricsStore.memory.test.js test/server/unit/middleware/metricsRouteLabel.test.js test/server/integration/metrics.test.js test/server/integration/metrics/metrics.test.js",
-        "test:money": "bun --bun vitest run test/unit/money.test.js test/unit/moneyFetchTypeHandler.test.js test/unit/signedFields.test.js test/unit/constants/currencies.test.js test/unit/FxRateService.test.js test/unit/bootGuardMoney.test.js test/unit/convertTypesFence.test.js"
+        "test:metrics": "bun --bun vitest run test/server/unit/middleware/metricsStore.test.ts test/server/unit/middleware/metricsStore.memory.test.ts test/server/unit/middleware/metricsRouteLabel.test.ts test/server/integration/metrics.test.ts test/server/integration/metrics/metrics.test.ts",
+        "test:money": "bun --bun vitest run test/unit/money.test.ts test/unit/moneyFetchTypeHandler.test.ts test/unit/signedFields.test.ts test/unit/constants/currencies.test.ts test/unit/FxRateService.test.ts test/unit/bootGuardMoney.test.ts test/unit/convertTypesFence.test.ts"
     },
     "dependencies": {
         "archiver": "^6.0.2",

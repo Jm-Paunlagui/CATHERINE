@@ -562,11 +562,10 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
                 throw new Error("keyFn boom");
             });
             const res = mockRes(200);
-            let jsonResult;
 
             mw(mockReq(), res, () => {});
             // res.json is called by the controller — capture the return value.
-            jsonResult = res.json({ ok: true });
+            const jsonResult = res.json({ ok: true });
 
             await flushImmediate();
 
@@ -728,10 +727,9 @@ describe("CacheMiddleware — chaos / edge-case unit tests", function () {
                 throw new Error("predicate exploded");
             });
             const res = mockRes(200);
-            let result;
 
             mw(mockReq(), res, () => {});
-            result = res.json({ sent: true });
+            const result = res.json({ sent: true });
 
             await flushImmediate();
 

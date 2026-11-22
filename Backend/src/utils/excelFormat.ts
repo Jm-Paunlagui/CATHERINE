@@ -191,7 +191,7 @@ function formatDateTimeText(value: Date | string | number | null | undefined): s
  */
 function normalizeRowDates(row: Record<string, unknown>): { row: Record<string, unknown>; dateKeys: string[]; } {
     const out: Record<string, unknown> = {};
-    const dateKeys = [];
+    const dateKeys: string[] = [];
     for (const [key, value] of Object.entries(row ?? {})) {
         if (value instanceof Date) {
             out[key] = toExcelDate(value);

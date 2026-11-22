@@ -278,8 +278,8 @@ class QueryBuilder {
 
         // Handle subquery projections
         if (this._projection && typeof this._projection === "object") {
-            const subParts = [];
-            const regularParts = [];
+            const subParts: string[] = [];
+            const regularParts: string[] = [];
             for (const [key, val] of Object.entries(this._projection)) {
                 if (typeof val === "object" && val !== null && "$subquery" in val && val.$subquery) {
                     const sub = val.$subquery as ProjectionSubquery;
@@ -294,7 +294,7 @@ class QueryBuilder {
                     const fnExpr = fnMap[sub.fn as keyof typeof fnMap] || "COUNT(*)";
 
                     // Build correlated WHERE
-                    const subWhere = [];
+                    const subWhere: string[] = [];
                     if (sub.filter) {
                         for (const [fk, fv] of Object.entries(sub.filter)) {
                             if (typeof fv === "string" && fv.startsWith("$")) {

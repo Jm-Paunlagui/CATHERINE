@@ -22,7 +22,7 @@ const AdminManagementService = require("../../../src/services/AdminManagementSer
 
 // ── Stubs — prevent real DB calls ─────────────────────────────────────────────
 
-let stubs = [];
+const stubs = [];
 
 beforeAll(function () {
     stubs.push(

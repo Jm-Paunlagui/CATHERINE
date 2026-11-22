@@ -146,13 +146,11 @@ describe("database.js — appDb pool configuration", function () {
 
         const { poolMin, poolMax } = connections.appDb;
 
-        expect(typeof poolMin).toBe("number", "poolMin must be typeof number");
-        (expect(Number.isInteger(poolMin)).toBe(true),
-            "poolMin must be an integer");
+        expect(typeof poolMin, "poolMin must be typeof number").toBe("number");
+        expect(Number.isInteger(poolMin), "poolMin must be an integer").toBe(true);
 
-        expect(typeof poolMax).toBe("number", "poolMax must be typeof number");
-        (expect(Number.isInteger(poolMax)).toBe(true),
-            "poolMax must be an integer");
+        expect(typeof poolMax, "poolMax must be typeof number").toBe("number");
+        expect(Number.isInteger(poolMax), "poolMax must be an integer").toBe(true);
     });
 
     // ── DB-P-07 ───────────────────────────────────────────────────────────────

@@ -349,8 +349,8 @@ class OracleCollection {
                     if (update.$set) Object.assign(insertFields, update.$set);
 
                     const filterColSet = new Set(filterEntries.map(([k]) => k));
-                    const insertCols = [];
-                    const insertVals = [];
+                    const insertCols: string[] = [];
+                    const insertVals: string[] = [];
                     for (const [col, val] of Object.entries(insertFields)) {
                         insertCols.push(quoteIdentifier(col));
                         if (filterColSet.has(col)) {
@@ -910,7 +910,7 @@ class OracleCollection {
             const bindDefs: Record<string, import("oracledb").BindDefinition> = {};
             cols.forEach((c, i) => {
                 // Scan all documents for a non-null sample to determine the type
-                let sampleVal = null;
+                let sampleVal: {} | null = null;
                 for (const doc of documents) {
                     if (doc[c] != null) {
                         sampleVal = doc[c];
@@ -1070,7 +1070,7 @@ class OracleCollection {
         // Bind definitions: same type-scan approach as insertMany.
         const bindDefs: Record<string, import("oracledb").BindDefinition> = {};
         const defFor = (col: string) => {
-            let sampleVal = null;
+            let sampleVal: {} | null = null;
             for (const row of rows) {
                 if (row[col] != null) {
                     sampleVal = row[col];
@@ -1381,7 +1381,7 @@ class OracleCollection {
                 this.db,
                 conn,
             );
-            const results = [];
+            const results: unknown[] = [];
 
             for (const op of operations) {
                 if (op.insertOne) {
@@ -1688,7 +1688,7 @@ class OracleCollection {
      * @returns {Promise<{ acknowledged, indexNames }>}
      */
     async createIndexes(indexSpecs: Array<IndexOptions & { fields: Record<string, unknown>; options?: IndexOptions }>): Promise<{ acknowledged: boolean; indexNames: string[];  }> {
-        const indexNames = [];
+        const indexNames: string[] = [];
         for (const spec of indexSpecs) {
             const result = await this.createIndex(
                 spec.fields,
@@ -2229,7 +2229,7 @@ class OracleCollection {
             const { target, join: joinSpec, set, where } = spec;
 
             // Build correlated UPDATE subquery approach (more reliable in Oracle)
-            const setParts = [];
+            const setParts: string[] = [];
             const binds: Record<string, unknown> = {};
             let bindIdx = 0;
 
@@ -2251,7 +2251,7 @@ class OracleCollection {
             // WHERE — exists in joined table
             let whereExtra = "";
             if (where) {
-                const whereParts = [];
+                const whereParts: string[] = [];
                 for (const [col, val] of Object.entries(where)) {
                     const cleanCol = col.includes(".")
                         ? col.split(".")[1]

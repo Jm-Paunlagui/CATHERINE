@@ -281,7 +281,7 @@ class BackupScheduleService {
             chains.get(key)!.push(entry); // set just above
         }
 
-        const pruned = [];
+        const pruned: string[] = [];
         for (const [baseArchiveId, members] of chains) {
             const newest = members.reduce((a, b) => (new Date(a.createdAt) > new Date(b.createdAt) ? a : b));
             if (new Date(newest.createdAt).getTime() >= oldestKeptMs) continue;

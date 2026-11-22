@@ -158,10 +158,9 @@ describe("POST /api/v1/auth/login — integration", function () {
 
             expect(res.status).toBe(400);
             expect(res.body.error.type).toBe("ValidationError");
-            expect(res.body.error.details).toBeInstanceOf(Array).that.is.not
-                .empty;
-            expect(res.body.error.details.some((d) => d.field === "userId")).to
-                .be.true;
+            expect(res.body.error.details).toBeInstanceOf(Array);
+            expect(res.body.error.details.length).toBeGreaterThan(0);
+            expect(res.body.error.details.some((d) => d.field === "userId")).toBe(true);
         });
 
         it("missing password → 400 with 'password' in details", async function () {

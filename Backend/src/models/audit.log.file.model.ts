@@ -216,7 +216,7 @@ function _extractDateRange(filter: Record<string, any>): { fromDate: Date | null
  * @returns {Promise<string[]>} Absolute paths to day directories.
  */
 async function _resolveDayDirectories(fromDate: Date, toDate: Date): Promise<string[]> {
-    const dirs = [];
+    const dirs: string[] = [];
     const cursor = new Date(fromDate);
     cursor.setHours(0, 0, 0, 0);
     const end = new Date(toDate);
@@ -267,7 +267,7 @@ async function _readJsonLines(filePath: string): Promise<Record<string, any>[]> 
         if (stat.size > MAX_READ_FILE_BYTES) return [];
 
         const content = await fs.readFile(filePath, "utf8");
-        const records = [];
+        const records: Record<string, any>[] = [];
         for (const line of content.split("\n")) {
             const trimmed = line.trim();
             if (!trimmed) continue;
@@ -402,7 +402,7 @@ async function _readAndFilter(filter: Record<string, unknown>): Promise<Record<s
     }
 
     const dayDirs = await _resolveDayDirectories(fromDate, toDate);
-    const matched = [];
+    const matched: Record<string, any>[] = [];
 
     for (const dir of dayDirs) {
         const files = await _listAuditFiles(dir);

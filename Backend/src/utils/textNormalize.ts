@@ -185,7 +185,7 @@ function normalizeText(value: unknown): unknown {
  */
 function findUnencodable(value: unknown): string[] {
     if (typeof value !== "string" || value.length === 0) return [];
-    const bad = [];
+    const bad: string[] = [];
     const seen = new Set();
     for (const ch of value) {
         if (!isLatin9Encodable(ch) && !seen.has(ch)) {

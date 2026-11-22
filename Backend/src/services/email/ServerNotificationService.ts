@@ -219,7 +219,7 @@ class ServerNotificationService {
 
         const source = dbUp && dbOptIns.length > 0 ? dbOptIns : envFloor;
         const seen = new Set();
-        const out = [];
+        const out: string[] = [];
         for (const email of source) {
             if (!email || seen.has(email)) continue;
             seen.add(email);
