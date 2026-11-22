@@ -23,7 +23,7 @@ Branch `backend-rewrite-to-typescript` (PR #4, open, not merged). Status as of 2
 
 - [x] **Type the audit record:** done (`AuditRecord` in `audit.log.model.ts`).
   ~~Was:~~ one type shared by `AuditLogMiddleware._buildRecord`, `AuditLogModel.insert/insertBatch` and `demoStore.auditInsert` (each takes `any` / `Record<string, unknown>` today).
-- [ ] **Restore has almost no tests:** `DataRestoreService` (archive verify, preflight allow-list, FK remap, re-sign) is covered only by the `_returnedIdentity` unit test. It handles uploaded archives, so it needs integration tests.
+- [x] **Restore tests:** `test/server/integration/restore/` — `dataRestore.roundtrip.test.js` builds a REAL archive (zip, SHA-256 map, HMAC) and checks preview/restore: flipped byte, edited manifest, forged digest, stripped file, non-zip, a correctly re-signed archive naming an unregistered table, non-empty FULL_SCOPE target, password and confirm-phrase gates, tier-ordered inserts, failing insert = no commit / no audit. `dataRestore.fkRemapResign.test.js` mocks a two-table project registry (identity parent + signed child with an FK edge) and checks FK remap to new identities, re-sign over the NEW pk/FK, and a forged original hash restored UNSIGNED. Both files fail under mutation of the guards they cover. DB stubbed (no Oracle in CI).
 
 ## Known flaky tests
 
