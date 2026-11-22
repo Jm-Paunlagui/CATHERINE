@@ -69,7 +69,7 @@ const CLOCK_OFFSET_SQL =
  */
 async function verifyDbClockOffset(db: { withConnection: ((...args: any[]) => unknown); oracledb?: Record<string, unknown>; }, { appOffsetMinutes = -new Date().getTimezoneOffset() }: { appOffsetMinutes?: number; } = {}): Promise<{ dbOffsetMinutes: number; configuredMinutes: number; appOffsetMinutes: number; match: boolean; } | null> {
     try {
-        const raw = await db.withConnection("appDb", async (conn: any) => {
+        const raw = await db.withConnection("appDb", async (conn: import("./oracle-mongo-wrapper/db").DbConnection) => {
             const r = await conn.execute(CLOCK_OFFSET_SQL, [], { outFormat: db.oracledb?.OUT_FORMAT_OBJECT });
             const row = r.rows?.[0];
             return Array.isArray(row) ? row[0] : row?.OFF_MIN;

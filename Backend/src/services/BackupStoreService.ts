@@ -1760,6 +1760,6 @@ export default __default;
 // at a temp directory without mutating process.env for the whole suite.
 __default.DEFAULT_BACKUP_DIR = DEFAULT_BACKUP_DIR;
 export { DEFAULT_BACKUP_DIR };
-export type { BackupIndexEntry, BackupManifest };
+export type { BackupIndexEntry, BackupManifest, BackupTableState };
 __default.INDEX_CACHE_TTL_MS = INDEX_CACHE_TTL_MS;
 export { INDEX_CACHE_TTL_MS };

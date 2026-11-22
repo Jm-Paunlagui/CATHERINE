@@ -131,7 +131,7 @@ class AuthRefreshTokenModel {
             demoInsert(rec);
             return;
         }
-        await _db.withTransaction((conn: any) => conn.execute(INSERT_SQL, insertBinds(rec)));
+        await _db.withTransaction((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) => conn.execute(INSERT_SQL, insertBinds(rec)));
     }
 
     /**
@@ -164,7 +164,7 @@ class AuthRefreshTokenModel {
             if (row.REVOKED_AT) return { outcome: "revoked" };
             return { outcome: "reused" };
         }
-        return _db.withTransaction(async (conn: any) => {
+        return _db.withTransaction(async (conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) => {
             const upd = await conn.execute(ROTATE_SQL, {
                 nowTs: now,
                 newHash: next.jtiHash,
@@ -211,7 +211,7 @@ class AuthRefreshTokenModel {
             }
             return n;
         }
-        const res = await _db.withTransaction((conn: any) =>
+        const res = await _db.withTransaction((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
             conn.execute(REVOKE_FAMILY_SQL, { nowTs: now, reason, fid: familyId }),
         );
         return res?.rowsAffected ?? 0;
@@ -238,7 +238,7 @@ class AuthRefreshTokenModel {
             return [...fids];
         }
         const { oracledb } = _db;
-        const res = await _db.withTransaction((conn: any) =>
+        const res = await _db.withTransaction((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
             conn.execute(REVOKE_USER_SQL, {
                 nowTs: now,
                 reason,
@@ -269,7 +269,7 @@ class AuthRefreshTokenModel {
                 .slice(0, Math.max(0, Number(limit) || 0))
                 .map(([familyId, revokedAt]) => ({ familyId, revokedAt }));
         }
-        const res = await _db.withConnection((conn: any) =>
+        const res = await _db.withConnection((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
             conn.execute(
                 RECENTLY_REVOKED_SQL,
                 { sinceTs: since, lim: limit },
@@ -301,7 +301,7 @@ class AuthRefreshTokenModel {
             }
             return n;
         }
-        const res = await _db.withTransaction((conn: any) =>
+        const res = await _db.withTransaction((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
             conn.execute(PURGE_SQL, { cutoffTs: cutoff, lim: limit }),
         );
         return res?.rowsAffected ?? 0;

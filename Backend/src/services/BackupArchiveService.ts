@@ -303,7 +303,7 @@ class BackupArchiveService {
             new Map<string, TableAccumulator>(tables.map((t) => [t, { hash: crypto.createHash("sha256"), lines: [], rowCount: 0, maxPk: 0n }]));
         let acc = freshAccumulators();
 
-        const onBatchFor = (table: any) => (rows: any) => {
+        const onBatchFor = (table: string) => (rows: Record<string, unknown>[]) => {
             touch("backup-batch");
             const a = acc.get(table)!; // one accumulator per requested table
             const pkCol = appendOnlyPk.get(table);
@@ -339,9 +339,9 @@ class BackupArchiveService {
             }
         }
 
-        const tablesManifest: Record<string, any> = {};
-        const dataBuffers: Record<string, any> = {};
-        const highWater: Record<string, any> = {};
+        const tablesManifest: Record<string, import("./BackupStoreService").BackupTableState> = {};
+        const dataBuffers: Record<string, Buffer> = {};
+        const highWater: Record<string, string> = {};
         let totalRows = 0;
         for (const table of tables) {
             const a = acc.get(table)!; // one accumulator per requested table
@@ -797,7 +797,7 @@ class BackupArchiveService {
         const scopeHash = BackupArchiveService.computeEntityScopeHash(entity, tables);
         logger.info(dataPurgeMessages.BACKUP_STARTED(adminId, scopeHash, tables.length));
 
-        const rowCounts: Record<string, any> = {};
+        const rowCounts: Record<string, number> = {};
         /** @type {Record<string, object[]>} */
         const rowsByTable: Record<string, Record<string, unknown>[]> = {};
         /** @type {Record<string, Buffer>} */
@@ -995,7 +995,7 @@ class BackupArchiveService {
      */
     static async _buildZip(files: Record<string, Buffer>): Promise<Buffer> {
         return new Promise((resolve, reject) => {
-            const chunks: any[] = [];
+            const chunks: Buffer[] = [];
             const pass = new PassThrough();
             pass.on("data", (chunk) => {
                 touch("backup-zip");
