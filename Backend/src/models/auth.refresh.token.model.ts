@@ -24,7 +24,7 @@
  * connection is opened.
  */
 
-import { createDb } from "../utils/oracle-mongo-wrapper";
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
 import { isDemoMode } from "../config/demoMode";
 import demo from "./demo/demoStore";
 
@@ -46,14 +46,6 @@ const REVOKE_FAMILY_SQL = `UPDATE ${TABLE}
     SET REVOKED_AT = :nowTs, REVOKE_REASON = :reason
   WHERE FAMILY_ID = :fid AND REVOKED_AT IS NULL`;
 
-// RETURNING gives the families in the SAME statement that revokes them, so a
-// session created between a SELECT and the UPDATE cannot be revoked here yet
-// missed by the access-token revocation.
-const REVOKE_USER_SQL = `UPDATE ${TABLE}
-    SET REVOKED_AT = :nowTs, REVOKE_REASON = :reason
-  WHERE USER_ID = :userKey AND REVOKED_AT IS NULL
-  RETURNING FAMILY_ID INTO :fids`;
-
 // Families ended within the access-token lifetime (boot reload of the
 // revoked-session set). No index on REVOKED_AT: the table only holds rows up to
 // a day past their refresh expiry (purgeExpired), so this is one bounded scan
@@ -64,8 +56,6 @@ const RECENTLY_REVOKED_SQL = `SELECT FAMILY_ID, MAX(REVOKED_AT) AS REVOKED_AT
   GROUP BY FAMILY_ID
   FETCH FIRST :lim ROWS ONLY`;
 
-const PURGE_SQL = `DELETE FROM ${TABLE}
-  WHERE EXPIRES_AT < :cutoffTs AND ROWNUM <= :lim`;
 
 /**
  * @param {object} rec
@@ -237,17 +227,15 @@ class AuthRefreshTokenModel {
             }
             return [...fids];
         }
-        const { oracledb } = _db;
-        const res = await _db.withTransaction((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
-            conn.execute(REVOKE_USER_SQL, {
-                nowTs: now,
-                reason,
-                userKey,
-                fids: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 36 },
-            }),
+        // RETURNING gives the families in the SAME statement that revokes them, so a
+        // session created between a SELECT and the UPDATE cannot be revoked here yet
+        // missed by the access-token revocation.
+        const { returning = [] } = await new OracleCollection(TABLE, _db).updateMany(
+            { USER_ID: userKey, REVOKED_AT: null },
+            { $set: { REVOKED_AT: now, REVOKE_REASON: reason } },
+            { returning: ["FAMILY_ID"] },
         );
-        const fids = res?.outBinds?.fids;
-        return Array.isArray(fids) ? [...new Set(fids.filter((f) => typeof f === "string"))] : [];
+        return [...new Set(returning.map((r) => r.FAMILY_ID).filter((f): f is string => typeof f === "string"))];
     }
 
     /**
@@ -301,10 +289,10 @@ class AuthRefreshTokenModel {
             }
             return n;
         }
-        const res = await _db.withTransaction((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
-            conn.execute(PURGE_SQL, { cutoffTs: cutoff, lim: limit }),
-        );
-        return res?.rowsAffected ?? 0;
+        const max = Math.floor(Number(limit) || 0);
+        if (max <= 0) return 0; // ROWNUM <= 0 deleted nothing; keep that without a statement
+        const { deletedCount } = await new OracleCollection(TABLE, _db).deleteMany({ EXPIRES_AT: { $lt: cutoff } }, { limit: max });
+        return deletedCount;
     }
 }
 

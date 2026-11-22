@@ -27,6 +27,8 @@
  * a plain string rather than a Lob stream. Every other column still flows
  * through ordinary named bind variables: only the CLOB TYPE is explicit, so
  * SQL-injection exposure (CWE-89) is unchanged.
+ * The retention purge has no CLOB to bind, so it uses `OracleCollection.deleteMany`
+ * with a `$now` cutoff (database clock).
  *
  * In DEMO_MODE nothing touches Oracle — rows live in a capped in-memory ring so
  * the alert-history UI renders with no database.
@@ -58,7 +60,7 @@
  *   );
  */
 
-import { createDb } from "../utils/oracle-mongo-wrapper";
+import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
 import { isDemoMode } from "../config/demoMode";
 import { normalizeText } from "../utils/textNormalize";
 
@@ -379,14 +381,11 @@ class ServerAlertLogModel {
             return before - _demoRows.length;
         }
 
-        return db().withConnection(async (conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) => {
-            const result = await conn.execute(
-                `DELETE FROM ${resolveTableName()} WHERE CREATED_AT < SYSTIMESTAMP - :cutoffDays`,
-                { cutoffDays },
-                { autoCommit: true },
-            );
-            return result.rowsAffected ?? 0;
+        // Cutoff on the database clock (the same clock that stamps CREATED_AT).
+        const { deletedCount } = await new OracleCollection(resolveTableName(), db()).deleteMany({
+            CREATED_AT: { $lt: { $now: { minus: { days: cutoffDays } } } },
         });
+        return deletedCount;
     }
 }
 

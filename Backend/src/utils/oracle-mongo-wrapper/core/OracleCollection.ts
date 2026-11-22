@@ -109,6 +109,32 @@ function _deepClone(value: unknown): unknown {
  * deleteOne. An empty filter yields no WHERE from parseFilter, so appending
  * "AND ROWNUM = 1" would produce invalid SQL ("… t0  AND ROWNUM = 1").
  */
+/**
+ * RETURNING clause for a statement that may touch MANY rows (updateMany / deleteMany).
+ * Each column gets an array out-bind; node-oracledb fills it with one value per row.
+ * Values come back as strings (the driver's default OUT type), like updateOne's RETURNING.
+ */
+function _multiRowReturning(cols: string[] | undefined, oracledb: { BIND_OUT: number }): { sql: string; outBinds: Record<string, unknown> } {
+    if (!cols || cols.length === 0) return { sql: "", outBinds: {} };
+    const outBinds: Record<string, unknown> = {};
+    for (const c of cols) outBinds[`out_${c}`] = { dir: oracledb.BIND_OUT };
+    return {
+        sql: ` RETURNING ${cols.map(quoteIdentifier).join(", ")} INTO ${cols.map((c) => `:out_${c}`).join(", ")}`,
+        outBinds,
+    };
+}
+
+/** Zips the per-column out-bind arrays of a multi-row RETURNING into one object per affected row. */
+function _returnedRows(cols: string[], outBinds: unknown): Array<Record<string, unknown>> {
+    const ob = (outBinds ?? {}) as Record<string, unknown>;
+    const columns = cols.map((c) => {
+        const v = ob[`out_${c}`];
+        return Array.isArray(v) ? v : v === undefined ? [] : [v];
+    });
+    const n = Math.max(0, ...columns.map((v) => v.length));
+    return Array.from({ length: n }, (_, i) => Object.fromEntries(cols.map((c, k) => [c, columns[k][i] ?? null])));
+}
+
 function _firstRowWhere(whereClause: string): string {
     return whereClause ? `${whereClause} AND ROWNUM = 1` : "WHERE ROWNUM = 1";
 }
@@ -1230,7 +1256,8 @@ class OracleCollection {
      *
      * @param {Object} filter - Which rows to update (e.g. { status: "trial" })
      * @param {Object} update - Update operators (e.g. { $set: { status: "expired" } })
-     * @param {Object} [_options] - returning (array of column names)
+     * @param {{ returning?: string[] }} [options] - `returning`: columns to read back from EVERY updated row
+     *   (`result.returning`, one object per row, values as strings)
      * @returns {Promise<{ acknowledged, matchedCount, modifiedCount }>}
      *
      * @example
@@ -1241,13 +1268,14 @@ class OracleCollection {
      *   );
      *   console.log(`Updated ${result.modifiedCount} users`);
      */
-    async updateMany(filter: Record<string, unknown>, update: Record<string, unknown>, _options: Record<string, unknown> = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number;  }> {
+    async updateMany(filter: Record<string, unknown>, update: Record<string, unknown>, options: ReturningOption = {}): Promise<{ acknowledged: boolean; matchedCount: number; modifiedCount: number; returning?: Array<Record<string, unknown>> }> {
         return this._execute(async (conn) => {
             const { whereClause, binds: filterBinds } = parseFilter(filter);
             const { setClause, binds: updateBinds } = parseUpdate(update);
-            const allBinds = mergeBinds(filterBinds, updateBinds);
+            const ret = _multiRowReturning(options.returning, this.db.oracledb);
+            const allBinds = { ...mergeBinds(filterBinds, updateBinds), ...ret.outBinds };
 
-            const sql = `UPDATE ${quoteIdentifier(this.tableName)} t0 ${setClause} ${whereClause}`;
+            const sql = `UPDATE ${quoteIdentifier(this.tableName)} t0 ${setClause} ${whereClause}${ret.sql}`;
             try {
                 const result = await conn.execute(sql, allBinds, {
                     autoCommit: !this._conn,
@@ -1256,6 +1284,7 @@ class OracleCollection {
                     acknowledged: true,
                     matchedCount: result.rowsAffected ?? 0,
                     modifiedCount: result.rowsAffected ?? 0,
+                    ...(options.returning?.length ? { returning: _returnedRows(options.returning, result.outBinds) } : {}),
                 };
             } catch (err) {
                 throw new Error(
@@ -1486,6 +1515,8 @@ class OracleCollection {
      * Use an empty filter {} to delete all rows (like TRUNCATE).
      *
      * @param {Object} filter - Which rows to delete
+     * @param {{ limit?: number, returning?: string[] }} [options] - `limit`: delete at most this many matching rows (batch purges);
+     *   `returning`: columns to read back from EVERY deleted row (`result.returning`, one object per row, values as strings)
      * @returns {Promise<{ acknowledged, deletedCount }>}
      *
      * @example
@@ -1493,10 +1524,23 @@ class OracleCollection {
      *   const result = await users.deleteMany({ status: "inactive" });
      *   console.log(`Deleted ${result.deletedCount} users`);
      */
-    async deleteMany(filter: Record<string, unknown>): Promise<{ acknowledged: boolean; deletedCount: number;  }> {
+    async deleteMany(filter: Record<string, unknown>, options: ReturningOption & { limit?: number } = {}): Promise<{ acknowledged: boolean; deletedCount: number; returning?: Array<Record<string, unknown>> }> {
+        const { limit } = options;
+        if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
+            throw new TypeError(`deleteMany: limit must be a positive integer, got ${String(limit)}`);
+        }
         return this._execute(async (conn) => {
             const { whereClause, binds } = parseFilter(filter);
-            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} t0 ${whereClause}`;
+            // A bounded delete removes at most `limit` matching rows (batch purges); parseFilter
+            // parenthesises every OR, so appending AND ROWNUM cannot change the filter's meaning.
+            let where = whereClause;
+            if (limit !== undefined) {
+                binds.del_limit = limit;
+                where = whereClause ? `${whereClause} AND ROWNUM <= :del_limit` : "WHERE ROWNUM <= :del_limit";
+            }
+            const ret = _multiRowReturning(options.returning, this.db.oracledb);
+            Object.assign(binds, ret.outBinds);
+            const sql = `DELETE FROM ${quoteIdentifier(this.tableName)} t0 ${where}${ret.sql}`;
             try {
                 const result = await conn.execute(sql, binds, {
                     autoCommit: !this._conn,
@@ -1504,6 +1548,7 @@ class OracleCollection {
                 return {
                     acknowledged: true,
                     deletedCount: result.rowsAffected ?? 0,
+                    ...(options.returning?.length ? { returning: _returnedRows(options.returning, result.outBinds) } : {}),
                 };
             } catch (err) {
                 throw new Error(

@@ -232,6 +232,37 @@ class Transaction {
             return fn(session);
         });
     }
+
+    /**
+     * Run reads against ONE consistent snapshot: every statement `fn` issues sees the
+     * database as of the same SCN, however long the reads take.
+     *
+     * `SET TRANSACTION READ ONLY` is issued as the first statement on the connection
+     * (Oracle rejects it anywhere else, ORA-01453), any write inside fails with
+     * ORA-01456, and the transaction is always ended with a rollback so the pooled
+     * connection goes back clean. A snapshot older than the undo retention fails with
+     * ORA-01555, which the caller decides how to handle.
+     *
+     * @param {Function} fn - async (session) => result
+     * @returns {Promise<*>} Whatever your function returns
+     *
+     * @example
+     *   const counts = await new Transaction(createDb("appDbBulk")).withReadOnlyTransaction(async (session) => ({
+     *     a: await session.collection("T_A").countDocuments({}),
+     *     b: await session.collection("T_B").countDocuments({}),
+     *   }));
+     */
+    async withReadOnlyTransaction<T>(fn: (session: Session) => T | Promise<T>): Promise<T> {
+        return this.db.withConnection(async (conn: DbConnection) => {
+            await conn.execute("SET TRANSACTION READ ONLY");
+            try {
+                return await fn(new Session(conn, this.db));
+            } finally {
+                // Ends the read-only transaction; nothing was written, so this only releases the snapshot.
+                await conn.rollback().catch(() => {});
+            }
+        });
+    }
 }
 
 export { Transaction, Session };

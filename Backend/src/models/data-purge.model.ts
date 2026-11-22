@@ -332,17 +332,12 @@ class DataPurgeModel {
         try {
             // Long-hold multi-table read-only stream — routed to the appDbBulk
             // pool so it cannot starve interactive traffic on the appDb pool.
-            return await db.withConnection("appDbBulk", async (conn) => {
-                // MUST be the first statement issued on this connection —
-                // Oracle only accepts SET TRANSACTION as the first statement
-                // of a transaction (ORA-01453 otherwise). Every table read
-                // below therefore shares this one read-only transaction/SCN.
-                await conn.execute("SET TRANSACTION READ ONLY");
-
+            // One read-only transaction: every table below is read at the same SCN.
+            return await new Transaction(_bulkDb).withReadOnlyTransaction(async (session) => {
                 const perTable: Record<string, number> = {};
                 for (const entry of entries) {
                     perTable[entry.table] = await DataPurgeModel._streamRowsOnConnection(
-                        conn,
+                        session,
                         entry,
                         { pageSize, onBatch: (rows) => onBatch(entry.table, rows) },
                         "streamAllTables",
@@ -423,7 +418,7 @@ class DataPurgeModel {
      * @returns {Promise<number>} Total rows streamed for this table.
      * @private
      */
-    static async _streamRowsOnConnection(conn: import('../utils/oracle-mongo-wrapper/db').DbConnection, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
+    static async _streamRowsOnConnection(conn: Pick<import('../utils/oracle-mongo-wrapper/db').DbConnection, "execute">, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
         const outFormat = { outFormat: _db.oracledb.OUT_FORMAT_OBJECT };
         const pageSize = typeof opts.pageSize === "number" && Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
         const onBatch = typeof opts.onBatch === "function" ? opts.onBatch : () => {};
