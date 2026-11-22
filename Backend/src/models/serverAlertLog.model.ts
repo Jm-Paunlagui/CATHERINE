@@ -299,14 +299,14 @@ class ServerAlertLogModel {
         const table = resolveTableName();
 
         return handle.withConnection(async (conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) => {
-            const countResult = await conn.execute(
+            const countResult = await conn.execute<{ CNT: number }>(
                 `SELECT COUNT(*) AS CNT FROM ${table} ${whereSql}`,
                 binds,
                 { outFormat: handle.oracledb.OUT_FORMAT_OBJECT },
             );
-            const total = Number(countResult.rows[0]?.CNT ?? 0);
+            const total = Number(countResult.rows?.[0]?.CNT ?? 0);
 
-            const rowsResult = await conn.execute(
+            const rowsResult = await conn.execute<Omit<AlertLogRow, "DETAILS"> & { DETAILS: string | null }>(
                 `SELECT ${SELECT_COLUMNS}
                  FROM ${table}
                  ${whereSql}
@@ -320,7 +320,7 @@ class ServerAlertLogModel {
             );
 
             // DETAILS is fetched as a string (fetchInfo above) and parsed here.
-            const rows: AlertLogRow[] = (rowsResult.rows ?? []).map((r: Omit<AlertLogRow, "DETAILS"> & { DETAILS: string | null }) => ({
+            const rows: AlertLogRow[] = (rowsResult.rows ?? []).map((r) => ({
                 ...r,
                 DETAILS: parseDetails(r.DETAILS),
             }));

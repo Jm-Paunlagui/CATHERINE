@@ -67,10 +67,11 @@ const CLOCK_OFFSET_SQL =
  * @returns {Promise<{ dbOffsetMinutes: number, configuredMinutes: number, appOffsetMinutes: number, match: boolean } | null>}
  *          null when the clock could not be read
  */
-async function verifyDbClockOffset(db: { withConnection: ((...args: any[]) => unknown); oracledb?: Record<string, unknown>; }, { appOffsetMinutes = -new Date().getTimezoneOffset() }: { appOffsetMinutes?: number; } = {}): Promise<{ dbOffsetMinutes: number; configuredMinutes: number; appOffsetMinutes: number; match: boolean; } | null> {
+async function verifyDbClockOffset(db: { withConnection: <T>(name: string, cb: (conn: import("./oracle-mongo-wrapper/db").DbConnection) => Promise<T>) => Promise<T>; oracledb?: { OUT_FORMAT_OBJECT?: number }; }, { appOffsetMinutes = -new Date().getTimezoneOffset() }: { appOffsetMinutes?: number; } = {}): Promise<{ dbOffsetMinutes: number; configuredMinutes: number; appOffsetMinutes: number; match: boolean; } | null> {
     try {
         const raw = await db.withConnection("appDb", async (conn: import("./oracle-mongo-wrapper/db").DbConnection) => {
-            const r = await conn.execute(CLOCK_OFFSET_SQL, [], { outFormat: db.oracledb?.OUT_FORMAT_OBJECT });
+            // Object rows normally; an array row if the caller's pool uses OUT_FORMAT_ARRAY.
+            const r = await conn.execute<{ OFF_MIN?: unknown } | unknown[]>(CLOCK_OFFSET_SQL, [], { outFormat: db.oracledb?.OUT_FORMAT_OBJECT });
             const row = r.rows?.[0];
             return Array.isArray(row) ? row[0] : row?.OFF_MIN;
         });

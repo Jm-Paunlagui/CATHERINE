@@ -124,9 +124,9 @@ class Session {
      *   const r = await session.execute("SELECT MY_SEQ.NEXTVAL FROM DUAL");
      *   const nextId = Number(r.rows[0][0]);
      */
-    // The raw driver result, untyped like the connection it comes from (see DbConnection in db.ts).
-    async execute(sql: string, binds: Record<string, unknown> = {}, opts: Record<string, unknown> = {}): Promise<ReturnType<DbConnection["execute"]>> {
-        return this._conn.execute(sql, binds, opts);
+    // The raw driver result; rows default to objects (OUT_FORMAT_OBJECT), pass T for a known shape.
+    async execute<T = Record<string, unknown>>(sql: string, binds: import("./db").DbBinds = {}, opts: import("oracledb").ExecuteOptions = {}): Promise<import("oracledb").Result<T>> {
+        return this._conn.execute<T>(sql, binds, opts);
     }
 
     /**

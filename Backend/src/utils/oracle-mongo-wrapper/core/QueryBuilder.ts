@@ -125,7 +125,7 @@ class QueryBuilder {
     declare _skip: unknown;
     declare _limit: unknown;
     declare _sort: Record<string, unknown> | null;
-    declare _conn: Record<string, unknown> | null;
+    declare _conn: import("../db").DbConnection | null;
     declare db: import("../db").WrapperDb;
     declare filter: Record<string, unknown>;
     declare tableName: string;
@@ -604,11 +604,12 @@ class QueryBuilder {
             try {
                 // Never commit on a session connection: that would end the
                 // caller's transaction and release its row locks mid-flight.
-                const result = await conn.execute(sql, binds, {
+                const result = await conn.execute<{ CNT: number }>(sql, binds, {
                     outFormat: this.db.oracledb.OUT_FORMAT_OBJECT,
                     autoCommit: !this._conn,
                 });
-                return Number(result.rows[0].CNT);
+                // COUNT(*) with no GROUP BY always returns exactly one row.
+                return Number(result.rows?.[0]?.CNT ?? 0);
             } catch (err) {
                 throw new Error(
                     MSG.wrapError("QueryBuilder.count", err, sql, binds),

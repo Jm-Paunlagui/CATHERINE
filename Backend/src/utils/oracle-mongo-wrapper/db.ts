@@ -126,16 +126,39 @@ function createDb(connectionName: string = "appDb") {
   };
 }
 
+/** Bind values as the wrapper builds them from caller filters / documents. */
+type DbBinds = Record<string, unknown> | unknown[];
+
 /**
- * The connection a wrapper method receives from withConnection / withTransaction.
- * Deliberately untyped: typing it as oracledb.Connection makes every `result.rows`
- * `unknown[]`, so the wrapper's row handling is typed first (plans/ts-conversion-open-items.md,
- * "Type the connection boundary"). One alias, so that change is one line.
+ * The connection a wrapper method (or a model's raw SQL) receives from withConnection /
+ * withTransaction: node-oracledb's Connection, with `execute` narrowed to the promise form.
+ *
+ * - `binds` takes the wrapper's `DbBinds`. Bind values come from callers, and node-oracledb
+ *   checks each one's type at execute time (NJS-011 / NJS-044 …), so the static type does not
+ *   pretend to know them.
+ * - Rows default to `Record<string, unknown>` (every pool uses OUT_FORMAT_OBJECT); pass `T`
+ *   for a known row shape, e.g. `conn.execute<{ CNT: number }>(…)`.
  */
-type DbConnection = any;
+type DbConnection = Omit<import("oracledb").Connection, "execute" | "executeMany" | "queryStream"> & {
+  execute<T = Record<string, unknown>>(
+    sql: string,
+    binds?: DbBinds,
+    options?: import("oracledb").ExecuteOptions,
+  ): Promise<import("oracledb").Result<T>>;
+  executeMany<T = Record<string, unknown>>(
+    sql: string,
+    binds: DbBinds[] | number,
+    options?: import("oracledb").ExecuteManyOptions,
+  ): Promise<import("oracledb").Results<T>>;
+  queryStream<T = Record<string, unknown>>(
+    sql: string,
+    binds?: DbBinds,
+    options?: import("oracledb").QueryStreamOptions,
+  ): import("oracledb").QueryStream<T>;
+};
 
 export { createDb };
 /** The db handle createDb() returns. */
 type WrapperDb = ReturnType<typeof createDb>;
 
-export type { DbConnection, WrapperDb };
+export type { DbConnection, DbBinds, WrapperDb };

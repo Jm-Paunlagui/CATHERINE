@@ -260,7 +260,7 @@ class AdminModel {
 
         const d = db();
         const res = await d.withConnection((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
-            conn.execute(
+            conn.execute<{ ID: number; USERNAME: string; EMAIL: string | null; ROLE: string; IS_ACTIVE: string }>(
                 SEARCH_SQL,
                 { q: `%${escapeLike(needle.toUpperCase())}%`, lim },
                 { outFormat: d.oracledb.OUT_FORMAT_OBJECT },

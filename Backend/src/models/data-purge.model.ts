@@ -423,7 +423,7 @@ class DataPurgeModel {
      * @returns {Promise<number>} Total rows streamed for this table.
      * @private
      */
-    static async _streamRowsOnConnection(conn: import('oracledb').Connection, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
+    static async _streamRowsOnConnection(conn: import('../utils/oracle-mongo-wrapper/db').DbConnection, entry: import('../constants/purgeTables').PurgeTableEntry, opts: { pageSize?: number; onBatch?: (rows: Record<string, unknown>[]) => (Promise<void> | void); whereColumns?: string[]; whereValue?: string | number; }, callerLabel: string): Promise<number> {
         const outFormat = { outFormat: _db.oracledb.OUT_FORMAT_OBJECT };
         const pageSize = typeof opts.pageSize === "number" && Number.isInteger(opts.pageSize) && opts.pageSize > 0 ? opts.pageSize : 1000;
         const onBatch = typeof opts.onBatch === "function" ? opts.onBatch : () => {};
@@ -658,7 +658,7 @@ class DataPurgeModel {
         }
 
         const outFormat = { outFormat: _db.oracledb.OUT_FORMAT_OBJECT };
-        const colResult = await session.execute(
+        const colResult = await session.execute<{ COLUMN_NAME: string; DATA_TYPE: string }>(
             `SELECT COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLUMNS WHERE TABLE_NAME = :tableName`,
             { tableName: entry.table },
             outFormat,
@@ -669,7 +669,7 @@ class DataPurgeModel {
                 `DataPurgeModel.insertRestoreBatch: USER_TAB_COLUMNS returned no columns for "${entry.table}" — verify the app database user (appDb/appDbBulk pools) has read access and the table name is correct.`,
             );
         }
-        const typeByCol = new Map<string, string>(columnRows.map((r: { COLUMN_NAME: string; DATA_TYPE: string }) => [r.COLUMN_NAME, r.DATA_TYPE]));
+        const typeByCol = new Map<string, string>(columnRows.map((r) => [r.COLUMN_NAME, r.DATA_TYPE]));
 
         const virtualSet = new Set(entry.virtualColumns);
         const identifierSet = new Set(entry.identifierColumns);
