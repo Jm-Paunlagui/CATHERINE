@@ -10,6 +10,11 @@ architecture and runtime models (`src/constants/architectureModel.ts`, `src/cons
 > branches 34.07%, functions 43.56%, lines 38.03% (all still FAIL). Ten test files opt out via `NATIVE_REQUIRE_ONLY` (src has ~65 lazy
 > native `require()` calls, so a Vite-loaded test and src would hold different module instances). The tables below show the
 > original measurement.
+>
+> **Update 2026-11-23 (tests added):** new tests cover gaps 1 (auth/session revocation), 3 (data-purge auth, backup token), 4 (ipcSchemas, cluster RPC chaos,
+> critRelay) and 5 (request watchdog). Chaos files moved to `test/server/chaos/`. Now: 2015 tests, statements 44.48%, branches 42.19%, functions 50.82%,
+> lines 45.54% (gate still FAIL). Gap 2 (shutdown teardown) tests are written but held back: they import `src/utils/shutdown/HttpInFlightTracker.ts`,
+> which fails `tsc -p tsconfig.test.json` (untyped `list = []`, `idleMs = null` at lines ~142-150) and needs a 2-line type annotation in src.
 
 ## 1. Coverage vs gate
 

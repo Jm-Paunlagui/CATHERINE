@@ -27,10 +27,10 @@
 
 const {
     CacheStore,
-} = require("../../../../../src/middleware/cache/CacheStore");
+} = require("../../../src/middleware/cache/CacheStore");
 const {
     CacheMiddleware,
-} = require("../../../../../src/middleware/cache/CacheMiddleware");
+} = require("../../../src/middleware/cache/CacheMiddleware");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
