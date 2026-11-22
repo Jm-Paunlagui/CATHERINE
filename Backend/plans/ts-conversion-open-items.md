@@ -27,3 +27,4 @@ Branch `backend-rewrite-to-typescript` (PR #4, open, not merged). Status as of 2
 ## Known flaky tests
 
 - `shutdownGate.perf` and `scanner-blocking` occasionally fail under full-suite load and pass when rerun.
+- `auth-bypass` "tampered payload → 403" failed once under full-suite load (2026-11-22); passed 3/3 alone and in the next full run. The test input is deterministic, so the cause is shared state or timing; not yet investigated.

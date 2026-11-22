@@ -270,7 +270,7 @@ function bootWorker() {
         });
     }
     /** @type {null | { verdict: string, previous: object|null, lastNoticeAt: number|null, bootedAtMs: number }} */
-    let bootInfo: null | { verdict: string; previous: Record<string, unknown> | null; lastNoticeAt: number | null; bootedAtMs: number; } = null;
+    let bootInfo: null | { verdict: string; previous: import("./src/utils/lifecycle/ServerRunMarker").RunRecord | null; lastNoticeAt: number | null; bootedAtMs: number; } = null;
     let bootAnnounced = false;
     /** @type {NodeJS.Timeout|null} Sends the boot email anyway when the pools are slow. */
     let bootAnnounceTimer: NodeJS.Timeout | null = null;

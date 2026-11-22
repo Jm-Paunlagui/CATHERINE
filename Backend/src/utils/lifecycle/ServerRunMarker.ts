@@ -93,7 +93,24 @@ const isTime = (v: unknown) => v === undefined || v === null || Number.isFinite(
  * @param {object} rec
  * @returns {boolean}
  */
-function isWellFormed(rec: Record<string, unknown>): boolean {
+/** A marker record read back from disk, once isWellFormed has checked it. */
+type RunRecord = Record<string, unknown> & {
+    state: string;
+    pid?: number;
+    version?: string;
+    bootedAt?: number | null;
+    lastHeartbeatAt?: number | null;
+    lastStartNoticeAt?: number | null;
+    stoppingAt?: number | null;
+    stoppedAt?: number | null;
+    stopReason?: string;
+    stopSignal?: string | null;
+    exitCode?: number | null;
+    unreported?: unknown;
+    stopEmailUnsent?: boolean;
+};
+
+function isWellFormed(rec: Record<string, unknown>): rec is RunRecord {
     if (typeof rec.state !== "string" || !Object.hasOwn(STATES, rec.state)) return false;
     if (rec.pid !== undefined && !Number.isInteger(rec.pid)) return false;
     if (rec.version !== undefined && typeof rec.version !== "string") return false;
@@ -118,8 +135,9 @@ function pendingList(p: unknown) {
 }
 
 /** Stable identity of one pending entry: the run's pid and boot time. */
-function pendingKey(entry: any) {
-    return `${entry?.pid ?? "?"}:${entry?.bootedAt ?? "?"}`;
+function pendingKey(entry: unknown) {
+    const e = (entry ?? {}) as { pid?: unknown; bootedAt?: unknown }; // a pending entry is a plain record (pendingList)
+    return `${e.pid ?? "?"}:${e.bootedAt ?? "?"}`;
 }
 
 /**
@@ -240,7 +258,7 @@ class ServerRunMarker {
      *
      * @returns {{ verdict: string, previous: object|null, cause?: string }}
      */
-    readPrevious(): { verdict: string; previous: Record<string, unknown> | null; cause?: string; } {
+    readPrevious(): { verdict: string; previous: RunRecord | null; cause?: string; } {
         let raw;
         try {
             raw = this._fs.readFileSync(this._filePath, "utf8");
@@ -655,6 +673,7 @@ const __default = ServerRunMarker;
 export default __default;
 __default.resolveMarkerPath = resolveMarkerPath;
 export { resolveMarkerPath };
+export type { RunRecord };
 __default.pendingKey = pendingKey;
 export { pendingKey };
 __default.pendingList = pendingList;
