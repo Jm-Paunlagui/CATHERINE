@@ -181,7 +181,7 @@ class AdminModel {
      * @param {number|string} id
      * @returns {Promise<object|null>}
      */
-    static async findById(id: number | string): Promise<Record<string, unknown> | null> {
+    static async findById(id: number | string): Promise<AdminRow | null> {
         const numericId = Number(id);
         if (id === null || id === undefined || id === "" || !Number.isFinite(numericId)) {
             return null;
@@ -190,7 +190,7 @@ class AdminModel {
             const { admins } = await demo.accounts();
             return admins.find((a) => Number(a.ID) === numericId) ?? null;
         }
-        return col().find({ ID: numericId }).project(PROJECTION).next();
+        return col().find({ ID: numericId }).project(PROJECTION).next<AdminRow>();
     }
 
     /**

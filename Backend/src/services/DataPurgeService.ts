@@ -523,7 +523,7 @@ class DataPurgeService {
      * @param {number|string} adminId
      * @returns {Promise<object|null>}
      */
-    static async findAdminById(adminId: number | string): Promise<Record<string, any> | null> {
+    static async findAdminById(adminId: number | string) {
         return AdminModel.findById(adminId);
     }
 
@@ -550,7 +550,7 @@ class DataPurgeService {
     static async _assertAdminPassword(
         adminId: number | string,
         adminPassword: string,
-        adminRecord: Record<string, unknown> | null = null,
+        adminRecord: import("../models/admin.model").AdminRow | null = null,
     ): Promise<{ adminId: number | string; }> {
         const record =
             adminRecord ?? (await DataPurgeService.findAdminById(adminId));
@@ -1153,7 +1153,7 @@ class DataPurgeService {
      * @private
      */
     static _scopedHighWater(tables: string[], tokenHighWater: Record<string, string> | undefined): Record<string, string> {
-        const out: Record<string, any> = {};
+        const out: Record<string, string> = {};
         if (!tokenHighWater || typeof tokenHighWater !== "object") return out;
         for (const table of tables) {
             const hw = tokenHighWater[table];
@@ -1183,7 +1183,15 @@ class DataPurgeService {
         durationMs,
         clientIp,
         requestId,
-    }: Record<string, any>): Promise<void> {
+    }: {
+        adminId: unknown;
+        scope: ReturnType<typeof DataPurgeService.resolveScope>;
+        perTable: Array<{ table: string; deletedCount: number }>;
+        totalDeleted: number;
+        durationMs: number;
+        clientIp?: string | null;
+        requestId?: string | null;
+    }): Promise<void> {
         await AuditLogModel.insert({
             REQUEST_ID: requestId ?? `purge-${Date.now()}`,
             USER_ID: Number.isFinite(Number(adminId))
@@ -1217,7 +1225,7 @@ class DataPurgeService {
      * @returns {Promise<void>}
      * @private
      */
-    static async _sendPostCommitAlert({ adminId, scope, totalDeleted }: Record<string, any>): Promise<void> {
+    static async _sendPostCommitAlert({ adminId, scope, totalDeleted }: { adminId: unknown; scope: ReturnType<typeof DataPurgeService.resolveScope>; totalDeleted: number }): Promise<void> {
         // Required lazily to avoid a hard dependency at module load for a
         // service most of this feature's paths never touch, and to sidestep
         // any startup-order coupling with AlertNotifierService.start().

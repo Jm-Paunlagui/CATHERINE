@@ -22,16 +22,33 @@
  * @returns {object} the map
  * @throws {Error} listing every problem found, one per line
  */
-function buildSystemMap(src: Record<string, any>): Record<string, unknown> {
+/**
+ * A system-map model as written in src/constants (architectureModel, runtimeModel).
+ * Hand-written data: buildSystemMap checks it and reports every inconsistency,
+ * so fields it validates at runtime (flow steps) stay unknown here.
+ */
+type SystemModel = {
+    MAP_VERIFIED_AT?: string;
+    META?: Record<string, unknown> & { title?: string };
+    LAYOUT: { columns: Array<{ nodes: string[] }>; band: { nodes: Array<{ id: string }> } };
+    layers: Array<{ id: string }>;
+    edgeKinds: Record<string, unknown>;
+    nodes: Array<Record<string, unknown> & { id: string; layer: string; sub?: string }>;
+    /** [source, target, kind, label?] rows. */
+    E: string[][];
+    flows: Array<{ id: string; name?: string; category?: string; ref?: string; summary?: string; steps: unknown }>;
+};
+
+function buildSystemMap(src: SystemModel): Record<string, unknown> {
     const { MAP_VERIFIED_AT, META, LAYOUT: layout, layers, edgeKinds, nodes, E, flows } = src;
     const name = META?.title ?? "System";
     const errors = [];
 
-    const nodeIds = new Set();
+    const nodeIds = new Set<string>();
     for (const n of nodes) {
         if (nodeIds.has(n.id)) errors.push(`duplicate node ${n.id}`);
         nodeIds.add(n.id);
-        if (!layers.some((l: any) => l.id === n.layer)) errors.push(`node ${n.id}: unknown layer ${n.layer}`);
+        if (!layers.some((l) => l.id === n.layer)) errors.push(`node ${n.id}: unknown layer ${n.layer}`);
     }
 
     const edges = [];
@@ -48,7 +65,7 @@ function buildSystemMap(src: Record<string, any>): Record<string, unknown> {
     }
 
     const flowIds = new Set();
-    const outFlows = flows.map((f: any) => {
+    const outFlows = flows.map((f) => {
         if (flowIds.has(f.id)) errors.push(`duplicate flow ${f.id}`);
         flowIds.add(f.id);
         const steps = [];
@@ -86,7 +103,7 @@ function buildSystemMap(src: Record<string, any>): Record<string, unknown> {
         };
     });
 
-    const placed = [...layout.columns.flatMap((c: any) => c.nodes), ...layout.band.nodes.map((b: any) => b.id)];
+    const placed = [...layout.columns.flatMap((c) => c.nodes), ...layout.band.nodes.map((b) => b.id)];
     for (const id of nodeIds) if (!placed.includes(id)) errors.push(`node ${id} is not placed in the layout`);
     for (const id of placed) if (!nodeIds.has(id)) errors.push(`layout places unknown node ${id}`);
     if (new Set(placed).size !== placed.length) errors.push("a node is placed twice in the layout");
@@ -97,7 +114,7 @@ function buildSystemMap(src: Record<string, any>): Record<string, unknown> {
         meta: { ...META, mapVerifiedAt: MAP_VERIFIED_AT },
         layers,
         edgeKinds,
-        nodes: nodes.map(({ sub, ...n }: any) => ({ ...n, subtitle: sub })),
+        nodes: nodes.map(({ sub, ...n }) => ({ ...n, subtitle: sub })),
         edges,
         flows: outFlows,
         layout,

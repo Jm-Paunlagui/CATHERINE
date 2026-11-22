@@ -64,7 +64,7 @@ function resolveKey() {
 
 // ── Encrypt / Decrypt ─────────────────────────────────────────────────────────
 
-function encrypt(plaintext: any) {
+function encrypt(plaintext: string) {
     const key = resolveKey();
     const iv = crypto.randomBytes(IV_BYTES);
     const cipher = crypto.createCipheriv(ALG, key, iv);
@@ -79,7 +79,7 @@ function encrypt(plaintext: any) {
     });
 }
 
-function decrypt(raw: any) {
+function decrypt(raw: string) {
     const key = resolveKey();
     const { iv, authTag, ciphertext } = JSON.parse(raw);
     const decipher = crypto.createDecipheriv(ALG, key, Buffer.from(iv, "hex"));
@@ -218,17 +218,44 @@ function ensureDataDir() {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+/** What create() accepts (ChangelogService validates it first). */
+export type ChangelogInput = {
+    displayDate: string;
+    version: string;
+    title: string;
+    type: string;
+    message?: string;
+    whatChanged?: unknown;
+    authors?: unknown;
+    coAuthors?: unknown;
+};
+
+/** One changelog entry as stored (older entries may still carry `summary`; see migrateEntry). */
+type ChangelogEntry = Record<string, unknown> & {
+    id: string;
+    displayDate: string;
+    version: string;
+    title: string;
+    type: string;
+    message?: string;
+    whatChanged?: unknown[];
+    authors?: string[];
+    coAuthors?: string[];
+    createdAt: string;
+    updatedAt: string;
+};
+
 /**
  * Migrates a single entry from the old schema (summary string) to the new schema
  * (message string + whatChanged array). Safe to run repeatedly — idempotent.
  * @param {object} entry
  * @returns {object}
  */
-function migrateEntry(entry: Record<string, unknown>): Record<string, unknown> {
+function migrateEntry(entry: ChangelogEntry): ChangelogEntry {
     // Old entries had `summary` instead of `message` + `whatChanged`
     if (!entry.message && entry.summary) {
         const { summary, ...rest } = entry;
-        return { ...rest, message: summary, whatChanged: [] };
+        return { ...rest, message: String(summary), whatChanged: [] };
     }
     if (!entry.whatChanged) {
         return { ...entry, whatChanged: [] };
@@ -243,11 +270,11 @@ function migrateEntry(entry: Record<string, unknown>): Record<string, unknown> {
  * Migrates legacy entries (summary → message) on read.
  * @returns {{ entries: object[] }}
  */
-function readStore(): { entries: Record<string, any>[]; } {
+function readStore(): { entries: ChangelogEntry[]; } {
     ensureDataDir();
 
     if (!fs.existsSync(STORE_PATH)) {
-        const initial = { entries: [] };
+        const initial: { entries: ChangelogEntry[] } = { entries: [] };
         writeStore(initial);
         logger.notice(changelogMessages.STORE_INITIALIZED());
         return initial;
@@ -256,10 +283,11 @@ function readStore(): { entries: Record<string, any>[]; } {
     try {
         const raw = fs.readFileSync(STORE_PATH, "utf8");
         const plaintext = decrypt(raw);
-        const store = JSON.parse(plaintext);
+        // AES-GCM authenticated our own store file, so its JSON has the shape we wrote.
+        const store = JSON.parse(plaintext) as { entries: ChangelogEntry[] };
 
         let needsWrite = false;
-        store.entries = store.entries.map((entry: any) => {
+        store.entries = store.entries.map((entry) => {
             const migrated = migrateEntry(entry);
             if (migrated !== entry) needsWrite = true;
             return migrated;
@@ -300,7 +328,7 @@ class ChangelogModel {
      * Returns all entries sorted newest displayDate first.
      * @returns {object[]}
      */
-    static listAll(): Record<string, any>[] {
+    static listAll(): ChangelogEntry[] {
         const { entries } = readStore();
         return [...entries].sort((a, b) => {
             if (b.displayDate !== a.displayDate)
@@ -326,7 +354,7 @@ class ChangelogModel {
      * @param {object} data
      * @returns {object} created entry
      */
-    static create(data: Record<string, unknown>): Record<string, unknown> {
+    static create(data: ChangelogInput): ChangelogEntry {
         // Whole read-modify-write cycle under the cross-process lock: readStore
         // runs AFTER any concurrent writer released the lock, so this create
         // always appends to the latest committed entries array — never a stale
@@ -334,7 +362,7 @@ class ChangelogModel {
         return withLock(() => {
             const store = readStore();
             const now = new Date().toISOString();
-            const entry = {
+            const entry: ChangelogEntry = {
                 id: crypto.randomUUID(),
                 displayDate: data.displayDate,
                 version: data.version,

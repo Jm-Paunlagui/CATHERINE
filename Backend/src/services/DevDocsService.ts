@@ -154,7 +154,21 @@ const SECTION_SOURCE_MAP = Object.freeze({
 });
 
 /** @type {{ builtAt: number, byId: Map<string, object>, sections: object[] }|null} */
-let _manifestCache: { builtAt: number; byId: Map<string, Record<string, unknown>>; sections: Record<string, unknown>[]; } | null = null;
+let _manifestCache: DocManifest | null = null;
+
+/** One doc as listed in the tree. */
+type DocEntry = {
+    id: string;
+    title: string;
+    sizeBytes: number;
+    docCommittedAt: string | null;
+    sourceCommittedAt: string | null;
+    freshness: ReturnType<typeof DevDocsService._freshness>;
+};
+/** A doc plus where it lives on disk (server side only, never sent). */
+type DocRecord = DocEntry & { absolutePath: string };
+type DocSection = { name: string; docs: DocEntry[] };
+type DocManifest = { builtAt: number; byId: Map<string, DocRecord>; sections: DocSection[] };
 
 class DevDocsService {
     declare static FRESHNESS_SNAPSHOT_PATH: string;
@@ -399,9 +413,9 @@ class DevDocsService {
      *
      * @returns {Promise<{ builtAt: number, byId: Map<string, object>, sections: object[] }>}
      */
-    static async _buildManifest(): Promise<{ builtAt: number; byId: Map<string, Record<string, unknown>>; sections: Record<string, unknown>[]; }> {
-        const byId = new Map();
-        const sections: any[] = [];
+    static async _buildManifest(): Promise<DocManifest> {
+        const byId = new Map<string, DocRecord>();
+        const sections: DocSection[] = [];
 
         const { docIndex, sourceIndex } = await DevDocsService._resolveDateIndexes();
 
@@ -420,9 +434,9 @@ class DevDocsService {
         const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
         const rootDocs = entries.filter((e) => e.isFile() && /\.md$/i.test(e.name)).map((e) => e.name).sort();
 
-        const collect = async (sectionName: any, dirAbs: any, fileNames: any) => {
+        const collect = async (sectionName: string, dirAbs: string, fileNames: string[]) => {
             const sourceDate = DevDocsService._sectionSourceDate(sectionName, sourceIndex);
-            const docs = [];
+            const docs: DocEntry[] = [];
             for (const fileName of fileNames) {
                 const absolutePath = DevDocsService._assertInsideCorpus(path.join(dirAbs, fileName));
                 const id = DevDocsService._buildId(sectionName, fileName);
@@ -477,7 +491,7 @@ class DevDocsService {
      *
      * @returns {Promise<{ builtAt: number, byId: Map<string, object>, sections: object[] }>}
      */
-    static async _manifest(): Promise<{ builtAt: number; byId: Map<string, Record<string, any>>; sections: Record<string, unknown>[]; }> {
+    static async _manifest(): Promise<DocManifest> {
         if (_manifestCache && Date.now() - _manifestCache.builtAt < MANIFEST_TTL_MS) {
             return _manifestCache;
         }
@@ -497,7 +511,7 @@ class DevDocsService {
      *
      * @returns {Promise<{ sections: object[], generatedAt: string }>}
      */
-    static async getTree(): Promise<{ sections: Record<string, any>[]; generatedAt: string; }> {
+    static async getTree(): Promise<{ sections: DocSection[]; generatedAt: string; }> {
         const manifest = await DevDocsService._manifest();
         return {
             sections: manifest.sections,
@@ -514,7 +528,7 @@ class DevDocsService {
      * @returns {Promise<object>}
      * @throws {AppError} 404 when the id is unknown
      */
-    static async getDoc(id: string): Promise<Record<string, any>> {
+    static async getDoc(id: string) {
         const manifest = await DevDocsService._manifest();
         const entry = manifest.byId.get(String(id ?? "").trim().toLowerCase());
         if (!entry) {

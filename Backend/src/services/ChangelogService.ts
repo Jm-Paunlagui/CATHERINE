@@ -44,7 +44,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * @param {boolean} [requireAll=true] - false for partial update (PATCH-style)
  * @returns {object} Normalised fields
  */
-function validate(data: Record<string, any>, requireAll: boolean = true): Record<string, unknown> {
+function validate(data: Record<string, unknown>, requireAll: boolean = true): Record<string, unknown> {
     const {
         displayDate,
         version,
@@ -67,14 +67,14 @@ function validate(data: Record<string, any>, requireAll: boolean = true): Record
         }
     }
 
-    if (displayDate !== undefined && !DATE_RE.test(displayDate)) {
+    if (displayDate !== undefined && (typeof displayDate !== "string" || !DATE_RE.test(displayDate))) {
         throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400, {
             type: "ValidationError",
             details: ["displayDate must be YYYY-MM-DD."],
         });
     }
 
-    if (type !== undefined && !VALID_TYPES.includes(type)) {
+    if (type !== undefined && (typeof type !== "string" || !VALID_TYPES.includes(type))) {
         throw new AppError(CHANGELOG_ERRORS.INVALID_ENTRY, 400, {
             type: "ValidationError",
             details: [`type must be one of: ${VALID_TYPES.join(", ")}.`],
@@ -177,7 +177,8 @@ class ChangelogService {
      * @returns {object} Created entry
      */
     static create(body: Record<string, unknown>): Record<string, unknown> {
-        const data = validate(body, true);
+        // validate(requireAll) guarantees displayDate, version, title, message and type.
+        const data = validate(body, true) as import("../models/changelog.model").ChangelogInput;
         return ChangelogModel.create(data);
     }
 
