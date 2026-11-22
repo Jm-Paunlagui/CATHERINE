@@ -43,7 +43,7 @@ const DELTA_CAP = 500;
  */
 const _subs: Map<string, { key: string; filters: Record<string, unknown>; cursor: number | null; conns: Map<string, import('express').Response>; }> = new Map();
 
-let _pollInterval: any = null;
+let _pollInterval: ReturnType<typeof setInterval> | null = null;
 let _consecutiveErrors = 0;
 
 /**
@@ -64,7 +64,7 @@ function _safeSend(res: import('express').Response, event: string, payload: Reco
 }
 
 /** Deterministic subscription key from table + scope filters (sorted keys). */
-function _subKey(table: unknown, filters: any) {
+function _subKey(table: unknown, filters: Record<string, unknown>) {
     const scope: Record<string, unknown> = {};
     for (const k of Object.keys(filters).sort()) {
         const v = filters[k];
@@ -135,7 +135,7 @@ async function _sharedPollTick() {
             }
             logger.warning(integrityMessages.SSE_MAX_ERRORS(conns, MAX_POLL_ERRORS));
             _subs.clear();
-            clearInterval(_pollInterval);
+            clearInterval(_pollInterval ?? undefined);
             _pollInterval = null;
         }
     }

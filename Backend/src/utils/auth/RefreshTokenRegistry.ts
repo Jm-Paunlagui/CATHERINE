@@ -212,7 +212,7 @@ class RefreshTokenRegistry {
         }
     }
 
-    #dropEntry(hash: any, entry: any) {
+    #dropEntry(hash: string, entry: { familyId: string }) {
         this.#entries.delete(hash);
         const fam = this.#families.get(entry.familyId);
         if (!fam) return;
@@ -222,7 +222,7 @@ class RefreshTokenRegistry {
         if (fam.jtis.size === 0 && !fam.revoked) this.#dropFamily(entry.familyId, fam);
     }
 
-    #dropFamily(fid: any, fam: any) {
+    #dropFamily(fid: string, fam: { userKey: string | null }) {
         this.#families.delete(fid);
         if (fam.userKey === null) return;
         const fids = this.#users.get(fam.userKey);

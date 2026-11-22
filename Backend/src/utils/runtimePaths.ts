@@ -29,7 +29,7 @@ const IS_COMPILED = typeof Bun !== "undefined" && isBunCompiledMain(Bun.main);
 const APP_ROOT = IS_COMPILED ? path.dirname(process.execPath) : path.resolve(__dirname, "..", "..");
 
 /** Absolute path to a file or folder under APP_ROOT. */
-function appPath(...segments: any[]) {
+function appPath(...segments: string[]) {
     return path.join(APP_ROOT, ...segments);
 }
 

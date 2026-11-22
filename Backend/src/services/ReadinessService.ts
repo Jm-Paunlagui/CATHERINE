@@ -115,7 +115,7 @@ const _countsUp = (name: string, check: { status: string; state: string; }) =>
     check?.status === "up" ||
     (!READINESS_GATING_POOLS.includes(name) && check?.state === "saturated");
 
-let _inFlight: any = null;
+let _inFlight: ReturnType<typeof evaluate> | null = null;
 
 /**
  * Probes every pool, closes the breaker of each pool that answered, and returns
@@ -127,7 +127,7 @@ function evaluate(): Promise<{ ready: boolean; checks: Record<string, Record<str
     if (_inFlight) return _inFlight;
     _inFlight = (async () => {
         const results = await Promise.all(POOL_NAMES.map(probePool));
-        const checks: Record<string, unknown> = {};
+        const checks: Record<string, Record<string, unknown>> = {};
         let ready = true;
         POOL_NAMES.forEach((name, i) => {
             const check = results[i];

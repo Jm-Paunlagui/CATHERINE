@@ -21,7 +21,7 @@
  */
 
 class SingleFlight {
-  declare _inflight: Map<unknown, any>;
+  declare _inflight: Map<string, Promise<unknown>>;
   constructor() {
     /** @type {Map<string, Promise<*>>} */
     this._inflight = new Map();

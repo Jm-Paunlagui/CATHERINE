@@ -10,8 +10,8 @@ import cookieParser from "cookie-parser";
 
 class CookieParserMiddleware {
   declare _parser: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, unknown, unknown, import("qs").ParsedQs, Record<string, unknown>>;
-  declare _secret: any;
-  constructor(options: Record<string, unknown> = {}) {
+  declare _secret: string | undefined;
+  constructor(options: { secret?: string } = {}) {
     this._secret = options.secret ?? process.env.COOKIE_SECRET ?? undefined;
     this._parser = cookieParser(this._secret); // lgtm[js/missing-csrf-middleware] CSRF is enforced by CsrfMiddleware (csrf-csrf) in the app middleware stack
 

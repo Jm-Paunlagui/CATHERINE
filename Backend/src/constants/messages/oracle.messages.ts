@@ -10,7 +10,7 @@ const oracleMessages = {
     "ORACLE_INSTANT_CLIENT not set — skipping validation.",
   ORACLE_CLIENT_PATH_NOT_FOUND: (clientPath: unknown) =>
     `Oracle client path not found: ${clientPath}`,
-  ORACLE_FILES_MISSING: (missing: any, clientPath: unknown) =>
+  ORACLE_FILES_MISSING: (missing: string[], clientPath: unknown) =>
     `Missing Oracle files [${missing.join(", ")}] in ${clientPath}`,
   ORACLE_CLIENT_VALIDATED: (clientPath: unknown) =>
     `Oracle client validated: ${clientPath}`,
@@ -27,7 +27,7 @@ const oracleMessages = {
   ORACLEDB_DRIVER_LOADED: "oracledb driver loaded.",
   ORACLEDB_DRIVER_FAILED: (err: unknown) => `Failed to load oracledb: ${err}`,
   POOL_CREATING: (name: unknown) => `Creating pool "${name}"…`,
-  POOL_READY: (name: unknown, pool: any) =>
+  POOL_READY: (name: unknown, pool: { poolMin: number; poolMax: number }) =>
     `Pool "${name}" ready (min=${pool.poolMin}, max=${pool.poolMax}).`,
   POOL_FAILED: (name: unknown, attempt: unknown, max: unknown, err: unknown) =>
     `Pool "${name}" failed (attempt ${attempt}/${max}): ${err}`,

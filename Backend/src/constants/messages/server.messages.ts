@@ -32,12 +32,12 @@ const serverMessages = {
     `Shutdown alert email (${event}) failed: ${err}.`,
   SHUTDOWN_EARLY_AUDIT_FLUSH_FAILED: (err: unknown) =>
     `Shutdown: early (non-final) audit flush failed: ${err}. The final flush still runs at teardown.`,
-  SHUTDOWN_WAITING: (count: unknown, elapsedMs: any, capMs: any, top: any) =>
+  SHUTDOWN_WAITING: (count: unknown, elapsedMs: number, capMs: number, top: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null }>) =>
     `Shutdown: still waiting for ${count} in-flight request(s) after ${Math.round(elapsedMs / 1000)}s (cap ${Math.round(capMs / 1000)}s). Oldest: ${
       top.length
         ? top
             .map(
-              (r: any) =>
+              (r) =>
                 `${r.method} ${r.path} (age ${Math.round(r.ageMs / 1000)}s, idle ${r.idleMs == null ? "n/a" : `${Math.round(r.idleMs / 1000)}s`})`,
             )
             .join("; ")

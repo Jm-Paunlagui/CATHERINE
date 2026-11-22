@@ -94,7 +94,7 @@ class SseConnectionRegistry {
     }
 
     /** Writes one terminal event, ends the socket, then runs the surface's teardown. Never throws. */
-    static #endOne(res: any, onShutdown: unknown, event: unknown, reason: unknown) {
+    static #endOne(res: import("express").Response & { flush?: () => void }, onShutdown: unknown, event: unknown, reason: unknown) {
         try {
             res.write(`event: ${event}\n`);
             res.write(`data: ${JSON.stringify({ reason })}\n\n`);

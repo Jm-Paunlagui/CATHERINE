@@ -207,10 +207,10 @@ const _serverIp = (() => {
 })();
 
 class AuditLogMiddleware {
-    declare _excludedPaths: any;
-    declare _excludeHealth: unknown;
-    declare _enabled: unknown;
-    constructor(options: Record<string, unknown> = {}) {
+    declare _excludedPaths: string[];
+    declare _excludeHealth: boolean;
+    declare _enabled: boolean;
+    constructor(options: { enabled?: boolean; excludeHealth?: boolean; excludedPaths?: string[] } = {}) {
         this._enabled =
             options.enabled ?? process.env.AUDIT_LOG_ENABLED !== "false";
         this._excludeHealth =
@@ -229,7 +229,7 @@ class AuditLogMiddleware {
     handle(req: Request, res: Response, next: NextFunction) {
         if (!this._enabled) return next();
         if (this._excludeHealth && req.path === "/health") return next();
-        if (this._excludedPaths.some((p: any) => req.path.startsWith(p)))
+        if (this._excludedPaths.some((p) => req.path.startsWith(p)))
             return next();
 
         // OPTIONS (CORS preflight) requests are browser plumbing, not business

@@ -169,7 +169,7 @@ function _formatBytes(bytes: number): string {
 class LogRetentionService {
     declare LogRetentionService: typeof LogRetentionService;
     declare _lastSweepDay: unknown;
-    declare _timer: any;
+    declare _timer: ReturnType<typeof setInterval> | null;
     declare _logBaseDir: string;
     /**
      * @param {object} [opts]
