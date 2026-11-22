@@ -127,7 +127,7 @@ type InstrumentableTransport = { sendMail?: unknown; [kInstrumented]?: boolean }
 
 class SharedTransporter {
     declare SharedTransporter: typeof SharedTransporter;
-    declare _transporter: any;
+    declare _transporter: import("nodemailer").Transporter | null;
     constructor() {
         /** @type {import("nodemailer").Transporter|null} */
         this._transporter = null;
@@ -185,8 +185,8 @@ class SharedTransporter {
             return {};
         }
 
-        const positiveInt = (raw: any, fallback: unknown) => {
-            const n = parseInt(raw, 10);
+        const positiveInt = (raw: string | undefined, fallback: number) => {
+            const n = parseInt(raw ?? "", 10);
             return Number.isInteger(n) && n > 0 ? n : fallback;
         };
 

@@ -99,7 +99,18 @@ function fxTableName(): string | undefined {
  * @param {Date} asOf
  * @returns {boolean}
  */
-function _inWindow(row: Record<string, any>, asOf: Date): boolean {
+/** One FX rate row as read from the table (or the demo fixtures). */
+interface FxRateRow {
+    CURRENCY_CODE: string;
+    RATE: string | number;
+    EFFECTIVE_FROM: Date;
+    EFFECTIVE_TO?: Date | null;
+    SOURCE: string;
+    RETRIEVED_AT?: Date | null;
+    SET_BY?: string | null;
+}
+
+function _inWindow(row: FxRateRow, asOf: Date): boolean {
     const from = row.EFFECTIVE_FROM instanceof Date ? row.EFFECTIVE_FROM : new Date(row.EFFECTIVE_FROM);
     if (asOf < from) return false;
     if (row.EFFECTIVE_TO == null) return true;
@@ -229,7 +240,7 @@ class FxRateService {
      * @returns {Promise<object[]>}
      * @private
      */
-    static async _loadRates(currencyCode: string): Promise<Record<string, any>[]> {
+    static async _loadRates(currencyCode: string): Promise<FxRateRow[]> {
         if (isDemoMode()) {
             return demo.fxRates().filter((r) => r.CURRENCY_CODE === currencyCode);
         }
@@ -241,7 +252,7 @@ class FxRateService {
         }
         const { createDb, OracleCollection } = (require("../utils/oracle-mongo-wrapper") as typeof import("../utils/oracle-mongo-wrapper"));
         const col = new OracleCollection(table, createDb("appDb"));
-        return col.find({ CURRENCY_CODE: currencyCode }).toArray();
+        return col.find({ CURRENCY_CODE: currencyCode }).toArray<FxRateRow>();
     }
 }
 

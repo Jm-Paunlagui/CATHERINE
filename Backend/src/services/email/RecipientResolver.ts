@@ -54,11 +54,11 @@ import { CLUSTER_RPC_METHODS } from "../../constants/clusterIpc";
 
 class RecipientResolver {
     declare RecipientResolver: typeof RecipientResolver;
-    declare static REFRESH_WAIT_MS: any;
+    declare static REFRESH_WAIT_MS: number;
     declare _lastRefreshOk: boolean;
     declare _refreshPromise: unknown;
     declare _lastRefreshAt: number;
-    declare _cache: Map<unknown, any>;
+    declare _cache: Map<string, string[]>;
     constructor() {
         /** @type {Map<string, string[]>} channel -> resolved DB opt-in emails */
         this._cache = new Map();
@@ -212,7 +212,7 @@ class RecipientResolver {
                 channels.map((channel) => AdminModel.findServerNotifyRecipients(channel)),
             );
 
-            const next = new Map();
+            const next = new Map<string, string[]>();
             channels.forEach((channel, i) => {
                 next.set(channel, emailLists[i]);
             });

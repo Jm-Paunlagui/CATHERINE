@@ -46,6 +46,15 @@ import { cacheMessages } from "../../constants/messages";
 /** IPC envelope discriminator — namespaced to avoid colliding with other IPC users. */
 const CHANNEL = "app:cache-sync";
 
+/** The `{ ch, store, op, arg }` envelope broadcast() sends; anything else on IPC is ignored. */
+type CacheSyncMessage = { ch: string; store: string; op: string; arg?: unknown };
+
+function isSyncMessage(msg: unknown): msg is CacheSyncMessage {
+    if (!msg || typeof msg !== "object") return false;
+    const m = msg as Record<string, unknown>;
+    return m.ch === CHANNEL;
+}
+
 /**
  * @class ClusterCacheSync
  * @description Static coordinator for cross-worker cache invalidation.
@@ -119,8 +128,8 @@ class ClusterCacheSync {
      * @param {{ ch: string, store: string, op: string, arg: * }} msg
      * @returns {boolean} true when the message was a cache-sync op and applied
      */
-    static applyRemote(registry: import('./CacheRegistry').CacheRegistry, msg: { ch: string; store: string; op: string; arg: any; }): boolean {
-        if (!msg || msg.ch !== CHANNEL) return false;
+    static applyRemote(registry: import('./CacheRegistry').CacheRegistry, msg: unknown): boolean {
+        if (!isSyncMessage(msg)) return false;
 
         let store;
         try {
@@ -136,9 +145,10 @@ class ClusterCacheSync {
             if (msg.op === "flush") {
                 store.flush();
             } else if (msg.op === "del") {
-                store.del(msg.arg);
+                // arg is what a sibling worker passed to broadcast(): a key or a key list.
+                store.del(msg.arg as string | string[]);
             } else if (msg.op === "delByPattern") {
-                store.delByPattern(msg.arg);
+                store.delByPattern(msg.arg as string);
             } else {
                 return false;
             }
@@ -165,7 +175,7 @@ class ClusterCacheSync {
      */
     static initWorker(registry: import('./CacheRegistry').CacheRegistry): boolean {
         if (!ClusterCacheSync.isWorker) return false;
-        process.on("message", (msg: any) =>
+        process.on("message", (msg: unknown) =>
             ClusterCacheSync.applyRemote(registry, msg),
         );
         logger.notice(cacheMessages.CACHE_CLUSTER_SYNC_WORKER_READY());
