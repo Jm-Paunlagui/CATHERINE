@@ -30,3 +30,4 @@ Branch `backend-rewrite-to-typescript` (PR #4, open, not merged). Status as of 2
 - `shutdownGate.perf` and `scanner-blocking` occasionally fail under full-suite load and pass when rerun.
 - `auth-bypass` "tampered payload → 403" failed once under full-suite load (2026-11-22); passed 3/3 alone and in the next full run. The test input is deterministic, so the cause is shared state or timing; not yet investigated.
 - `audit-log.test.js` "X-Request-ID is present" failed once in a partial run under load (2026-11-22); passed 3/3 alone and in the full suite. Likely the same shared-state/timing cause.
+- `audit-log.test.js` export + range-delete block (11 tests) failed together once in the full suite (2026-11-22); 55/55 alone and 1570/1570 on the next full run. Looks like one stalled export cascading into the following tests.

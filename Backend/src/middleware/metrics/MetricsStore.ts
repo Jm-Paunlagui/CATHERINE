@@ -272,6 +272,38 @@ const internalProcess = process as NodeJS.Process & {
     _getActiveRequests?: () => unknown[];
 };
 
+/** Per-route RED counters plus the latency/timestamp rings. */
+interface RouteEntry {
+  count: number;
+  redirectCount: number;
+  notModifiedCount: number;
+  clientErrorCount: number;
+  serverErrorCount: number;
+  durations: number[];
+  timestamps: number[];
+}
+
+/** Per-pool query counters plus the latency ring. */
+interface DbQueryEntry {
+  queryCount: number;
+  errorCount: number;
+  totalMs: number;
+  durations: number[];
+}
+
+/** Latest saturation reading for one pool (see recordPoolStats). */
+interface PoolStatsEntry {
+  connectionsInUse: number;
+  connectionsOpen: number;
+  poolMax: number;
+  queueLength: number;
+  utilization: number;
+  capacity: number;
+  healthy: boolean;
+  consecutiveFailures: number;
+  updatedAt: string;
+}
+
 class MetricsStore {
   declare _backgroundProbes: boolean;
   declare _prevCpuUsage: NodeJS.CpuUsage;
@@ -290,15 +322,15 @@ class MetricsStore {
   declare _frontendVitals: unknown[];
   declare _watchdog: { terminated: number; byRoute: Map<string, number>; };
   declare _notifications: Map<string, NotificationDelivery>;
-  declare _oraclePoolStats: Map<any, any>;
-  declare _oracle: Map<unknown, any>;
-  declare _errorWindow: Map<any, any>;
+  declare _oraclePoolStats: Map<string, PoolStatsEntry>;
+  declare _oracle: Map<string, DbQueryEntry>;
+  declare _errorWindow: Map<number, { total: number; client: number; server: number }>;
   declare _serverErrorsTotal: number;
   declare _clientErrorsTotal: number;
   declare _notModifiedTotal: number;
   declare _redirectsTotal: number;
   declare _requestsTotal: number;
-  declare _routes: Map<any, any>;
+  declare _routes: Map<string, RouteEntry>;
   /**
    * @param {object} [options]
    * @param {boolean} [options.backgroundProbes] - Run the recurring system

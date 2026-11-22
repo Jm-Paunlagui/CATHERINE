@@ -70,6 +70,7 @@ class CacheStore {
    * @param {string} key
    * @returns {*}
    */
+  // A store holds whatever its callers put in it, so a read is untyped by design.
   get(key: string): any {
     const value = this._store.get(key);
     this._log(value !== undefined ? "HIT" : "MISS", key);
@@ -268,7 +269,7 @@ class CacheStore {
     this._flight = new SingleFlight();
   }
 
-  _log(event: any, key: unknown) {
+  _log(event: string, key: unknown) {
     logger.debug(`[Cache:${this._name}] ${event.padEnd(7)} ${key}`);
   }
 }

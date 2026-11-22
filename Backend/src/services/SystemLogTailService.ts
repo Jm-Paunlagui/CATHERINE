@@ -67,15 +67,23 @@ const MAX_ROWS_PER_TICK = 200;
 /** Consecutive tick failures before the poller stops and notifies every connection. */
 const MAX_CONSECUTIVE_ERRORS = 5;
 
+/** One SSE subscriber to the live system-log tail. */
+interface TailConnection {
+    res: import("express").Response;
+    maxPriority: number;
+    level: string | null;
+    pollCount: number;
+}
+
 class SystemLogTailService {
     declare SystemLogTailService: typeof SystemLogTailService;
     declare _ticking: boolean;
     declare _consecutiveErrors: number;
     declare _initializedDir: boolean;
     declare _currentDir: unknown;
-    declare _offsets: Map<unknown, any>;
-    declare _timer: any;
-    declare _connections: Map<any, any>;
+    declare _offsets: Map<string, number>;
+    declare _timer: ReturnType<typeof setInterval> | null;
+    declare _connections: Map<string, TailConnection>;
     declare _logBaseDir: string;
     /**
      * @param {object} [opts]
@@ -155,7 +163,7 @@ class SystemLogTailService {
     }
 
     /** @returns {boolean} */
-    hasConnection(connId: unknown): boolean {
+    hasConnection(connId: string): boolean {
         return this._connections.has(connId);
     }
 

@@ -23,6 +23,9 @@ const SIGNAL_LABEL = Object.freeze({
     SIGBREAK: "Windows service stop (SIGBREAK)",
 });
 
+/** What a lifecycle email resolved to (the notifier's result, or a local not-sent). */
+type SendResult = Awaited<ReturnType<import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]>>;
+
 class ShutdownNotifier {
     /** @type {Set<Promise<any>>} */
     #pending: Set<Promise<unknown>> = new Set();
@@ -52,10 +55,10 @@ class ShutdownNotifier {
      *   `idleLimits` switches the summary to the progress-aware wording.
      * @returns {Promise<any>}
      */
-    started({ signal, inFlight, graceMs, pendingTasks, idleLimits }: { signal: string; inFlight: number; graceMs: number; pendingTasks: number; idleLimits?: { defaultMs: number; longMs: number; }; }): Promise<unknown> {
+    started({ signal, inFlight, graceMs, pendingTasks, idleLimits }: { signal: string; inFlight: number; graceMs: number; pendingTasks: number; idleLimits?: { defaultMs: number; longMs: number; }; }): Promise<SendResult> {
         if (!this._announce) return Promise.resolve({ sent: false, reason: "not-announcer" });
         const how = SIGNAL_LABEL[signal as keyof typeof SIGNAL_LABEL] ?? signal;
-        const sec = (ms: any) => Math.round(ms / 1000);
+        const sec = (ms: number) => Math.round(ms / 1000);
         const summary = idleLimits
             ? `A graceful shutdown began (${how}). New requests are refused. ` +
               `${inFlight} request(s) in progress may finish while they keep making progress; ` +
@@ -85,7 +88,7 @@ class ShutdownNotifier {
      * @param {{reason?: "cap"|"idle"}} [opts] - `idle`: cut by the idle watchdog; `cap` (default): grace ran out.
      * @returns {Promise<any>}
      */
-    requestsCut(summary: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null; }>, graceMs: number, total: number = summary.length, { reason = "cap" }: { reason?: "cap" | "idle"; } = {}): Promise<unknown> {
+    requestsCut(summary: Array<{ method: string; path: string; ageMs: number; idleMs?: number | null; }>, graceMs: number, total: number = summary.length, { reason = "cap" }: { reason?: "cap" | "idle"; } = {}): Promise<SendResult> {
         const idle = reason === "idle";
         const rows = summary.map((r) => ({
             rule: "SHUTDOWN_REQUEST_CUT",
@@ -113,7 +116,7 @@ class ShutdownNotifier {
      * @param {number} forcedExitMs
      * @returns {Promise<any>}
      */
-    forcedExit(forcedExitMs: number): Promise<any> {
+    forcedExit(forcedExitMs: number): Promise<SendResult> {
         // Sent by every process whose own failsafe fired; a cluster worker
         // that is not the cron leader names itself, so the email says which one hung.
         const who = this._announce ? "" : ` (cluster worker PID ${process.pid}, not the cron leader)`;
@@ -149,7 +152,7 @@ class ShutdownNotifier {
      * @param {object} payload
      * @returns {Promise<any>}
      */
-    #send(event: string, payload: Parameters<import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]>[0]): Promise<unknown> {
+    #send(event: string, payload: Parameters<import("../../services/AlertNotifierService").AlertNotifierService["notifyLifecycleNow"]>[0]): Promise<SendResult> {
         let p;
         try {
             p = Promise.resolve(this._alertNotifier.notifyLifecycleNow(payload));
