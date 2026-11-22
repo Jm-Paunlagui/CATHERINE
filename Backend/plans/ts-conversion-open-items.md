@@ -21,7 +21,8 @@ Branch `backend-rewrite-to-typescript` (PR #4, open, not merged). Status as of 2
 - [ ] **TypeScript 7** once typescript-eslint supports it (currently pinned `~6.0`).
 - [ ] **Wrapper backlog G5–G17** (`oracle-wrapper-gap-inventory.md`).
 
-- [ ] **Type the audit record:** one type shared by `AuditLogMiddleware._buildRecord`, `AuditLogModel.insert/insertBatch` and `demoStore.auditInsert` (each takes `any` / `Record<string, unknown>` today).
+- [x] **Type the audit record:** done (`AuditRecord` in `audit.log.model.ts`).
+  ~~Was:~~ one type shared by `AuditLogMiddleware._buildRecord`, `AuditLogModel.insert/insertBatch` and `demoStore.auditInsert` (each takes `any` / `Record<string, unknown>` today).
 - [ ] **Restore has almost no tests:** `DataRestoreService` (archive verify, preflight allow-list, FK remap, re-sign) is covered only by the `_returnedIdentity` unit test. It handles uploaded archives, so it needs integration tests.
 
 ## Known flaky tests

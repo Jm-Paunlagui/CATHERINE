@@ -151,7 +151,7 @@ class AuditLogService {
     static FINAL_FLUSH_TIMEOUT_MS = 2000;
 
     /** @type {object[]} */
-    static _pending: Record<string, unknown>[] = [];
+    static _pending: import("../models/audit.log.model").AuditRecord[] = [];
 
     /** @type {NodeJS.Timeout|null} */
     static _flushTimer: NodeJS.Timeout | null = null;
@@ -170,7 +170,7 @@ class AuditLogService {
      * @param {object} record - The audit log record to persist.
      * @returns {Promise<void>}
      */
-    static async insertAsync(record: Record<string, unknown>): Promise<void> {
+    static async insertAsync(record: import("../models/audit.log.model").AuditRecord): Promise<void> {
         AuditLogService._pending.push(record);
 
         if (

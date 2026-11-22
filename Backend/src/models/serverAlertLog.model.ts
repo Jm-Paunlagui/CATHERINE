@@ -71,7 +71,7 @@ function resolveTableName(): string {
         : "T_SERVER_ALERT_LOG_DEV";
 }
 
-let _db: any = null;
+let _db: ReturnType<typeof createDb> | null = null;
 /** Lazily resolves the appDb handle (never called in DEMO_MODE). */
 function db() {
     if (!_db) _db = createDb("appDb");
@@ -86,7 +86,24 @@ const DEFAULT_PAGE_LIMIT = 50;
 const DEMO_MAX_ROWS = 500;
 
 /** @type {object[]} DEMO_MODE store, newest last. */
-const _demoRows: Record<string, any>[] = [];
+/** One SERVER_ALERT_LOG row as SELECT_COLUMNS reads it (DETAILS parsed from its JSON CLOB). */
+type AlertLogRow = {
+    ID: number;
+    ALERT_KEY: string;
+    RULE: string;
+    SEVERITY: string;
+    TRANSITION: string;
+    VALUE_NUM: number | null | undefined;
+    DESCRIPTION: string | null | undefined;
+    CHANNEL: string;
+    NOTIFICATION_ID: string | null | undefined;
+    EMAIL_STATUS: string;
+    EMAIL_ERROR: string | null | undefined;
+    DETAILS: Record<string, unknown> | null;
+    CREATED_AT: Date;
+};
+
+const _demoRows: AlertLogRow[] = [];
 let _demoNextId = 1;
 
 const SELECT_COLUMNS = `
@@ -225,7 +242,7 @@ class ServerAlertLogModel {
         }
 
         const handle = db();
-        return handle.withConnection(async (conn: any) => {
+        return handle.withConnection(async (conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) => {
             await conn.execute(
                 `INSERT INTO ${resolveTableName()} (
                      ALERT_KEY, RULE, SEVERITY, TRANSITION, VALUE_NUM, DESCRIPTION,
@@ -257,7 +274,7 @@ class ServerAlertLogModel {
      * @param {{ page?: number, limit?: number }} [opts]
      * @returns {Promise<{ rows: object[], total: number, page: number, limit: number }>}
      */
-    static async findPage(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}, opts: { page?: unknown; limit?: unknown; } = {}): Promise<{ rows: Record<string, unknown>[]; total: number; page: number; limit: number; }> {
+    static async findPage(filters: { rule?: string; severity?: string; alertKey?: string; from?: Date; to?: Date; } = {}, opts: { page?: unknown; limit?: unknown; } = {}): Promise<{ rows: AlertLogRow[]; total: number; page: number; limit: number; }> {
         const page = Math.max(1, Number(opts.page) || 1);
         const limit = Math.min(
             MAX_PAGE_LIMIT,
@@ -267,7 +284,7 @@ class ServerAlertLogModel {
 
         if (isDemoMode()) {
             const matched = demoFilter(filters).sort(
-                (a, b) => b.CREATED_AT - a.CREATED_AT || b.ID - a.ID,
+                (a, b) => b.CREATED_AT.getTime() - a.CREATED_AT.getTime() || b.ID - a.ID,
             );
             return {
                 rows: matched.slice(skip, skip + limit),
@@ -281,7 +298,7 @@ class ServerAlertLogModel {
         const handle = db();
         const table = resolveTableName();
 
-        return handle.withConnection(async (conn: any) => {
+        return handle.withConnection(async (conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) => {
             const countResult = await conn.execute(
                 `SELECT COUNT(*) AS CNT FROM ${table} ${whereSql}`,
                 binds,
@@ -302,7 +319,8 @@ class ServerAlertLogModel {
                 },
             );
 
-            const rows = (rowsResult.rows ?? []).map((r: any) => ({
+            // DETAILS is fetched as a string (fetchInfo above) and parsed here.
+            const rows: AlertLogRow[] = (rowsResult.rows ?? []).map((r: Omit<AlertLogRow, "DETAILS"> & { DETAILS: string | null }) => ({
                 ...r,
                 DETAILS: parseDetails(r.DETAILS),
             }));
@@ -334,7 +352,7 @@ class ServerAlertLogModel {
      * @param {number} [limit=20]
      * @returns {Promise<object[]>}
      */
-    static async findRecent(limit: number = 20): Promise<Record<string, any>[]> {
+    static async findRecent(limit: number = 20): Promise<AlertLogRow[]> {
         const { rows } = await ServerAlertLogModel.findPage(
             {},
             { page: 1, limit },
@@ -361,7 +379,7 @@ class ServerAlertLogModel {
             return before - _demoRows.length;
         }
 
-        return db().withConnection(async (conn: any) => {
+        return db().withConnection(async (conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) => {
             const result = await conn.execute(
                 `DELETE FROM ${resolveTableName()} WHERE CREATED_AT < SYSTIMESTAMP - :cutoffDays`,
                 { cutoffDays },
@@ -375,4 +393,5 @@ class ServerAlertLogModel {
 const __default = ServerAlertLogModel;
 export default __default;
 __default.resolveTableName = resolveTableName;
+export type { AlertLogRow };
 export { resolveTableName };

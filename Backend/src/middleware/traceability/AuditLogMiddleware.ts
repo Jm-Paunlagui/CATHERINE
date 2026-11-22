@@ -253,7 +253,7 @@ class AuditLogMiddleware {
         next();
     }
 
-    static _buildRecord(req: Request, res: Response, duration: unknown) {
+    static _buildRecord(req: Request, res: Response, duration: number) {
         const statusCode = res.statusCode || 200;
         const statusCategory = Math.floor(statusCode / 100) + "xx";
 

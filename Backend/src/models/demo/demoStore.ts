@@ -186,17 +186,17 @@ function _buildAuditLogs(count = 200) {
 }
 
 // Mutable so demo-mode inserts (live traffic while browsing) appear in the list.
-const _auditLogs = _buildAuditLogs();
+/** Demo T_AUDIT_LOGS_DEV rows (seeded plus AuditLogModel inserts). */
+const _auditLogs: Array<import("../audit.log.model").AuditRecord & { ID: number; CREATED_AT: Date }> = _buildAuditLogs();
 let _auditSeq = _auditLogs.length;
 
 function auditLogs() {
     return _auditLogs;
 }
 
-// The audit record type is untyped end to end (AuditLogMiddleware -> AuditLogModel -> here);
-// tracked as "type the audit record" in plans/ts-conversion-open-items.md.
-function auditInsert(record: any) {
-    _auditLogs.push({ ID: ++_auditSeq, ...record });
+function auditInsert(record: import("../audit.log.model").AuditRecord) {
+    // CREATED_AT defaults to now, as the real column defaults to SYSTIMESTAMP.
+    _auditLogs.push({ ID: ++_auditSeq, ...record, CREATED_AT: record.CREATED_AT ?? new Date() });
     return { rowsAffected: 1 };
 }
 
