@@ -198,7 +198,7 @@ function _isoNoMillis(at: Date = new Date()): string {
 }
 
 class BackupArchiveService {
-    declare static ADMIN_REVOKE_BACKUP_TABLES: any;
+    declare static ADMIN_REVOKE_BACKUP_TABLES: readonly string[];
     declare static BACKUP_TRIGGERS: readonly string[];
     declare static SCHEMA_VERSION: string;
     /**
@@ -732,7 +732,7 @@ class BackupArchiveService {
      *     BackupArchiveService.ADMIN_REVOKE_BACKUP_TABLES,
      * );
      */
-    static computeEntityScopeHash(entity: { table: string; keyColumn: string; keyValue: string | number; }, tables: string[]): string {
+    static computeEntityScopeHash(entity: { table: string; keyColumn: string; keyValue: string | number; }, tables: readonly string[]): string {
         const sortedTables = [...new Set(tables)].sort();
         return crypto
             .createHash("sha256")

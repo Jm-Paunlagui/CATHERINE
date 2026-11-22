@@ -275,12 +275,12 @@ class AdminManagementService {
      * @private
      */
     static _flagsOf(admin: Record<string, unknown>): Record<string, 'Y' | 'N'> {
-        const flags: Record<string, any> = {};
+        const flags: Record<string, "Y" | "N"> = {};
         for (const [key, channel] of Object.entries(NOTIFY_FLAG_CHANNELS)) {
             const column = AdminModel.SERVER_NOTIFY_FLAG_COLUMNS[channel];
-            flags[key] = String(admin[column] ?? "N");
+            flags[key] = admin[column] === "Y" ? "Y" : "N"; // CHAR(1) Y/N column
         }
-        flags.isActive = String(admin.IS_ACTIVE ?? "Y");
+        flags.isActive = admin.IS_ACTIVE === "N" ? "N" : "Y"; // CHAR(1) Y/N column
         return flags;
     }
 
@@ -291,7 +291,7 @@ class AdminManagementService {
      * @throws {AppError} 400 on unknown keys or invalid values
      * @private
      */
-    static _validateFlags(flags: Record<string, unknown>) {
+    static _validateFlags(flags: unknown): asserts flags is Record<string, "Y" | "N"> {
         if (flags == null || typeof flags !== "object" || Array.isArray(flags)) {
             throw new AppError(VALIDATION_ERRORS.INVALID_INPUT, HTTP_STATUS.BAD_REQUEST, {
                 type: "ValidationError",
@@ -328,9 +328,9 @@ class AdminManagementService {
      * @private
      */
     static _notifyChannelFlags(flags: Record<string, unknown>): Record<string, 'Y' | 'N'> {
-        const channelFlags: Record<string, any> = {};
+        const channelFlags: Record<string, "Y" | "N"> = {};
         for (const [key, channel] of Object.entries(NOTIFY_FLAG_CHANNELS)) {
-            if (flags[key] !== undefined) channelFlags[channel] = flags[key];
+            if (flags[key] !== undefined) channelFlags[channel] = flags[key] === "Y" ? "Y" : "N";
         }
         return channelFlags;
     }
@@ -361,7 +361,7 @@ class AdminManagementService {
      * @returns {Promise<object>} `{ username, role, emailDelivered, recipientSource, recipientHint, tempPasswordExpiresAt }`
      * @throws {AppError} 400 | 403 | 409 | 422 | 503
      */
-    static async addAdmin({ username, role, caller, overrideEmail, retainPassword, newPassword, flags }: { username: string; role: string; caller: { username: string; role: string | undefined; }; overrideEmail?: string; retainPassword?: unknown; newPassword?: unknown; flags?: Record<string, any>; }): Promise<Record<string, unknown>> {
+    static async addAdmin({ username, role, caller, overrideEmail, retainPassword, newPassword, flags }: { username: string; role: string; caller: { username: string; role: string | undefined; }; overrideEmail?: string; retainPassword?: unknown; newPassword?: unknown; flags?: Record<string, unknown>; }): Promise<Record<string, unknown>> {
         AdminManagementService._validateRole(role);
 
         if (retainPassword !== undefined || newPassword !== undefined) {
@@ -478,7 +478,13 @@ class AdminManagementService {
      *
      * @private
      */
-    static async _deliverTemporaryPassword({ username, role, recipient, issued, kind }: any) {
+    static async _deliverTemporaryPassword({ username, role, recipient, issued, kind }: {
+        username: string;
+        role: string;
+        recipient: Awaited<ReturnType<typeof AdminAccessEmailService.resolveRecipient>>;
+        issued: Awaited<ReturnType<typeof AdminManagementService._issueTemporaryPassword>>;
+        kind: Parameters<typeof AdminAccessEmailService.sendTemporaryPassword>[0]["kind"];
+    }) {
         const { delivered } = await AdminAccessEmailService.sendTemporaryPassword({
             to: recipient.address,
             source: recipient.source,
@@ -539,7 +545,7 @@ class AdminManagementService {
             AdminModel.buildSignedFields({ ...existing, ROLE: role }),
         );
 
-        const apply = async (session: any) => {
+        const apply = async (session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null) => {
             if (existing.ROLE !== role) {
                 await AdminManagementService._endSessions(username, SESSION_END_CAUSES.ROLE_CHANGED);
             }
@@ -712,7 +718,7 @@ class AdminManagementService {
         // Derived from BackupArchiveService.ADMIN_REVOKE_BACKUP_TABLES so the
         // archive's table set — and its scope hash — can never drift from what
         // _verifyRevokeBackupToken recomputes.
-        const tableFilters = BackupArchiveService.ADMIN_REVOKE_BACKUP_TABLES.map((table: any) => ({
+        const tableFilters = BackupArchiveService.ADMIN_REVOKE_BACKUP_TABLES.map((table) => ({
             table,
             whereColumns: filterFor[table].columns,
             whereValue: filterFor[table].value,
@@ -795,7 +801,7 @@ class AdminManagementService {
      * @returns {Promise<{ username: string, flags: object }>}
      * @throws {AppError} 400 | 404 | 409 | 422
      */
-    static async updatePermissions({ username, flags }: { username: string; flags: Record<string, any>; }): Promise<{ username: string; flags: Record<string, unknown>; }> {
+    static async updatePermissions({ username, flags }: { username: string; flags: Record<string, unknown>; }): Promise<{ username: string; flags: Record<string, unknown>; }> {
         AdminManagementService._validateFlags(flags);
 
         const existing = await AdminManagementService._fetchAndVerify(username);
@@ -810,12 +816,12 @@ class AdminManagementService {
             )
             : null;
 
-        const applyActive = async (session: any) => {
+        const applyActive = async (session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null) => {
             if (deactivating) {
                 await AdminManagementService._endSessions(username, SESSION_END_CAUSES.DEACTIVATED);
             }
             if (activeChanging && sysSignature !== null) { // signed exactly when activeChanging
-                await AdminModel.setActive(username, flags.isActive, sysSignature, session);
+                await AdminModel.setActive(username, flags.isActive!, sysSignature, session); // activeChanging: isActive is set
             }
         };
 
@@ -921,7 +927,7 @@ class AdminManagementService {
      * @throws {AppError} 409 LAST_ACTIVE_SUPER_ADMIN
      * @private
      */
-    static async _withSuperAdminGuard<T>(existing: Record<string, any>, fn: (session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null) => Promise<T>): Promise<T> {
+    static async _withSuperAdminGuard<T>(existing: import("../models/admin.model").AdminRow, fn: (session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null) => Promise<T>): Promise<T> {
         if (existing.ROLE !== "SUPER_ADMIN" || String(existing.IS_ACTIVE ?? "Y") !== "Y") {
             return fn(null);
         }
@@ -966,7 +972,7 @@ class AdminManagementService {
      * @throws {AppError} 404 | 422
      * @private
      */
-    static async _fetchAndVerify(username: string): Promise<Record<string, any>> {
+    static async _fetchAndVerify(username: string): Promise<import("../models/admin.model").AdminRow> {
         const existing = await AdminModel.findByUsername(username);
         if (!existing) {
             logger.warning(adminMessages.ADMIN_NOT_FOUND(username));
