@@ -35,6 +35,8 @@ describe("IpFilterMiddleware", function () {
                 allowedIps: ["192.168.1.10"],
             });
             const res = {
+                _status: undefined as any,
+                _body: undefined as any,
                 status(c) {
                     this._status = c;
                     return this;
@@ -69,6 +71,7 @@ describe("IpFilterMiddleware", function () {
                 allowedIps: ["10.0.0.0/24"],
             });
             const res = {
+                _status: undefined as any,
                 status(c) {
                     this._status = c;
                     return this;

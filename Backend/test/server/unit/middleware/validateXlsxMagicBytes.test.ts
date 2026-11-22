@@ -43,6 +43,8 @@ function mockReq(fileBuffer) {
 /** Creates a minimal res (not used by this middleware but required by Express) */
 function mockRes() {
     return {
+        _status: undefined as any,
+        _body: undefined as any,
         status(c) {
             this._status = c;
             return this;

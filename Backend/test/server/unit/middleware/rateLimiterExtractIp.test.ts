@@ -113,6 +113,7 @@ describe("RateLimiterMiddleware.extractIp() — CWE-290 fix (no XFF manual parsi
             const mockRes = () => {
                 const h: Record<string, any> = {};
                 return {
+                    _body: undefined as any,
                     _status: null,
                     headersSent: false,
                     setHeader(k, v) {

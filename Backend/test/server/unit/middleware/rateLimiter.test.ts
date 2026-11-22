@@ -11,6 +11,8 @@ function mockReq(ip = "127.0.0.1", path = "/api/v1/users") {
 function mockRes() {
     const headers: Record<string, any> = {};
     return {
+        _status: undefined as any,
+        _body: undefined as any,
         headersSent: false,
         setHeader(k, v) {
             headers[k] = v;

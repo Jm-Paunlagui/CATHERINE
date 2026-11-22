@@ -24,6 +24,8 @@ describe("Rate Limiting", function () {
             const mockRes = () => {
                 const h: Record<string, any> = {};
                 return {
+                    _status: undefined as any,
+                    _body: undefined as any,
                     headersSent: false,
                     setHeader(k, v) {
                         h[k] = v;
@@ -83,6 +85,8 @@ describe("Rate Limiting", function () {
             const mockRes = () => {
                 const h: Record<string, any> = {};
                 return {
+                    _status: undefined as any,
+                    _body: undefined as any,
                     headersSent: false,
                     setHeader(k, v) {
                         h[k] = v;

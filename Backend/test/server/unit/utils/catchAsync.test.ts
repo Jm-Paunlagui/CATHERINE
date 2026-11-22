@@ -9,6 +9,8 @@ describe("catchAsync", function () {
 
     function mockRes() {
         return {
+            _status: undefined as any,
+            _body: undefined as any,
             status(code) {
                 this._status = code;
                 return this;
