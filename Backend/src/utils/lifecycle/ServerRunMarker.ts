@@ -83,7 +83,7 @@ function resolveMarkerPath(env: NodeJS.ProcessEnv = process.env): { path: string
     return { path: path.join(root, "data", SERVER_RUN_MARKER.FILE_NAME), ignoredOverride, ignoredReason };
 }
 
-const isPlainObject = (v: unknown) => v !== null && typeof v === "object" && !Array.isArray(v);
+const isPlainObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
 const isTime = (v: unknown) => v === undefined || v === null || Number.isFinite(v);
 
 /**
@@ -129,7 +129,7 @@ const PENDING_UNCLEAN_MAX = 5;
  * A record's pendingUnclean as a list (an rc.3 record held one object).
  * Capped on read too (CWE-770): a tampered record must not make one boot send hundreds of emails.
  */
-function pendingList(p: unknown) {
+function pendingList(p: unknown): Record<string, unknown>[] {
     if (Array.isArray(p)) return p.filter(isPlainObject).slice(-PENDING_UNCLEAN_MAX);
     return isPlainObject(p) ? [p] : [];
 }
@@ -161,10 +161,10 @@ class ServerRunMarker {
     declare static pendingList: (p: unknown) => unknown[];
     declare static pendingKey: (entry: unknown) => string;
     declare static resolveMarkerPath: (env?: NodeJS.ProcessEnv) => { path: string; ignoredOverride: string | null; ignoredReason: "relative" | "production" | null; };
-    declare _pendingLeaderLost: any;
-    declare _pendingUnclean: any;
+    declare _pendingLeaderLost: Record<string, unknown>[] | undefined;
+    declare _pendingUnclean: Record<string, unknown>[] | undefined;
     declare _verdict: unknown;
-    declare _stoppedExitCode: any;
+    declare _stoppedExitCode: number | undefined;
     declare _stoppedAt: unknown;
     declare _raisedExitCode: number;
     declare _stopEmailUnsent: unknown;
@@ -176,10 +176,10 @@ class ServerRunMarker {
     declare _lastHeartbeatAt: unknown;
     declare _bootedAt: unknown;
     declare _state: string;
-    declare _lastStartNoticeAt: any;
+    declare _lastStartNoticeAt: number | null;
     declare _previous: unknown;
     declare _warned: boolean;
-    declare _timer: any;
+    declare _timer: ReturnType<typeof setInterval> | null;
     declare _started: boolean;
     declare _hostname: string;
     declare _process: NodeJS.EventEmitter & { pid: number; };
@@ -278,7 +278,7 @@ class ServerRunMarker {
         }
 
         this._previous = rec;
-        this._lastStartNoticeAt = Number.isFinite(rec.lastStartNoticeAt) ? rec.lastStartNoticeAt : null;
+        this._lastStartNoticeAt = typeof rec.lastStartNoticeAt === "number" && Number.isFinite(rec.lastStartNoticeAt) ? rec.lastStartNoticeAt : null;
 
         // A record written on ANOTHER host (e.g. the build machine's smoke run, packaged
         // into dist\data by mistake) says nothing about this host's last run: FIRST_BOOT,

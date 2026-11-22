@@ -151,7 +151,7 @@ function col() {
  * @param {object|null|undefined} session - Transaction session or null
  * @returns {OracleCollection}
  */
-function writeCol(session: Record<string, any> | null | undefined): OracleCollection {
+function writeCol(session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null | undefined): OracleCollection {
     return session ? session.collection(TABLE) : col();
 }
 
@@ -259,7 +259,7 @@ class AdminModel {
         }
 
         const d = db();
-        const res = await d.withConnection((conn: any) =>
+        const res = await d.withConnection((conn: import("../utils/oracle-mongo-wrapper/db").DbConnection) =>
             conn.execute(
                 SEARCH_SQL,
                 { q: `%${escapeLike(needle.toUpperCase())}%`, lim },
@@ -274,7 +274,7 @@ class AdminModel {
      * Includes PASSWORD + SYSSIGNATURE so callers can verify integrity.
      * @returns {Promise<Array<object>>}
      */
-    static async findAll(): Promise<Array<Record<string, any>>> {
+    static async findAll(): Promise<AdminRow[]> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return [...admins].sort((a, b) =>
@@ -285,7 +285,7 @@ class AdminModel {
             .find({})
             .project(PROJECTION)
             .sort({ USERNAME: 1 })
-            .toArray();
+            .toArray<AdminRow>();
     }
 
     /**
@@ -352,8 +352,8 @@ class AdminModel {
     static async withLastSuperAdminGuard<T>(excludeId: number | string, fn: (session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null) => Promise<T>): Promise<T> {
         const targetId = Number(excludeId);
 
-        const assertNotLast = (rows: any) => {
-            const ids = rows.map((r: any) => Number(r.ID));
+        const assertNotLast = (rows: Array<{ ID: unknown }>) => {
+            const ids = rows.map((r) => Number(r.ID));
             if (ids.includes(targetId) && ids.every((id: unknown) => id === targetId)) {
                 logger.warning(adminMessages.ADMIN_LAST_SUPER_ADMIN_BLOCKED(excludeId));
                 throw new AppError(ADMIN_ERRORS.LAST_ACTIVE_SUPER_ADMIN, HTTP_STATUS.CONFLICT, {
@@ -377,7 +377,7 @@ class AdminModel {
                 .find({ ROLE: "SUPER_ADMIN", IS_ACTIVE: "Y" })
                 .project({ ID: 1 })
                 .forUpdate(true)
-                .toArray();
+                .toArray<{ ID: number }>();
             assertNotLast(rows ?? []);
             return fn(session);
         });
@@ -444,7 +444,7 @@ class AdminModel {
         if (numericIds.length === 0) return new Map();
 
         try {
-            let rows;
+            let rows: Array<{ ID: number; USERNAME: string }>;
             if (isDemoMode()) {
                 const { admins } = await demo.accounts();
                 rows = admins.filter((a) => numericIds.includes(Number(a.ID)));
@@ -452,10 +452,10 @@ class AdminModel {
                 rows = await col()
                     .find({ ID: { $in: numericIds } })
                     .project({ ID: 1, USERNAME: 1 })
-                    .toArray();
+                    .toArray<{ ID: number; USERNAME: string }>();
             }
             return new Map(
-                (rows ?? []).map((r: any) => [Number(r.ID), r.USERNAME ?? null]),
+                (rows ?? []).map((r) => [Number(r.ID), r.USERNAME]), // USERNAME is NOT NULL
             );
         } catch {
             return new Map();
