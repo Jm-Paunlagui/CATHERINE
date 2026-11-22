@@ -37,7 +37,7 @@ function resolveTableName(): string {
         : "T_AUDIT_LOGS_DEV";
 }
 
-let _col: any = null;
+let _col: InstanceType<typeof OracleCollection> | null = null;
 /** Lazily resolves the audit-table collection (never called in DEMO_MODE / file mode). */
 function col() {
     if (!_col) _col = new OracleCollection(resolveTableName(), createDb("appDb"));
@@ -79,7 +79,7 @@ function useFile(): boolean {
  * @param {() => Promise<T>} fileWrite - Re-routes the same payload to the file model.
  * @returns {Promise<T>}
  */
-async function writeWithFallback<T>(dbWrite: () => Promise<T>, fileWrite: () => Promise<T>): Promise<T> {
+async function writeWithFallback<D, F>(dbWrite: () => Promise<D>, fileWrite: () => Promise<F>): Promise<D | F> {
     if (useFile()) return fileWrite();
     try {
         return await dbWrite();
@@ -194,7 +194,7 @@ class AuditLogModel {
             .find({})
             .sort({ CREATED_AT: -1 })
             .limit(1)
-            .toArray();
+            .toArray<{ CREATED_AT: Date }>();
         return rows.length > 0 ? new Date(rows[0].CREATED_AT).getTime() : 0;
     }
 

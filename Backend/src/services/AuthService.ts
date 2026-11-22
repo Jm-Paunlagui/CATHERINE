@@ -64,6 +64,23 @@ type RefreshRecord = {
     expiresAtMs: number;
 };
 
+/** A verified refresh token's claims (jwt.verify already checked signature, audience, issuer). */
+type RefreshClaims = import("jsonwebtoken").JwtPayload & { sub: string; jti: string; fid: string };
+
+/** The claims every refresh token must carry; anything else is refused as invalid. */
+function isRefreshClaims(decoded: unknown): decoded is RefreshClaims {
+    if (typeof decoded !== "object" || decoded === null) return false;
+    const d = decoded as Record<string, unknown>;
+    return (
+        typeof d.sub === "string" &&
+        d.type === TOKEN_TYPES.REFRESH &&
+        typeof d.jti === "string" &&
+        d.jti !== "" &&
+        typeof d.fid === "string" &&
+        d.fid !== ""
+    );
+}
+
 class AuthService {
     // Re-export: the constant lives in constants/authTokens.js so the rate
     // limiters can read it without importing this service.
@@ -142,15 +159,7 @@ class AuthService {
             });
         }
 
-        if (
-            typeof decoded !== "object" ||
-            typeof decoded.sub !== "string" ||
-            decoded.type !== TOKEN_TYPES.REFRESH ||
-            typeof decoded.jti !== "string" ||
-            decoded.jti === "" ||
-            typeof decoded.fid !== "string" ||
-            decoded.fid === ""
-        ) {
+        if (!isRefreshClaims(decoded)) {
             throw new AppError(AUTH_ERRORS.TOKEN_INVALID, 403, {
                 type: "AuthenticationError",
             });
@@ -310,7 +319,7 @@ class AuthService {
 
     // ─── Login helpers ────────────────────────────────────────────────────────
 
-    static async _loginAdmin(admin: any, userId: any, password: any) {
+    static async _loginAdmin(admin: import("../models/admin.model").AdminRow, userId: string, password: string) {
         AuthService._assertAdminActive(admin, userId);
         // Integrity before any password comparison — a tampered row is refused
         // without becoming a timing oracle.
@@ -358,7 +367,7 @@ class AuthService {
         return tokens;
     }
 
-    static async _loginUser(user: any, userId: any, password: any) {
+    static async _loginUser(user: import("../models/user.model").UserRow, userId: string, password: string) {
         AuthService._assertUserActive(user, userId);
 
         const matched = await CryptoVault.verifyPassword(password, user.PASSWORD);
@@ -410,7 +419,7 @@ class AuthService {
     // ─── Account gates ────────────────────────────────────────────────────────
 
     /** Throws 403 when the admin row is deactivated (IS_ACTIVE='N'). */
-    static _assertAdminActive(admin: any, userId: any) {
+    static _assertAdminActive(admin: import("../models/admin.model").AdminRow, userId: string) {
         if (String(admin.IS_ACTIVE ?? "Y") === "N") {
             logger.warning(adminMessages.ADMIN_INACTIVE_LOGIN_BLOCKED(userId));
             throw new AppError(ADMIN_ERRORS.ACCOUNT_INACTIVE, 403, {
@@ -420,7 +429,7 @@ class AuthService {
     }
 
     /** Throws 403 when the user row is deactivated (IS_ACTIVE='N'). */
-    static _assertUserActive(user: any, userId: unknown) {
+    static _assertUserActive(user: import("../models/user.model").UserRow, userId: unknown) {
         if (String(user.IS_ACTIVE ?? "Y") === "N") {
             logger.warning(authMessages.ACCOUNT_INACTIVE_BLOCKED(userId));
             throw new AppError(AUTH_ERRORS.ACCOUNT_INACTIVE, 403, {
@@ -440,7 +449,7 @@ class AuthService {
      * @returns {Promise<void>}
      * @private
      */
-    static async _assertAdminSignature(admin: Record<string, any>, userId: string, stage: 'login' | 'refresh' | 'change-password'): Promise<void> {
+    static async _assertAdminSignature(admin: import("../models/admin.model").AdminRow, userId: string, stage: 'login' | 'refresh' | 'change-password'): Promise<void> {
         const sigValid = await CryptoVault.verifyRecord(
             AdminModel.SIGN_CONTEXT,
             AdminModel.buildSignedFields(admin),
@@ -502,7 +511,7 @@ class AuthService {
      * @throws {AppError} 401 when a temporary password has expired
      * @private
      */
-    static async _adminPasswordState(admin: Record<string, any>, userId: string, stage: 'login' | 'refresh'): Promise<{ isDefaultPassword: boolean; isTemporaryPassword: boolean; temporaryPasswordExpiresAt: string | null; requiresPasswordChange: boolean; }> {
+    static async _adminPasswordState(admin: import("../models/admin.model").AdminRow, userId: string, stage: 'login' | 'refresh'): Promise<{ isDefaultPassword: boolean; isTemporaryPassword: boolean; temporaryPasswordExpiresAt: string | null; requiresPasswordChange: boolean; }> {
         const parsed = parseStoredAdminPassword(admin.PASSWORD);
         if (parsed.temporary) {
             if (isTemporaryExpired(parsed)) {
@@ -557,7 +566,7 @@ class AuthService {
      * @returns {Promise<boolean>} true when the new hash is now the stored one
      * @private
      */
-    static async _persistAdminHashUpgrade(admin: Record<string, any>, newHash: string): Promise<boolean> {
+    static async _persistAdminHashUpgrade(admin: import("../models/admin.model").AdminRow, newHash: string): Promise<boolean> {
         try {
             const sysSignature = await CryptoVault.signRecord(
                 AdminModel.SIGN_CONTEXT,
@@ -609,7 +618,7 @@ class AuthService {
     }
 
     /** `_issueTokens` identity params for a (signature-verified) admin row. */
-    static _adminClaims(admin: any) {
+    static _adminClaims(admin: import("../models/admin.model").AdminRow) {
         return {
             id: Number(admin.ID) || null,
             userId: admin.USERNAME,
@@ -623,7 +632,7 @@ class AuthService {
     }
 
     /** `_issueTokens` identity params for a regular user row. */
-    static _userClaims(user: any) {
+    static _userClaims(user: import("../models/user.model").UserRow) {
         return {
             id: Number(user.ID) || null,
             userId: user.USERNAME,
@@ -648,7 +657,7 @@ class AuthService {
      * @returns {Promise<{ user: object, accessToken: string, refreshToken: string, refreshRecord: object }>}
      * @private
      */
-    static async _rotateInto(decoded: Record<string, any>, params: Omit<Parameters<typeof AuthService._issueTokens>[0], "familyId">): Promise<{ user: Record<string, unknown>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
+    static async _rotateInto(decoded: RefreshClaims, params: Omit<Parameters<typeof AuthService._issueTokens>[0], "familyId">): Promise<{ user: Record<string, unknown>; accessToken: string; refreshToken: string; refreshRecord: RefreshRecord; }> {
         const tokens = AuthService._issueTokens({ ...params, familyId: decoded.fid });
         await RefreshTokenService.rotate(
             { jti: decoded.jti, familyId: decoded.fid, userId: decoded.sub },
@@ -671,7 +680,7 @@ class AuthService {
      * @throws {AppError} 401 REFRESH_TOKEN_REVOKED
      * @private
      */
-    static async _assertCredentialEpoch(decoded: Record<string, any>, storedHash: string | null | undefined): Promise<void> {
+    static async _assertCredentialEpoch(decoded: RefreshClaims, storedHash: string | null | undefined): Promise<void> {
         const expected = credentialEpoch(storedHash);
         const presented = typeof decoded.pwv === "string" ? decoded.pwv : "";
         if (expected !== null) {
@@ -871,7 +880,7 @@ class AuthService {
             if (!matched) AuthService._refuseWrongCurrentPassword();
             currentIsTemporary = temporary === true;
         } else {
-            AuthService._assertUserActive(user, userId);
+            AuthService._assertUserActive(user!, userId); // admin is null, so user is not (guard above)
             const matched = await CryptoVault.verifyPassword(currentPassword, user!.PASSWORD); // admin is null, so user is not (guard above)
             if (!matched) AuthService._refuseWrongCurrentPassword();
         }
@@ -934,7 +943,7 @@ class AuthService {
         } else {
             newHash = await CryptoVault.hashPassword(newPassword);
             await UserModel.updatePassword(user!.USERNAME, newHash); // admin is null, so user is not (guard above)
-            claims = AuthService._userClaims(user);
+            claims = AuthService._userClaims(user!); // admin is null, so user is not (guard above)
         }
         logger.info(authMessages.PASSWORD_CHANGED(userId));
         if (currentIsTemporary) logger.info(authMessages.TEMP_PASSWORD_REPLACED(userId));

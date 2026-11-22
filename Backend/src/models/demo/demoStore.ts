@@ -36,7 +36,7 @@ interface DemoAdminRow {
     CREATED_AT: Date;
     UPDATED_AT: Date;
     SYSSIGNATURE?: string;
-    EMAIL?: string | null;
+    EMAIL: string | null;
     CAN_RECEIVE_SRV_CRIT?: string;
     CAN_RECEIVE_SRV_DEPS?: string;
     CAN_RECEIVE_SRV_RED?: string;
@@ -81,6 +81,7 @@ async function _buildAccounts() {
             ID: 1,
             USERNAME: "admin",
             PASSWORD: pw,
+            EMAIL: null,
             ROLE: "SUPER_ADMIN",
             IS_ACTIVE: "Y",
             CREATED_AT: now,
@@ -90,6 +91,7 @@ async function _buildAccounts() {
             ID: 2,
             USERNAME: "manager",
             PASSWORD: pw,
+            EMAIL: null,
             ROLE: "ADMIN",
             IS_ACTIVE: "Y",
             CREATED_AT: now,

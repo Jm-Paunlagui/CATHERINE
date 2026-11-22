@@ -64,7 +64,7 @@ function resolveTableName(): string {
         : "T_SERVER_ALERT_ACK_DEV";
 }
 
-let _col: any = null;
+let _col: InstanceType<typeof OracleCollection> | null = null;
 /** Lazily resolves the ack collection (never called in DEMO_MODE). */
 function col() {
     if (!_col)

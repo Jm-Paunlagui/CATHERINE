@@ -83,6 +83,23 @@ function buildSignedFields(row: Record<string, unknown>): Record<string, unknown
     };
 }
 
+/** One T_ADMINS_DEV row as PROJECTION reads it (sql/01_schema.sql section 2). */
+export type AdminRow = {
+    ID: number;
+    USERNAME: string;
+    PASSWORD: string;
+    EMAIL: string | null;
+    ROLE: string;
+    IS_ACTIVE: string;
+    CAN_RECEIVE_SRV_CRIT?: string;
+    CAN_RECEIVE_SRV_DEPS?: string;
+    CAN_RECEIVE_SRV_RED?: string;
+    CAN_RECEIVE_SRV_SYS?: string;
+    SYSSIGNATURE?: string | null;
+    CREATED_AT: Date;
+    UPDATED_AT: Date;
+};
+
 const PROJECTION = {
     ID: 1,
     USERNAME: 1,
@@ -114,8 +131,8 @@ const SERVER_NOTIFY_FLAG_COLUMNS = Object.freeze({
     "server-system-notification": "CAN_RECEIVE_SRV_SYS",
 });
 
-let _db: any = null;
-let _col: any = null;
+let _db: ReturnType<typeof createDb> | null = null;
+let _col: InstanceType<typeof OracleCollection> | null = null;
 /** Lazily resolves the appDb interface (never called in DEMO_MODE). */
 function db() {
     if (!_db) _db = createDb("appDb");
@@ -150,12 +167,12 @@ class AdminModel {
      * @param {string} username
      * @returns {Promise<object|null>}
      */
-    static async findByUsername(username: string): Promise<Record<string, any> | null> {
+    static async findByUsername(username: string): Promise<AdminRow | null> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             return admins.find((a) => a.USERNAME === username) ?? null;
         }
-        return col().find({ USERNAME: username }).project(PROJECTION).next();
+        return col().find({ USERNAME: username }).project(PROJECTION).next<AdminRow>();
     }
 
     /**

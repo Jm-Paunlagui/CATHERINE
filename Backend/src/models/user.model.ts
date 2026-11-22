@@ -15,6 +15,19 @@ import { createDb, OracleCollection } from "../utils/oracle-mongo-wrapper";
 import { isDemoMode } from "../config/demoMode";
 import demo from "./demo/demoStore";
 
+/** One T_USERS_DEV row as PROJECTION reads it (sql/01_schema.sql section 1). */
+export type UserRow = {
+    ID: number;
+    USERNAME: string;
+    PASSWORD: string;
+    FIRST_NAME: string | null;
+    LAST_NAME: string | null;
+    EMAIL: string | null;
+    IS_ACTIVE: string;
+    CREATED_AT: Date;
+    UPDATED_AT: Date;
+};
+
 const PROJECTION = {
     ID: 1,
     USERNAME: 1,
@@ -27,7 +40,7 @@ const PROJECTION = {
     UPDATED_AT: 1,
 };
 
-let _col: any = null;
+let _col: InstanceType<typeof OracleCollection> | null = null;
 /** Lazily resolves the T_USERS_DEV collection (never called in DEMO_MODE). */
 function col() {
     if (!_col) _col = new OracleCollection("T_USERS_DEV", createDb("appDb"));
@@ -40,12 +53,12 @@ class UserModel {
      * @param {string} username
      * @returns {Promise<object|null>}
      */
-    static async findByUsername(username: string): Promise<Record<string, any> | null> {
+    static async findByUsername(username: string): Promise<UserRow | null> {
         if (isDemoMode()) {
             const { users } = await demo.accounts();
             return users.find((u) => u.USERNAME === username) ?? null;
         }
-        return col().find({ USERNAME: username }).project(PROJECTION).next();
+        return col().find({ USERNAME: username }).project(PROJECTION).next<UserRow>();
     }
 
     /**
