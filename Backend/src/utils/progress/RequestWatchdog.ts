@@ -63,6 +63,15 @@ import { defaultIdleWatchdog } from "./IdleWatchdog";
 import { defaultBurstDetector } from "./WatchdogBurstDetector";
 
 /**
+ * The CORS step the 504 passes through (CorsMiddleware's `applyToErrorResponse`). A stall can
+ * land before Express decorated req/res, so the policy receives the raw watched pair; method
+ * syntax keeps CorsMiddleware's Express-typed signature assignable.
+ */
+type CorsErrorPolicy = { applyToErrorResponse(req: WatchedRequest, res: WatchedResponse, done: () => void): unknown };
+/** The stall-burst alert (WatchdogBurstDetector's `record`). */
+type BurstRecorder = { record(cut: { method: string; path: string; lastSource: string }): unknown };
+
+/**
  * Label for a request with no route template (stalled before routing): the
  * `/api/vN` prefix plus the FIRST segment only, then `/…` — never an id.
  * @param {string} p - Raw path without query string.
@@ -81,8 +90,8 @@ class RequestWatchdog {
     declare _now: () => number;
     declare _idleWatchdog: import("./IdleWatchdog").IdleWatchdog;
     declare _limits: { defaultMs: number; longMs: number; };
-    declare _corsOverride: { applyToErrorResponse: ((...args: any[]) => unknown); } | null;
-    declare _burstDetector: { record: ((...args: unknown[]) => unknown); };
+    declare _corsOverride: CorsErrorPolicy | null;
+    declare _burstDetector: BurstRecorder;
 
     /**
      * The ProgressScope of a request (undefined outside a watched server).
@@ -110,7 +119,7 @@ class RequestWatchdog {
      * @param {{ applyToErrorResponse: Function }} [options.cors] - CORS policy for the 504 (default: the one `app.js` mounts).
      * @param {{ record: Function }} [options.burstDetector=defaultBurstDetector] - Stall-burst alert (one critical log per burst).
      */
-    constructor({ limits, idleWatchdog = defaultIdleWatchdog, now = Date.now, cors, burstDetector = defaultBurstDetector }: { limits?: { defaultMs: number; longMs: number; }; idleWatchdog?: import("./IdleWatchdog").IdleWatchdog; now?: () => number; cors?: { applyToErrorResponse: ((...args: unknown[]) => unknown); }; burstDetector?: { record: ((...args: any[]) => unknown); }; } = {}) {
+    constructor({ limits, idleWatchdog = defaultIdleWatchdog, now = Date.now, cors, burstDetector = defaultBurstDetector }: { limits?: { defaultMs: number; longMs: number; }; idleWatchdog?: import("./IdleWatchdog").IdleWatchdog; now?: () => number; cors?: CorsErrorPolicy; burstDetector?: BurstRecorder; } = {}) {
         this._burstDetector = burstDetector;
         this._corsOverride = cors ?? null;
         if (limits) {
@@ -129,7 +138,7 @@ class RequestWatchdog {
     }
 
     /** @returns {{ applyToErrorResponse: Function }} */
-    _corsPolicy(): { applyToErrorResponse: ((...args: unknown[]) => unknown); } {
+    _corsPolicy(): CorsErrorPolicy {
         return (
             this._corsOverride ??
             (require("../../middleware/security/CorsMiddleware") as typeof import("../../middleware/security/CorsMiddleware")).defaultCors
@@ -174,7 +183,7 @@ class RequestWatchdog {
         const bytes = () => (socket?.bytesRead ?? 0) + (socket?.bytesWritten ?? 0);
         let lastBytes = bytes();
 
-        const probe = (s: any) => {
+        const probe = (s: ProgressScope) => {
             // `writeHead(status, {headers})` does not populate getHeader(), so
             // fall back to the serialised head once it was flushed.
             const ct = String(res.getHeader?.("content-type") ?? "");

@@ -21,6 +21,7 @@ import { logger } from "../utils/logger";
 import { integrityMessages } from "../constants/messages";
 import { CacheKeyBuilder, registry } from "../middleware/cache";
 import IntegrityModel from "../models/integrity.model";
+import type { TableConfig } from "../models/integrity.model";
 
 const _store = registry.resolve("integrity");
 
@@ -75,8 +76,8 @@ class IntegrityService {
      * @returns {string}
      * @private
      */
-    static _sweepKey(key: string, cfg: Record<string, any>, filters: Record<string, any>): string {
-        const parts: Record<string, string> = { table: key, mode: "tamper" };
+    static _sweepKey(key: string, cfg: TableConfig, filters: Record<string, unknown>): string {
+        const parts: Record<string, unknown> = { table: key, mode: "tamper" };
         for (const name of Object.keys(cfg.filters ?? {})) {
             if (name === "date") continue;
             parts[name] = filters[name] ?? "none";
@@ -126,7 +127,7 @@ class IntegrityService {
      * @returns {Promise<{ tampered: object[], rowsScanned: number, truncated: boolean, scannedAt: string }>}
      * @private
      */
-    static async _sweptTampered(key: string, cfg: Record<string, any>, filters: Record<string, unknown>, forceRescan: boolean = false): Promise<{ tampered: Record<string, unknown>[]; rowsScanned: number; truncated: boolean; scannedAt: string; }> {
+    static async _sweptTampered(key: string, cfg: TableConfig, filters: Record<string, unknown>, forceRescan: boolean = false): Promise<{ tampered: Record<string, unknown>[]; rowsScanned: number; truncated: boolean; scannedAt: string; }> {
         const cacheKey = IntegrityService._sweepKey(key, cfg, filters);
 
         if (forceRescan) _store.del(cacheKey);
@@ -258,7 +259,7 @@ class IntegrityService {
      * @param {object[]} rows
      * @returns {Promise<object[]>}
      */
-    static async _annotate(cfg: Record<string, any>, rows: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
+    static async _annotate(cfg: TableConfig, rows: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
         const verdicts = await Promise.all((rows ?? []).map((r) => cfg.verifyFn(r)));
         return (rows ?? []).map((r, i) => ({
             ...r,

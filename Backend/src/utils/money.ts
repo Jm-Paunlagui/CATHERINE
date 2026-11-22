@@ -60,7 +60,7 @@ const MAX_INTEGER_DIGITS = 15;
 
 /** `10n ** BigInt(n)` memoised for small n. @type {Map<number, bigint>} */
 const _pow10Cache: Map<number, bigint> = new Map();
-function _pow10(n: any) {
+function _pow10(n: number) {
     if (n < 0) throw new RangeError(`_pow10: negative exponent ${n}`);
     let v = _pow10Cache.get(n);
     if (v === undefined) {
@@ -71,7 +71,7 @@ function _pow10(n: any) {
 }
 
 /** Absolute value of a BigInt. */
-function _absBig(x: any) {
+function _absBig(x: bigint) {
     return x < 0n ? -x : x;
 }
 
@@ -172,7 +172,7 @@ class Money {
      * an exact multiply by a power of ten; it never rounds.
      * @private
      */
-    static _align(a: any, b: any): [bigint, bigint, number] {
+    static _align(a: Money, b: Money): [bigint, bigint, number] {
         if (a.s === b.s) return [a.c, b.c, a.s];
         if (a.s > b.s) return [a.c, b.c * _pow10(a.s - b.s), a.s];
         return [a.c * _pow10(b.s - a.s), b.c, b.s];

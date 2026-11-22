@@ -337,7 +337,7 @@ class ServerAlertLogModel {
      * @param {string} alertKey
      * @returns {Promise<object|null>} newest row (DETAILS parsed) or null
      */
-    static async findLatestByAlertKey(rule: string, alertKey: string): Promise<Record<string, unknown> | null> {
+    static async findLatestByAlertKey(rule: string, alertKey: string): Promise<AlertLogRow | null> {
         const { rows } = await ServerAlertLogModel.findPage(
             { rule, alertKey },
             { page: 1, limit: 1 },

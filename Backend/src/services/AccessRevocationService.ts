@@ -1,5 +1,8 @@
 
 
+/** One ended session family and when its tokens stop being valid. */
+type RevokedEntry = { fid: string; untilMs: number };
+
 /**
  * @fileoverview Access-token revocation.
  *
@@ -131,7 +134,7 @@ class AccessRevocationService {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    static #applyLocal(entries: any, { endStreams = true }: Record<string, unknown> = {}) {
+    static #applyLocal(entries: RevokedEntry[], { endStreams = true }: { endStreams?: boolean } = {}) {
         let added = 0;
         for (const { fid, untilMs } of entries) {
             const r = revokedSessions.revoke(fid, untilMs);
@@ -140,11 +143,11 @@ class AccessRevocationService {
         }
         // Live streams were authenticated once, at open: end the ones of an
         // ended session too (none exist yet at boot).
-        if (endStreams && entries.length > 0) SseConnectionRegistry.endFamilies(entries.map((e: any) => e.fid));
+        if (endStreams && entries.length > 0) SseConnectionRegistry.endFamilies(entries.map((e) => e.fid));
         return added;
     }
 
-    static #broadcast(entries: any) {
+    static #broadcast(entries: RevokedEntry[]) {
         if (!clusterRpc.active || entries.length === 0) return;
         const max = ACCESS_REVOCATION_LIMITS.MAX_FIDS_PER_MESSAGE;
         for (let i = 0; i < entries.length; i += max) {

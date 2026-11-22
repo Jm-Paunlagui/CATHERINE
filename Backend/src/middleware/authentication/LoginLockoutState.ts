@@ -103,7 +103,7 @@ class LoginLockoutState {
 
     // ── Internals ────────────────────────────────────────────────────────────
 
-    #live(key: any, now: any) {
+    #live(key: string, now: number) {
         const entry = this.#entries.get(key);
         if (!entry) return null;
         if (entry.expiresAt <= now) {
@@ -113,7 +113,7 @@ class LoginLockoutState {
         return entry;
     }
 
-    #write(key: any, state: any, now: any) {
+    #write(key: string, state: Record<string, unknown>, now: number) {
         // delete first so Map order tracks last write (oldest-first eviction).
         this.#entries.delete(key);
         this.#entries.set(key, { state, expiresAt: now + ENTRY_TTL_MS });
@@ -125,7 +125,7 @@ class LoginLockoutState {
      *
      * @returns {boolean} true when a slot is free
      */
-    #makeRoom(now: any): boolean {
+    #makeRoom(now: number): boolean {
         if (now - this.#lastSweep < SWEEP_MIN_GAP_MS) return false;
         for (const [k, e] of this.#entries) {
             if (e.expiresAt <= now) this.#entries.delete(k);

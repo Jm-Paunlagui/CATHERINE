@@ -203,6 +203,8 @@ class MetricsService {
      * @returns {object} Full metrics snapshot (see MetricsStore.getSnapshot)
      * @throws {AppError} 503 if snapshot retrieval fails unexpectedly
      */
+    // The snapshot is MetricsStore's large nested report, read field-by-field by the alert
+    // rules and the summary; `any` until its shape is unified (see plans/ts-conversion-open-items.md).
     static getSnapshot(): Record<string, any> {
         try {
             return metricsStore.getSnapshot();
@@ -724,7 +726,7 @@ class MetricsService {
      * @param {Array} payload - Array of frontend metric events from the client
      * @throws {AppError} 400 on validation failure
      */
-    static async ingestFrontendMetrics(payload: Array<any>) {
+    static async ingestFrontendMetrics(payload: unknown) {
         if (!Array.isArray(payload)) {
             throw new AppError(METRICS_ERRORS.INVALID_PAYLOAD, 400, {
                 type: "ValidationError",
@@ -749,15 +751,18 @@ class MetricsService {
         let vitalCount = 0;
         let errorCount = 0;
 
-        for (const event of payload) {
-            if (!event || typeof event !== "object") continue;
+        for (const item of payload as unknown[]) {
+            if (!item || typeof item !== "object") continue;
+            const event = item as Record<string, unknown>;
+            // A client-supplied context object; anything else stores as {} as before.
+            const context = (event.context || {}) as Record<string, unknown>;
 
             if (event.type === "vital") {
                 metricsStore.recordFrontendVital(
                     String(event.name || "UNKNOWN").slice(0, 200),
                     Number(event.value) || 0,
                     String(event.rating || "unknown"),
-                    event.context || {},
+                    context,
                 );
                 vitalCount++;
                 logger.debug(metricsMessages.FRONTEND_INGESTED(1), {
@@ -769,7 +774,7 @@ class MetricsService {
                 metricsStore.recordFrontendError(
                     String(event.message || "").slice(0, 500),
                     String(event.stack || "").slice(0, 2000),
-                    event.context || {},
+                    context,
                 );
                 errorCount++;
                 logger.notice(metricsMessages.FRONTEND_INGESTED(1), {
