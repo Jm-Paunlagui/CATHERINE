@@ -20,7 +20,7 @@
  */
 
 vi.mock("../../../../src/constants/purgeTables", async (importOriginal) => {
-    const real = await importOriginal();
+    const real = await importOriginal<typeof import("../../../../src/constants/purgeTables")>();
     const base = {
         group: real.PURGE_GROUP_KEYS.T,
         pool: real.PURGE_POOL,
@@ -67,7 +67,14 @@ vi.mock("../../../../src/constants/purgeTables", async (importOriginal) => {
 
 // Loaded with import() (in beforeAll), not require(): vi.mock above only applies to
 // modules resolved through Vitest's module graph.
-let DataRestoreService, BackupArchiveService, DataPurgeService, DataPurgeModel, AuditLogModel, TamperDetectionService, CryptoVault, Transaction;
+let DataRestoreService: typeof import("../../../../src/services/DataRestoreService").default;
+let BackupArchiveService: typeof import("../../../../src/services/BackupArchiveService").default;
+let DataPurgeService: typeof import("../../../../src/services/DataPurgeService").default;
+let DataPurgeModel: typeof import("../../../../src/models/data-purge.model").default;
+let AuditLogModel: typeof import("../../../../src/models/audit.log.model").default;
+let TamperDetectionService: typeof import("../../../../src/services/TamperDetectionService").default;
+let CryptoVault: typeof import("../../../../src/utils/encryption/CryptoVault").CryptoVault;
+let Transaction: typeof import("../../../../src/utils/oracle-mongo-wrapper").Transaction;
 
 async function loadModules() {
     DataRestoreService = (await import("../../../../src/services/DataRestoreService")).default;
@@ -109,8 +116,9 @@ describe("DataRestoreService — FK remap and ROW_HASH re-sign", function () {
         inserts = [];
         rehashes = [];
 
-        vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch }) => {
-            for (const t of tables) await onBatch(t, SOURCE_ROWS[t].map((r) => ({ ...r })));
+        vi.spyOn(DataPurgeModel, "streamAllTables").mockImplementation(async (tables, { onBatch } = {}) => {
+            for (const t of tables) await onBatch?.(t, SOURCE_ROWS[t].map((r) => ({ ...r })));
+            return Object.fromEntries(tables.map((t) => [t, SOURCE_ROWS[t].length]));
         });
         vi.spyOn(DataPurgeModel, "streamTable").mockImplementation(async (t, { onBatch } = {}) => {
             if (onBatch) await onBatch(SOURCE_ROWS[t].map((r) => ({ ...r })));
@@ -124,7 +132,7 @@ describe("DataRestoreService — FK remap and ROW_HASH re-sign", function () {
         vi.spyOn(TamperDetectionService, "buildSignedFields").mockImplementation((domain, row) => ({
             ID: String(row.ID),
             PARENT_ID: String(row.PARENT_ID),
-            LABEL: row.LABEL,
+            LABEL: String(row.LABEL),
         }));
         const realVerify = CryptoVault.verifyRecord.bind(CryptoVault);
         const realSign = CryptoVault.signRecord.bind(CryptoVault);
@@ -137,8 +145,8 @@ describe("DataRestoreService — FK remap and ROW_HASH re-sign", function () {
 
         const { zipBuffer } = await BackupArchiveService.buildBackup({ selection: { tables: [PARENT, CHILD] }, adminId: 1 });
 
-        vi.spyOn(DataPurgeService, "findAdminById").mockResolvedValue({ ID: 1, PASSWORD: "h" });
-        vi.spyOn(CryptoVault, "verifyAdminPassword").mockResolvedValue({ matched: true });
+        vi.spyOn(DataPurgeService, "findAdminById").mockResolvedValue({ ID: 1, PASSWORD: "h" } as never); // partial admin row
+        vi.spyOn(CryptoVault, "verifyAdminPassword").mockResolvedValue({ matched: true, newHash: null });
         vi.spyOn(AuditLogModel, "insert").mockResolvedValue({ rowsAffected: 1 });
         const counters = { ...NEW_ID_BASE };
         vi.spyOn(DataPurgeModel, "insertRestoreBatch").mockImplementation(async (table, rows) => {
@@ -154,7 +162,7 @@ describe("DataRestoreService — FK remap and ROW_HASH re-sign", function () {
                 },
             }),
         };
-        vi.spyOn(Transaction.prototype, "withTransaction").mockImplementation(async (fn) => fn(session));
+        vi.spyOn(Transaction.prototype, "withTransaction").mockImplementation(async (fn) => fn(session as never)); // session double: execute + collection only
 
         report = await DataRestoreService.restore({
             zipBuffer,
