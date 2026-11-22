@@ -38,6 +38,9 @@ const WRITE_QUEUE_OVERFLOW = (dropped: number, cap: number): string =>
     `The log file has a gap. The disk could not keep up with log volume; check disk health, free space, ` +
     `and any antivirus real-time scanning of the log directory.`;
 
+/** A record delivered to an onLevel() subscriber. */
+type LevelRecord = { level: string; message: string; meta: Record<string, unknown>; requestId: string | null; timestamp: string };
+
 class Logger {
     // ========================================
     // STATIC CONFIGURATION
@@ -133,14 +136,14 @@ class Logger {
             hourCycle: "h23",
         } satisfies Intl.DateTimeFormatOptions,
     };
-    declare _levelSubscribers: any[];
+    declare _levelSubscribers: Array<{ maxPriority: number; fn: (record: LevelRecord) => void }>;
     declare machineIdentifier: string;
     declare _droppedCount: number;
     declare _maxQueueLength: number;
     declare isWriting: boolean;
-    declare writeQueue: any[];
+    declare writeQueue: Array<{ level: string; message: unknown; meta: Record<string, unknown>; requestId: string | null }>;
     declare _maxSafeStrLength: number;
-    declare currentLevel: any;
+    declare currentLevel: number;
 
     // ========================================
     // CONSTRUCTOR
@@ -225,7 +228,7 @@ class Logger {
      * });
      * // later: unsubscribe();
      */
-    onLevel(maxPriority: number, fn: (record: { level: string; message: string; meta: Record<string, unknown>; requestId: string | null; timestamp: string; }) => void): () => void {
+    onLevel(maxPriority: number, fn: (record: LevelRecord) => void): () => void {
         if (typeof fn !== "function") return () => {};
         const entry = { maxPriority, fn };
         this._levelSubscribers.push(entry);
@@ -406,7 +409,7 @@ class Logger {
     /**
      * Ensure a directory exists, creating it if necessary
      */
-    async #ensureDirectoryExists(dirPath: any) {
+    async #ensureDirectoryExists(dirPath: string) {
         try {
             await fs.mkdir(dirPath, { recursive: true });
         } catch (error) {
@@ -424,7 +427,7 @@ class Logger {
     /**
      * Get a file's size in bytes, returning 0 if it doesn't exist
      */
-    async #getFileSize(filePath: any) {
+    async #getFileSize(filePath: string) {
         try {
             return (await fs.stat(filePath)).size;
         } catch (error) {
@@ -485,7 +488,7 @@ class Logger {
     /**
      * Get next available log filename, rolling over when the size limit is exceeded
      */
-    async #getAvailableFilename(baseDir: any, baseName: unknown) {
+    async #getAvailableFilename(baseDir: string, baseName: unknown) {
         let filename = `${baseName}.log`;
         let fullPath = path.join(baseDir, filename);
 
@@ -531,7 +534,7 @@ class Logger {
     /**
      * Build the plain-text log entry string
      */
-    #formatMessage(level: unknown, message: unknown, meta: Record<string, unknown> = {}, requestId = null) {
+    #formatMessage(level: unknown, message: unknown, meta: Record<string, unknown> = {}, requestId: string | null = null) {
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
         const { displayFn, displayFile, displayLine } =
@@ -559,7 +562,7 @@ class Logger {
     /**
      * Build the colorized console log entry string
      */
-    #formatColorizedMessage(level: any, message: unknown, meta: Record<string, unknown> = {}, requestId = null) {
+    #formatColorizedMessage(level: string, message: unknown, meta: Record<string, unknown> = {}, requestId: string | null = null) {
         const colors = Logger.CONFIG.COLORS;
         const { timestamp } = this.#getDateComponents();
         const cleanMessage = this.#resolveMessage(message);
@@ -610,7 +613,7 @@ class Logger {
     /**
      * Serialize non-internal meta keys to a string
      */
-    #buildMetaString(meta: any) {
+    #buildMetaString(meta: Record<string, unknown>) {
         const INTERNAL_KEYS = new Set([
             "method",
             "url",
@@ -630,7 +633,7 @@ class Logger {
     /**
      * Inject call site info into a meta object from the current stack
      */
-    #injectCallSite(meta: any) {
+    #injectCallSite(meta: Record<string, unknown>) {
         try {
             const enabled =
                 String(process.env.LOG_CALLSITE || "true").toLowerCase() ===
@@ -674,7 +677,7 @@ class Logger {
     /**
      * Write a formatted log entry to the appropriate file
      */
-    async #writeToFile(level: any, message: unknown, meta: Record<string, unknown> = {}, requestId = null) {
+    async #writeToFile(level: string, message: unknown, meta: Record<string, unknown> = {}, requestId: string | null = null) {
         const logDir = this.#getLogDirectory();
         try {
             await this.#ensureDirectoryExists(logDir);
@@ -714,7 +717,7 @@ class Logger {
 
         this.isWriting = true;
         while (this.writeQueue.length > 0) {
-            const { level, message, meta, requestId } = this.writeQueue.shift();
+            const { level, message, meta, requestId } = this.writeQueue.shift()!; // non-null: the loop checked length > 0
             try {
                 await this.#writeToFile(level, message, meta, requestId);
             } catch (error) {
@@ -748,7 +751,7 @@ class Logger {
     // ARGUMENT NORMALIZATION
     // ========================================
 
-    #normalizeLogArguments(args: any) {
+    #normalizeLogArguments(args: unknown[]) {
         if (args.length === 0) return { message: "[Empty Log]", meta: {} };
         if (args.length === 1) return { message: args[0], meta: {} };
 
@@ -765,7 +768,7 @@ class Logger {
         };
     }
 
-    #isPlainMetaObject(value: unknown) {
+    #isPlainMetaObject(value: unknown): value is Record<string, unknown> {
         if (
             value === null ||
             value === undefined ||
@@ -993,7 +996,7 @@ class Logger {
     // HTTP REQUEST LIFECYCLE LOGGING
     // ========================================
 
-    logIncomingRequest(req: any, customMessage: string | null = null) {
+    logIncomingRequest(req: import("express").Request, customMessage: string | null = null) {
         return this.log("INFO", customMessage || "Incoming Request", {
             method: req.method,
             url: req.originalUrl || req.url,
@@ -1003,7 +1006,7 @@ class Logger {
         });
     }
 
-    logHandlingRequest(req: any, additionalMeta: Record<string, unknown> = {}) {
+    logHandlingRequest(req: import("express").Request, additionalMeta: Record<string, unknown> = {}) {
         return this.log("INFO", "Handling Request", {
             method: req.method,
             url: req.originalUrl || req.url,
@@ -1030,7 +1033,7 @@ class Logger {
         });
     }
 
-    #createClientMachineIdentifier(req: any) {
+    #createClientMachineIdentifier(req: import("express").Request) {
         const username =
             req.get?.("X-Client-Username") ||
             (req.query?.username && req.query?.userId
@@ -1097,7 +1100,7 @@ class Logger {
         });
     }
 
-    performance(operation: unknown, duration: any, details: Record<string, unknown> = {}) {
+    performance(operation: unknown, duration: number, details: Record<string, unknown> = {}) {
         const level = duration > 5000 ? "WARNING" : "INFO";
         return this.log(level, "Performance", {
             operation,
@@ -1159,7 +1162,7 @@ class Logger {
     // `constants/messages` or `fs`-heavy retention logic here would invert
     // that dependency.
 
-    #formatBytes(bytes: any, decimals = 2) {
+    #formatBytes(bytes: number, decimals = 2) {
         if (bytes === 0) return "0 Bytes";
         const k = 1024;
         const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
