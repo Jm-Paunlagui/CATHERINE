@@ -18,7 +18,7 @@ Branch `backend-rewrite-to-typescript` (PR #4, open, not merged). Status as of 2
 - [x] **Unify the two metrics snapshot shapes:** done. `MetricsSnapshot` (MetricsStore) is built from named parts (`RouteRedSnapshot`, `OraclePoolSnapshot`, `TotalsSnapshot`, `SystemSnapshot`); `mergeMetricsSnapshots` returns `ClusterMetricsSnapshot` (= `MetricsSnapshot` + `cluster`), and the merge rebuilds memory / heap trend / failure cause to those types instead of copying wire data. `MetricsService` alert rules take `AlertInput` (`red` and `system` required, the rest guarded) and `AlertNotifierService.AlertSnapshot` is the partial cluster snapshot. Locked by `test/server/unit/middleware/metricsMerge.shape.test.js`.
 - [x] **Port to TypeScript:** `scripts/` (7 files) and the root configs (`eslint.config.ts`, `vitest.config.mts`, `vitest.coverage-scoped.config.mts`; `.mts` because the package is CommonJS) are done and type-checked. `test/` stays JavaScript by decision (2026-11-22): Vitest runs the .js tests against the .ts source, and typing 113 files of loose mocks would mean casts for little gain.
 - [ ] **Frontend** TypeScript conversion (not started).
-- [ ] **TypeScript 7** once typescript-eslint supports it (currently pinned `~6.0`).
+- [ ] **TypeScript 7** — ready, blocked upstream. TS 7.0.2 (stable since 2026-07-08) type-checks the whole backend with 0 errors (checked 2026-11-22 against `tsconfig.json`, planted-error sanity check passed). typescript-eslint 8.73 (latest and canary) still requires `typescript <6.1.0`, so `typescript` stays `~6.0`. Switch when typescript-eslint widens its peer range.
 - [ ] **Wrapper backlog G5–G17** (`oracle-wrapper-gap-inventory.md`).
 
 - [x] **Type the audit record:** done (`AuditRecord` in `audit.log.model.ts`).
