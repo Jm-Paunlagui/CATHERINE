@@ -24,7 +24,7 @@ const DEMO_PASSWORD = "Demo@123";
 
 // ── Accounts (lazy, memoised — Argon2 hashing is async) ───────────────────────
 
-let _accountsPromise: any = null;
+let _accountsPromise: ReturnType<typeof _buildAccounts> | null = null;
 
 /** A seeded demo admin (T_ADMINS_DEV shape); SYSSIGNATURE is added after hashing. */
 interface DemoAdminRow {
@@ -36,6 +36,40 @@ interface DemoAdminRow {
     CREATED_AT: Date;
     UPDATED_AT: Date;
     SYSSIGNATURE?: string;
+    EMAIL?: string | null;
+    CAN_RECEIVE_SRV_CRIT?: string;
+    CAN_RECEIVE_SRV_DEPS?: string;
+    CAN_RECEIVE_SRV_RED?: string;
+    CAN_RECEIVE_SRV_SYS?: string;
+    /** Demo writes add columns the way the real table has them. */
+    [column: string]: unknown;
+}
+
+interface DemoUserRow {
+    ID: number;
+    USERNAME: string;
+    PASSWORD: string;
+    FIRST_NAME: string | null;
+    LAST_NAME: string | null;
+    EMAIL: string | null;
+    IS_ACTIVE: string;
+    CREATED_AT: Date;
+    UPDATED_AT: Date;
+    [column: string]: unknown;
+}
+
+/** One T_AUTH_REFRESH_TOKEN_DEV row in demo mode. */
+interface DemoRefreshRow {
+    JTI_HASH: string;
+    FAMILY_ID: string;
+    USER_ID: string;
+    ROLE_SOURCE: string;
+    ISSUED_AT: Date;
+    EXPIRES_AT: Date;
+    USED_AT: Date | null;
+    REPLACED_BY: string | null;
+    REVOKED_AT: Date | null;
+    REVOKE_REASON: string | null;
 }
 
 async function _buildAccounts() {
@@ -71,7 +105,7 @@ async function _buildAccounts() {
         });
     }
 
-    const users = [
+    const users: DemoUserRow[] = [
         {
             ID: 1,
             USERNAME: "user",
@@ -92,7 +126,7 @@ async function _buildAccounts() {
  * Returns the memoised demo accounts ({ admins, users }), hashing on first call.
  * @returns {Promise<{admins: object[], users: object[]}>}
  */
-function accounts(): Promise<{ admins: Record<string, any>[]; users: Record<string, any>[]; }> {
+function accounts(): ReturnType<typeof _buildAccounts> {
     if (!_accountsPromise) _accountsPromise = _buildAccounts();
     return _accountsPromise;
 }
@@ -109,7 +143,7 @@ const ENDPOINTS = [
     "/api/v1/audit-logs",
 ];
 
-function _statusFor(i: any) {
+function _statusFor(i: number) {
     const m = i % 100;
     if (m < 80) return i % 2 === 0 ? 200 : 201;
     if (m < 88) return i % 2 === 0 ? 302 : 304;
@@ -157,6 +191,8 @@ function auditLogs() {
     return _auditLogs;
 }
 
+// The audit record type is untyped end to end (AuditLogMiddleware -> AuditLogModel -> here);
+// tracked as "type the audit record" in plans/ts-conversion-open-items.md.
 function auditInsert(record: any) {
     _auditLogs.push({ ID: ++_auditSeq, ...record });
     return { rowsAffected: 1 };
@@ -232,7 +268,7 @@ const _ledger: LedgerRow[] = [
 let _ledgerSeq = _ledger.length;
 
 /** All demo ledger rows (append-only). @returns {object[]} */
-function ledger(): Record<string, any>[] {
+function ledger(): LedgerRow[] {
     return _ledger;
 }
 
@@ -280,7 +316,9 @@ function reverseEntry(originalId: number, memo: string): { rowsAffected: number;
 // Supports the operators the audit/admin queries actually use so the same filter
 // objects work against the in-memory arrays.
 
-function _toComparable(v: any) {
+// Returns a value for JS relational comparison (Date -> ms, ISO date string -> ms, else as-is),
+// mirroring how Oracle compares the column; `any` because the operands are mixed by design.
+function _toComparable(v: unknown): any {
     if (v instanceof Date) return v.getTime();
     if (typeof v === "string") {
         const t = Date.parse(v);
@@ -320,16 +358,16 @@ function _matchOp(value: unknown, op: unknown, expected: unknown) {
  * @param {object} filter
  * @returns {boolean}
  */
-function match(row: Record<string, unknown>, filter: Record<string, any>): boolean {
+function match(row: Record<string, unknown>, filter: unknown): boolean {
     if (!filter || typeof filter !== "object") return true;
 
     for (const [key, cond] of Object.entries(filter)) {
         if (key === "$or") {
-            if (!cond.some((sub: any) => match(row, sub))) return false;
+            if (!Array.isArray(cond) || !cond.some((sub) => match(row, sub))) return false;
             continue;
         }
         if (key === "$and") {
-            if (!cond.every((sub: any) => match(row, sub))) return false;
+            if (!Array.isArray(cond) || !cond.every((sub) => match(row, sub))) return false;
             continue;
         }
 
@@ -362,17 +400,17 @@ function match(row: Record<string, unknown>, filter: Record<string, any>): boole
 // ── Platform tables (empty at boot, mutated in place by the models) ──────────
 
 /** T_AUTH_REFRESH_TOKEN_DEV rows (refresh-token ledger). */
-const _refreshTokens: any[] = [];
+const _refreshTokens: DemoRefreshRow[] = [];
 /** T_SERVER_BACKUP_TOKEN_CONSUMED_DEV — JTI → row. */
 const _backupTokensConsumed = new Map();
 /** T_SERVER_BACKUP_DELETE_VOTE_DEV rows. */
-const _backupVotes: any[] = [];
+const _backupVotes: import("../backup-vote.model").BackupVoteRow[] = [];
 let _backupVoteSeq = 0;
 /** T_SYSTEM_CONFIG_DEV — CONFIG_KEY → row. */
 const _systemConfig = new Map();
 
 /** @returns {object[]} live refresh-token ledger array */
-function refreshTokens(): Record<string, any>[] {
+function refreshTokens(): DemoRefreshRow[] {
     return _refreshTokens;
 }
 
@@ -382,7 +420,7 @@ function backupTokensConsumed(): Map<string, Record<string, unknown>> {
 }
 
 /** @returns {object[]} live backup-delete vote array */
-function backupVotes(): Record<string, any>[] {
+function backupVotes(): import("../backup-vote.model").BackupVoteRow[] {
     return _backupVotes;
 }
 
@@ -392,11 +430,12 @@ function nextBackupVoteId(): number {
 }
 
 /** @returns {Map<string, object>} live system-config map */
-function systemConfig(): Map<string, Record<string, any>> {
+function systemConfig(): Map<string, import("../system.config.model").SystemConfigRow> {
     return _systemConfig;
 }
 
 // One stateful object, not named exports: tests stub its methods with
 // vi.spyOn, which cannot replace an ES module namespace binding.
 const demoStore = { DEMO_PASSWORD, accounts, refreshTokens, backupTokensConsumed, backupVotes, nextBackupVoteId, systemConfig, auditLogs, auditInsert, fxRates, fxRateInsert, ledger, ledgerInsert, reverseEntry, match };
+export type { DemoRefreshRow };
 export default demoStore;

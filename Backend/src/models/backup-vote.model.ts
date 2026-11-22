@@ -45,7 +45,7 @@ const _votes = new OracleCollection(TABLE, _db);
  * @returns {object[]}
  */
 function demoVotes(pred: (row: BackupVoteRow) => boolean = () => true): BackupVoteRow[] {
-    return (demo.backupVotes() as BackupVoteRow[])
+    return demo.backupVotes()
         .filter(pred)
         .sort((a, b) => a.VOTED_AT.getTime() - b.VOTED_AT.getTime() || a.VOTE_ID - b.VOTE_ID);
 }
