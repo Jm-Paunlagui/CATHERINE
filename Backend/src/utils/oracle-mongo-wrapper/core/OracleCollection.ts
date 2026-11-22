@@ -77,6 +77,7 @@
  * ============================================================================
  */
 
+import type { DbConnection } from "../db";
 import { quoteIdentifier, mergeBinds } from "../utils";
 import { parseFilter } from "../parsers/filterParser";
 import { parseUpdate } from "../parsers/updateParser";
@@ -116,15 +117,7 @@ function _firstRowWhere(whereClause: string): string {
 type WrapperDb = ReturnType<typeof import("../db").createDb>;
 /** RETURNING column names; values come back as the `returning` object/array. */
 type ReturningOption = { returning?: string[] };
-type FindOptions = {
-    sort?: Record<string, unknown>;
-    limit?: number;
-    skip?: number;
-    projection?: Record<string, unknown>;
-    forUpdate?: import("./QueryBuilder").ForUpdateMode;
-    sample?: { percentage: number; seed?: number };
-    asOf?: { scn?: number | string; timestamp?: string };
-};
+type FindOptions = import("./QueryBuilder").QueryBuilderOptions;
 type InsertManyOptions = ReturningOption & { batchErrors?: boolean };
 type UpdateOptions = ReturningOption & { upsert?: boolean };
 type IndexOptions = { name?: string; unique?: boolean; type?: "bitmap" | string };
@@ -165,7 +158,7 @@ class OracleCollection {
      *   When set → transaction mode (reuses this connection for all operations).
      *   You normally don't pass this yourself — it's set by Session.collection().
      */
-    constructor(tableName: string, db: Record<string, unknown>, _conn: Record<string, unknown> | null = null) {
+    constructor(tableName: string, db: WrapperDb, _conn: import("../db").DbConnection | null = null) {
         this.tableName = tableName;
         this.db = db;
         this._conn = _conn;
@@ -184,7 +177,7 @@ class OracleCollection {
      * @returns {Promise<*>} Whatever fn returns
      */
     // `conn` is the untyped connection boundary (see withConnection in config/adapters/oracle.ts).
-    async _execute<T>(fn: (conn: any) => T | Promise<T>): Promise<T> {
+    async _execute<T>(fn: (conn: DbConnection) => T | Promise<T>): Promise<T> {
         if (this._conn) return fn(this._conn);
         return this.db.withConnection(fn);
     }
@@ -873,7 +866,7 @@ class OracleCollection {
             throw new Error(MSG.INSERT_MANY_RETURNING_WITH_BATCH_ERRORS);
         }
 
-        const run = async (conn: any) => {
+        const run = async (conn: DbConnection) => {
             const cols = Object.keys(documents[0]);
             const placeholders = cols.map((_, i) => `:v${i}`).join(", ");
 
@@ -1098,7 +1091,7 @@ class OracleCollection {
             return bound;
         });
 
-        const run = async (conn: any) => {
+        const run = async (conn: DbConnection) => {
             try {
                 const result = await conn.executeMany(sql, bindRows, {
                     autoCommit: false,
@@ -1353,7 +1346,7 @@ class OracleCollection {
             throw new Error(MSG.BULK_WRITE_EMPTY);
         }
 
-        return this.db.withTransaction(async (conn: any) => {
+        return this.db.withTransaction(async (conn: DbConnection) => {
             const sessionColl = new OracleCollection(
                 this.tableName,
                 this.db,

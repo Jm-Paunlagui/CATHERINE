@@ -339,7 +339,7 @@ class DataPurgeModel {
                 // below therefore shares this one read-only transaction/SCN.
                 await conn.execute("SET TRANSACTION READ ONLY");
 
-                const perTable: Record<string, unknown> = {};
+                const perTable: Record<string, number> = {};
                 for (const entry of entries) {
                     perTable[entry.table] = await DataPurgeModel._streamRowsOnConnection(
                         conn,

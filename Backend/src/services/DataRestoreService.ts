@@ -561,7 +561,7 @@ class DataRestoreService {
         return newPk;
     }
 
-    static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, unknown>; original: Record<string, unknown>; newPk: number | string; }>, session: { execute: ((...args: unknown[]) => any); }): Promise<{ signRows: Array<Record<string, unknown>>; tampered: number; }> {
+    static async _verifyThenSign(entry: import('../constants/purgeTables').PurgeTableEntry, items: Array<{ row: Record<string, unknown>; original: Record<string, unknown>; newPk: number | string; }>, session: import("../utils/oracle-mongo-wrapper/Transaction").Session): Promise<{ signRows: Array<Record<string, unknown>>; tampered: number; }> {
         const domain = entry.rowHashDomain;
         // Callers only route tables with a ROW_HASH domain here.
         if (!domain) throw new Error(`_verifyThenSign: ${entry.table} has no rowHashDomain.`);

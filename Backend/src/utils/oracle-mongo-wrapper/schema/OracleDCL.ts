@@ -23,6 +23,7 @@
  * ============================================================================
  */
 
+import type { DbConnection } from "../db";
 import { quoteIdentifier } from "../utils";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 const PRIVILEGE_ERROR_CODES = [1031, 942, 1917, 1919];
@@ -52,7 +53,7 @@ class OracleDCL {
      *   await dcl.grant(["SELECT", "INSERT"], "orders", "app_readonly");
      */
     async grant(privileges: string[], on: string, to: string): Promise<{ acknowledged: boolean; }> {
-        return this.db.withConnection(async (conn: any) => {
+        return this.db.withConnection(async (conn: DbConnection) => {
             const privList = privileges.join(", ");
             const sql = `GRANT ${privList} ON ${quoteIdentifier(on)} TO ${quoteIdentifier(to)}`;
 
@@ -81,7 +82,7 @@ class OracleDCL {
      *   await dcl.revoke(["DELETE", "UPDATE"], "orders", "intern_user");
      */
     async revoke(privileges: string[], on: string, from: string): Promise<{ acknowledged: boolean; }> {
-        return this.db.withConnection(async (conn: any) => {
+        return this.db.withConnection(async (conn: DbConnection) => {
             const privList = privileges.join(", ");
             const sql = `REVOKE ${privList} ON ${quoteIdentifier(on)} FROM ${quoteIdentifier(from)}`;
 

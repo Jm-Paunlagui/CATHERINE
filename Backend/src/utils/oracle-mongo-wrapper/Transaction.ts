@@ -44,6 +44,7 @@
  * ============================================================================
  */
 
+import type { DbConnection } from "./db";
 import { OracleCollection } from "./core/OracleCollection";
 
 /**
@@ -70,13 +71,13 @@ function _validateSavepointName(name: unknown) {
  * with no transactional guarantee.
  */
 class Session {
-    declare db: Record<string, unknown>;
-    declare _conn: Record<string, any>;
+    declare db: import("./db").WrapperDb;
+    declare _conn: DbConnection;
     /**
      * @param {Object} conn - The raw Oracle database connection (from the pool)
      * @param {Object} db  - The db interface (from createDb) for driver constants
      */
-    constructor(conn: Record<string, unknown>, db: Record<string, unknown>) {
+    constructor(conn: DbConnection, db: import("./db").WrapperDb) {
         this._conn = conn;
         this.db = db;
     }
@@ -123,7 +124,8 @@ class Session {
      *   const r = await session.execute("SELECT MY_SEQ.NEXTVAL FROM DUAL");
      *   const nextId = Number(r.rows[0][0]);
      */
-    async execute(sql: string, binds: Record<string, unknown> = {}, opts: Record<string, unknown> = {}): Promise<Record<string, any>> {
+    // The raw driver result, untyped like the connection it comes from (see DbConnection in db.ts).
+    async execute(sql: string, binds: Record<string, unknown> = {}, opts: Record<string, unknown> = {}): Promise<ReturnType<DbConnection["execute"]>> {
         return this._conn.execute(sql, binds, opts);
     }
 
@@ -192,7 +194,7 @@ class Session {
  *   - You never need to call COMMIT or ROLLBACK manually
  */
 class Transaction {
-    declare db: Record<string, any>;
+    declare db: import("./db").WrapperDb;
     /**
      * @param {Object} db - The db interface from createDb()
      *
@@ -200,7 +202,7 @@ class Transaction {
      *   const db = createDb("appDb");
      *   const txManager = new Transaction(db);
      */
-    constructor(db: Record<string, unknown>) {
+    constructor(db: import("./db").WrapperDb) {
         this.db = db;
     }
 
@@ -224,8 +226,8 @@ class Transaction {
      *     // Both inserts COMMIT together when this function returns
      *   });
      */
-    async withTransaction(fn: ((...args: any[]) => unknown)): Promise<any> {
-        return this.db.withTransaction(async (conn: any) => {
+    async withTransaction<T>(fn: (session: Session) => T | Promise<T>): Promise<T> {
+        return this.db.withTransaction(async (conn: DbConnection) => {
             const session = new Session(conn, this.db);
             return fn(session);
         });

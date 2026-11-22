@@ -990,7 +990,7 @@ function _bindScope(conn: InstrumentedConnection, scope: import("../../utils/pro
 // The callback's `conn` stays untyped on purpose: typing it as oracledb.Connection makes every
 // `result.rows` in the models `unknown[]`. Tracked as "type the connection boundary" in
 // plans/ts-conversion-open-items.md.
-async function withConnection(connectionName: string, callback: ((...args: any[]) => any), opts: { bypassBreaker?: boolean; } = {}) {
+async function withConnection<T>(connectionName: string, callback: (conn: any) => T | Promise<T>, opts: { bypassBreaker?: boolean; } = {}): Promise<T> {
     if (typeof callback !== "function")
         throw new TypeError("withConnection: callback must be a function.");
 
@@ -1081,7 +1081,7 @@ async function withConnection(connectionName: string, callback: ((...args: any[]
  * @param {string}   connectionName
  * @param {Function} callback  async (conn) => result
  */
-async function withTransaction(connectionName: string, callback: ((...args: unknown[]) => unknown)) {
+async function withTransaction<T>(connectionName: string, callback: (conn: any) => T | Promise<T>): Promise<T> {
     return withConnection(connectionName, async (conn) => {
         try {
             const result = await callback(conn);

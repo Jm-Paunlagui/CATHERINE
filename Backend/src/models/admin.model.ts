@@ -332,7 +332,7 @@ class AdminModel {
      * @returns {Promise<T>}
      * @throws {AppError} 409 LAST_ACTIVE_SUPER_ADMIN
      */
-    static async withLastSuperAdminGuard<T>(excludeId: number | string, fn: (session: Record<string, unknown> | null) => Promise<T>): Promise<T> {
+    static async withLastSuperAdminGuard<T>(excludeId: number | string, fn: (session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null) => Promise<T>): Promise<T> {
         const targetId = Number(excludeId);
 
         const assertNotLast = (rows: any) => {
@@ -507,7 +507,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async setNotifyFlags(username: string, channelFlags: Record<string, 'Y' | 'N'>, session: Record<string, unknown> | null = null): Promise<void> {
+    static async setNotifyFlags(username: string, channelFlags: Record<string, 'Y' | 'N'>, session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null = null): Promise<void> {
         const fields: Record<string, unknown> = {};
         for (const [channel, value] of Object.entries(channelFlags ?? {})) {
             const column = SERVER_NOTIFY_FLAG_COLUMNS[channel as keyof typeof SERVER_NOTIFY_FLAG_COLUMNS];
@@ -552,7 +552,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async updateRole(username: string, role: string, sysSignature: string, session: Record<string, unknown> | null = null): Promise<void> {
+    static async updateRole(username: string, role: string, sysSignature: string, session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null = null): Promise<void> {
         return AdminModel._set(
             username,
             { ROLE: role, SYSSIGNATURE: sysSignature },
@@ -568,7 +568,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async setActive(username: string, isActive: string, sysSignature: string, session: Record<string, unknown> | null = null): Promise<void> {
+    static async setActive(username: string, isActive: string, sysSignature: string, session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null = null): Promise<void> {
         return AdminModel._set(
             username,
             { IS_ACTIVE: isActive, SYSSIGNATURE: sysSignature },
@@ -582,7 +582,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session (see withLastSuperAdminGuard)
      * @returns {Promise<void>}
      */
-    static async deleteAdmin(username: string, session: Record<string, unknown> | null = null): Promise<void> {
+    static async deleteAdmin(username: string, session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null = null): Promise<void> {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             const idx = admins.findIndex((a) => a.USERNAME === username);
@@ -599,7 +599,7 @@ class AdminModel {
      * @param {object|null} [session] - guard session; null uses the pool
      * @private
      */
-    static async _set(username: string, fields: Record<string, unknown>, session: Record<string, unknown> | null = null) {
+    static async _set(username: string, fields: Record<string, unknown>, session: import("../utils/oracle-mongo-wrapper/Transaction").Session | null = null) {
         if (isDemoMode()) {
             const { admins } = await demo.accounts();
             const row = admins.find((a) => a.USERNAME === username);
