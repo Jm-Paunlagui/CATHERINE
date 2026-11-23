@@ -60,7 +60,7 @@ describe("Gap 3 â€” DB dies during graceful shutdown", function () {
 
         dbUp = true;
         const conn = { ping: async () => {}, close: async () => {}, execute: async () => ({ rows: [] }) };
-        fresh = loadFreshAdapter({
+        fresh = await loadFreshAdapter({
             createPool: async () => ({
                 poolMin: 0, poolMax: 4, connectionsOpen: 1, connectionsInUse: 0, queueLength: 0,
                 getConnection: async () => (dbUp ? conn : DB_DOWN()),

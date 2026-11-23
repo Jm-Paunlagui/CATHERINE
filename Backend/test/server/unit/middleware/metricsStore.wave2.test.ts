@@ -1,10 +1,18 @@
-import {
-    MetricsStore,
-    calcPercentile,
-    linRegSlope,
-    GC_KIND,
-    LATENCY_WINDOW_MS,
-} from "../../../../src/middleware/metrics/MetricsStore";
+type MetricsStoreModule = typeof import("../../../../src/middleware/metrics/MetricsStore");
+let MetricsStore: MetricsStoreModule["MetricsStore"];
+let calcPercentile: MetricsStoreModule["calcPercentile"];
+let linRegSlope: MetricsStoreModule["linRegSlope"];
+let GC_KIND: MetricsStoreModule["GC_KIND"];
+let LATENCY_WINDOW_MS: MetricsStoreModule["LATENCY_WINDOW_MS"];
+
+// The shared setup file can load MetricsStore (through the service graph) before this
+// file's vi.mock("perf_hooks") is registered, so evaluate a fresh copy after the mock.
+beforeAll(async () => {
+    vi.resetModules();
+    ({ MetricsStore, calcPercentile, linRegSlope, GC_KIND, LATENCY_WINDOW_MS } = await import(
+        "../../../../src/middleware/metrics/MetricsStore"
+    ));
+});
 
 const observers = vi.hoisted(() => ({ callbacks: [] as Array<(list: { getEntries(): unknown[] }) => void>, throwOnObserve: false }));
 vi.mock("perf_hooks", async (orig) => {

@@ -518,15 +518,18 @@ class AuditLogFileModel {
 
             for (const dir of dayDirs) {
                 try {
-                    // Count records before deleting so we can report rowsAffected
+                    // Count the day's records first, but only report them once the
+                    // directory is actually gone: a failed rm deletes nothing.
+                    let dayCount = 0;
                     const files = await _listAuditFiles(dir);
                     for (const file of files) {
                         const lines = await _readJsonLines(file);
-                        totalDeleted += lines.length;
+                        dayCount += lines.length;
                     }
                     await fs.rm(dir, { recursive: true, force: true });
+                    totalDeleted += dayCount;
                 } catch {
-                    // Directory may not exist — skip silently
+                    // Directory missing or not removable — nothing deleted for this day
                 }
             }
 

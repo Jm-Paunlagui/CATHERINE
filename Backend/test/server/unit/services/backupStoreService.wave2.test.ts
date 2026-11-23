@@ -1,5 +1,4 @@
 import { promises as fsp } from "fs";
-import { createRequire } from "module";
 import os from "os";
 import path from "path";
 import JSZip from "jszip";
@@ -9,7 +8,6 @@ import { logger } from "../../../../src/utils/logger";
 import { writeArchive } from "../../helpers/backupFixtures";
 
 const BS = BackupStoreService;
-const nativeRequire = createRequire(import.meta.url);
 let dir: string;
 const ENV_KEYS = ["DB_BACKUP_DIR", "DB_BACKUP_FULL_EVERY", "DEMO_MODE", "DB_BACKUP_IDLE_TIMEOUT_MS"];
 const savedEnv: Record<string, string | undefined> = {};
@@ -125,8 +123,8 @@ describe("BackupStoreService wave2: listing with pending delete votes", () => {
         process.env.DEMO_MODE = "true";
         await writeArchive(dir, { archiveId: "VOTED", createdAt: "2026-02-01T00:00:00Z", tables: {} });
         await writeArchive(dir, { archiveId: "PLAIN", createdAt: "2026-01-01T00:00:00Z", tables: {} });
-        // src reaches the model through its own native require, so seed that same instance.
-        const Vote = nativeRequire("../../../../src/models/backup-vote.model").default;
+        // src's lazy require now resolves to this same (Vite-loaded) model instance.
+        const { default: Vote } = await import("../../../../src/models/backup-vote.model");
         await Vote.castVote("VOTED", 11, 11);
         await Vote.castVote("VOTED", 12, 11);
         try {

@@ -87,8 +87,12 @@ const DEFAULT_SWEEP_CAP = 200_000;
 const DEFAULT_SWEEP_BATCH = 5_000;
 
 class IntegrityModel {
-    /** The frozen registry (catalog source of truth). */
-    static REGISTRY = TABLE_REGISTRY;
+    /**
+     * The frozen registry (catalog source of truth). Every method reads the
+     * allow-list through this property (never the module const directly) so a
+     * test can install a registry; nothing in src reassigns it.
+     */
+    static REGISTRY: Readonly<Record<string, TableConfig>> = TABLE_REGISTRY;
     declare static TABLE_REGISTRY: typeof TABLE_REGISTRY;
 
     /**
@@ -98,8 +102,8 @@ class IntegrityModel {
      * @returns {TableConfig|null}
      */
     static getTableConfig(key: string): TableConfig | null {
-        return Object.prototype.hasOwnProperty.call(TABLE_REGISTRY, key)
-            ? TABLE_REGISTRY[key]
+        return Object.prototype.hasOwnProperty.call(IntegrityModel.REGISTRY, key)
+            ? IntegrityModel.REGISTRY[key]
             : null;
     }
 
@@ -108,7 +112,7 @@ class IntegrityModel {
      * @returns {Array<{ key:string, label:string, pk:string, filters:string[], live:boolean }>}
      */
     static listTables(): Array<{ key: string; label: string; pk: string; filters: string[]; live: boolean; }> {
-        return Object.values(TABLE_REGISTRY).map((c) => ({
+        return Object.values(IntegrityModel.REGISTRY).map((c) => ({
             key: c.key,
             label: c.label,
             pk: c.pk,
@@ -129,7 +133,7 @@ class IntegrityModel {
      * @returns {Promise<Object<string, Array<{ value:string, label:string }>>>}
      */
     static async getFilterOptions(key: string): Promise<{ [s: string]: Array<{ value: string; label: string; }>; }> {
-        const cfg = TABLE_REGISTRY[key];
+        const cfg = IntegrityModel.REGISTRY[key];
         if (!cfg || !cfg.enums) return {};
 
         const entries = await Promise.all(
@@ -215,7 +219,7 @@ class IntegrityModel {
      * @returns {Promise<{ tampered: object[], rowsScanned: number, truncated: boolean }>}
      */
     static async sweepTampered(key: string, filters: Record<string, unknown> = {}, opts: { batch?: number; cap?: number; } = {}): Promise<{ tampered: Record<string, unknown>[]; rowsScanned: number; truncated: boolean; }> {
-        const cfg = TABLE_REGISTRY[key];
+        const cfg = IntegrityModel.REGISTRY[key];
         if (!cfg) return { tampered: [], rowsScanned: 0, truncated: false };
 
         const batch = Math.max(1, Number(opts.batch) || DEFAULT_SWEEP_BATCH);
@@ -270,7 +274,7 @@ class IntegrityModel {
      * @returns {Promise<{ rows: object[], total: number }>}
      */
     static async listPage(key: string, filters: Record<string, unknown> = {}, opts: { page?: number; limit?: number; } = {}): Promise<{ rows: Record<string, unknown>[]; total: number; }> {
-        const cfg = TABLE_REGISTRY[key];
+        const cfg = IntegrityModel.REGISTRY[key];
         if (!cfg) return { rows: [], total: 0 };
 
         const page = Math.max(1, Number(opts.page) || 1);
@@ -301,7 +305,7 @@ class IntegrityModel {
      * @returns {Promise<number|null>}
      */
     static async getMaxPk(key: string, filters: Record<string, unknown> = {}): Promise<number | null> {
-        const cfg = TABLE_REGISTRY[key];
+        const cfg = IntegrityModel.REGISTRY[key];
         if (!cfg) return null;
         const match = IntegrityModel._buildMatch(cfg, filters);
         const row = await _col(cfg.table)
@@ -323,7 +327,7 @@ class IntegrityModel {
      * @returns {Promise<object[]>}
      */
     static async listSince(key: string, filters: Record<string, unknown> = {}, afterPk: number, cap: number = 500): Promise<Record<string, unknown>[]> {
-        const cfg = TABLE_REGISTRY[key];
+        const cfg = IntegrityModel.REGISTRY[key];
         if (!cfg || afterPk == null) return [];
         const match = {
             ...IntegrityModel._buildMatch(cfg, filters),
