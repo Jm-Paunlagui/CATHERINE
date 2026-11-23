@@ -36,6 +36,7 @@ export default defineConfig({
         // Vitest setupFiles run in the test file's context (same process/fork) so
         // process.env mutations land before any module is required by the test.
         setupFiles: [
+            "./test/server/setupEnv.ts", // env first: imports nothing from src
             "./test/server/setup.ts",
         ],
         coverage: {

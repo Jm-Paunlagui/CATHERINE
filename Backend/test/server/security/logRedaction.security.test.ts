@@ -10,6 +10,7 @@ import { normalizeCellValue } from "../../../src/utils/excelCell";
 let dir: string;
 let baseDir: string;
 let consoleOutput: boolean;
+let level: string;
 const files = () => {
     const out: string[] = [];
     const walk = (d: string) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else out.push(fs.readFileSync(p, "utf8")); } };
@@ -21,12 +22,16 @@ beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "logsec-"));
     baseDir = Logger.CONFIG.LOG_BASE_DIR;
     consoleOutput = Logger.CONFIG.CONSOLE_OUTPUT;
+    level = Logger.CONFIG.CURRENT_LEVEL;
     Logger.CONFIG.LOG_BASE_DIR = dir;
     Logger.CONFIG.CONSOLE_OUTPUT = false;
+    // Assertions read INFO lines: pin the level instead of inheriting the run's LOG_LEVEL.
+    Logger.CONFIG.CURRENT_LEVEL = "INFO";
 });
 afterEach(() => {
     Logger.CONFIG.LOG_BASE_DIR = baseDir;
     Logger.CONFIG.CONSOLE_OUTPUT = consoleOutput;
+    Logger.CONFIG.CURRENT_LEVEL = level;
     fs.rmSync(dir, { recursive: true, force: true });
 });
 

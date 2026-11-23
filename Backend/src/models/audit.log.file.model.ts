@@ -216,17 +216,39 @@ function _extractDateRange(filter: Record<string, any>): { fromDate: Date | null
  * @returns {Promise<string[]>} Absolute paths to day directories.
  */
 async function _resolveDayDirectories(fromDate: Date, toDate: Date): Promise<string[]> {
+    // Walk calendar days in CONFIG.DATE_OPTIONS.timeZone (the zone the logger
+    // names its folders in), never in the process zone: with local-time
+    // setHours/setDate a host whose TZ differs from it resolves the wrong days.
     const dirs: string[] = [];
-    const cursor = new Date(fromDate);
-    cursor.setHours(0, 0, 0, 0);
-    const end = new Date(toDate);
-    end.setHours(23, 59, 59, 999);
+    const cursor = _zoneDayAsUtc(fromDate);
+    const end = _zoneDayAsUtc(toDate);
 
     while (cursor <= end) {
-        dirs.push(_dayDirPath(cursor));
-        cursor.setDate(cursor.getDate() + 1);
+        dirs.push(path.join(
+            CONFIG.BASE_DIR,
+            String(cursor.getUTCFullYear()),
+            String(cursor.getUTCMonth() + 1).padStart(2, "0"),
+            String(cursor.getUTCDate()).padStart(2, "0"),
+        ));
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
     return dirs;
+}
+
+/**
+ * The calendar day `date` falls on in the configured zone, as a UTC-midnight
+ * Date, so days can be stepped with UTC arithmetic free of DST and host TZ.
+ *
+ * @param {Date} date
+ * @returns {Date}
+ */
+function _zoneDayAsUtc(date: Date): Date {
+    const parts = Object.fromEntries(
+        new Intl.DateTimeFormat("en-CA", CONFIG.DATE_OPTIONS)
+            .formatToParts(date)
+            .map(({ type, value }) => [type, value]),
+    );
+    return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
 }
 
 /**
@@ -382,23 +404,13 @@ function _matchesFilter(record: Record<string, any>, filter: Record<string, any>
 async function _readAndFilter(filter: Record<string, unknown>): Promise<Record<string, any>[]> {
     let { fromDate, toDate } = _extractDateRange(filter);
 
-    // Default to today when no date range is specified
+    // Default a missing bound to today. Only the bound's calendar day (in the
+    // configured zone) is used to pick directories; record filtering reads the
+    // filter's own CREATED_AT condition, so "now" stands for "today" here.
     if (!fromDate || !toDate) {
         const now = new Date();
-        fromDate =
-            fromDate ||
-            new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        toDate =
-            toDate ||
-            new Date(
-                now.getFullYear(),
-                now.getMonth(),
-                now.getDate(),
-                23,
-                59,
-                59,
-                999,
-            );
+        fromDate = fromDate || now;
+        toDate = toDate || now;
     }
 
     const dayDirs = await _resolveDayDirectories(fromDate, toDate);

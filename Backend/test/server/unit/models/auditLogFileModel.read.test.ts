@@ -120,6 +120,21 @@ describe("AuditLogFileModel read paths", function () {
             expect((await f({ CREATED_AT: new Date("2030-01-01T00:00:00Z") })).length).toBe(0);
         });
 
+        it("resolves day directories in Manila time whatever the host time zone", async function () {
+            const saved = process.env.TZ;
+            try {
+                for (const tz of ["America/New_York", "UTC", "Pacific/Kiritimati", "Asia/Manila"]) {
+                    process.env.TZ = tz;
+                    const out = await AuditLogFileModel.findPaginated(
+                        { CREATED_AT: { $gte: new Date("2026-03-05T02:30:00Z"), $lte: new Date("2026-03-05T04:00:00Z") } }, 1, 10,
+                    );
+                    expect(out.map((r) => r.REQUEST_ID), tz).toEqual(["new"]);
+                }
+            } finally {
+                if (saved === undefined) delete process.env.TZ; else process.env.TZ = saved;
+            }
+        });
+
         it("compares range bounds given as Dates against Date or garbage record values", async function () {
             files.set(path.join(dayDir(FROM), "audit_2.log"), { content: jsonl(row({ REQUEST_ID: "bad-ts", CREATED_AT: "garbage" })) });
             const out = await AuditLogFileModel.findPaginated({ CREATED_AT: { $gte: FROM, $lte: TO } }, 1, 20);
@@ -202,8 +217,12 @@ describe("AuditLogFileModel read paths", function () {
         it("keeps going when one day fails", async function () {
             files.set(path.join(dayDir(FROM), "audit.log"), { content: jsonl(row()) });
             const rm = vi.spyOn(fs, "rm").mockRejectedValue(new Error("EBUSY"));
-            await expect(AuditLogFileModel.deleteMany(range)).resolves.toBeTypeOf("object");
-            expect(rm).toHaveBeenCalledTimes(1);
+            // range spans two Manila days (03-05 08:00 → 03-06 07:00): the first rm
+            // rejecting must not stop the second, and a failed rm counts nothing.
+            await expect(AuditLogFileModel.deleteMany(range)).resolves.toEqual({ rowsAffected: 0 });
+            expect(rm).toHaveBeenCalledTimes(2);
+            expect(rm).toHaveBeenNthCalledWith(1, dayDir(FROM), { recursive: true, force: true });
+            expect(rm).toHaveBeenNthCalledWith(2, dayDir(TO), { recursive: true, force: true });
         });
 
         it("warns and returns zero on an unexpected failure", async function () {

@@ -7,6 +7,7 @@ import { requestContext } from "../../../../src/utils/requestContext";
 let dir: string;
 let baseDir: string;
 let consoleOutput: boolean;
+let level: string;
 let stack = "";
 
 const read = () => {
@@ -29,14 +30,18 @@ beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "logger-callsite-"));
     baseDir = Logger.CONFIG.LOG_BASE_DIR;
     consoleOutput = Logger.CONFIG.CONSOLE_OUTPUT;
+    level = Logger.CONFIG.CURRENT_LEVEL;
     Logger.CONFIG.LOG_BASE_DIR = dir;
     Logger.CONFIG.CONSOLE_OUTPUT = false;
+    // Assertions read INFO lines: pin the level instead of inheriting the run's LOG_LEVEL.
+    Logger.CONFIG.CURRENT_LEVEL = "INFO";
 });
 afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     Logger.CONFIG.LOG_BASE_DIR = baseDir;
     Logger.CONFIG.CONSOLE_OUTPUT = consoleOutput;
+    Logger.CONFIG.CURRENT_LEVEL = level;
     fs.rmSync(dir, { recursive: true, force: true });
 });
 
