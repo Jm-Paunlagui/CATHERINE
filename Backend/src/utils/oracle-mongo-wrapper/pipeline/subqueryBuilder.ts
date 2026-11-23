@@ -55,7 +55,7 @@ function buildScalarSubquery(spec: { collection: string; fn?: string; filter?: R
   const fnUpper = (fn || "count").toUpperCase();
 
   // Build WHERE clause, replacing $-refs with outer alias
-  const whereParts = [];
+  const whereParts: string[] = [];
   for (const [col, val] of Object.entries(filter)) {
     if (typeof val === "string" && val.startsWith("$")) {
       const outerCol = val.substring(1);
@@ -103,7 +103,7 @@ function buildScalarSubquery(spec: { collection: string; fn?: string; filter?: R
  */
 function buildExistsSubquery(spec: { collection: string; match: Record<string, unknown>; }, outerAlias: string = "t0"): string {
   const { collection, match } = spec;
-  const whereParts = [];
+  const whereParts: string[] = [];
   for (const [col, val] of Object.entries(match)) {
     if (typeof val === "string" && val.startsWith("$")) {
       const outerCol = val.substring(1);
@@ -147,7 +147,7 @@ function buildCorrelatedSubquery(spec: { collection: string; field: string; aggr
   const aggFn = (aggregate || "$avg").replace("$", "").toUpperCase();
   const aggExpr = `${aggFn}(${quoteIdentifier(field as string)})`;
 
-  const whereParts = [];
+  const whereParts: string[] = [];
   for (const [col, val] of Object.entries(where)) {
     if (typeof val === "string" && val.startsWith("$outer.")) {
       const outerCol = val.replace("$outer.", "");

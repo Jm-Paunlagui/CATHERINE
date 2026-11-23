@@ -506,7 +506,7 @@ class AuditLogController {
     // provided. Validated against the same known-level-name set the browse
     // endpoint uses (AuditLogService.SYSTEM_LOG_LEVEL_NAMES) so the two
     // paths never disagree on what a valid level is.
-    let level = null;
+    let level: string | null = null;
     if (req.query.level != null && req.query.level !== '') {
       const normalizedLevel = (AuditLogService.SYSTEM_LOG_LEVEL_NAMES as Record<string, string>)[String(req.query.level).toLowerCase()];
       if (!normalizedLevel) {

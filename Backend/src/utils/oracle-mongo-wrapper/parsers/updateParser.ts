@@ -116,7 +116,7 @@ function parseUpdate(update: Record<string, any>): { setClause: string; binds: R
   }
 
   const counter = _createCounter();
-  const parts = [];
+  const parts: string[] = [];
   const binds: Record<string, unknown> = {};
   let hasOp = false;
 

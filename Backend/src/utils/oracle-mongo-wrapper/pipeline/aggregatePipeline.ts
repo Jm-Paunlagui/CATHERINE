@@ -114,11 +114,11 @@ function _createCounter(): Counter {
  */
 function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<string, unknown>): { sql: string; binds: Record<string, unknown>; } {
   const counter = _createCounter();
-  const ctes = [];
+  const ctes: Array<{ alias: string; sql: string; isMerge?: boolean }> = [];
   const allBinds: Record<string, unknown> = {};
   let prevSource = quoteIdentifier(tableName);
   let stageIdx = 0;
-  let outTable = null;
+  let outTable: string | null = null;
 
   // Pre-scan for $having — attach to preceding $group
   for (let i = 0; i < pipeline.length; i++) {
@@ -271,7 +271,7 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
 
       case "$facet": {
         // Each facet pipeline is a separate CTE, union all at end
-        const facetCtes = [];
+        const facetCtes: string[] = [];
         for (const [facetName, facetPipeline] of Object.entries(stage.$facet as Record<string, unknown[]>)) {
           const { sql } = buildAggregateSQL(
             prevSource.replace(/"/g, ""),
@@ -377,8 +377,8 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
  */
 function _buildGroup(group: Record<string, DslSpec>, source: string, having: Record<string, DslSpec>, counter: Counter): { sql: string; binds: Record<string, unknown>; } {
   const binds: Record<string, unknown> = {};
-  const selectParts = [];
-  const groupByParts = [];
+  const selectParts: string[] = [];
+  const groupByParts: string[] = [];
 
   // _id defines the GROUP BY columns
   const idSpec = group._id;
@@ -445,7 +445,7 @@ function _buildGroup(group: Record<string, DslSpec>, source: string, having: Rec
 
   // HAVING
   if (having) {
-    const havingParts = [];
+    const havingParts: string[] = [];
     for (const [col, cond] of Object.entries(having)) {
       // Use the aggregate expression instead of the alias
       const aggExpr = aliasToExpr[col] || quoteIdentifier(col.toUpperCase());
@@ -673,7 +673,7 @@ function _buildSortString(sortSpec: Record<string, unknown>) {
  *   - { alias: { $sum: .. }} → computed expression with alias
  */
 function _buildProjectCols(project: Record<string, DslSpec>, counter: Counter) {
-  const parts = [];
+  const parts: string[] = [];
   const binds: Record<string, unknown> = {};
   for (const [col, spec] of Object.entries(project)) {
     if (spec === 1 || spec === true) {
@@ -696,7 +696,7 @@ function _buildProjectCols(project: Record<string, DslSpec>, counter: Counter) {
  */
 function _buildAddFieldsCols(addFields: Record<string, DslSpec>, counter: Counter) {
   const binds: Record<string, unknown> = {};
-  const parts = [];
+  const parts: string[] = [];
   for (const [alias, spec] of Object.entries(addFields)) {
     if (typeof spec === "object") {
       const expr = _buildAggExpr(spec as Record<string, unknown>, binds, counter);
@@ -763,7 +763,7 @@ function _buildBucket(bucket: DslSpec, source: unknown, counter: Counter) {
   const binds: Record<string, unknown> = {};
   const { groupBy, boundaries, default: defaultBucket, output } = bucket;
   const col = groupBy.startsWith("$") ? groupBy.substring(1) : groupBy;
-  const cases = [];
+  const cases: string[] = [];
 
   // Determine if boundaries are numeric — if so, use TO_CHAR for THEN labels
   // so that the default bucket string doesn't cause ORA-00932 (inconsistent datatypes).

@@ -79,7 +79,7 @@ function isIntInRange(v: unknown, min: number, max: number): v is number {
  * @param {*} v
  * @returns {boolean} a textual IP (v4/v6 charset, <= 64 chars) or the literal "unknown"
  */
-function isIp(v: unknown): boolean {
+function isIp(v: unknown): v is string {
     return typeof v === "string" && v.length >= 1 && v.length <= L.IP_MAX && (v === "unknown" || IP_RE.test(v));
 }
 
@@ -136,7 +136,7 @@ function lockoutKeyArgs(a: Record<string, unknown>): { ok: true; value: { key: s
  */
 function revokedEntries(list: unknown, max: number, now: number): { ok: true; value: { fid: string; untilMs: number; }[]; } | { ok: false; reason: string; } {
     if (!Array.isArray(list) || list.length === 0 || list.length > max) return bad("bad-entries");
-    const out = [];
+    const out: { fid: string; untilMs: number; }[] = [];
     for (const e of list) {
         if (!isPlainObject(e) || typeof e.fid !== "string" || !FAMILY_ID_RE.test(e.fid)) return bad("bad-fid");
         if (!isFiniteInRange(e.untilMs, now - 1000, now + AR.MAX_TTL_MS)) return bad("bad-until");
@@ -337,7 +337,7 @@ function validateTopic(topic: string, payload: unknown, now: number = Date.now()
             return isIp(payload.ip) ? ok({ ip: payload.ip }) : bad("bad-ip");
         case CLUSTER_TOPICS.SF_SYNC: {
             if (!Array.isArray(payload.blocks) || payload.blocks.length > L.SF_SYNC_MAX_ENTRIES) return bad("bad-blocks");
-            const blocks = [];
+            const blocks: Array<{ ip: string; blockedUntil: number }> = [];
             for (const b of payload.blocks) {
                 if (!isPlainObject(b) || !isIp(b.ip)) return bad("bad-block");
                 if (!isFiniteInRange(b.blockedUntil, now - 1000, now + L.SF_BLOCK_MAX_AHEAD_MS)) return bad("bad-block");
@@ -351,7 +351,7 @@ function validateTopic(topic: string, payload: unknown, now: number = Date.now()
         }
         case CLUSTER_TOPICS.SCHED_SYNC: {
             if (!isPlainObject(payload.state)) return bad("bad-state");
-            const entries = [];
+            const entries: unknown[] = [];
             for (const job of KNOWN_JOBS) {
                 const e = payload.state[job];
                 if (e === null || e === undefined) continue;

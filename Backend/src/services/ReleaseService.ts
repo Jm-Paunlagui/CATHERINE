@@ -197,11 +197,11 @@ class ReleaseService {
         const core = coreStr(top);
         const stage = top.stage;
 
-        let nextActions = [];
-        let content = null;
-        let promote = null;
-        let cut = null;
-        let open = null;
+        let nextActions: string[] = [];
+        let content: ReturnType<typeof draft> | null = null;
+        let promote: ReturnType<typeof draft> | null = null;
+        let cut: ReturnType<typeof draft> | null = null;
+        let open: ReturnType<typeof ReleaseService._openDrafts> | null = null;
 
         if (stage === "stable") {
             // Cycle closed — open the next one (content must wait for that).

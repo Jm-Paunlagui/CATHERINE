@@ -168,7 +168,7 @@ class LoginLockoutPolicy {
         const currentMax = next.currentMax;
 
         let engaged = false;
-        let lockDurationMs = null;
+        let lockDurationMs: number | null = null;
         if (next.failCount >= next.currentMax) {
             next.cycles += 1;
             lockDurationMs =

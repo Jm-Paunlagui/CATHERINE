@@ -797,7 +797,7 @@ PATCH /api/v1/auth/change-password  authenticatePendingPasswordChange + changePa
 
 **There is no `/auth/register`.** Self-registration is deliberately absent: accounts
 are provisioned through the admin-management router, and
-`test/server/integration/auth/register.test.js` locks that in — it asserts the route
+`test/server/integration/auth/register.test.ts` locks that in — it asserts the route
 returns 404 *intentionally*. Do not add one back without deciding who is allowed to
 create accounts: that is an access-control decision, not a missing CRUD endpoint.
 
@@ -1196,13 +1196,26 @@ OPTISv2 backend at `D:\Web\OPTISv2\OPITS-BE` used as reference for advanced patt
 
 ---
 
+## Testing standard
+
+The backend suite is a **6-category matrix**: unit, integration, performance, chaos, security, reliability.
+
+- New or changed behaviour is tested in **every category that applies** to it, not only unit.
+- Tests must reach the coverage required for the system's architecture and runtime, as modelled in `src/constants/architectureModel.ts` and `src/constants/runtimeModel.ts` (validated by `src/utils/systemMap.ts`). Adding a node, flow or route to a model means adding its tests.
+- The coverage gate is `coverage.thresholds` in `vitest.config.mts` (branches 85, lines 80, functions 85, statements 80). Never lower it.
+- Current state (2026-11-23, `bun run test:coverage`): 4829 tests in 259 files pass and the gate **passes** on all four metrics (statements 88.85%, branches 89.67%, functions 88.15%, lines 89.22%). `vitest.requireToImport.mts` routes tests' relative `require()` through Vite so those modules are instrumented; ten older test files opt out (`NATIVE_REQUIRE_ONLY`) because src lazy-`require`s the same modules. Keep new work above the thresholds.
+- Chaos tests live in `test/server/chaos/` as `*.chaos.test.ts` (`bun run test:chaos`).
+- Per-category counts, the architecture/runtime coverage map and the prioritised gaps are in `plans/test-coverage-gap-report.md`.
+
+---
+
 ## Test Directory Structure
 
-Baseline at the 2026-10-28 re-sync (user-reported, not re-run here): **77 test files / 1254 tests** green; lint clean; build OK. The tree below is the core layout — list the folder for the full set (it also has `test/unit/` for money/FX/idempotency, `test/encryption/`, `integration/{admin-management,audit-log,client,metrics,health}/`, `security/admin-management-auth.test.js` and `auth/change-password.test.js`).
+Baseline at the 2026-10-28 re-sync (user-reported, not re-run here): **77 test files / 1254 tests** green; lint clean; build OK. The tree below is the core layout — list the folder for the full set (it also has `test/unit/` for money/FX/idempotency, `test/encryption/`, `integration/{admin-management,audit-log,client,metrics,health}/`, `security/admin-management-auth.test.ts` and `auth/change-password.test.ts`).
 
 ```
 test/server/
-├── setup.js                        # Global test setup: env loading, DB teardown helpers
+├── setup.ts                        # Global test setup: env loading, DB teardown helpers
 ├── helpers/
 │   ├── request.js                  # Supertest app factory (creates a fresh app per suite)
 │   ├── auth.js                     # JWT token factory (sign tokens for any permission level)
@@ -1213,48 +1226,48 @@ test/server/
 │
 ├── unit/                           # Pure function / class tests — no DB, no HTTP
 │   ├── middleware/
-│   │   ├── rateLimiter.test.js
-│   │   ├── ipFilter.test.js
-│   │   ├── cors.test.js
-│   │   ├── csrf.test.js
-│   │   ├── securityFilter.test.js
-│   │   └── securityFilter.bodyless.test.js   # GET/HEAD body guard (CVE-2026-123864)
+│   │   ├── rateLimiter.test.ts
+│   │   ├── ipFilter.test.ts
+│   │   ├── cors.test.ts
+│   │   ├── csrf.test.ts
+│   │   ├── securityFilter.test.ts
+│   │   └── securityFilter.bodyless.test.ts   # GET/HEAD body guard (CVE-2026-123864)
 │   ├── utils/
-│   │   ├── catchAsync.test.js
-│   │   ├── logger.test.js
-│   │   └── cacheKeyBuilder.test.js
+│   │   ├── catchAsync.test.ts
+│   │   ├── logger.test.ts
+│   │   └── cacheKeyBuilder.test.ts
 │   └── constants/
-│       ├── filterParser.test.js
-│       └── updateParser.test.js
+│       ├── filterParser.test.ts
+│       └── updateParser.test.ts
 │
 ├── integration/                    # HTTP-level tests against a real Express app instance
 │   ├── auth/
-│   │   ├── login.test.js
-│   │   ├── register.test.js
-│   │   ├── refresh.test.js
-│   │   └── logout.test.js
-│   ├── health.test.js
-│   ├── csrf.test.js
-│   └── error-handling.test.js
+│   │   ├── login.test.ts
+│   │   ├── register.test.ts
+│   │   ├── refresh.test.ts
+│   │   └── logout.test.ts
+│   ├── health.test.ts
+│   ├── csrf.test.ts
+│   └── error-handling.test.ts
 │
 ├── security/                       # Adversarial tests — what should be rejected
-│   ├── injection.test.js           # SQLi, path traversal, XSS payloads
-│   ├── auth-bypass.test.js         # Missing / forged / expired tokens
-│   ├── rate-limit.test.js          # Flood attack simulation
-│   ├── cors.test.js                # Disallowed origins
-│   ├── csrf.test.js                # Missing / replayed tokens
-│   ├── headers.test.js             # Helmet header presence and values
-│   └── securityFilter.bodylessMethods.security.test.js  # raw-socket GET/HEAD-with-body refusal (CVE-2026-123864)
+│   ├── injection.test.ts           # SQLi, path traversal, XSS payloads
+│   ├── auth-bypass.test.ts         # Missing / forged / expired tokens
+│   ├── rate-limit.test.ts          # Flood attack simulation
+│   ├── cors.test.ts                # Disallowed origins
+│   ├── csrf.test.ts                # Missing / replayed tokens
+│   ├── headers.test.ts             # Helmet header presence and values
+│   └── securityFilter.bodylessMethods.security.test.ts  # raw-socket GET/HEAD-with-body refusal (CVE-2026-123864)
 │
 ├── performance/                    # Timing and throughput assertions
-│   ├── response-time.test.js       # P95 latency under normal load
-│   ├── concurrent.test.js          # Parallel request correctness
-│   └── pool.test.js                # DB pool exhaustion and recovery
+│   ├── response-time.test.ts       # P95 latency under normal load
+│   ├── concurrent.test.ts          # Parallel request correctness
+│   └── pool.test.ts                # DB pool exhaustion and recovery
 │
 └── reliability/                    # Fault-tolerance and recovery tests
-    ├── graceful-shutdown.test.js
-    ├── db-reconnect.test.js
-    └── unhandled-errors.test.js
+    ├── graceful-shutdown.test.ts
+    ├── db-reconnect.test.ts
+    └── unhandled-errors.test.ts
 ```
 
 ---
@@ -1282,9 +1295,9 @@ The runner is configured by `vitest.config.mts` at the Backend root:
 
 - `pool: "forks"`, `fileParallelism: false` — each test file runs in its own child
   process, sequentially, because the suite mutates shared in-memory middleware state.
-- `setupFiles: ["./test/server/setup.js"]` — sets `process.env.*` and stubs
+- `setupFiles: ["./test/server/setup.ts"]` — sets `process.env.*` and stubs
   `AuditLogService.insertAsync` before any module loads (see Test Setup below).
-- `include: ["test/**/*.test.js"]`; excludes `test/encryption/cryptosuite.test.js`
+- `include: ["test/**/*.test.js"]`; excludes `test/encryption/cryptosuite.test.ts`
   (custom async runner) and `test/oracle-mongo-wrapper/**` (standalone real-DB scripts
   with their own `package.json`).
 - Coverage thresholds: branches 85, lines 80, functions 85, statements 80.
@@ -1339,7 +1352,7 @@ The `package.json` scripts:
 
 ## Test Setup
 
-`test/server/setup.js` (registered as a `setupFile`) runs before every test file:
+`test/server/setup.ts` (registered as a `setupFile`) runs before every test file:
 
 - Sets `process.env.*` (NODE_ENV=test, JWT/CSRF/COOKIE secrets, disabled IP filter
   and clustering, unlimited rate limit, fake Oracle DSN). `dotenv.config()` never
@@ -1369,7 +1382,7 @@ Unit tests verify individual classes and pure functions in complete isolation. N
 ### Example — RateLimiterMiddleware
 
 ```js
-// test/unit/middleware/rateLimiter.test.js
+// test/unit/middleware/rateLimiter.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -1521,7 +1534,7 @@ describe("RateLimiterMiddleware", function () {
 ### Example — IpFilterMiddleware
 
 ```js
-// test/unit/middleware/ipFilter.test.js
+// test/unit/middleware/ipFilter.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -1615,7 +1628,7 @@ describe("IpFilterMiddleware", function () {
 ### Example — CacheKeyBuilder
 
 ```js
-// test/unit/utils/cacheKeyBuilder.test.js
+// test/unit/utils/cacheKeyBuilder.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -1734,7 +1747,7 @@ every hand-rolled test token must spread them.
 ### Example — Health Route
 
 ```js
-// test/integration/health.test.js
+// test/integration/health.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -1773,7 +1786,7 @@ describe("GET /api/v1/health", function () {
 ### Example — 404 and Error Shape
 
 ```js
-// test/integration/error-handling.test.js
+// test/integration/error-handling.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -1823,7 +1836,7 @@ Security tests are adversarial. Prove server correctly **rejects** dangerous or 
 ### 3.1 Authentication & Authorization
 
 ```js
-// test/security/auth-bypass.test.js
+// test/security/auth-bypass.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -1913,7 +1926,7 @@ describe("Auth Security", function () {
 ### 3.2 HTTP Headers (Helmet)
 
 ```js
-// test/security/headers.test.js
+// test/security/headers.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -1964,7 +1977,7 @@ describe("Security Headers (Helmet)", function () {
 ### 3.3 Injection Attacks
 
 ```js
-// test/security/injection.test.js
+// test/security/injection.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -2046,7 +2059,7 @@ describe("Injection Attack Mitigation", function () {
 ### 3.4 CSRF Protection
 
 ```js
-// test/security/csrf.test.js
+// test/security/csrf.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -2115,7 +2128,7 @@ describe("CSRF Protection", function () {
 ### 3.5 Rate Limiting (Flood Attack)
 
 ```js
-// test/security/rate-limit.test.js
+// test/security/rate-limit.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -2159,7 +2172,7 @@ describe("Rate Limiting", function () {
 ### 3.6 CORS
 
 ```js
-// test/security/cors.test.js
+// test/security/cors.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -2215,7 +2228,7 @@ describe("CORS Policy", function () {
 ### 3.7 Scanner / Path Traversal Blocking
 
 ```js
-// test/security/scanner-blocking.test.js
+// test/security/scanner-blocking.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -2271,7 +2284,7 @@ Performance tests assert timing guarantees. Not load-testing tools (k6, wrk) —
 - Cold DB pool = unfair benchmark — warm pool in `before()`.
 
 ```js
-// test/performance/response-time.test.js
+// test/performance/response-time.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -2320,7 +2333,7 @@ describe("Response Time Budgets", function () {
 ```
 
 ```js
-// test/performance/concurrent.test.js
+// test/performance/concurrent.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)
@@ -2365,7 +2378,7 @@ describe("Concurrent Request Correctness", function () {
 Reliability tests verify graceful degradation, recovery from transient failures, correct process lifecycle behavior.
 
 ```js
-// test/reliability/unhandled-errors.test.js
+// test/reliability/unhandled-errors.test.ts
 "use strict";
 
 // `expect`, `describe`, `it`, `vi`, hooks → injected globally by Vitest (globals: true)

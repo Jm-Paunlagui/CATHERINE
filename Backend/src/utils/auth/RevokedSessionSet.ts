@@ -98,7 +98,7 @@ class RevokedSessionSet {
      * @returns {{fid: string, untilMs: number}[]}
      */
     snapshot(nowMs: number = this.#now(), limit: number = Infinity): { fid: string; untilMs: number; }[] {
-        const out = [];
+        const out: { fid: string; untilMs: number; }[] = [];
         for (const [fid, untilMs] of this.#entries) {
             if (untilMs > nowMs) out.push({ fid, untilMs });
         }
@@ -124,7 +124,7 @@ class RevokedSessionSet {
             }
         }
         if (this.#entries.size < this.#maxEntries) return false;
-        let soonestFid = null;
+        let soonestFid: string | null = null;
         let soonest = Infinity;
         for (const [fid, until] of this.#entries) {
             if (until < soonest) {

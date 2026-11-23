@@ -128,7 +128,7 @@ class ProgressScope {
      * @returns {() => void} release (idempotent)
      */
     markBusy(): () => void {
-        const key = {};
+        const key: object = {};
         this._busy.set(key, this._now());
         const releaseParent = this._parent ? this._parent.markBusy() : null;
         return () => {
@@ -142,7 +142,7 @@ class ProgressScope {
      * @returns {number|null} epoch ms
      */
     oldestBusyAt(): number | null {
-        let oldest = null;
+        let oldest: number | null = null;
         for (const t of this._busy.values()) {
             if (oldest === null || t < oldest) oldest = t;
         }

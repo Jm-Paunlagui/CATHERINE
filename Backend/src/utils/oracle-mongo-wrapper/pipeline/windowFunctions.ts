@@ -56,7 +56,7 @@ function buildWindowExpr(spec: { fn: string; field?: string; partitionBy?: strin
   const { fn, field, partitionBy, orderBy, offset, n, frame } = spec;
 
   // Build OVER clause
-  const overParts = [];
+  const overParts: string[] = [];
   if (partitionBy) {
     const partCols = Array.isArray(partitionBy)
       ? partitionBy.map(quoteIdentifier).join(", ")

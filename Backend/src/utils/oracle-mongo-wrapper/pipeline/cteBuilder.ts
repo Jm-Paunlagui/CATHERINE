@@ -160,7 +160,7 @@ class CTEResult {
   }
 
   _buildSQL() {
-    const withParts = [];
+    const withParts: string[] = [];
     const allBinds: Record<string, unknown> = {};
 
     for (const [name, qb] of Object.entries(this._cteDefs)) {

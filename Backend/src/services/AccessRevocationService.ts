@@ -75,7 +75,7 @@ class AccessRevocationService {
      */
     static revoke(familyIds: Iterable<string>, nowMs: number = Date.now()): number {
         const untilMs = nowMs + AccessRevocationService.retentionMs();
-        const entries = [];
+        const entries: { fid: string; untilMs: number; }[] = [];
         for (const fid of new Set(Array.isArray(familyIds) ? familyIds : [])) {
             if (typeof fid !== "string" || !FAMILY_ID_RE.test(fid)) continue;
             entries.push({ fid, untilMs });

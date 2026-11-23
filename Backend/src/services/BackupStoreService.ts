@@ -1390,7 +1390,7 @@ class BackupStoreService {
 
             // Capped row parse for the summary workbook only — cheap even
             // for a huge table since parsing stops at rowCap lines.
-            const rows = [];
+            const rows: Record<string, unknown>[] = [];
             for (const line of buf.toString("utf8").split("\n")) {
                 if (rows.length >= rowCap) break;
                 const trimmed = line.trim();

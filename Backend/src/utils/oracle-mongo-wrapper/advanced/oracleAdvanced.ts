@@ -70,7 +70,7 @@ function buildConnectBy(tableName: string, spec: { startWith?: Record<string, un
   const binds: Record<string, unknown> = {};
 
   // SELECT clause
-  const selectParts = [];
+  const selectParts: string[] = [];
   if (includeLevel) selectParts.push("LEVEL");
   if (includePath) {
     selectParts.push(
@@ -90,7 +90,7 @@ function buildConnectBy(tableName: string, spec: { startWith?: Record<string, un
   // CONNECT BY
   let connectByClause = "";
   if (connectBy) {
-    const parts = [];
+    const parts: string[] = [];
     for (const [childCol, priorRef] of Object.entries(connectBy)) {
       if (typeof priorRef === "string" && priorRef.includes("$PRIOR")) {
         const parentCol = priorRef.replace("$PRIOR ", "").replace("$PRIOR", "");

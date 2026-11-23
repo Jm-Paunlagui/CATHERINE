@@ -327,7 +327,7 @@ class MetricsService {
      */
     static evaluateAlertHolds(snapshot: AlertInput | null = null): string[] {
         const snap: AlertInput = snapshot || MetricsService.getSnapshot();
-        const holds = [];
+        const holds: string[] = [];
         const win = snap.totals?.window;
         if (!win || win.serviced < ERROR_RATE_MIN_SAMPLES) {
             holds.push("HIGH_ERROR_RATE::global");
@@ -388,7 +388,7 @@ class MetricsService {
      */
     static evaluateAlerts(snapshot: AlertInput | null = null): Array<{ rule: string; severity: string; value: number; route?: string; pool?: string; }> {
         const snap: AlertInput = snapshot || MetricsService.getSnapshot();
-        const alerts = [];
+        const alerts: Array<{ rule: string; severity: string; value: number; description: string; route?: string; pool?: string }> = [];
 
         // Rule 1 — high SERVER-error rate over the last 5 minutes (5xx-only;
         // 4xx excluded). A snapshot without `totals.window` never fires it.

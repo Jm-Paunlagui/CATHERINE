@@ -744,7 +744,7 @@ async function initializePools() {
         `Initializing ${names.length} database pool(s): ${names.join(", ")}`,
     );
 
-    const results = [];
+    const results: Array<{ name: string; success: boolean; error?: string }> = [];
     for (const name of names) {
         try {
             const config = getConnectionConfig(name);
@@ -839,7 +839,7 @@ async function _acquireConnection(connectionName: string, pool: import("oracledb
 
     for (let attempt = 1; attempt <= ACQUIRE_MAX_ATTEMPTS; attempt++) {
         const pending = pool.getConnection();
-        let timer = null;
+        let timer: ReturnType<typeof setTimeout> | null = null;
 
         try {
             return await Promise.race([
@@ -1111,7 +1111,7 @@ async function withBatchConnection(connectionName: string, operations: ((...args
 
     return withConnection(connectionName, async (conn) => {
         const FATAL = new Set(["ORA-00028", "ORA-00031"]);
-        const results = [];
+        const results: Array<{ success: boolean; result?: unknown; error?: string; index: number }> = [];
         for (let i = 0; i < operations.length; i++) {
             if (typeof operations[i] !== "function") {
                 results.push({
@@ -1188,7 +1188,7 @@ async function closeAll() {
     isShuttingDown = true;
     healthMonitor.stop();
     logger.notice(oracleMessages.CLOSING_ALL_POOLS);
-    const closures = [];
+    const closures: Promise<void>[] = [];
     for (const [name, poolPromise] of poolRegistry) {
         closures.push(
             Promise.race([
