@@ -1,0 +1,7 @@
+{
+    // Editor entry point for test/. VS Code only discovers files named tsconfig.json,
+    // so without this file it opens tests in a default project that lacks Vitest's
+    // injected globals (describe/it/vi/expect) and marks them red. All settings live
+    // in ../tsconfig.test.json, which `bun run typecheck` uses.
+    "extends": "../tsconfig.test.json"
+}
