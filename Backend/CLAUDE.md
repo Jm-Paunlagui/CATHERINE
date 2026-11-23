@@ -1203,7 +1203,7 @@ The backend suite is a **6-category matrix**: unit, integration, performance, ch
 - New or changed behaviour is tested in **every category that applies** to it, not only unit.
 - Tests must reach the coverage required for the system's architecture and runtime, as modelled in `src/constants/architectureModel.ts` and `src/constants/runtimeModel.ts` (validated by `src/utils/systemMap.ts`). Adding a node, flow or route to a model means adding its tests.
 - The coverage gate is `coverage.thresholds` in `vitest.config.mts` (branches 85, lines 80, functions 85, statements 80). Never lower it.
-- Current state (2026-11-23, `bun run test:coverage`): 2015 tests pass, but the gate **fails** on all four metrics (statements 44.48%, branches 42.19%, functions 50.82%, lines 45.54%). `vitest.requireToImport.mts` routes tests' relative `require()` through Vite so those modules are instrumented. Ten test files still opt out (`NATIVE_REQUIRE_ONLY`) because src lazy-`require`s the same modules; their coverage is under-counted.
+- Current state (2026-11-23, `bun run test:coverage`): 4829 tests in 259 files pass and the gate **passes** on all four metrics (statements 88.85%, branches 89.67%, functions 88.15%, lines 89.22%). `vitest.requireToImport.mts` routes tests' relative `require()` through Vite so those modules are instrumented; ten older test files opt out (`NATIVE_REQUIRE_ONLY`) because src lazy-`require`s the same modules. Keep new work above the thresholds.
 - Chaos tests live in `test/server/chaos/` as `*.chaos.test.ts` (`bun run test:chaos`).
 - Per-category counts, the architecture/runtime coverage map and the prioritised gaps are in `plans/test-coverage-gap-report.md`.
 

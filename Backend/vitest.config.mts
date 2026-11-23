@@ -15,6 +15,11 @@ export default defineConfig({
     plugins: [requireToImport()],
     test: {
         globals: true,
+        // Console output is written straight to the fork's stdout instead of being relayed to the
+        // main process over worker RPC. With 200+ files that log heavily, the relay could still be
+        // pending when a worker closed, failing the whole run with EnvironmentTeardownError
+        // ("Closing rpc while onUserConsoleLog was pending") even though every test passed.
+        disableConsoleIntercept: true,
         environment: "node",
         include: ["test/**/*.test.ts"],
         exclude: [
