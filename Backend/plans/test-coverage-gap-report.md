@@ -16,6 +16,10 @@ architecture and runtime models (`src/constants/architectureModel.ts`, `src/cons
 > lines 45.54% (gate still FAIL). Gap 2 (shutdown teardown) tests are written but held back: they import `src/utils/shutdown/HttpInFlightTracker.ts`,
 > which fails `tsc -p tsconfig.test.json` (untyped `list = []`, `idleMs = null` at lines ~142-150) and needs a 2-line type annotation in src.
 
+> **Update 2026-11-23 (branch push):** 4054 tests in 214 files across all six categories. Statements 82.08% (PASS), lines 82.74% (PASS),
+> branches 81.69% (FAIL, gate 85), functions 79.98% (FAIL, gate 85). Remaining low files are mostly those whose spies cannot take effect because
+> src lazy-`require()`s them, plus `server.ts`-adjacent shutdown code (tests held pending a src type annotation).
+
 ## 1. Coverage vs gate
 
 Run result: 103 test files, 1613 tests, **all passed**. Coverage gate: **FAILED on all four metrics**
