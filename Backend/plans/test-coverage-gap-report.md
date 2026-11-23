@@ -10,6 +10,24 @@ architecture and runtime models (`src/constants/architectureModel.ts`, `src/cons
 > branches 34.07%, functions 43.56%, lines 38.03% (all still FAIL). Ten test files opt out via `NATIVE_REQUIRE_ONLY` (src has ~65 lazy
 > native `require()` calls, so a Vite-loaded test and src would hold different module instances). The tables below show the
 > original measurement.
+>
+> **Update 2026-11-23 (tests added):** new tests cover gaps 1 (auth/session revocation), 3 (data-purge auth, backup token), 4 (ipcSchemas, cluster RPC chaos,
+> critRelay) and 5 (request watchdog). Chaos files moved to `test/server/chaos/`. Now: 2015 tests, statements 44.48%, branches 42.19%, functions 50.82%,
+> lines 45.54% (gate still FAIL). Gap 2 (shutdown teardown) tests are written but held back: they import `src/utils/shutdown/HttpInFlightTracker.ts`,
+> which fails `tsc -p tsconfig.test.json` (untyped `list = []`, `idleMs = null` at lines ~142-150) and needs a 2-line type annotation in src.
+
+> **Update 2026-11-23 (branch push):** 4054 tests in 214 files across all six categories. Statements 82.08% (PASS), lines 82.74% (PASS),
+> branches 81.69% (FAIL, gate 85), functions 79.98% (FAIL, gate 85). Remaining low files are mostly those whose spies cannot take effect because
+> src lazy-`require()`s them, plus `server.ts`-adjacent shutdown code (tests held pending a src type annotation).
+
+> **Update 2026-11-23 (wave 2):** 4778 tests in 255 files. Statements 87.61%, branches 88.84%, functions 87.13%, lines 88.01%: the gate now **passes**
+> on all four metrics. Still open: shutdown teardown tests (36) held pending a 2-line type annotation in `src/utils/shutdown/HttpInFlightTracker.ts`;
+> EmailProtectionService tests (2 files) held for a tsc error inside that src file; `TABLE_REGISTRY` in `models/integrity.model.ts` is a frozen empty
+> object so its per-table branches are unreachable; spies on modules src lazy-`require()`s do not take effect.
+
+> **Update 2026-11-23 (held tests landed):** shutdown teardown, HttpInFlightTracker and EmailProtectionService tests added after two type-only annotation fixes in
+> `src/utils/shutdown/HttpInFlightTracker.ts` and `src/services/email/EmailProtectionService.ts`. 4829 tests in 259 files; statements 88.85%, branches 89.67%,
+> functions 88.15%, lines 89.22%.
 
 ## 1. Coverage vs gate
 

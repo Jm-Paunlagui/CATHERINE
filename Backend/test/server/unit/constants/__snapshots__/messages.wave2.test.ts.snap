@@ -1,0 +1,574 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`constants/messages templates (wave 2) > admin: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "admin.adminMessages.ADMIN_ALREADY_EXISTS": "Admin creation rejected — USERNAME: S1x already exists in T_ADMINS_DEV.",
+  "admin.adminMessages.ADMIN_CREATED": "Admin created — USERNAME: S1x, ROLE: S2x.",
+  "admin.adminMessages.ADMIN_DELETED": "Admin removed — USERNAME: S1x.",
+  "admin.adminMessages.ADMIN_DELETE_SELF_BLOCKED": "Admin delete rejected — USERNAME: S1x attempted to delete their own account.",
+  "admin.adminMessages.ADMIN_INACTIVE_LOGIN_BLOCKED": "Login blocked — admin USERNAME: S1x has IS_ACTIVE='N'.",
+  "admin.adminMessages.ADMIN_LAST_SUPER_ADMIN_BLOCKED": "Admin action rejected — ADMIN_ID: S1x is the last active SUPER_ADMIN.",
+  "admin.adminMessages.ADMIN_LIST_FETCHED": "Admin list fetched and enriched with user profile data.",
+  "admin.adminMessages.ADMIN_NOT_FOUND": "Admin operation failed — USERNAME: S1x not found in T_ADMINS_DEV.",
+  "admin.adminMessages.ADMIN_PASSWORD_RESET": "Admin password reset to a new temporary password — USERNAME: S1x.",
+  "admin.adminMessages.ADMIN_PERMISSIONS_UPDATED": "Admin permission flags updated — USERNAME: S1x, flags: "S2x".",
+  "admin.adminMessages.ADMIN_REVOKED": "Admin access revoked (deactivated, all CAN_* flags cleared, SYSSIGNATURE re-signed) — USERNAME: S1x, by USERNAME: S2x.",
+  "admin.adminMessages.ADMIN_REVOKE_BACKUP_ISSUED": "Revoke-backup archive issued — target USERNAME: S1x, issued to ADMIN_ID: S2x.",
+  "admin.adminMessages.ADMIN_REVOKE_SELF_BLOCKED": "Admin revoke rejected — USERNAME: S1x attempted to revoke their own account.",
+  "admin.adminMessages.ADMIN_REVOKE_TOKEN_REJECTED": "Admin revoke/delete rejected — USERNAME: S1x, backup token invalid: S2x.",
+  "admin.adminMessages.ADMIN_SEARCH": "Account search executed with query: "S1x".",
+  "admin.adminMessages.ADMIN_SIGNATURE_INVALID": "SYSSIGNATURE mismatch detected for USERNAME: S1x — record may have been tampered with.",
+  "admin.adminMessages.ADMIN_SIGNATURE_RESET": "Admin SYSSIGNATURE recomputed — USERNAME: S1x.",
+  "admin.adminMessages.ADMIN_UPDATED": "Admin record updated — USERNAME: S1x.",
+  "admin.adminMessages.ROLE_POLICY_DENIED": "Access Control refused — USERNAME: S1x (S2x) may not S3x on USERNAME: S4x.",
+  "admin.adminMessages.TEMP_PASSWORD_EMAIL_FAILED": "Temporary password email NOT delivered (S2x) — USERNAME: S1x. The account holds an unclaimed temporary password; use Reset Password to send a new one. Cause: S3x",
+  "admin.adminMessages.TEMP_PASSWORD_EMAIL_SENT": "Temporary password email sent (S2x) — USERNAME: S1x, recipient source: S3x.",
+  "admin.adminMessages.TEMP_PASSWORD_LEGACY_FIELDS_REFUSED": "Admin creation refused — USERNAME: S1x; the request carried retainPassword/newPassword, which the server no longer accepts.",
+  "admin.adminMessages.TEMP_PASSWORD_RECIPIENT_LOOKUP_FAILED": "Recipient email lookup failed — USERNAME: S1x. Nothing was written. Cause: S2x",
+  "admin.adminMessages.TEMP_PASSWORD_RECIPIENT_REFUSED": "Temporary password not issued — USERNAME: S1x, recipient refused: S2x. Nothing was written.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > architecture: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "architecture.MAP_BUILD_FAILED": "System map "S1x" could not be built (src/constants/S1xModel.ts): S2x",
+  "architecture.MAP_SERVED": "System map "S1x" served — ADMIN_ID: S2x, nodes: S3x, flows: S4x.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > auditLog: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "auditLog.auditLogMessages.BATCH_INSERT_FAILED": "Audit log batch insert failed for S1x record(s): S2x.",
+  "auditLog.auditLogMessages.DELETE_DAY_FAILED": "Audit log day folder delete failed — S1x: S2x.",
+  "auditLog.auditLogMessages.DELETE_RANGE_DONE": "Audit log delete complete — S1x DB rows, S2x log day(s) removed.",
+  "auditLog.auditLogMessages.DELETE_RANGE_STARTED": "Audit log delete range started — S1x to S2x.",
+  "auditLog.auditLogMessages.EXPORT_EXCEL_STARTED": "Audit log Excel export started — range: S1x to S2x.",
+  "auditLog.auditLogMessages.EXPORT_TRACE_STARTED": "Audit log trace Excel export started — requestId: S1x.",
+  "auditLog.auditLogMessages.EXPORT_ZIP_STARTED": "Audit log ZIP export started — range: S1x to S2x.",
+  "auditLog.auditLogMessages.EXPORT_ZIP_TRAVERSAL_BLOCKED": "AuditLogService.exportToZip: path traversal attempt blocked — S1x",
+  "auditLog.auditLogMessages.INSERT_FAILED": "Audit log insert failed for REQUEST_ID S1x: S2x.",
+  "auditLog.auditLogMessages.INSERT_SKIPPED_DISABLED": "Audit log middleware is disabled — skipping DB insert.",
+  "auditLog.auditLogMessages.INVALID_DATE_RANGE_WARN": "Audit log query called with invalid date range: fromDate=S1x, toDate=S2x.",
+  "auditLog.auditLogMessages.LIST_FETCHED": "Audit log list fetched — S1x rows, page S2x.",
+  "auditLog.auditLogMessages.LOG_TRACE_FETCHED": "Request log trace fetched — S1x: S2x line(s).",
+  "auditLog.auditLogMessages.PENDING_OVERFLOW_DROPPED": "Audit log queue over cap S2x during DB outage — S1x oldest record(s) dropped.",
+  "auditLog.auditLogMessages.SHUTDOWN_ROWS_UNPERSISTED": "Shutdown: S1x audit record(s) could not be persisted (S2x) and are lost.",
+  "auditLog.auditLogMessages.SSE_BASELINE_ESTABLISHED": "Audit log SSE baseline established — userId: S1x, latestTs: S2x.",
+  "auditLog.auditLogMessages.SSE_CONNECTED": "Audit log SSE connected — userId: S1x.",
+  "auditLog.auditLogMessages.SSE_CONNECTED_EVENT_SENT": "Audit log SSE connected event sent — userId: S1x.",
+  "auditLog.auditLogMessages.SSE_DISCONNECTED": "Audit log SSE disconnected — userId: S1x.",
+  "auditLog.auditLogMessages.SSE_DUPLICATE_CONNECTION": "Audit log SSE duplicate connection rejected — userId: S1x.",
+  "auditLog.auditLogMessages.SSE_POLL_ERROR": "Audit log SSE poll error: S1x.",
+  "auditLog.auditLogMessages.SSE_SHARED_POLL_MAX_ERRORS": "Audit log SSE shared poller hit S2x consecutive errors with S1x client(s) — stopping and notifying all.",
+  "auditLog.auditLogMessages.SSE_SHARED_POLL_STARTED": "Audit log SSE shared poller started.",
+  "auditLog.auditLogMessages.SSE_SHARED_POLL_STOPPED": "Audit log SSE shared poller stopped.",
+  "auditLog.auditLogMessages.SSE_UPDATE_SENT": "Audit log SSE update pushed — userId: S1x.",
+  "auditLog.auditLogMessages.STATS_FETCHED": "Audit log stats fetched — range: S1x to S2x.",
+  "auditLog.auditLogMessages.SYSTEM_LOGS_FETCHED": "System log entries fetched — date: S1x, S2x row(s), page S3x.",
+  "auditLog.auditLogMessages.SYSTEM_LOG_DIR_MISSING": "System log directory not found for date S1x — returning empty result.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_CONNECTED": "System log tail SSE connected — connId: S1x.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_DIR_ROLLOVER": "System log tail day directory changed — now tailing S1x.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_DISCONNECTED": "System log tail SSE disconnected — connId: S1x.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_DUPLICATE_CONNECTION": "System log tail SSE duplicate connection rejected — connId: S1x.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_MAX_ERRORS": "System log tail poller hit S2x consecutive errors with S1x client(s) — stopping and notifying all.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_ROTATION_DETECTED": "System log tail detected rotation/truncation on S1x — offset reset to 0.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_STARTED": "System log tail poller started.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_STOPPED": "System log tail poller stopped — no active connections.",
+  "auditLog.auditLogMessages.SYSTEM_TAIL_TICK_ERROR": "System log tail poll tick error: S1x.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > auth: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "auth.authMessages.ACCESS_REVOCATIONS_FULL": "Revoked access-session set is full (S1x); the soonest-expiring entry was dropped.",
+  "auth.authMessages.ACCESS_REVOCATIONS_LOADED": "Revoked access sessions loaded at boot: S1x.",
+  "auth.authMessages.ACCESS_REVOCATIONS_LOAD_FAILED": "Could not load revoked access sessions at boot - sessions ended before this start may keep working until their access token expires: S1x.",
+  "auth.authMessages.ACCESS_REVOCATION_BROADCAST_FAILED": "Could not tell the other server workers about S1x ended session(s); they keep accepting those access tokens until they expire.",
+  "auth.authMessages.ACCESS_SESSION_REVOKED_REFUSED": "Access token refused - USERNAME: S1x, session family S2x was ended.",
+  "auth.authMessages.ACCESS_TTL_UNPARSEABLE": "JWT_EXPIRES_IN "S1x" is not in the s/m/h/d form; revoked sessions are kept for the refresh lifetime instead.",
+  "auth.authMessages.ACCOUNT_INACTIVE_BLOCKED": "Login blocked — account S1x is inactive.",
+  "auth.authMessages.AUTH_DOWNLOAD_REJECTED": "S1x - S2x",
+  "auth.authMessages.AUTH_LOGOUT": "USER S1x logged out.",
+  "auth.authMessages.AUTH_SUCCESS": "USER S1x authenticated successfully.",
+  "auth.authMessages.AUTH_TRACE": "[AUTH @ S1x]",
+  "auth.authMessages.DEFAULT_PASSWORD_REJECTED": "USER S1x attempted to set the system default password as their new password — rejected.",
+  "auth.authMessages.HASH_UPGRADED": "Password hash for S1x upgraded to current Argon2 parameters on login.",
+  "auth.authMessages.LOGIN_ATTEMPT_FAILED": "Failed login attempt for USER S1x (S2x/S3x).",
+  "auth.authMessages.LOGIN_FAILURE_IGNORED_LOCKED": "Failed login for USER S1x not counted - account is already locked.",
+  "auth.authMessages.LOGIN_LOCKOUT_CLEARED": "Lockout cleared for user S1x after successful login.",
+  "auth.authMessages.LOGIN_LOCKOUT_ENGAGED": "USER S1x locked out for S2xms (cycle S3x).",
+  "auth.authMessages.LOGIN_LOCKOUT_PERMANENT": "USER S1x permanently locked after exhausting all retry cycles. HR reset required.",
+  "auth.authMessages.PASSWORD_CHANGED": "USER S1x changed their password successfully.",
+  "auth.authMessages.PASSWORD_CHANGE_GATE_BLOCKED": "Restricted session refused — USERNAME: S1x must set a new password before S2x S3x.",
+  "auth.authMessages.PROFILE_FLAG_REFRESH_FAILED": "Permission-flag refresh failed for /auth/me — user S1x, falling back to token payload: S2x",
+  "auth.authMessages.REFRESH_FAMILY_REVOKED": "Refresh-token family S1x revoked (S2x).",
+  "auth.authMessages.REFRESH_PURGE_FAILED": "Expired refresh-token purge failed (best effort, ignored): S1x.",
+  "auth.authMessages.REFRESH_REVOKE_PERSIST_FAILED": "Could not persist refresh-token revocation (S1x): S2x.",
+  "auth.authMessages.REFRESH_TOKEN_REJECTED": "Refresh refused - USERNAME: S1x, outcome S2x.",
+  "auth.authMessages.REFRESH_TOKEN_REUSE_DETECTED": "Refresh-token reuse detected - USERNAME: S1x, family S2x; the whole session family was revoked.",
+  "auth.authMessages.REFRESH_USER_SESSIONS_REVOKED": "All refresh sessions revoked - USERNAME: S1x (S2x).",
+  "auth.authMessages.SYS_SIGNATURE_TAMPERED_BLOCKED": "SYSSIGNATURE mismatch for USERNAME: S1x — record may have been tampered with. Login blocked.",
+  "auth.authMessages.TEMP_PASSWORD_EXPIRED": "Expired temporary password refused at S2x — USERNAME: S1x.",
+  "auth.authMessages.TEMP_PASSWORD_LOGIN": "Temporary-password sign-in — USERNAME: S1x; session restricted to setting a new password.",
+  "auth.authMessages.TEMP_PASSWORD_REPLACED": "Temporary password replaced by the account holder — USERNAME: S1x.",
+  "auth.authMessages.TOKEN_REFRESHED": "Token refreshed for user S1x.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > backupEmail: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "backupEmail.backupEmailMessages.DISPATCH_REJECTED": "Purge backup email dispatch rejected at the fire-and-forget call site (ADMIN_ID S1x) — the purge backup response itself was NOT affected: S2x",
+  "backupEmail.backupEmailMessages.RECIPIENT_LOOKUP_FAILED": "Purge backup email recipient lookup failed — falling back to whatever could be resolved: S1x",
+  "backupEmail.backupEmailMessages.SEND_FAILED": "Purge backup email failed for ADMIN_ID S1x: S2x",
+  "backupEmail.backupEmailMessages.SEND_SKIPPED_DISABLED": "Purge backup email skipped for ADMIN_ID S1x — backup email delivery is disabled (BACKUP_EMAIL_ENABLED=false).",
+  "backupEmail.backupEmailMessages.SEND_SKIPPED_NO_RECIPIENTS": "Purge backup email skipped for ADMIN_ID S1x — no resolvable recipient email address (no opted-in active SUPER_ADMIN, and the acting operator has no resolvable email).",
+  "backupEmail.backupEmailMessages.SEND_SUCCESS": "Purge notification email sent — triggered by ADMIN_ID S1x, S2x recipient(s) (notification only, no attachment).",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > cache: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "cache.cacheMessages.CACHE_BYPASS": "Cache BYPASS — store: S1x, keyFn threw, falling through to controller: S2x",
+  "cache.cacheMessages.CACHE_CLUSTER_SYNC_APPLIED": "Cache cluster-sync applied — store: S1x, op: S2x, arg: "S3x"",
+  "cache.cacheMessages.CACHE_CLUSTER_SYNC_PRIMARY_READY": "Cache cluster-sync relay installed on primary — worker invalidations will be broadcast to all siblings.",
+  "cache.cacheMessages.CACHE_CLUSTER_SYNC_WORKER_READY": "Cache cluster-sync listener installed — invalidations from sibling workers will be applied locally.",
+  "cache.cacheMessages.CACHE_COALESCED": "Cache COALESCED — store: S1x, key: S2x (awaited in-flight leader, served from cache)",
+  "cache.cacheMessages.CACHE_ERROR": "Cache INVALIDATE ERROR — keyFn threw: S1x",
+  "cache.cacheMessages.CACHE_HIT": "Cache HIT — store: S1x, key: S2x",
+  "cache.cacheMessages.CACHE_INVALIDATE": "Cache INVALIDATE — store: S1x, keys: [S2x], S3x key(s) removed",
+  "cache.cacheMessages.CACHE_INVALIDATE_PATTERN": "Cache INVALIDATE — store: S1x, pattern: "S2x", S3x key(s) removed",
+  "cache.cacheMessages.CACHE_INVALIDATE_WHERE": "Cache INVALIDATE — store: S1x, predicate match, S2x key(s) removed",
+  "cache.cacheMessages.CACHE_MISS": "Cache MISS — store: S1x, key: S2x",
+  "cache.cacheMessages.CACHE_PREDICATE_ERROR": "Cache INVALIDATE ERROR — predicateFn threw: S1x",
+  "cache.cacheMessages.CACHE_SET_SKIPPED_STALE": "Cache SET skipped — store: S1x, key: S2x (store was invalidated while this value was being built; next read reloads)",
+  "cache.cacheMessages.CACHE_STORE": "Cache STORE — store: S1x, key: S2x",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > changelog: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "changelog.changelogMessages.ENTRY_CREATED": "Changelog entry created: S1x",
+  "changelog.changelogMessages.ENTRY_DELETED": "Changelog entry deleted: S1x",
+  "changelog.changelogMessages.ENTRY_UPDATED": "Changelog entry updated: S1x",
+  "changelog.changelogMessages.STORE_DECRYPT_FAILED": "Changelog store decryption failed: S1x",
+  "changelog.changelogMessages.STORE_ENCRYPT_FAILED": "Changelog store encryption failed: S1x",
+  "changelog.changelogMessages.STORE_INITIALIZED": "Changelog data store initialised with seed data.",
+  "changelog.changelogMessages.STORE_READ": "Changelog store read: S1x entries.",
+  "changelog.changelogMessages.STORE_WRITTEN": "Changelog store written: S1x entries.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > client: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "client.clientMessages.CLIENT_ERROR": "Client-side render error reported by user S1x",
+  "client.clientMessages.HELP_SEARCH_MISS": "Help search miss (S2x): "S1x" returned no results",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > cluster: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "cluster.clusterMessages.CLUSTER_BOOT_FATAL": "CLUSTER_BOOT_FATAL — worker S1x cannot start (S2x); stopping the cluster without respawning.",
+  "cluster.clusterMessages.CLUSTER_BOOT_FATAL_IGNORED": "CLUSTER_BOOT_FATAL_IGNORED — worker S1x reported S2x after it was already listening; treated as a runtime fault, the cluster keeps running.",
+  "cluster.clusterMessages.CLUSTER_CRASH_LOOP_TRIPPED": "CLUSTER_CRASH_LOOP_TRIPPED — S1x worker exits within S2xms; no more workers will be forked. The primary exits 1 once no worker is left so the service supervisor restarts it.",
+  "cluster.clusterMessages.CLUSTER_CRIT_RELAY_DROPPED": "CLUSTER_CRIT_RELAY_DROPPED — critical log from worker S1x could not be relayed to the cron leader (S2x).",
+  "cluster.clusterMessages.CLUSTER_FORCED_KILL": "CLUSTER_FORCED_KILL — S2x worker(s) still running S1xms after the stop began; sending SIGKILL and exiting 1.",
+  "cluster.clusterMessages.CLUSTER_LEADERLESS_STOP": "CLUSTER_LEADERLESS_STOP — crash loop tripped and no cron leader is alive; stopping S1x remaining worker(s) gracefully, then exiting 1 so the service restarts the cluster (scheduled money jobs cannot run leaderless).",
+  "cluster.clusterMessages.CLUSTER_LOCKOUT_FALLBACK": "CLUSTER_LOCKOUT_FALLBACK - login lockout could not reach the primary (S1x); using this worker's local lockout (per-worker threshold) until it recovers.",
+  "cluster.clusterMessages.CLUSTER_METRICS_PARTIAL": "CLUSTER_METRICS_PARTIAL - metrics merged from A1,A2/B1,B2 workers (missing: C1).",
+  "cluster.clusterMessages.CLUSTER_NO_WORKERS_LEFT": "CLUSTER_NO_WORKERS_LEFT — no live worker and respawning is disabled; primary exiting with code S1x.",
+  "cluster.clusterMessages.CLUSTER_PER_WORKER_LIMITS": "CLUSTER_PER_WORKER_LIMITS — rate limits and IP blocks are kept per worker; with round-robin the effective per-IP limit is up to limit x S1x workers.",
+  "cluster.clusterMessages.CLUSTER_PRIMARY_DISCONNECT": "CLUSTER_PRIMARY_DISCONNECT — IPC channel to the primary closed; shutting down this worker gracefully.",
+  "cluster.clusterMessages.CLUSTER_PRIMARY_FORKING": "Primary process S1x — forking S2x workers…",
+  "cluster.clusterMessages.CLUSTER_RELAY_INGEST_FAILED": "CLUSTER_RELAY_INGEST_FAILED — relayed critical log could not be ingested: S1x.",
+  "cluster.clusterMessages.CLUSTER_RESPAWN_SCHEDULED": "CLUSTER_RESPAWN_SCHEDULED — worker S1x exited (it was the cron leader); replacement forks in S2xms.",
+  "cluster.clusterMessages.CLUSTER_RL_FALLBACK": "CLUSTER_RL_FALLBACK - rate limiter "S1x" could not reach the primary (S2x); counting locally (per-worker limit) until it recovers.",
+  "cluster.clusterMessages.CLUSTER_RPC_HANDLER_FAILED": "CLUSTER_RPC_HANDLER_FAILED - handler for S1x failed: S2x.",
+  "cluster.clusterMessages.CLUSTER_RPC_REJECTED": "CLUSTER_RPC_REJECTED - dropped an invalid IPC message from worker S1x (S2x).",
+  "cluster.clusterMessages.CLUSTER_SF_UNBLOCK_DEGRADED": "CLUSTER_SF_UNBLOCK_DEGRADED - unblock of S1x could not reach the primary (S2x); cleared on this worker only.",
+  "cluster.clusterMessages.CLUSTER_SHARED_STATE_READY": "CLUSTER_SHARED_STATE_READY - rate limits, IP blocks, login lockout, scheduler state, metrics and alert acks are shared across S1x workers via the primary.",
+  "cluster.clusterMessages.CLUSTER_SHUTDOWN_COMPLETE": "CLUSTER_SHUTDOWN_COMPLETE — all workers exited; primary exiting with code S1x.",
+  "cluster.clusterMessages.CLUSTER_SIGNAL_RECEIVED": "S1x received by the primary — stopping S2x worker(s) gracefully…",
+  "cluster.clusterMessages.CLUSTER_WORKER_BOOT_FATAL_SENT": "CLUSTER_WORKER_BOOT_FATAL_SENT — reported S1x to the primary.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > dataBackup: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "dataBackup.dataBackupMessages.ARCHIVE_READ_FALLBACK": "Backup archive A1,A2: read-consistent multi-table read hit ORA-01555 — falling back to the per-table streamTable() path for 2 table(s) [B1, B2]. Manifest will be stamped readConsistent:false.",
+  "dataBackup.dataBackupMessages.ARCHIVE_WRITE_FAILED": "Backup archive write FAILED — archiveId: S1x: S2x. Any partial ".part" file is left for manual inspection, never renamed into place.",
+  "dataBackup.dataBackupMessages.ARCHIVE_WRITTEN": "Backup archive written to disk — archiveId: S1x, file: S2x, S3x byte(s).",
+  "dataBackup.dataBackupMessages.BACKUP_LEASE_STOLEN": "Stale backup lease S1x taken over — previous holder pid S2x on S3x was dead or made no progress.",
+  "dataBackup.dataBackupMessages.BACKUP_LEASE_WAITING": "Backup lease S1x is held by pid S2x — waiting for it to finish.",
+  "dataBackup.dataBackupMessages.BACKUP_PUBLISHED_AFTER_CUT": "Backup watchdog cut arrived while the archive was being published — archiveId: S1x, no progress for NaNs (last progress: S4x). The archive WAS published as S2x (complete, fsynced, atomically renamed) and is a valid chain member; no backup was lost.",
+  "dataBackup.dataBackupMessages.BACKUP_STALE_PARTS_REMOVED": "Removed S1x stale backup .part file(s) left by an interrupted run.",
+  "dataBackup.dataBackupMessages.BACKUP_WATCHDOG_CANCELLED": "Backup CANCELLED by watchdog — archiveId: S1x, no progress for NaNs (last progress: S3x). Nothing was published; the next run starts fresh.",
+  "dataBackup.dataBackupMessages.CHAIN_FORCED_FULL": "Backup S1x forced to mode FULL — reason: S2x.",
+  "dataBackup.dataBackupMessages.CHAIN_INCREMENTAL": "Backup S1x written as INCREMENTAL — chain base: S2x, generation: S3x.",
+  "dataBackup.dataBackupMessages.DELETE_REQUESTED": "Backup delete requested — archiveId: S1x, ADMIN_ID S2x.",
+  "dataBackup.dataBackupMessages.DELETE_REQUEST_CANCELLED": "Backup delete request cancelled — archiveId: S1x, cancelled by ADMIN_ID S2x.",
+  "dataBackup.dataBackupMessages.DELETE_REQUEST_CREATED": "Backup delete request created — archiveId: S1x, requested by ADMIN_ID S2x, S3x vote(s) needed.",
+  "dataBackup.dataBackupMessages.DELETE_VOTE_CAST": "Backup delete vote cast — archiveId: S1x, ADMIN_ID S2x, S3x/S4x votes.",
+  "dataBackup.dataBackupMessages.DELETE_VOTE_THRESHOLD_MET": "Backup delete vote threshold met — archiveId: S1x, final vote by ADMIN_ID S2x. Executing chain-safe delete.",
+  "dataBackup.dataBackupMessages.DOWNLOAD_REQUESTED": "Backup download requested — archiveId: S1x, ADMIN_ID S2x.",
+  "dataBackup.dataBackupMessages.INDEX_ENTRY_UNREADABLE": "Backup store index: "S1x" could not be read as a valid backup archive and was skipped: S2x.",
+  "dataBackup.dataBackupMessages.INDEX_REBUILT": "Backup store index rebuilt from disk — S1x archive(s) found, S2xms.",
+  "dataBackup.dataBackupMessages.MANUAL_BACKUP_BLOCKED_SCHEDULE_WINDOW": "Manual backup REJECTED — pre-scheduled-backup lockout window active (reason: S1x, ~NaNs remaining).",
+  "dataBackup.dataBackupMessages.MANUAL_BACKUP_COMPLETE": "Manual backup complete — archiveId: S1x, requested by ADMIN_ID S2x.",
+  "dataBackup.dataBackupMessages.MANUAL_BACKUP_REQUESTED": "Manual backup requested by ADMIN_ID S1x.",
+  "dataBackup.dataBackupMessages.MATERIALISE_CHAIN_MEMBER_MISSING": "Materialise of S1x FAILED — table "S2x" points at sourceArchiveId "S3x", which is missing or fails signature verification.",
+  "dataBackup.dataBackupMessages.MATERIALISE_COMPLETE": "Materialised backup S1x — S2x table(s) resolved, S3xms.",
+  "dataBackup.dataBackupMessages.MATERIALISE_STARTED": "Materialising backup S1x into a self-contained FULL zip.",
+  "dataBackup.dataBackupMessages.PATH_SAFETY_REJECTED": "Backup archive id rejected — fails path-safety validation before any index lookup or path join: "S1x".",
+  "dataBackup.dataBackupMessages.PRUNE_DELETED": "Backup archive deleted — archiveId: S1x, file: S2x.",
+  "dataBackup.dataBackupMessages.PRUNE_REFUSED_DEPENDENTS": "Delete of backup A1,A2 refused — 2 retained archive(s) still depend on it for table data: [B1, B2].",
+  "dataBackup.dataBackupMessages.PURGE_BACKUP_PERSISTED": "Purge backup persisted to disk — archiveId: S1x, triggered by ADMIN_ID S2x.",
+  "dataBackup.dataBackupMessages.PURGE_BLOCKED_SCHEDULE_WINDOW": "Purge execute REJECTED for ADMIN_ID S1x — pre-scheduled-backup lockout window active (reason: S2x, ~NaNs remaining). This is an ergonomics guard only — the purge's own PURGE-triggered backup call still queues correctly behind BackupStoreService's FIFO mutex regardless of this check.",
+  "dataBackup.dataBackupMessages.RESTORE_INCREMENTAL_REJECTED": "Incremental archive upload rejected for restore — archiveId: S1x. Only self-contained FULL archives can be restored.",
+  "dataBackup.dataBackupMessages.SCHEDULED_BUILD_COMPLETE": "Scheduled/manual backup archive build complete — archiveId: S1x, mode: S2x, S3x table(s) included, S4x unchanged (pointer only), S5x row(s) total, S6xms.",
+  "dataBackup.dataBackupMessages.SCHEDULED_BUILD_STARTED": "Scheduled/manual backup archive build started — archiveId: S1x, trigger: S2x, S3x table(s).",
+  "dataBackup.dataBackupMessages.SCHEDULE_ALREADY_RUNNING": "Scheduled DB backup trigger (label: S1x) — a run is already in flight in this process, skipped (in-process mutex).",
+  "dataBackup.dataBackupMessages.SCHEDULE_BACKUP_FAILED": "Scheduled DB backup FAILED (label: S1x) — event S2x / S3x: S4x.",
+  "dataBackup.dataBackupMessages.SCHEDULE_BACKUP_RAN": "Scheduled DB backup RAN (label: S1x) — event S2x / S3x: archiveId S4x, mode S5x.",
+  "dataBackup.dataBackupMessages.SCHEDULE_DISABLED": "Scheduled DB backup trigger (label: S1x) — DB_BACKUP_ENABLED=false, skipped without reading the schedule.",
+  "dataBackup.dataBackupMessages.SCHEDULE_EVENT_ALREADY_BACKED_UP": "Scheduled DB backup: event S1x / S2x already has a matching SCHEDULED archive on disk — skipped (filename-derived idempotency).",
+  "dataBackup.dataBackupMessages.SCHEDULE_NO_EVENTS_DUE": "Scheduled DB backup trigger (label: S1x) — no scheduled backup event fell inside the S2xh catch-up window.",
+  "dataBackup.dataBackupMessages.SCHEDULE_PRUNED": "Scheduled DB backup retention sweep (label: S1x) deleted expired archive S2x (chain base S3x) — whole chain past DB_BACKUP_RETENTION_DAYS.",
+  "dataBackup.dataBackupMessages.SCHEDULE_PRUNE_SKIPPED": "Scheduled DB backup retention sweep (label: S1x) could not delete S2x — left for the next sweep: S3x.",
+  "dataBackup.dataBackupMessages.SCHEDULE_WINDOW_LOOKUP_FAILED": "Backup lockout-window lookup FAILED — could not read the upcoming backup events: S1x. Failing OPEN (lockout treated as inactive) — the FIFO chain-race mutex in BackupStoreService.runBackup is the correctness guarantee, this window is ergonomics only.",
+  "dataBackup.dataBackupMessages.TOKEN_CONSUMED": "Backup token consumed — ADMIN_ID S1x, jti S2x. This token can never be accepted again.",
+  "dataBackup.dataBackupMessages.TOKEN_REPLAY_BLOCKED": "Backup token REPLAY BLOCKED — ADMIN_ID S1x, jti S2x was already consumed. Rejecting (ORA-00001 on T_SERVER_BACKUP_TOKEN_CONSUMED_DEV.JTI).",
+  "dataBackup.dataBackupMessages.VERIFY_REQUESTED": "Backup verify — archiveId: S1x, signatureValid: S2x, ADMIN_ID S3x.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > dataPurge: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "dataPurge.dataPurgeMessages.BACKUP_COMPLETE": "Backup archive build complete — ADMIN_ID: S1x, scopeHash: S2x, S3x row(s), S4xms.",
+  "dataPurge.dataPurgeMessages.BACKUP_STARTED": "Backup archive build started — ADMIN_ID: S1x, scopeHash: S2x, S3x table(s).",
+  "dataPurge.dataPurgeMessages.BACKUP_TOKEN_ISSUED": "Backup token issued — ADMIN_ID: S1x, scopeHash: S2x, expires: S3x.",
+  "dataPurge.dataPurgeMessages.CACHE_FLUSHED": "All cache stores flushed after purge commit.",
+  "dataPurge.dataPurgeMessages.EXECUTE_COMMIT": "Purge committed - ADMIN_ID: S1x, scopeHash: S2x, S3x row(s) deleted total, S4xms.",
+  "dataPurge.dataPurgeMessages.EXECUTE_CONFIRM_MISMATCH": "Purge execution rejected — ADMIN_ID: S1x, confirm phrase did not match.",
+  "dataPurge.dataPurgeMessages.EXECUTE_COUNT_MISMATCH": "Purge execution rejected — "S1x" row count changed since backup: token had S2x, live is S3x.",
+  "dataPurge.dataPurgeMessages.EXECUTE_LOCKOUT_ACK": "Purge scope includes the Access Control admin table — ADMIN_ID: S1x acknowledged the full-lockout warning.",
+  "dataPurge.dataPurgeMessages.EXECUTE_PASSWORD_REJECTED": "Purge execution rejected — ADMIN_ID: S1x, admin password did not verify.",
+  "dataPurge.dataPurgeMessages.EXECUTE_STARTED": "Purge execution started — ADMIN_ID: S1x, scopeHash: S2x.",
+  "dataPurge.dataPurgeMessages.EXECUTE_TABLE_STEP": "Purge deleted table "S1x" — S2x row(s).",
+  "dataPurge.dataPurgeMessages.EXECUTE_TOKEN_REJECTED": "Purge execution rejected — ADMIN_ID: S1x, backup token invalid: S2x.",
+  "dataPurge.dataPurgeMessages.POST_COMMIT_AUDIT_FAILED": "Purge post-commit audit write failed (purge itself already committed successfully): S1x.",
+  "dataPurge.dataPurgeMessages.POST_COMMIT_EMAIL_FAILED": "Purge post-commit ops alert email failed (purge itself already committed successfully): S1x.",
+  "dataPurge.dataPurgeMessages.PREVIEW_GENERATED": "Purge preview generated — S1x table(s), S2x total row(s).",
+  "dataPurge.dataPurgeMessages.RESTORE_COMMIT": "Restore committed — ADMIN_ID: S1x, archive scopeHash: S2x, S3x row(s) inserted total, S4xms.",
+  "dataPurge.dataPurgeMessages.RESTORE_CONFIRM_MISMATCH": "Restore execution rejected — ADMIN_ID: S1x, confirm phrase did not match.",
+  "dataPurge.dataPurgeMessages.RESTORE_MALICIOUS_MANIFEST": "Restore archive rejected — manifest names table(s) outside the allow-list or on the protected deny-list: [A1, A2].",
+  "dataPurge.dataPurgeMessages.RESTORE_PASSWORD_REJECTED": "Restore execution rejected — ADMIN_ID: S1x, admin password did not verify.",
+  "dataPurge.dataPurgeMessages.RESTORE_POST_COMMIT_AUDIT_FAILED": "Restore post-commit audit write failed (restore itself already committed successfully): S1x.",
+  "dataPurge.dataPurgeMessages.RESTORE_PREFLIGHT_REJECTED": "Restore pre-flight rejected: S1x.",
+  "dataPurge.dataPurgeMessages.RESTORE_PREVIEW_GENERATED": "Restore pre-flight report generated — S1x table(s), S2x row(s).",
+  "dataPurge.dataPurgeMessages.RESTORE_SIGNATURE_REJECTED": "Restore archive rejected — signature verification failed: S1x.",
+  "dataPurge.dataPurgeMessages.RESTORE_STARTED": "Restore execution started — ADMIN_ID: S1x, archive scopeHash: S2x.",
+  "dataPurge.dataPurgeMessages.RESTORE_TABLE_STEP": "Restore inserted table "S1x" — S2x row(s), S3x ROW_HASH re-signed.",
+  "dataPurge.dataPurgeMessages.RESTORE_TARGET_CHANGED_UNDER_LOCK": "Restore aborted and rolled back — "S1x" gained S2x row(s) between the pre-flight emptiness check and the locked insert (ADMIN_ID: S3x). Nothing was committed.",
+  "dataPurge.dataPurgeMessages.SCOPE_RESOLVED": "Purge scope resolved — groups: [A1, A2], auto-included: [C1], 2 table(s).",
+  "dataPurge.dataPurgeMessages.STREAM_ALL_TABLES_SNAPSHOT_TOO_OLD": "DataPurgeModel.streamAllTables() read-only transaction hit ORA-01555 snapshot too old across 2 table(s) [A1, A2] — caller must fall back to the per-table streamTable() path and mark the backup manifest readConsistent:false. Oracle: B1,B2",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > database: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "database.databaseMessages.CONNECTION_ACQUIRED": "Connection acquired on "S1x" in S2xms.",
+  "database.databaseMessages.CONNECTION_TIMEOUT": "Connection timeout on "S1x" after S2xms.",
+  "database.databaseMessages.DB_CLOCK_OFFSET_CHECK_FAILED": "Could not read the Oracle server clock offset at start-up: S1x",
+  "database.databaseMessages.DB_OP_FAILED": "Database operation failed: S1x on S2x — S3x",
+  "database.databaseMessages.DB_TZ_OFFSET_INVALID": "DB_TIMEZONE_OFFSET_MINUTES="S1x" is not a whole number of minutes between -720 and 840 — using S2x.",
+  "database.databaseMessages.TRANSACTION_COMMITTED": "Transaction committed on "S1x" in S2xms.",
+  "database.databaseMessages.TRANSACTION_ROLLED_BACK": "Transaction rolled back on "S1x": S2x",
+  "database.databaseMessages.TRANSACTION_STARTED": "Transaction started on "S1x".",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > devdocs: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "devdocs.CORPUS_ESCAPE_BLOCKED": "Dev-docs path escaped the corpus root and was refused — resolved: S1x. This indicates a manifest defect, not a client attack.",
+  "devdocs.CORPUS_UNREADABLE": "Dev-docs corpus unreadable at S1x — S2x.",
+  "devdocs.DOC_READ": "Dev-docs document read — ADMIN_ID: S1x, DOC_ID: S2x.",
+  "devdocs.DOC_READ_FAILED": "Dev-docs document read failed — DOC_ID: S1x, reason: S2x.",
+  "devdocs.FRESHNESS_SNAPSHOT_UNAVAILABLE": "Dev-docs freshness unavailable — no git history and no build snapshot at S1x. Documents will show "Age unknown".",
+  "devdocs.SEARCH_COMPLETED": "Dev-docs search completed — ADMIN_ID: S1x, matches: S2x, returned: S3x.",
+  "devdocs.TREE_SERVED": "Dev-docs index served — ADMIN_ID: S1x, sections: S2x, documents: S3x.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > inFlight: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "inFlight.inFlightMessages.TASK_DRAIN_ABANDONED": "TASK_DRAIN_ABANDONED — A1,A2 in-flight task(s) still running after the B1,B2ms drain budget: C1.",
+  "inFlight.inFlightMessages.TASK_DRAIN_COMPLETE": "TASK_DRAIN_COMPLETE — S1x in-flight task(s) settled in S2xms.",
+  "inFlight.inFlightMessages.TASK_DRAIN_START": "TASK_DRAIN_START — S1x in-flight task(s) tracked; waiting up to S2xms for them to settle before closing DB pools and the SMTP transporter.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > integrity: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "integrity.integrityMessages.BROWSE_PAGE": "Integrity browse — table=S1x, page=S2x, limit=S3x",
+  "integrity.integrityMessages.CONFIG_CHANGED": "T_SYSTEM_CONFIG key "S1x" changed from "S2x" to "S3x" by S4x.",
+  "integrity.integrityMessages.CONFIG_MISSING": "T_SYSTEM_CONFIG key "S1x" is missing or unreadable — using its safe default.",
+  "integrity.integrityMessages.CONFIG_TAMPERED": "T_SYSTEM_CONFIG key "S1x" FAILED ROW_HASH verification — possible tampering; using its safe default.",
+  "integrity.integrityMessages.CONFIG_UNSIGNED": "T_SYSTEM_CONFIG key "S1x" has no ROW_HASH (seeded in SQL, never written by the app) — using its safe default until it is set once.",
+  "integrity.integrityMessages.RESCAN_REQUESTED": "Integrity rescan requested — table=S1x, scope=S2x, by=S3x",
+  "integrity.integrityMessages.SSE_BASELINE": "Integrity stream baseline set — table=S1x, maxPk=S2x",
+  "integrity.integrityMessages.SSE_BASELINE_FAILED": "Integrity stream baseline lookup failed before upgrade — table=S1x: S2x",
+  "integrity.integrityMessages.SSE_CONNECTED": "Integrity stream connected — table=S1x, by=S2x",
+  "integrity.integrityMessages.SSE_DISCONNECTED": "Integrity stream disconnected — table=S1x, by=S2x",
+  "integrity.integrityMessages.SSE_MAX_ERRORS": "Integrity stream poller exceeded S2x consecutive errors (S1x connections notified) — stopping",
+  "integrity.integrityMessages.SSE_POLL_ERROR": "Integrity stream poll error — table=S1x: S2x",
+  "integrity.integrityMessages.SSE_POLL_STARTED": "Integrity stream shared poller started.",
+  "integrity.integrityMessages.SSE_POLL_STOPPED": "Integrity stream shared poller stopped.",
+  "integrity.integrityMessages.SSE_UPDATE_SENT": "Integrity stream update — table=S1x, newRows=S2x, tampered=S3x",
+  "integrity.integrityMessages.SWEEP_COMPLETE": "Integrity tamper sweep complete — table=S1x, scanned=S2x, tampered=S3x, truncated=S4x",
+  "integrity.integrityMessages.SWEEP_STARTED": "Integrity tamper sweep started — table=S1x, scope=S2x",
+  "integrity.integrityMessages.SWEEP_TRUNCATED": "Integrity tamper sweep hit the scan cap (S2x rows) for table=S1x — scope the request by date for a complete result",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > logRetention: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "logRetention.logRetentionMessages.LOG_RETENTION_BUDGET_ABORT": "Log retention sweep aborted — S1x failed day dir(s) reached the budget of S2x. Remaining days retried next sweep.",
+  "logRetention.logRetentionMessages.LOG_RETENTION_DAY_FAILED": "Log retention: day dir S1x removal failed: S2x.",
+  "logRetention.logRetentionMessages.LOG_RETENTION_DISABLED": "Log retention sweep disabled — LOG_RETENTION_DAYS=0.",
+  "logRetention.logRetentionMessages.LOG_RETENTION_INVALID_DAYS": "Log retention: LOG_RETENTION_DAYS="S1x" is not a valid positive number — falling back to S2x day(s).",
+  "logRetention.logRetentionMessages.LOG_RETENTION_STARTED": "Log retention sweep started — retaining S1x day(s), checked every S2xms.",
+  "logRetention.logRetentionMessages.LOG_RETENTION_SWEEP_DONE": "Log retention sweep complete — removed S1x day dir(s), freed S2x, retention S3x day(s).",
+  "logRetention.logRetentionMessages.LOG_RETENTION_SWEEP_FAILED": "Log retention sweep failed unexpectedly: S1x.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > metrics: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "metrics.metricsMessages.ALERTS_FETCHED": "Alert evaluations fetched",
+  "metrics.metricsMessages.ALERT_TRIGGERED": "Alert triggered: S1x [S2x]",
+  "metrics.metricsMessages.FRONTEND_INGESTED": "Frontend metrics ingested: S1x event(s)",
+  "metrics.metricsMessages.FRONTEND_REJECTED": "Frontend metrics payload rejected: S1x",
+  "metrics.metricsMessages.SNAPSHOT_FETCHED": "Metrics snapshot fetched",
+  "metrics.metricsMessages.SUMMARY_FETCHED": "Metrics summary fetched",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > middleware: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "middleware.middlewareMessages.CORS_ORIGIN_BLOCKED": "CORS: origin blocked — S1x",
+  "middleware.middlewareMessages.CRON_LEADER_ELECTED": "Cron leader elected: worker id=S1x pid=S2x (S3x).",
+  "middleware.middlewareMessages.CRON_LEADER_MULTIPLE_ELECTED": "CRITICAL: cluster has S2x cron leader workers stamped CRON_LEADER=true (S1x) — scheduled jobs are not guaranteed idempotent, so duplicate leaders risk double-processing.",
+  "middleware.middlewareMessages.CRON_LEADER_NONE_ELECTED": "CRITICAL: cluster has ZERO cron leader workers (S1x) — scheduled jobs will not run on ANY worker until a leader is elected.",
+  "middleware.middlewareMessages.CRON_LEADER_REFORK_FAILED": "CRITICAL: failed to fork a replacement for worker id=S1x: S2x. If that worker was the cron leader, the cluster now has NO cron leader.",
+  "middleware.middlewareMessages.CRON_WORKER_DISCONNECTED": "Worker S1x disconnected (id=S2x) — awaiting exit before replacing.",
+  "middleware.middlewareMessages.CRON_WORKER_EXITED": "Worker S1x died (code=S2x, signal=S3x) — replacing… (was cron leader — replacement inherits leadership)",
+  "middleware.middlewareMessages.CSRF_REFRESH_FAILED": "Failed to refresh CSRF token for user S1x.",
+  "middleware.middlewareMessages.CSRF_REFRESH_NO_SESSION": "CSRF refresh attempted without an existing cookie by user S1x.",
+  "middleware.middlewareMessages.CSRF_STATUS_FAILED": "Failed to retrieve CSRF status for S1x.",
+  "middleware.middlewareMessages.CSRF_TOKEN_GENERATED": "CSRF token generated for S1x.",
+  "middleware.middlewareMessages.CSRF_TOKEN_GENERATE_FAILED": "Failed to generate CSRF token for S1x.",
+  "middleware.middlewareMessages.CSRF_TOKEN_REFRESHED": "CSRF token refreshed for user S1x.",
+  "middleware.middlewareMessages.CSRF_VALIDATION_FAILED": "CSRF validation failed for S1x on S2x.",
+  "middleware.middlewareMessages.CSRF_VALIDATION_PASSED": "CSRF validation passed for S1x on S2x.",
+  "middleware.middlewareMessages.GET_BODY_REFUSED": "Security filter: S2x with a request body refused — S3x from S1x.",
+  "middleware.middlewareMessages.HTTP_METHOD_BLOCKED": "Security filter: HTTP method blocked — S2x S3x from S1x.",
+  "middleware.middlewareMessages.IP_BLOCKED": "IP blocked by filter: S1x on S2x",
+  "middleware.middlewareMessages.IP_BLOCKED_SUSPICIOUS": "Security filter: request from blocked IP — S2x S3x from S1x.",
+  "middleware.middlewareMessages.MALICIOUS_REQUEST_BLOCKED": "Security filter: malicious request blocked — S2x S3x from S1x.",
+  "middleware.middlewareMessages.RATE_LIMIT_EXCEEDED": "Rate limit exceeded for S1x on S2x (S3x/S4x).",
+  "middleware.middlewareMessages.RATE_LIMIT_STORE_FULL": "[S1x] Rate limit store is full - failing open (requests are admitted uncounted until entries expire).",
+  "middleware.middlewareMessages.SECURITY_FILTER_BLOCKED": "Security filter blocked S2x S3x from S1x.",
+  "middleware.middlewareMessages.SUSPICIOUS_IP_BLOCKED": "IP S1x blocked until S2x.",
+  "middleware.middlewareMessages.SUSPICIOUS_IP_BLOCK_EXPIRED": "Suspicious-IP block expired for S1x — offence counter reset to 0.",
+  "middleware.middlewareMessages.SUSPICIOUS_IP_TRACKED": "Suspicious IP tracked: S1x (S2x offenses).",
+  "middleware.middlewareMessages.SUSPICIOUS_IP_UNBLOCKED": "Suspicious-IP block manually cleared for S1x by S2x.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > notification: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "notification.notificationMessages.ACK_HYDRATED": "AlertNotifierService hydrated S1x active acknowledgement(s) from SERVER_ALERT_ACK.",
+  "notification.notificationMessages.ALERT_ACKNOWLEDGED": "Alert 'S1x' acknowledged by ADMIN_ID S2x, expires S3x.",
+  "notification.notificationMessages.ALERT_ACK_ESCALATION_CLEARED": "Alert 'S1x' escalated past its acknowledgement (S2x -> S3x) — acknowledgement cleared, notification will send.",
+  "notification.notificationMessages.ALERT_ACK_EXPIRED": "Alert 'S1x' acknowledgement TTL expired — resuming normal cooldown re-notify.",
+  "notification.notificationMessages.ALERT_ACK_REQUESTED": "Alert acknowledgement requested for 'S1x' by ADMIN_ID S2x.",
+  "notification.notificationMessages.ALERT_ACK_SUPPRESSED": "Alert 'S1x' cooldown re-notify suppressed by an active acknowledgement.",
+  "notification.notificationMessages.ALERT_ACK_SUPPRESSED_AFTER_RESTART": "Alert 'S1x' re-fired after a restart; email suppressed by an active acknowledgement.",
+  "notification.notificationMessages.ALERT_LOG_QUEUE_DROPPED": "Alert-log queue full — dropped S1x oldest queued row(s) (not persisted to SERVER_ALERT_LOG).",
+  "notification.notificationMessages.ALERT_LOG_ROWS_SKIPPED_SHUTDOWN": "S1x SERVER_ALERT_LOG row(s) not persisted — the final shutdown flush runs after the Oracle pools closed.",
+  "notification.notificationMessages.ALERT_TRANSITION": "Alert transition: S1x (S2x) S3x -> S4x on channel 'S5x'.",
+  "notification.notificationMessages.ALERT_UNACKNOWLEDGED": "Alert 'S1x' acknowledgement cleared.",
+  "notification.notificationMessages.ALERT_UNACK_REQUESTED": "Alert unacknowledge requested for 'S1x'.",
+  "notification.notificationMessages.CRITICAL_BUFFER_CAPPED": "Critical digest buffer reached its cap of S1x records this window — further events are counted but not itemised.",
+  "notification.notificationMessages.EMAIL_FAILED": "Server notification email failed on channel 'S1x': S2x",
+  "notification.notificationMessages.EMAIL_SENT": "Server notification email sent on channel 'S1x' (S2x).",
+  "notification.notificationMessages.NOTIFIER_DISABLED": "AlertNotifierService not started — server email notifications are disabled (S1x).",
+  "notification.notificationMessages.NOTIFIER_FINAL_FLUSH_SKIPPED": "AlertNotifierService final flush skipped — no time left before the forced exit; S1x buffered critical event(s) not emailed yet.",
+  "notification.notificationMessages.NOTIFIER_SHUTDOWN_BEGUN": "AlertNotifierService shutdown begun — metrics poll and retention sweep stopped; critical logger tap stays live until the final flush.",
+  "notification.notificationMessages.NOTIFIER_SHUTDOWN_FLUSH": "AlertNotifierService shutdown flush — S1x buffered critical event(s), outcome: S2x.",
+  "notification.notificationMessages.NOTIFIER_STARTED": "AlertNotifierService started — polling metrics every S1xms for dependency/red/system alerts and subscribed to the critical logger tap.",
+  "notification.notificationMessages.NOTIFIER_STOPPED": "AlertNotifierService stopped — poll timer cleared and critical logger tap unsubscribed.",
+  "notification.notificationMessages.NOTIFIER_STOP_DISCARDED": "AlertNotifierService.stop() discarded S1x buffered critical event(s) without emailing — graceful shutdown must use drainAndStop().",
+  "notification.notificationMessages.POLL_TICK_OVERLAP_SKIPPED": "Alert poll tick skipped — the previous tick is still in flight.",
+  "notification.notificationMessages.RECIPIENT_REFRESH_WAIT_EXCEEDED": "Server notification recipients: the Access Control opt-in lookup did not answer within S1x ms; sending to the last known list and SERVER_NOTIFY_TO (the lookup continues in the background)",
+  "notification.notificationMessages.RETENTION_PURGED": "AlertNotifierService: purged S1x SERVER_ALERT_LOG row(s) older than S2x days.",
+  "notification.notificationMessages.SHUTDOWN_ROWS_SAVED_EMAIL_DEFERRED": "AlertNotifierService shutdown — S1x buffered critical row(s) saved before the pools close; the email follows after the stop is marked clean.",
+  "notification.notificationMessages.STATUS_FETCHED": "Server notification status fetched",
+  "notification.notificationMessages.STORM_SUPPRESSED": "Critical digest suppressed by the hourly ceiling — S1x event(s) dropped this window (S2x suppressed since the last successful send).",
+  "notification.notificationMessages.TEST_SEND_REQUESTED": "Test notification requested on channel 'S1x' by S2x.",
+  "notification.notificationMessages.UNMAPPED_RULE": "Alert rule 'S1x' has no channel mapping — falling back to server-system-notification.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > oracle: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "oracle.oracleMessages.ACQUIRE_ORPHAN_CLOSED": "Discarded a connection from "S1x" that arrived after its acquire had already failed.",
+  "oracle.oracleMessages.ACQUIRE_RETRY": "Connection acquire failed on "S1x" (attempt S2x/S3x), retrying: S4x",
+  "oracle.oracleMessages.BATCH_OP_FAILED": "Batch op S1x failed: S2x",
+  "oracle.oracleMessages.CLOSE_FAILED": "Close failed for "S1x": S2x",
+  "oracle.oracleMessages.COULD_NOT_READ_ENV": "Could not read .env at S1x: S2x",
+  "oracle.oracleMessages.DB_OP_FAILED": "DB op failed [S1x]: S2x",
+  "oracle.oracleMessages.DEV_PLACEHOLDER_CONFIG": "Dev mode: placeholder config for "S1x". Missing: S2x",
+  "oracle.oracleMessages.ENV_LOADED_FROM": "Env loaded from: S1x",
+  "oracle.oracleMessages.MISSING_CONFIG_FIELDS": "Missing config fields for "S1x": S2x",
+  "oracle.oracleMessages.OP_FAILED": "Op failed on "S1x" (S2xms): S3x",
+  "oracle.oracleMessages.ORACLEDB_DRIVER_FAILED": "Failed to load oracledb: S1x",
+  "oracle.oracleMessages.ORACLE_CLIENT_INIT_WARN": "Oracle client init: S1x",
+  "oracle.oracleMessages.ORACLE_CLIENT_PATH_NOT_FOUND": "Oracle client path not found: S1x",
+  "oracle.oracleMessages.ORACLE_CLIENT_PREPENDED_PATH": "Oracle client prepended to PATH: S1x",
+  "oracle.oracleMessages.ORACLE_CLIENT_VALIDATED": "Oracle client validated: S1x",
+  "oracle.oracleMessages.ORACLE_FILES_MISSING": "Missing Oracle files [A1, A2] in B1,B2",
+  "oracle.oracleMessages.POOL_CIRCUIT_OPEN": "Pool "S1x" circuit open (NJS-503): marked unhealthy after repeated ping failures — failing fast.",
+  "oracle.oracleMessages.POOL_CLOSED": "Pool "S1x" closed.",
+  "oracle.oracleMessages.POOL_CLOSE_ERROR": "Pool "S1x" close error: S2x",
+  "oracle.oracleMessages.POOL_COULD_NOT_CREATE": "Could not create pool "S1x" after S2x attempts: S3x",
+  "oracle.oracleMessages.POOL_CREATE_FAILED_EVICTED": "Pool "S1x" creation failed — cached failure evicted after S2xms; the next acquire will retry creation.",
+  "oracle.oracleMessages.POOL_CREATING": "Creating pool "S1x"…",
+  "oracle.oracleMessages.POOL_FAILED": "Pool "S1x" failed (attempt S2x/S3x): S4x",
+  "oracle.oracleMessages.POOL_HEALTH_CHECK_FAILED": "Pool "S1x" health check failed (consecutive failures: S2x).",
+  "oracle.oracleMessages.POOL_MARKED_UNHEALTHY": "Pool "S1x" marked UNHEALTHY after S2x failures.",
+  "oracle.oracleMessages.POOL_READY": "Pool "S1x" ready (min=P_poolMin, max=P_poolMax).",
+  "oracle.oracleMessages.POOL_RECOVERED": "Pool "S1x" RECOVERED after S2x consecutive failures.",
+  "oracle.oracleMessages.POOL_RETRYING": "Retrying pool "S1x" in S2xms…",
+  "oracle.oracleMessages.POOL_STATS_RECORD_FAILED": "Metrics push failed on the catch path for pool "S1x": S2x. Health-checking was unaffected.",
+  "oracle.oracleMessages.POOL_UNHEALTHY_ATTEMPT": "Pool "S1x" is unhealthy — attempting anyway.",
+  "oracle.oracleMessages.ROLLBACK_FAILED": "Rollback failed on "S1x": S2x",
+  "oracle.oracleMessages.SIGNAL_RECEIVED": "S1x received — shutting down.",
+  "oracle.oracleMessages.SLOW_OP": "Slow op on "S1x": S2xms",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > oracleWrapper: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "oracleWrapper.oracleMongoWrapperMessages.BULK_WRITE_UNKNOWN_OP": "[OracleCollection.bulkWrite] Unknown operation type: "S1x"",
+  "oracleWrapper.oracleMongoWrapperMessages.DCL_GRANT_INSUFFICIENT": "[OracleDCL.grant] Insufficient privileges to GRANT. Requires GRANT OPTION or DBA role.
+Original: undefined
+SQL: S2x",
+  "oracleWrapper.oracleMongoWrapperMessages.DCL_REVOKE_INSUFFICIENT": "[OracleDCL.revoke] Insufficient privileges to REVOKE. Requires GRANT OPTION or DBA role.
+Original: undefined
+SQL: S2x",
+  "oracleWrapper.oracleMongoWrapperMessages.FILTER_UNSUPPORTED_OPERATOR": "[filterParser] Unsupported operator: S1x",
+  "oracleWrapper.oracleMongoWrapperMessages.FOR_UPDATE_INVALID_MODE": "[QueryBuilder.forUpdate] Invalid lock mode: "S1x". Use true, "nowait", "skip locked" or { of?: string[], wait?: number, nowait?: boolean, skipLocked?: boolean }.",
+  "oracleWrapper.oracleMongoWrapperMessages.INSUFFICIENT_PRIVILEGES": "[S1x] Insufficient privileges. S2x
+Original: undefined
+SQL: S4x",
+  "oracleWrapper.oracleMongoWrapperMessages.MERGE_BINDS_KEY_COLLISION": "Bind key collision: "S1x" exists in both bind objects.",
+  "oracleWrapper.oracleMongoWrapperMessages.UPDATE_CURRENT_DATE_INVALID": "[updateParser] $currentDate.S1x must be true, { $type: "date" } or { $type: "timestamp" }.",
+  "oracleWrapper.oracleMongoWrapperMessages.UPDATE_UNSUPPORTED_OPERATOR": "[updateParser] Unsupported update operator: S1x",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > resilience: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "resilience.resilienceMessages.ATTEMPT_FAIL": "[S1x] Attempt S2x failed (classification=S3x): S4x",
+  "resilience.resilienceMessages.ATTEMPT_OK": "[S1x] Attempt S2x succeeded in S3xms",
+  "resilience.resilienceMessages.ATTEMPT_START": "[S1x] Attempt S2x/S3x starting",
+  "resilience.resilienceMessages.BACKOFF": "[S1x] Backing off S3xms before retrying attempt S2x1",
+  "resilience.resilienceMessages.BATCH_ABORTED": "[S1x] Batch aborted after a fatal session error — S2x remaining item(s) moved to pending: S3x",
+  "resilience.resilienceMessages.BATCH_BUDGET_EXHAUSTED": "[S1x] Batch retry budget exhausted — S2x/S3x retries spent across failed items; remaining un-started item(s) moved to pending to avoid amplifying the outage.",
+  "resilience.resilienceMessages.BATCH_DONE": "[S1x] Batch done in S5xms — succeeded=S2x failed=S3x pending=S4x",
+  "resilience.resilienceMessages.BATCH_REQUEST_ABORTED": "REQUEST_ABORTED — [S1x] request was cancelled by the server (no progress); item not attempted.",
+  "resilience.resilienceMessages.BATCH_START": "[S1x] Batch starting — S2x item(s), concurrency S3x",
+  "resilience.resilienceMessages.EMAIL_ATTEMPT_OK": "[S1x] Email delivered via S3x tier on attempt S4x to S2x",
+  "resilience.resilienceMessages.EMAIL_BUDGET_EXHAUSTED": "[S1x] Email phase budget exhausted — skipping remaining send(s).",
+  "resilience.resilienceMessages.EMAIL_DELIVERY_SUMMARY": "[S1x] Email delivery summary — delivered=S2x fallbackDelivered=S3x failed=S4x",
+  "resilience.resilienceMessages.EMAIL_FAILED": "[S1x] Email delivery failed on both primary and fallback tiers: S2x",
+  "resilience.resilienceMessages.EMAIL_FALLBACK": "Primary email delivery failed — falling back to: S1x",
+  "resilience.resilienceMessages.EMAIL_PARTIALLY_REJECTED": "Email "S1x" was accepted by SMTP but S2x recipient(s) were rejected: S3x. Reported as PARTIAL, not delivered.",
+  "resilience.resilienceMessages.EMAIL_RETRYING": "[S1x] Email retry S2x/S3x after transient SMTP failure: S4x",
+  "resilience.resilienceMessages.IDEMPOTENT_RESOLVE": "[S1x] Idempotency probe found a prior committed result — ack-lost recovery (key=S2x), retry loop short-circuited",
+  "resilience.resilienceMessages.PHASE": "[S1x] S2x",
+  "resilience.resilienceMessages.RETRYING": "[S1x] Retry S2x/S3x after transient failure: S4x",
+  "resilience.resilienceMessages.RETRY_EXHAUSTED": "[S1x] Retry budget exhausted after S2x attempt(s): S3x",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > server: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "server.serverMessages.BOOT_ANNOUNCE_POOLS_PENDING": "[RunMarker] BOOT_ANNOUNCE_POOLS_PENDING Boot email sent before the database pools settled (waited S1x ms); recipients may fall back to SERVER_NOTIFY_TO; a still-settling pool can delay delivery.",
+  "server.serverMessages.FORCED_EXIT_MS_CLAMPED": "SHUTDOWN_FORCED_EXIT_MS="S1x" invalid or out of [S3x, S4x] — using S2xms.",
+  "server.serverMessages.NOTIFY_DRAIN_MS_CLAMPED": "NOTIFY_DRAIN_MS="S1x" invalid or out of [0, S2x] — clamped to S3xms.",
+  "server.serverMessages.RUN_MARKER_FIRST_BOOT": "[RunMarker] RUN_MARKER_FIRST_BOOT no previous run record at S1x - first start with restart tracking.",
+  "server.serverMessages.RUN_MARKER_FOREIGN_HOST": "[RunMarker] RUN_MARKER_FOREIGN_HOST the record at S1x was written by another host (e.g. a build-machine smoke run packaged by mistake) - treating this as a first start, no unclean-restart alarm.",
+  "server.serverMessages.RUN_MARKER_HANDOVER": "[RunMarker] RUN_MARKER_HANDOVER the previous cron-leader worker (PID S1x) belonged to this cluster run - taking over the record, no restart email.",
+  "server.serverMessages.RUN_MARKER_PATH_OVERRIDE_IGNORED": "[RunMarker] SERVER_RUN_MARKER_PATH="S1x" is not an absolute path - ignored.",
+  "server.serverMessages.RUN_MARKER_PATH_OVERRIDE_REFUSED": "[RunMarker] SERVER_RUN_MARKER_PATH="S1x" ignored: the override is for tests only and is refused when NODE_ENV=production.",
+  "server.serverMessages.RUN_MARKER_PREVIOUS_CLEAN": "[RunMarker] RUN_MARKER_PREVIOUS_CLEAN previous process (PID S1x) stopped at S4x with exit code S2x (S3x).",
+  "server.serverMessages.RUN_MARKER_UNCLEAN": "[RunMarker] RUN_MARKER_UNCLEAN previous process (PID S1x) ended without its shutdown sequence: last state S2x, last alive S3x, down about S4xs.",
+  "server.serverMessages.RUN_MARKER_UNREADABLE": "[RunMarker] RUN_MARKER_UNREADABLE previous run record S1x could not be read: S2x.",
+  "server.serverMessages.RUN_MARKER_WRITE_FAILED": "[RunMarker] RUN_MARKER_WRITE_FAILED could not write S1x: S2x. Restart detection is degraded until a write succeeds (reported once per process).",
+  "server.serverMessages.SCHEDULER_ACTIVITY_RECORDED": "[SchedulerState] Activity recorded — job=S1x status=S2x.",
+  "server.serverMessages.SCHEDULER_UNKNOWN_JOB": "[SchedulerState] Unknown job key 'S1x' — ignored.",
+  "server.serverMessages.SHUTDOWN_BUDGET": "Shutdown budget: S1xms before teardown; in-flight requests may finish for up to S2xms (S3x tracked background task(s) pending).",
+  "server.serverMessages.SHUTDOWN_CRASH_FAILSAFE": "Shutdown: S1x is a crash — failsafe armed at S2xms (crash schedule), not the full forced-exit budget.",
+  "server.serverMessages.SHUTDOWN_CUT_HOOK_FAILED": "Shutdown: the requests-cut hook failed: S1x.",
+  "server.serverMessages.SHUTDOWN_EARLY_AUDIT_FLUSH_FAILED": "Shutdown: early (non-final) audit flush failed: S1x. The final flush still runs at teardown.",
+  "server.serverMessages.SHUTDOWN_EXITING": "Shutdown (S1x) complete — exiting with code S2x.",
+  "server.serverMessages.SHUTDOWN_FORCED_EXIT": "Forced shutdown after timeout (S1xms) — exiting with code 1.",
+  "server.serverMessages.SHUTDOWN_GRACE_SHORTENED_CRASH": "Shutdown: S1x crash arrived during a graceful stop — in-flight request grace shortened to S2xms.",
+  "server.serverMessages.SHUTDOWN_IDLE_CUTS": "Shutdown: S1x in-flight request(s) were cut by the idle watchdog (stopped making progress).",
+  "server.serverMessages.SHUTDOWN_NOTIFIER_STEP_FAILED": "Shutdown: alert notifier S1x failed — S2x",
+  "server.serverMessages.SHUTDOWN_NOTIFY_FAILED": "Shutdown alert email (S1x) failed: S2x.",
+  "server.serverMessages.SHUTDOWN_REQUESTS_CUT": "Shutdown: S1x in-flight request(s) still running after the S2xms grace — connections force-closed.",
+  "server.serverMessages.SHUTDOWN_REQUESTS_FINISHED": "Shutdown: every in-flight request finished after S1xms.",
+  "server.serverMessages.SHUTDOWN_REQUEST_GRACE": "Shutdown: waiting up to S2xms for S1x in-flight request(s) to finish — new connections are refused.",
+  "server.serverMessages.SHUTDOWN_SHORTEN_FAILED": "Shutdown: shortening the grace after a crash failed: S1x.",
+  "server.serverMessages.SHUTDOWN_STEP_FAILED": "Shutdown: S1x failed — S2x",
+  "server.serverMessages.SHUTDOWN_WAITING": "Shutdown: still waiting for 111 in-flight request(s) after 0s (cap 0s). Oldest: none.",
+  "server.serverMessages.STARTUP_NOTICE_THROTTLED": "Server started notice skipped: the last one was sent at S1x (under 15 minutes ago).",
+  "server.serverMessages.STARTUP_NOTIFY_FAILED": "Startup alert email (S1x) failed: S2x.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > sse: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "sse.sseMessages.SSE_POLL_ERROR": "S1x SSE poll error for scope "S2x": S3x.",
+  "sse.sseMessages.SSE_SCOPE_CLOSED": "S1x SSE stream closed — scope: S2x.",
+  "sse.sseMessages.SSE_SCOPE_CONNECTED": "S1x SSE connection joined scope "S2x" — S3x connection(s) now sharing it.",
+  "sse.sseMessages.SSE_SCOPE_MAX_ERRORS": "S1x SSE scope "S2x" hit S4x consecutive poll errors — notifying S3x connection(s) and dropping the scope.",
+  "sse.sseMessages.SSE_SCOPE_OPENED": "S1x SSE stream opened — scope: S2x.",
+  "sse.sseMessages.SSE_SESSION_ENDED": "Ended S1x live stream(s) whose session was signed out or had its password changed.",
+  "sse.sseMessages.SSE_SHARED_POLL_STARTED": "S1x SSE shared poller started (per-scope, one Oracle query per distinct scope per tick).",
+  "sse.sseMessages.SSE_SHARED_POLL_STOPPED": "S1x SSE shared poller stopped — no scopes remain.",
+  "sse.sseMessages.SSE_SHUTDOWN_BROADCAST": "SSE graceful shutdown — sent 'shutdown' event to S1x live stream(s).",
+  "sse.sseMessages.SSE_UPDATE_SENT": "S1x SSE update pushed for scope "S2x" — cursor changed, onChange ran.",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > upload: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "upload.uploadMessages.LEDGER_BALANCED": "[UploadOutcome:S1x] ledger balanced — total=P_total inserted=P_inserted updated=P_updated skipped=P_skipped failed=P_failed pending=P_pending",
+  "upload.uploadMessages.LEDGER_DUPLICATE_KEY": "[UploadOutcome:S1x] row "S2x" bucketed twice — first as "S3x", again as "S4x".",
+  "upload.uploadMessages.LEDGER_OVERCOUNT": "[UploadOutcome:S1x] LEDGER OVERCOUNT — S2x outcome(s) recorded for S3x submitted row(s). A row was bucketed more than once.",
+  "upload.uploadMessages.LEDGER_UNBALANCED": "[UploadOutcome:S1x] LEDGER UNBALANCED — P_unaccounted row(s) unaccounted for. total=P_total inserted=P_inserted updated=P_updated skipped=P_skipped failed=P_failed pending=P_pending",
+}
+`;
+
+exports[`constants/messages templates (wave 2) > watchdog: every template renders deterministic, fully-interpolated text 1`] = `
+{
+  "watchdog.watchdogMessages.WATCHDOG_EVENT_LOOP_STALL": "WATCHDOG_EVENT_LOOP_STALL — idle sweep ran S1xms late; credited S2x active scope(s) as progressing and skipped enforcement this tick.",
+  "watchdog.watchdogMessages.WATCHDOG_LIMIT_CLAMPED": "WATCHDOG_LIMIT_CLAMPED — S1x="S2x" is out of range or not a number; using S3xms.",
+  "watchdog.watchdogMessages.WATCHDOG_ONIDLE_FAILED": "WATCHDOG_ONIDLE_FAILED — idle callback threw: S1x",
+  "watchdog.watchdogMessages.WATCHDOG_REQUEST_STALLED": "WATCHDOG_REQUEST_STALLED — S1x S2x made no progress for S3xms (limit S4xms, last progress: S5x, age S6xms); terminated with 504.",
+}
+`;

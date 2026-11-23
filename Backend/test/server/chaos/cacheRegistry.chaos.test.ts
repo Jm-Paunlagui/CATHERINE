@@ -18,7 +18,7 @@
 // Import the class, NOT the singleton.
 const {
     CacheRegistry,
-} = require("../../../../../src/middleware/cache/CacheRegistry");
+} = require("../../../src/middleware/cache/CacheRegistry");
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
