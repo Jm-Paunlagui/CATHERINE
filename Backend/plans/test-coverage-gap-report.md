@@ -25,6 +25,10 @@ architecture and runtime models (`src/constants/architectureModel.ts`, `src/cons
 > EmailProtectionService tests (2 files) held for a tsc error inside that src file; `TABLE_REGISTRY` in `models/integrity.model.ts` is a frozen empty
 > object so its per-table branches are unreachable; spies on modules src lazy-`require()`s do not take effect.
 
+> **Update 2026-11-23 (held tests landed):** shutdown teardown, HttpInFlightTracker and EmailProtectionService tests added after two type-only annotation fixes in
+> `src/utils/shutdown/HttpInFlightTracker.ts` and `src/services/email/EmailProtectionService.ts`. 4829 tests in 259 files; statements 88.85%, branches 89.67%,
+> functions 88.15%, lines 89.22%.
+
 ## 1. Coverage vs gate
 
 Run result: 103 test files, 1613 tests, **all passed**. Coverage gate: **FAILED on all four metrics**

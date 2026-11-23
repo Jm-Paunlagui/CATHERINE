@@ -237,8 +237,8 @@ class EmailProtectionService {
         // nodemailer's `to` (a string, an address object or a list), passed through as-is to
         // the result and logs; `any` so its existing string | null consumers are unchanged.
         let primaryRecipient: any = null;
-        let primaryCause = null;
-        let primaryErrorCode = null;
+        let primaryCause: string | null = null;
+        let primaryErrorCode: string | null = null;
 
         let primaryInfo: { rejected?: Array<string | { address?: string }> } | null = null;
         try {
@@ -323,7 +323,7 @@ class EmailProtectionService {
             typeof fallback.resolveRecipients !== "function" ||
             typeof fallback.buildMailOptions !== "function"
         ) {
-            logger.error(resilienceMessages.EMAIL_FAILED(label, primaryCause));
+            logger.error(resilienceMessages.EMAIL_FAILED(label, primaryCause as string));
             logger.info(
                 resilienceMessages.EMAIL_DELIVERY_SUMMARY(label, 0, 0, 1),
                 { label, delivered: 0, fallbackDelivered: 0, failed: 1 },
@@ -340,7 +340,7 @@ class EmailProtectionService {
         }
 
         let fallbackRecipients: string[] = [];
-        let resolveError = null;
+        let resolveError: any = null;
         try {
             fallbackRecipients = (await fallback.resolveRecipients()) ?? [];
         } catch (err) {
