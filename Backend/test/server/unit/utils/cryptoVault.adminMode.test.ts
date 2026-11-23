@@ -16,14 +16,14 @@
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Re-requires CryptoVault with a clean module cache so env-var changes are
+ * Re-imports CryptoVault with a clean module registry so env-var changes are
  * picked up. Returns the fresh module exports.
  */
-function freshVault() {
-    // Clear module cache for the vault and its lazy-init singletons
-    const key = require.resolve("../../../../src/utils/encryption/CryptoVault");
-    delete require.cache[key];
-    return require("../../../../src/utils/encryption/CryptoVault");
+async function freshVault() {
+    // Drop the module registry so the vault and its lazy-init singletons are
+    // re-evaluated under the env vars the test just set.
+    vi.resetModules();
+    return await import("../../../../src/utils/encryption/CryptoVault");
 }
 
 /**
@@ -62,7 +62,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
     // ── Mode resolution rules ──────────────────────────────────────────────────
 
     describe("resolveAdminMode() — mode selection", function () {
-        it("uses PASSWORD_HASH_MODE directly when it is bcrypt (strong mode)", function () {
+        it("uses PASSWORD_HASH_MODE directly when it is bcrypt (strong mode)", async function () {
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "bcrypt",
                 PASSWORD_ENCRYPTION_MODE: undefined,
@@ -70,7 +70,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: undefined,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 // In bcrypt mode, hashAdminPassword must produce a bcrypt hash
                 // We only test that it doesn't throw due to missing enc mode
                 expect(CryptoVault).toBeDefined();
@@ -79,7 +79,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             }
         });
 
-        it("uses PASSWORD_HASH_MODE directly when it is argon2 (strong mode)", function () {
+        it("uses PASSWORD_HASH_MODE directly when it is argon2 (strong mode)", async function () {
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "argon2",
                 PASSWORD_ENCRYPTION_MODE: undefined,
@@ -87,7 +87,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 expect(CryptoVault).toBeDefined();
             } finally {
                 restore();
@@ -103,7 +103,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 PASSWORD_KEY: "TESTK",
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 let threw = false;
                 let errorMsg = "";
                 try {
@@ -128,7 +128,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 NODE_ENV: "development",
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 let threw = false;
                 let errorMsg = "";
                 try {
@@ -153,7 +153,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 PASSWORD_KEY: "TESTK",
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 let threw = false;
                 let errorMsg = "";
                 try {
@@ -171,7 +171,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             }
         });
 
-        it("accepts PASSWORD_ENCRYPTION_MODE=bcrypt when hash mode is weak", function () {
+        it("accepts PASSWORD_ENCRYPTION_MODE=bcrypt when hash mode is weak", async function () {
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "bcrypt",
@@ -179,7 +179,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 BCRYPT_SALT_ROUNDS: "10",
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 // Should not throw on access
                 expect(CryptoVault).toBeDefined();
             } finally {
@@ -187,7 +187,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
             }
         });
 
-        it("accepts PASSWORD_ENCRYPTION_MODE=argon2 when hash mode is weak", function () {
+        it("accepts PASSWORD_ENCRYPTION_MODE=argon2 when hash mode is weak", async function () {
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "tripledes",
                 PASSWORD_ENCRYPTION_MODE: "argon2",
@@ -196,7 +196,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 expect(CryptoVault).toBeDefined();
             } finally {
                 restore();
@@ -215,7 +215,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const hash = await CryptoVault.hashAdminPassword("AdminPass1!");
                 expect(hash).toMatch(/^\$argon2id\$/);
             } finally {
@@ -230,7 +230,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 BCRYPT_SALT_ROUNDS: "10",
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const hash = await CryptoVault.hashAdminPassword("AdminPass1!");
                 expect(hash).toMatch(/^\$2[ab]\$/);
             } finally {
@@ -247,7 +247,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const hash = await CryptoVault.hashAdminPassword("AdminPass1!");
                 expect(hash).toMatch(/^\$argon2id\$/);
             } finally {
@@ -263,7 +263,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 BCRYPT_SALT_ROUNDS: "10",
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const hash = await CryptoVault.hashAdminPassword("AdminPass1!");
                 expect(hash).toMatch(/^\$2[ab]\$/);
             } finally {
@@ -277,14 +277,14 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 BCRYPT_SALT_ROUNDS: "10",
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 await expect(
                     CryptoVault.hashAdminPassword(""),
                 ).rejects.toThrow(TypeError);
             } catch (_err) {
                 // Some chai versions don't have rejectedWith without chai-as-promised
                 // Fallback: call directly and check
-                const { CryptoVault: CV2 } = freshVault();
+                const { CryptoVault: CV2 } = await freshVault();
                 let threw = false;
                 try {
                     await CV2.hashAdminPassword("");
@@ -308,7 +308,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const hash = await CryptoVault.hashAdminPassword("Correct1!");
                 const { matched, newHash } =
                     await CryptoVault.verifyAdminPassword("Correct1!", hash);
@@ -326,7 +326,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const hash = await CryptoVault.hashAdminPassword("Correct1!");
                 const { matched } = await CryptoVault.verifyAdminPassword(
                     "Wrong1!",
@@ -344,7 +344,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 BCRYPT_SALT_ROUNDS: "10",
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const hash = await CryptoVault.hashAdminPassword("Correct1!");
                 const { matched, newHash } =
                     await CryptoVault.verifyAdminPassword("Correct1!", hash);
@@ -364,7 +364,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 // Produce a TripleDES hash via CryptoVault.hashPassword (tripledes mode)
                 const tripleDesHash =
                     await CryptoVault.hashPassword("LegacyPass1!");
@@ -390,7 +390,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 ARGON2_PEPPER: TEST_PEPPER,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const tripleDesHash =
                     await CryptoVault.hashPassword("LegacyPass1!");
                 const { matched, newHash } =
@@ -409,14 +409,14 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
     // ── adminNeedsRehash ───────────────────────────────────────────────────────
 
     describe("adminNeedsRehash()", function () {
-        it("returns true for a TripleDES (legacy) hash", function () {
+        it("returns true for a TripleDES (legacy) hash", async function () {
             const restore = setEnv({
                 PASSWORD_HASH_MODE: "argon2",
                 ARGON2_PEPPER: TEST_PEPPER,
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 // A base64 string that is not a bcrypt or argon2 prefix
                 expect(CryptoVault.adminNeedsRehash("dGVzdA==")).toBe(true);
             } finally {
@@ -431,7 +431,7 @@ describe("CryptoVault — PASSWORD_ENCRYPTION_MODE (admin password hardening)", 
                 DATA_SIGNING_SECRET: TEST_DATA_SIGNING_SECRET,
             });
             try {
-                const { CryptoVault } = freshVault();
+                const { CryptoVault } = await freshVault();
                 const hash = await CryptoVault.hashAdminPassword("Fresh1!");
                 expect(CryptoVault.adminNeedsRehash(hash)).toBe(false);
             } finally {

@@ -8,14 +8,16 @@
  * (started at module load), and the `isShuttingDown` flag. Tests that prove
  * behaviour of that state (a cached rejected pool promise, a leaked health-check
  * connection, a pool the monitor never sees) need a copy nobody else has
- * touched, so this helper evicts the adapter from `require.cache` and
- * re-requires it.
+ * touched, so this helper imports a SEPARATE instance of the adapter module
+ * (a unique `?fresh=N` query makes Vite evaluate the file again) while every
+ * dependency it imports (database, metrics store, logger) stays the shared
+ * instance the rest of the test and src see.
  *
  * Usage (order matters):
  *
  *   vi.useFakeTimers();            // BEFORE load → the monitor interval is faked
  *   Math.random = () => 0;         // retry jitter → 0 ms (restore it yourself)
- *   const { adapter, restore } = loadFreshAdapter({ createPool });
+ *   const { adapter, restore } = await loadFreshAdapter({ createPool });
  *   ...
  *   restore();                     // BEFORE vi.useRealTimers()
  *   vi.useRealTimers();
@@ -23,9 +25,8 @@
  * What it patches, and how each is put back by `restore()`:
  *   - `require("oracledb").createPool` → the caller's stub. Restored to whatever
  *     was there before.
- *   - `require.cache[<adapter>]` → the fresh copy. The previous cache entry
- *     (the copy src/config/index.ts already holds) is put back, so a later
- *     require of the adapter in the same file sees the original singleton.
+ *   - The shared adapter instance (the one src/config/index.ts holds) is never
+ *     touched; the fresh copy lives only under its own query-string module id.
  *   - `database.getConnectionConfig` → patched ONLY for the duration of the
  *     re-require (the adapter destructures it at load). The fresh copy's
  *     captured reference returns the real pool config with the credentials and
@@ -39,40 +40,34 @@
  * too and are discarded by `vi.useRealTimers()`.
  */
 
-const path = require("path");
+import oracledb from "oracledb";
+import database from "../../../src/config/database";
 
-const ADAPTER_PATH = require.resolve(
-    path.join(__dirname, "../../../src/config/adapters/oracle"),
-);
-const DATABASE_PATH = require.resolve(
-    path.join(__dirname, "../../../src/config/database"),
-);
+const ADAPTER_SPEC = "../../../src/config/adapters/oracle";
+let freshSeq = 0;
 
 /**
  * @param {object} opts
  * @param {(cfg: object) => Promise<object>} opts.createPool - Stub installed as
  *   `oracledb.createPool` for the lifetime of the fresh adapter.
- * @returns {{ adapter: object, restore: () => void }}
+ * @returns {Promise<{ adapter: object, restore: () => void }>}
  */
-function loadFreshAdapter({ createPool }: Record<string, any> = {}) {
+async function loadFreshAdapter({ createPool }: Record<string, any> = {}) {
     if (typeof createPool !== "function") {
         throw new TypeError("loadFreshAdapter: createPool stub is required.");
     }
 
-    // Ensure the shared copy (and database.js) are loaded first, so the entry we
-    // stash below is the singleton everyone else holds.
-    require(ADAPTER_PATH);
-    const database = require(DATABASE_PATH).default;
-    const oracledb = require("oracledb");
+    // Load the shared copy first so it is evaluated against the real config,
+    // never against the placeholder patch below.
+    await import(ADAPTER_SPEC);
 
-    const prevCreatePool = oracledb.createPool;
-    const prevCacheEntry = require.cache[ADAPTER_PATH];
-    const realGetConnectionConfig = database.getConnectionConfig;
+    const ora: any = oracledb;
+    const db: any = database;
+    const prevCreatePool = ora.createPool;
+    const realGetConnectionConfig = db.getConnectionConfig;
 
-    oracledb.createPool = createPool;
-
-    delete require.cache[ADAPTER_PATH];
-    database.getConnectionConfig = function freshAdapterConnectionConfig(name) {
+    ora.createPool = createPool;
+    db.getConnectionConfig = function freshAdapterConnectionConfig(name: string) {
         const cfg = realGetConnectionConfig(name); // still throws on unknown names
         return {
             ...cfg,
@@ -81,11 +76,12 @@ function loadFreshAdapter({ createPool }: Record<string, any> = {}) {
             connectString: "127.0.0.1:1/FRESH_ADAPTER_PLACEHOLDER",
         };
     };
-    let adapter;
+    let adapter: any;
     try {
-        adapter = require(ADAPTER_PATH);
+        freshSeq += 1;
+        adapter = await import(/* @vite-ignore */ `${ADAPTER_SPEC}?fresh=${freshSeq}`);
     } finally {
-        database.getConnectionConfig = realGetConnectionConfig;
+        db.getConnectionConfig = realGetConnectionConfig;
     }
 
     let restored = false;
@@ -97,12 +93,10 @@ function loadFreshAdapter({ createPool }: Record<string, any> = {}) {
         } catch {
             // closeAll's sync prefix never throws today; never fail a teardown on it.
         }
-        oracledb.createPool = prevCreatePool;
-        if (prevCacheEntry) require.cache[ADAPTER_PATH] = prevCacheEntry;
-        else delete require.cache[ADAPTER_PATH];
+        ora.createPool = prevCreatePool;
     }
 
     return { adapter, restore };
 }
 
-module.exports = { loadFreshAdapter };
+export { loadFreshAdapter };

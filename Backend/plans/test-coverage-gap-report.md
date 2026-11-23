@@ -29,6 +29,11 @@ architecture and runtime models (`src/constants/architectureModel.ts`, `src/cons
 > `src/utils/shutdown/HttpInFlightTracker.ts` and `src/services/email/EmailProtectionService.ts`. 4829 tests in 259 files; statements 88.85%, branches 89.67%,
 > functions 88.15%, lines 89.22%.
 
+> **Update 2026-11-23 (open items closed):** the plugin now also routes src's lazy `require()` through Vite in tests, so the ten opt-out files are
+> instrumented and share src's module instances. `IntegrityModel` reads its allow-list via `IntegrityModel.REGISTRY` (tests install a registry;
+> `integrity.model.ts` 100% branches). `AuditLogFileModel.deleteMany` now counts a day only after `fs.rm` succeeds. 4874 tests; statements 96.81%,
+> branches 94.70%, functions 94.88%, lines 97.12%.
+
 ## 1. Coverage vs gate
 
 Run result: 103 test files, 1613 tests, **all passed**. Coverage gate: **FAILED on all four metrics**
