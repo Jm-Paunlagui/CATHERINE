@@ -138,14 +138,14 @@ class HttpInFlightTracker {
      */
     activeSummary(limit: number = 20): Array<{ method: string; path: string; ageMs: number; idleMs: number | null; }> {
         const now = Date.now();
-        const list = [];
+        const list: Array<{ method: string; path: string; ageMs: number; idleMs: number | null }> = [];
         for (const res of this.#active) {
             if (HttpInFlightTracker.#isSse(res)) continue;
             const m = this.#meta.get(res);
             if (!m) continue;
             const template = m.req.route?.path;
             const path = typeof template === "string" ? `${m.req.baseUrl ?? ""}${template}` : maskIds(m.path);
-            let idleMs = null;
+            let idleMs: number | null = null;
             try {
                 const scope = this.#scopeOf(m.req);
                 if (scope) idleMs = scope.idleMs(now);

@@ -28,7 +28,7 @@
 
 const {
     CacheStore,
-} = require("../../../../../src/middleware/cache/CacheStore");
+} = require("../../../src/middleware/cache/CacheStore");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
