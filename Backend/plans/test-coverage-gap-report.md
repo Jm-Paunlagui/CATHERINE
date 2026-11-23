@@ -20,6 +20,15 @@ architecture and runtime models (`src/constants/architectureModel.ts`, `src/cons
 > branches 81.69% (FAIL, gate 85), functions 79.98% (FAIL, gate 85). Remaining low files are mostly those whose spies cannot take effect because
 > src lazy-`require()`s them, plus `server.ts`-adjacent shutdown code (tests held pending a src type annotation).
 
+> **Update 2026-11-23 (wave 2):** 4778 tests in 255 files. Statements 87.61%, branches 88.84%, functions 87.13%, lines 88.01%: the gate now **passes**
+> on all four metrics. Still open: shutdown teardown tests (36) held pending a 2-line type annotation in `src/utils/shutdown/HttpInFlightTracker.ts`;
+> EmailProtectionService tests (2 files) held for a tsc error inside that src file; `TABLE_REGISTRY` in `models/integrity.model.ts` is a frozen empty
+> object so its per-table branches are unreachable; spies on modules src lazy-`require()`s do not take effect.
+
+> **Update 2026-11-23 (held tests landed):** shutdown teardown, HttpInFlightTracker and EmailProtectionService tests added after two type-only annotation fixes in
+> `src/utils/shutdown/HttpInFlightTracker.ts` and `src/services/email/EmailProtectionService.ts`. 4829 tests in 259 files; statements 88.85%, branches 89.67%,
+> functions 88.15%, lines 89.22%.
+
 ## 1. Coverage vs gate
 
 Run result: 103 test files, 1613 tests, **all passed**. Coverage gate: **FAILED on all four metrics**
