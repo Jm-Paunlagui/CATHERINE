@@ -2,6 +2,7 @@ import { RecipientResolver } from "../../../../src/services/email/RecipientResol
 import { clusterRpc } from "../../../../src/utils/cluster/ClusterRpcClient";
 import { CLUSTER_RPC_METHODS } from "../../../../src/constants/clusterIpc";
 import { logger } from "../../../../src/utils/logger";
+import AdminModel from "../../../../src/models/admin.model";
 
 let r: RecipientResolver;
 let savedMin: string | undefined;
@@ -84,8 +85,11 @@ describe("_maybeRefresh", () => {
     });
 });
 
-describe("_doRefresh (database unreachable in tests)", () => {
+describe("_doRefresh (database unreachable)", () => {
     it("serves the stale cache, flags the refresh as failed and stamps the attempt", async () => {
+        // Fail the read explicitly: Bun auto-loads .env, so with a local Oracle
+        // running the real query would succeed and the test would depend on the host.
+        vi.spyOn(AdminModel, "findServerNotifyRecipients").mockRejectedValue(new Error("ORA-12541: no listener"));
         r._cache = new Map([["backup", ["stale@x.test"]]]);
         r._lastRefreshOk = true;
         await r._doRefresh();

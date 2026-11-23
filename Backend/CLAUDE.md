@@ -1352,11 +1352,23 @@ The `package.json` scripts:
 
 ## Test Setup
 
-`test/server/setup.ts` (registered as a `setupFile`) runs before every test file:
+Two `setupFiles` run before every test file, in this order:
 
-- Sets `process.env.*` (NODE_ENV=test, JWT/CSRF/COOKIE secrets, disabled IP filter
-  and clustering, unlimited rate limit, fake Oracle DSN). `dotenv.config()` never
-  overrides already-set vars, so these win regardless of the real `.env`.
+`test/server/setupEnv.ts` imports nothing from `src/` and sets `process.env.*`:
+NODE_ENV=test, TZ=`APP_TZ || Asia/Manila`, JWT/CSRF/COOKIE secrets, IP filter and
+clustering off, unlimited rate limit, and a fake Oracle DSN. It is a separate file
+because `vitest.requireToImport.mts` hoists a setup file's `require()` of `src` above
+its body. Env set in that body would reach `src/config/database.ts` too late, and
+under Bun (which loads `Backend/.env` into every fork) the tests would log in to
+the developer's real schema. All other `.env` values (SMTP, `LOG_*`) reach the tests
+on purpose.
+
+`test/server/setup.ts`:
+
+- Patches supertest to connect to `[::1]` when the server bound `::`. Its default
+  `127.0.0.1` can be shadowed on macOS by another app (VS Code, Docker) listening on
+  `127.0.0.1` on the same ephemeral port, which caused random empty-body 404/401s.
+  A hand-made server binds `127.0.0.1` explicitly (`listen(0, "127.0.0.1")`).
 - In a global `beforeAll`, stubs `AuditLogService.insertAsync` with
   `vi.spyOn(...).mockResolvedValue(undefined)` so the fire-and-forget audit write
   after every response never tries to acquire a real Oracle connection (which would

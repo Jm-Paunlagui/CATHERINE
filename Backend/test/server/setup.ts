@@ -1,34 +1,37 @@
 "use strict";
 
-// Set test environment variables before any module is required.
-// Prevents Oracle pool initialisation errors and suppresses log noise.
-// IMPORTANT: dotenv.config() in database.js does NOT override already-set env
-// vars, so these values are safe regardless of the real .env file contents.
-process.env.NODE_ENV = "test";
-process.env.JWT_SECRET = "test-jwt-secret-for-unit-tests-only";
-process.env.CSRF_SECRET = "test-csrf-secret-for-unit-tests-only";
-process.env.COOKIE_SECRET = "test-cookie-secret";
-process.env.ENABLE_IP_FILTER = "false";
-process.env.ENABLE_CLUSTERING = "false";
-process.env.LOG_LEVEL = "error";
-process.env.ENABLE_CONSOLE_LOGS = "false";
-process.env.LOG_EXCLUDE_HEALTH = "true";
-process.env.DB_TYPE = "oracle";
-process.env.DB_HOST = "127.0.0.1";
-process.env.DB_PORT = "1521";
-process.env.DB_APP_SERVICE_NAME = "testdb";
-process.env.APP_DB_USERNAME = "test_app";
-process.env.APP_DB_PASSWORD = "test_app_pw";
-// Set an effectively unlimited rate limit for tests — the full suite makes
-// 3 000+ HTTP requests from 127.0.0.1, exhausting any realistic per-IP cap.
-// Rate-limit behaviour is tested separately via RateLimiterMiddleware instances
-// created with explicit { max, windowMs } in rate-limit.test.js.
-process.env.RATE_LIMIT_MAX = "99999";
-process.env.RATE_LIMIT_WINDOW_MS = "60000";
-process.env.PORT = "4099";
-process.env.DATA_SIGNING_SECRET =
-    process.env.DATA_SIGNING_SECRET ||
-    "test-signing-secret-for-unit-tests-only-must-be-32-chars";
+// Environment variables live in test/server/setupEnv.ts, which runs first.
+
+import supertest from "supertest";
+
+// ── supertest: connect to the address the server actually bound ──────────────
+//
+// supertest(app) starts app.listen(0) — on a dual-stack host a wildcard (::)
+// bind — then always connects to 127.0.0.1:<port>. macOS lets that wildcard bind
+// take a port another process already holds on 127.0.0.1 (VS Code, Docker,
+// Discord... listen there), and loopback traffic then goes to THAT process, the
+// more specific binding: a test got a foreign empty-body 404/401 at random.
+// When the server bound "::", connect over IPv6 loopback [::1] instead, where
+// those 127.0.0.1-only listeners cannot shadow it. Any other bind (0.0.0.0 on an
+// IPv4-only host, an explicit host) keeps supertest's own 127.0.0.1 URL.
+// (Binding 127.0.0.1 instead was tried: the 500-request perf bursts then
+// exhausted 127.0.0.1's ephemeral ports — EADDRNOTAVAIL.)
+type ServerLike = { address(): { address: string; port: number } | string | null };
+// serverAddress is supertest-internal (absent from its typings): look it up at
+// runtime and fail loudly if an upgrade renames it, rather than silently not patching.
+const testProto: object = supertest.Test.prototype;
+const nativeServerAddress: unknown = Reflect.get(testProto, "serverAddress");
+if (typeof nativeServerAddress !== "function") {
+    throw new Error("supertest internals changed: Test#serverAddress not found; revisit test/server/setup.ts");
+}
+Reflect.set(testProto, "serverAddress", function (this: unknown, app: ServerLike, path: string): string {
+    const url = String(nativeServerAddress.call(this, app, path));
+    const addr = app.address();
+    if (addr && typeof addr === "object" && addr.address === "::") {
+        return url.replace("://127.0.0.1:", "://[::1]:");
+    }
+    return url;
+});
 
 // ── Global audit log stub ─────────────────────────────────────────────────────
 //
