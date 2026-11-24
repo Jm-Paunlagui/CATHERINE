@@ -255,6 +255,12 @@ function moneySafeFetchTypeHandler(metaData: import("oracledb").Metadata<unknown
     return undefined; // default handling for everything else
 }
 
+// Applied driver-wide so EVERY query (wrapper methods and raw conn.execute alike)
+// gets exact decimal strings for scaled NUMBER columns. It used to live only in
+// EXECUTE_OPTIONS, which no wrapper query passes — money silently arrived as
+// IEEE doubles (123456789012345.6789 → 123456789012345.67).
+oracledb.fetchTypeHandler = moneySafeFetchTypeHandler;
+
 const EXECUTE_OPTIONS = Object.freeze({
     outFormat: OUT_FORMAT_OBJECT,
     autoCommit: true,
@@ -828,7 +834,6 @@ const ACQUIRE_BASE_DELAY_MS = 150;
  * @returns {Promise<object>} An open connection the caller must close.
  */
 async function _acquireConnection(connectionName: string, pool: import("oracledb").Pool): Promise<import("oracledb").Connection> {
-    let lastErr;
 
     // B9 — honour the PER-POOL connectTimeout on the acquire-race timer.
     // `pool.connectTimeout` is not a property node-oracledb exposes on the live
@@ -837,7 +842,9 @@ async function _acquireConnection(connectionName: string, pool: import("oracledb
     const cfg = getConnectionConfig(connectionName);
     const connectTimeoutMs = ("connectTimeout" in cfg ? cfg.connectTimeout : undefined) ?? POOL_DEFAULTS.connectTimeout;
 
-    for (let attempt = 1; attempt <= ACQUIRE_MAX_ATTEMPTS; attempt++) {
+    // Every pass either returns a connection or throws on the last / a
+    // non-transient attempt, so the loop needs no exit condition.
+    for (let attempt = 1; ; attempt++) {
         const pending = pool.getConnection();
         let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -875,10 +882,12 @@ async function _acquireConnection(connectionName: string, pool: import("oracledb
                 () => {},
             );
 
-            lastErr = err;
-
             const isLastAttempt = attempt >= ACQUIRE_MAX_ATTEMPTS;
-            if (isLastAttempt || !RetryPolicy.isTransientDbError(err)) throw err;
+            // NJS-040 (queue timeout) means the pool is saturated: retrying the acquire
+            // stretches the caller's wait to ~3x queueTimeout and adds load. RetryPolicy
+            // still treats it as transient for other callers (e.g. batch work).
+            const queueTimeout = /NJS-040/.test(String((err as { message?: unknown }).message));
+            if (isLastAttempt || queueTimeout || !RetryPolicy.isTransientDbError(err)) throw err;
 
             logger.warning(
                 oracleMessages.ACQUIRE_RETRY(
@@ -893,8 +902,6 @@ async function _acquireConnection(connectionName: string, pool: import("oracledb
             if (timer) clearTimeout(timer);
         }
     }
-
-    throw lastErr;
 }
 
 // ── Progress instrumentation (request watchdog, B-D9) ─────────────────────────
@@ -1062,6 +1069,10 @@ async function withConnection<T>(connectionName: string, callback: (conn: import
     } finally {
         unbindScope();
         if (conn) {
+            // Session settings a callback changed must not follow the pooled
+            // connection to its next borrower (a leftover callTimeout aborts
+            // someone else's long query).
+            if (conn.callTimeout) conn.callTimeout = 0;
             try {
                 await conn.close();
             } catch (e) {
@@ -1242,7 +1253,9 @@ function _timeout(ms: number, msg: string) {
 // SECTION 5 — Exports
 // ─────────────────────────────────────────────────────────────────────────────
 
-const __export_isPoolHealthy = (name: string) => healthMonitor.isHealthy(name);
+// After closeAll() the pools are gone for good (getPool refuses while shutting down), so
+// no pool is healthy any more, including one that was never created.
+const __export_isPoolHealthy = (name: string) => !isShuttingDown && healthMonitor.isHealthy(name);
 const __export_getHealthMetrics = () => healthMonitor.getMetrics();
 const __export___setPoolHealthForTest = (name: string, healthy: unknown) => {
         if (process.env.NODE_ENV !== "test") {

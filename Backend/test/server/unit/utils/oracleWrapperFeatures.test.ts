@@ -44,16 +44,18 @@ function fakeDb(conn) {
 
 describe("oracle-mongo-wrapper features", function () {
     describe("G6 — $now server-time operand", function () {
-        it("binds the amount and compares against SYSTIMESTAMP", function () {
+        it("binds the amount and compares against the database's wall-clock time", function () {
             const { whereClause, binds } = parseFilter({ CREATED_AT: { $lt: { $now: { minus: { days: 30 } } } } });
-            expect(whereClause).toBe(`WHERE "CREATED_AT" < SYSTIMESTAMP - NUMTODSINTERVAL(:where_CREATED_AT_now_0, 'DAY')`);
+            expect(whereClause).toBe(`WHERE "CREATED_AT" < CAST(SYSTIMESTAMP AS TIMESTAMP) - NUMTODSINTERVAL(:where_CREATED_AT_now_0, 'DAY')`);
             expect(binds).toEqual({ where_CREATED_AT_now_0: 30 });
         });
 
         it("supports plain $now and combined units", function () {
-            expect(parseFilter({ T: { $gte: { $now: true } } }).whereClause).toBe(`WHERE "T" >= SYSTIMESTAMP`);
+            expect(parseFilter({ T: { $gte: { $now: true } } }).whereClause).toBe(`WHERE "T" >= CAST(SYSTIMESTAMP AS TIMESTAMP)`);
+            // A TIMESTAMP WITH TIME ZONE column compares with SYSTIMESTAMP itself.
+            expect(parseFilter({ T: { $gte: { $now: { withTimeZone: true } } } }).whereClause).toBe(`WHERE "T" >= SYSTIMESTAMP`);
             const { whereClause } = parseFilter({ T: { $lt: { $now: { minus: { hours: 2 }, plus: { minutes: 5 } } } } });
-            expect(whereClause).toMatch(/SYSTIMESTAMP - NUMTODSINTERVAL\(:\w+, 'HOUR'\) \+ NUMTODSINTERVAL\(:\w+, 'MINUTE'\)$/);
+            expect(whereClause).toMatch(/CAST\(SYSTIMESTAMP AS TIMESTAMP\) - NUMTODSINTERVAL\(:\w+, 'HOUR'\) \+ NUMTODSINTERVAL\(:\w+, 'MINUTE'\)$/);
         });
 
         it("never interpolates the amount", function () {
