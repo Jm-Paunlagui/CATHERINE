@@ -2008,5 +2008,65 @@
     ],
     "createdAt": "2026-11-21T19:16:42.884Z",
     "updatedAt": "2026-11-21T21:01:44.791Z"
+  },
+  {
+    "id": "664db007-ba30-4cab-8d2e-2a6147afd7d5",
+    "displayDate": "2026-11-25",
+    "version": "1.0.0-dev.54",
+    "title": "Database Helper Brought Up to Mira 2.0",
+    "message": "The database helper now matches Mira 2.0: 43 more faults fixed, about ten of which returned wrong data with no error, and new report features. Every fix and feature was first proven on Oracle 19c in Mira, where all 50 business queries of its enterprise simulation now run through the helper.",
+    "whatChanged": [
+      {
+        "text": "Fixed (proven): a null comparison ({ $ne: null } / { $eq: null }) matched nothing; it is now IS NOT NULL / IS NULL"
+      },
+      {
+        "text": "Fixed (proven): $now was off by the difference between the app's and the database's time zones; it now compares in database time ($currentDate's value). withTimeZone: true keeps SYSTIMESTAMP for TIMESTAMP WITH TIME ZONE columns"
+      },
+      {
+        "text": "Fixed (proven): findOneAndUpdate / findOneAndReplace changed every matching row; they now lock and change exactly one"
+      },
+      {
+        "text": "Fixed (proven): a subquery, a CTE, a repeated $match or a lateral join filtering the same column could overwrite another filter's value"
+      },
+      {
+        "text": "Fixed (proven): bulkWrite on a transaction's collection committed on its own connection; it now joins the transaction"
+      },
+      {
+        "text": "Fixed (proven): with SKIP LOCKED and a limit, a second worker on a queue got nothing while free rows waited; a standalone locking read failed with ORA-01002 when rows were skipped"
+      },
+      {
+        "text": "Fixed (proven): views and materialized views from a filtered query (NJS-098), insertOne on a table without an ID column (ORA-00904), createTable with a default and NOT NULL (ORA-00907), a multi-stage $facet after another stage (ORA-32034), filter $case / $coalesce / $nullif (ORA-00920), $size, $match after $group, updateFromJoin literals with a dot, getIndexes on descending columns, isHealthy after closePool"
+      },
+      {
+        "text": "Fixed (proven): a pool queue timeout (NJS-040) is no longer retried on connection acquire (callers waited about 3x the timeout); the general retry policy is unchanged for other callers"
+      },
+      {
+        "text": "New: pipeline expressions nest anywhere; $abs $ceil $floor $round $trunc $mod; GREATEST / LEAST; $switch; $dateDiff / $dateAdd / $dateTrunc and date parts; column-to-column conditions; GROUPING flags for ROLLUP / CUBE"
+      },
+      {
+        "text": "New: $matchRecognize (row pattern matching); $connectBy stage and root / leaf / cycle columns; $lookup with a pipeline; outer lateral joins"
+      },
+      {
+        "text": "New: recursion that carries a calculation (withRecursiveCTE set / while / aggregate) and a series() row generator for numbers and calendars"
+      },
+      {
+        "text": "Error messages from the helper now show the value that was refused"
+      },
+      {
+        "text": "Tests: 6 tests that pinned the old behaviour updated (large $in lists are one collection bind, $now, message templates); backend suite 4876 of 4876"
+      },
+      {
+        "text": "No database update"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-11-24T16:24:09.869Z",
+    "updatedAt": "2026-11-24T16:24:22.105Z"
   }
 ]
