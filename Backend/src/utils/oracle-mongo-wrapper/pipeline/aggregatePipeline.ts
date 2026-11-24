@@ -64,14 +64,15 @@
  *   _buildProjectCols()  → Build SELECT columns for $project
  *   _buildAddFieldsCols() → Build extra columns for $addFields
  *   _buildLateralSub()   → Build LATERAL subquery
- *   _buildMergeStage()   → Build MERGE INTO for $merge stage
+ *   _buildMergeStatement() → Wrap the pipeline in MERGE INTO for $merge
  *   _buildBucket()       → Build CASE-based grouping for $bucket
  *   _buildSortString()   → Build ORDER BY string
  * ============================================================================
  */
 
-import { quoteIdentifier } from "../utils";
+import { quoteIdentifier, renameBinds } from "../utils";
 import { parseFilter } from "../parsers/filterParser";
+import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 /**
  * Create a per-call counter for unique bind variable names.
@@ -112,13 +113,15 @@ function _createCounter(): Counter {
  *     { $group: { _id: "$region", total: { $sum: "$amount" } } },
  *   ], db);
  */
-function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<string, unknown>): { sql: string; binds: Record<string, unknown>; } {
+function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<string, unknown>, aliasPrefix = "", hoist?: Array<{ alias: string; sql: string }>, base?: Array<{ alias: string; sql: string; cols?: string[]; suffix?: string }>): { sql: string; binds: Record<string, unknown>; } {
   const counter = _createCounter();
-  const ctes: Array<{ alias: string; sql: string; isMerge?: boolean }> = [];
+  const ctes: Array<{ alias: string; sql: string }> = [];
   const allBinds: Record<string, unknown> = {};
   let prevSource = quoteIdentifier(tableName);
   let stageIdx = 0;
   let outTable: string | null = null;
+  let mergeSpec: DslSpec = null;
+  let hasMerge = false;
 
   // Pre-scan for $having — attach to preceding $group
   for (let i = 0; i < pipeline.length; i++) {
@@ -142,17 +145,45 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
     }
   }
 
+  // Upper-case aliases the stages so far have produced ($group, $project …),
+  // so a later $match can name them in the case the caller wrote them.
+  const aliases = new Set<string>();
+
+  // A stage built by its own parseFilter / QueryBuilder numbers its binds from 0,
+  // so it can reuse a name an earlier stage already bound (two $match stages on
+  // one column, a $lateralJoin subquery). Renaming on collision keeps each value.
+  const addStageBinds = (sql: string, binds: Record<string, unknown>, prefix: string) => {
+    const clash = Object.keys(binds).some((k) => k in allBinds);
+    const out = clash ? renameBinds(sql, binds, prefix) : { sql, binds };
+    Object.assign(allBinds, out.binds);
+    return out.sql;
+  };
+
+  // A nested pipeline ($facet branch, $lookup.pipeline) cannot be a WITH inside this
+  // statement's WITH (Oracle: ORA-32034). Its steps are hoisted into this WITH list,
+  // named apart with a prefix, and only its final SELECT is used in place; its binds
+  // are renamed if they clash with names already bound.
+  const nested = (from: string, stages: unknown[], prefix: string, bindPrefix: string): string => {
+    const inner: Array<{ alias: string; sql: string }> = [];
+    const sub = buildAggregateSQL(from, stages as Array<any>, db, prefix, inner);
+    const clash = Object.keys(sub.binds).some((k) => k in allBinds);
+    const fix = (sql: string) => (clash ? renameBinds(sql, sub.binds, bindPrefix).sql : sql);
+    for (const c of inner) ctes.push({ alias: c.alias, sql: fix(c.sql) });
+    Object.assign(allBinds, clash ? renameBinds("", sub.binds, bindPrefix).binds : sub.binds);
+    return fix(sub.sql);
+  };
+
   for (const stage of pipeline) {
-    const stageAlias = `stage_${stageIdx}`;
+    const stageAlias = `${aliasPrefix}stage_${stageIdx}`;
     const key = Object.keys(stage).filter((k) => k !== "_having")[0];
 
     switch (key) {
       case "$match": {
-        const { whereClause, binds } = parseFilter(stage.$match);
-        Object.assign(allBinds, binds);
+        const { whereClause, binds } = parseFilter(_alignToAliases(stage.$match, aliases));
+        const where = addStageBinds(whereClause, binds, `m${stageIdx}_`);
         ctes.push({
           alias: stageAlias,
-          sql: `SELECT * FROM ${prevSource} ${whereClause}`,
+          sql: `SELECT * FROM ${prevSource} ${where}`,
         });
         break;
       }
@@ -166,6 +197,9 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
         );
         Object.assign(allBinds, binds);
         ctes.push({ alias: stageAlias, sql });
+        const id = stage.$group._id;
+        for (const k of Object.keys(stage.$group)) if (k !== "_id") aliases.add(k.toUpperCase());
+        if (id && typeof id === "object" && !id.$rollup && !id.$cube && !id.$groupingSets) for (const k of Object.keys(id)) aliases.add(k.toUpperCase());
         break;
       }
 
@@ -199,6 +233,7 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
           alias: stageAlias,
           sql: `SELECT COUNT(*) AS ${quoteIdentifier(stage.$count.toUpperCase())} FROM ${prevSource}`,
         });
+        aliases.add(stage.$count.toUpperCase());
         break;
       }
 
@@ -212,6 +247,7 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
           alias: stageAlias,
           sql: `SELECT ${projCols} FROM ${prevSource}`,
         });
+        _addComputedAliases(stage.$project, aliases);
         break;
       }
 
@@ -225,26 +261,48 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
           alias: stageAlias,
           sql: `SELECT ${prevSource}.*, ${addCols} FROM ${prevSource}`,
         });
+        _addComputedAliases(stage.$addFields, aliases);
         break;
       }
 
       case "$lookup": {
         const { buildJoinSQL } = (require("../joins/joinBuilder") as typeof import("../joins/joinBuilder"));
-        const joinSql = buildJoinSQL(prevSource, stage.$lookup);
-        ctes.push({ alias: stageAlias, sql: joinSql });
+        const lk = stage.$lookup;
+        if (lk && lk.pipeline !== undefined) {
+          // Join the RESULT of a pipeline on `from` (e.g. a grouped total per key), not its rows.
+          if (!Array.isArray(lk.pipeline)) throw new Error(MSG.PIPELINE_LOOKUP_PIPELINE);
+          const subSql = nested(lk.from, lk.pipeline, `${stageAlias}_`, `lk${stageIdx}_`);
+          // buildJoinSQL validates the join type, on and select; the placeholder table becomes the subquery.
+          const joinSql = buildJoinSQL(prevSource, { ...lk, from: LOOKUP_SUB, as: lk.as ?? "SUB" });
+          ctes.push({ alias: stageAlias, sql: joinSql.replace(quoteIdentifier(LOOKUP_SUB), () => `(${subSql})`) });
+        } else {
+          ctes.push({ alias: stageAlias, sql: buildJoinSQL(prevSource, lk) });
+        }
+        break;
+      }
+
+      case "$connectBy": {
+        // The tree as a stage: CONNECT BY over the rows so far, so it can feed $lookup / $group.
+        const { buildConnectBy } = (require("../advanced/oracleAdvanced") as typeof import("../advanced/oracleAdvanced"));
+        const spec = stage.$connectBy;
+        const built = buildConnectBy(prevSource.slice(1, -1).replace(/""/g, '"'), spec);
+        ctes.push({ alias: stageAlias, sql: addStageBinds(built.sql, built.binds, `cb${stageIdx}_`) });
+        if (spec?.includeLevel) aliases.add("LEVEL");
+        for (const c of spec?.root == null ? [] : Array.isArray(spec.root) ? spec.root : [spec.root]) aliases.add(`ROOT_${String(c).toUpperCase()}`);
         break;
       }
 
       case "$lateralJoin": {
         const lj = stage.$lateralJoin;
-        const { sql: subSql, binds: subBinds } = _buildLateralSub(
-          lj,
-          prevSource,
-        );
-        Object.assign(allBinds, subBinds);
+        const built = _buildLateralSub(lj, prevSource);
+        const subSql = addStageBinds(built.sql, built.binds, `lj${stageIdx}_`);
         ctes.push({
           alias: stageAlias,
-          sql: `SELECT ${prevSource}.*, ${quoteIdentifier(lj.as)}.* FROM ${prevSource}, LATERAL (${subSql}) ${quoteIdentifier(lj.as)}`,
+          // outer: true keeps outer rows the subquery returns nothing for (OUTER APPLY),
+          // e.g. an invoice in a currency with no rate yet.
+          sql: lj.outer === true
+            ? `SELECT ${prevSource}.*, ${quoteIdentifier(lj.as)}.* FROM ${prevSource} OUTER APPLY (${subSql}) ${quoteIdentifier(lj.as)}`
+            : `SELECT ${prevSource}.*, ${quoteIdentifier(lj.as)}.* FROM ${prevSource}, LATERAL (${subSql}) ${quoteIdentifier(lj.as)}`,
         });
         break;
       }
@@ -257,8 +315,19 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
       }
 
       case "$merge": {
-        const mergeSql = _buildMergeStage(stage.$merge, prevSource);
-        ctes.push({ alias: stageAlias, sql: mergeSql, isMerge: true });
+        // MERGE is a statement, not a row source: it must end the pipeline and
+        // wraps everything before it (see _buildMergeStatement).
+        if (pipeline[pipeline.length - 1] !== stage) throw new Error(MSG.PIPELINE_MERGE_INVALID("$merge must be the last stage"));
+        mergeSpec = stage.$merge;
+        hasMerge = true;
+        continue;
+      }
+
+      case "$matchRecognize": {
+        const { sql, binds, outputs } = _buildMatchRecognize(stage.$matchRecognize, prevSource, counter);
+        Object.assign(allBinds, binds);
+        ctes.push({ alias: stageAlias, sql });
+        for (const o of outputs) aliases.add(o);
         break;
       }
 
@@ -272,12 +341,12 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
       case "$facet": {
         // Each facet pipeline is a separate CTE, union all at end
         const facetCtes: string[] = [];
+        let facetIdx = 0;
         for (const [facetName, facetPipeline] of Object.entries(stage.$facet as Record<string, unknown[]>)) {
-          const { sql } = buildAggregateSQL(
-            prevSource.replace(/"/g, ""),
-            facetPipeline,
-            db,
-          );
+          // Every facet numbers its binds from 0 (renamed on clash: f0_where_S_0 …) and its
+          // steps are hoisted into this WITH list (see nested()).
+          const sql = nested(prevSource.slice(1, -1).replace(/""/g, '"'), facetPipeline, `${stageAlias}_f${facetIdx}_`, `f${facetIdx}_`);
+          facetIdx++;
           facetCtes.push(
             `SELECT '${facetName.replace(/'/g, "''")}' AS "facet_name", sub.* FROM (${sql}) sub`,
           );
@@ -319,43 +388,61 @@ function buildAggregateSQL(tableName: string, pipeline: Array<any>, db: Record<s
         break;
       }
 
+      case "$having":
+        // Reached only when the pre-scan could not attach it to a preceding $group.
+        throw new Error(MSG.PIPELINE_HAVING_WITHOUT_GROUP);
+
       default:
-        // Unknown stage — skip
-        stageIdx++;
-        continue;
+        // A typo ($mtach) silently skipped would turn a filtered query into a full read.
+        throw new Error(MSG.PIPELINE_UNKNOWN_STAGE(key));
     }
 
     prevSource = quoteIdentifier(stageAlias);
     stageIdx++;
   }
 
-  // Build final SQL
-  if (ctes.length === 0) {
-    return {
-      sql: `SELECT * FROM ${quoteIdentifier(tableName)}`,
-      binds: allBinds,
-    };
+  // Nested pipeline: hand its steps to the outer WITH, return only the final SELECT.
+  if (hoist) {
+    if (hasMerge || outTable) throw new Error(MSG.PIPELINE_NESTED_WRITE);
+    hoist.push(...ctes.slice(0, -1));
+    return { sql: ctes.length ? ctes[ctes.length - 1].sql : `SELECT * FROM ${quoteIdentifier(tableName)}`, binds: allBinds };
   }
 
-  if (ctes.length === 1) {
-    let sql = ctes[0].sql;
-    if (outTable) {
-      sql = `INSERT INTO ${quoteIdentifier(outTable)} ${sql}`;
-    }
-    return { sql, binds: allBinds };
-  }
+  // Build final SQL: the SELECT the pipeline produces, after any base CTEs (a
+  // recursive CTE or a series the pipeline runs on) and the stages before it.
+  const finalSql = ctes.length ? ctes[ctes.length - 1].sql : `SELECT * FROM ${quoteIdentifier(tableName)}`;
+  const withParts = [...(base ?? []), ...ctes.slice(0, -1)].map(
+    (c: { alias: string; sql: string; cols?: string[]; suffix?: string }) => `${quoteIdentifier(c.alias)}${c.cols ? ` (${c.cols.map(quoteIdentifier).join(", ")})` : ""} AS (${c.sql})${c.suffix ?? ""}`,
+  );
+  let sql = withParts.length ? `WITH ${withParts.join(",\n     ")}\n${finalSql}` : finalSql;
 
-  // Build WITH ... AS chain
-  const withParts = ctes
-    .slice(0, -1)
-    .map((c) => `${quoteIdentifier(c.alias)} AS (${c.sql})`);
-  const lastCte = ctes[ctes.length - 1];
-
-  let sql = `WITH ${withParts.join(",\n     ")}\n${lastCte.sql}`;
-  if (outTable) {
-    sql = `INSERT INTO ${quoteIdentifier(outTable)} ${sql}`;
-  }
+  // … optionally written somewhere by $merge / $out.
+  if (hasMerge) return { sql: _buildMergeStatement(mergeSpec, sql), binds: allBinds };
+  if (outTable) sql = `INSERT INTO ${quoteIdentifier(outTable)} ${sql}`;
   return { sql, binds: allBinds };
+}
+
+/**
+ * Rewrite a $match filter's field names to the upper-case aliases earlier stages
+ * produced ($group, $project, $addFields and $count upper-case their aliases), so
+ * `{ $match: { total: … } }` after `{ $group: { total: … } }` finds TOTAL. Names that
+ * are not aliases, and operator keys, are left alone; $and / $or / $nor / $not recurse.
+ */
+function _alignToAliases(filter: Record<string, any>, aliases: Set<string>): Record<string, any> {
+  if (aliases.size === 0 || !filter || typeof filter !== "object") return filter;
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(filter)) {
+    if ((k === "$and" || k === "$or" || k === "$nor") && Array.isArray(v)) out[k] = v.map((f) => _alignToAliases(f, aliases));
+    else if (k === "$not") out[k] = _alignToAliases(v, aliases);
+    else if (!k.startsWith("$") && !aliases.has(k) && aliases.has(k.toUpperCase())) out[k.toUpperCase()] = v;
+    else out[k] = v;
+  }
+  return out;
+}
+
+/** Record the aliases a $project / $addFields stage computes (pass-through `col: 1` keeps its own name). */
+function _addComputedAliases(spec: Record<string, any>, aliases: Set<string>): void {
+  for (const [k, v] of Object.entries(spec)) if (v !== 1 && v !== 0 && v !== true && v !== false) aliases.add(k.toUpperCase());
 }
 
 /**
@@ -391,14 +478,19 @@ function _buildGroup(group: Record<string, DslSpec>, source: string, having: Rec
     groupByParts.push(quoteIdentifier(col));
   } else if (typeof idSpec === "object" && !Array.isArray(idSpec)) {
     // Check for $rollup, $cube, $groupingSets
+    // grouping: true adds GROUPING_<col> (1 on a subtotal row for that column), so a
+    // subtotal can be told from a group whose key really is NULL.
+    const flags = (cols: string[]) => (idSpec.grouping === true ? cols.map((c) => `GROUPING(${quoteIdentifier(c)}) AS ${quoteIdentifier(`GROUPING_${c.toUpperCase()}`)}`) : []);
     if (idSpec.$rollup) {
       const cols = idSpec.$rollup.map((c: string) => quoteIdentifier(c));
       selectParts.push(...idSpec.$rollup.map(quoteIdentifier));
       groupByParts.push(`ROLLUP(${cols.join(", ")})`);
+      selectParts.push(...flags(idSpec.$rollup));
     } else if (idSpec.$cube) {
       const cols = idSpec.$cube.map((c: string) => quoteIdentifier(c));
       selectParts.push(...idSpec.$cube.map(quoteIdentifier));
       groupByParts.push(`CUBE(${cols.join(", ")})`);
+      selectParts.push(...flags(idSpec.$cube));
     } else if (idSpec.$groupingSets) {
       const sets = idSpec.$groupingSets.map((set: string[]) => {
         if (Array.isArray(set) && set.length === 0) return "()";
@@ -414,6 +506,7 @@ function _buildGroup(group: Record<string, DslSpec>, source: string, having: Rec
       });
       selectParts.push(...[...allCols].map(quoteIdentifier));
       groupByParts.push(`GROUPING SETS(${sets.join(", ")})`);
+      selectParts.push(...flags([...allCols]));
     } else {
       // Regular object — { alias: '$field', ... }
       for (const [alias, fieldRef] of Object.entries(idSpec)) {
@@ -491,93 +584,228 @@ function _buildGroup(group: Record<string, DslSpec>, source: string, having: Rec
 function _buildAggExpr(expr: Record<string, DslSpec>, binds: Record<string, unknown>, counter: Counter): string {
   if (typeof expr === "object") {
     for (const [op, val] of Object.entries(expr)) {
+      // Aggregates take a column ("$A"), "*", or any expression ({ $mul: [...] }).
+      const one = (v: DslSpec) => _one(v, binds, counter);
+      const arg = (v: DslSpec) => _fieldRefOrBind(v, binds, counter);
+      const list = (v: DslSpec, min: number) => {
+        if (!Array.isArray(v) || v.length < min) throw new Error(MSG.PIPELINE_EXPRESSION_ARGS(op, `a list of at least ${min} values`));
+        return v.map(arg);
+      };
       switch (op) {
         case "$sum":
-          return `SUM(${_fieldRef(val)})`;
+          return `SUM(${one(val)})`;
         case "$avg":
-          return `AVG(${_fieldRef(val)})`;
+          return `AVG(${one(val)})`;
         case "$min":
-          return `MIN(${_fieldRef(val)})`;
+          // A list compares values in the row (LEAST); a single value aggregates rows (MIN).
+          return Array.isArray(val) ? `LEAST(${list(val, 2).join(", ")})` : `MIN(${one(val)})`;
         case "$max":
-          return `MAX(${_fieldRef(val)})`;
+          return Array.isArray(val) ? `GREATEST(${list(val, 2).join(", ")})` : `MAX(${one(val)})`;
         case "$count":
-          return `COUNT(${val === "*" ? "*" : _fieldRef(val)})`;
+          return `COUNT(${val === "*" ? "*" : one(val)})`;
         case "$first":
-          return `MIN(${_fieldRef(val)})`;
+          return `MIN(${one(val)})`;
         case "$last":
-          return `MAX(${_fieldRef(val)})`;
-        case "$mul": {
-          if (Array.isArray(val)) {
-            return val
-              .map((v) => _fieldRefOrBind(v, binds, counter))
-              .join(" * ");
-          }
-          return _fieldRef(val);
+          return `MAX(${one(val)})`;
+        case "$mul":
+          return Array.isArray(val) ? `(${val.map(arg).join(" * ")})` : one(val);
+        case "$add":
+          return Array.isArray(val) ? `(${val.map(arg).join(" + ")})` : one(val);
+        case "$subtract":
+          return Array.isArray(val) ? `(${val.map(arg).join(" - ")})` : one(val);
+        case "$divide":
+          return Array.isArray(val) ? `(${val.map(arg).join(" / ")})` : one(val);
+        case "$mod": {
+          const [a, b] = list(val, 2);
+          return `MOD(${a}, ${b})`;
         }
-        case "$add": {
-          if (Array.isArray(val)) {
-            return `(${val.map((v) => _fieldRefOrBind(v, binds, counter)).join(" + ")})`;
-          }
-          return _fieldRef(val);
+        case "$abs":
+          return `ABS(${one(val)})`;
+        case "$ceil":
+          return `CEIL(${one(val)})`;
+        case "$floor":
+          return `FLOOR(${one(val)})`;
+        case "$round":
+        case "$trunc": {
+          const fn = op === "$round" ? "ROUND" : "TRUNC";
+          if (!Array.isArray(val)) return `${fn}(${one(val)})`;
+          return `${fn}(${arg(val[0])}${val.length > 1 ? `, ${arg(val[1])}` : ""})`;
         }
-        case "$subtract": {
-          if (Array.isArray(val)) {
-            return `(${val.map((v) => _fieldRefOrBind(v, binds, counter)).join(" - ")})`;
-          }
-          return _fieldRef(val);
-        }
-        case "$divide": {
-          if (Array.isArray(val)) {
-            return `(${val.map((v) => _fieldRefOrBind(v, binds, counter)).join(" / ")})`;
-          }
-          return _fieldRef(val);
-        }
+        case "$literal":
+          return _bindValue(val, binds, counter);
         case "$concat": {
           if (Array.isArray(val)) {
-            return val.map(_fieldRef).join(" || ");
+            // "$col" is a column; any other string/number is a literal and is bound.
+            return val.map(arg).join(" || ");
           }
-          return _fieldRef(val);
+          return one(val);
         }
         case "$toUpper":
-          return `UPPER(${_fieldRef(val)})`;
+          return `UPPER(${one(val)})`;
         case "$toLower":
-          return `LOWER(${_fieldRef(val)})`;
+          return `LOWER(${one(val)})`;
         case "$substr": {
           if (Array.isArray(val)) {
-            return `SUBSTR(${_fieldRef(val[0])}, ${Number(val[1])}, ${Number(val[2])})`;
+            return `SUBSTR(${one(val[0])}, ${Number(val[1])}, ${Number(val[2])})`;
           }
-          return _fieldRef(val);
+          return one(val);
         }
         case "$dateToString": {
           const fmt = (val.format || "YYYY-MM-DD").replace(/'/g, "''");
-          return `TO_CHAR(${_fieldRef(val.date)}, '${fmt}')`;
+          return `TO_CHAR(${one(val.date)}, '${fmt}')`;
         }
+        case "$dateTrunc": {
+          const fmt = DATE_TRUNC_UNITS[val?.unit];
+          if (!fmt) throw new Error(MSG.PIPELINE_EXPRESSION_ARGS(op, `unit one of ${Object.keys(DATE_TRUNC_UNITS).join(", ")}`));
+          return `TRUNC(${one(val.date)}, '${fmt}')`;
+        }
+        case "$dateAdd": {
+          const start = one(val?.startDate);
+          const n = arg(val?.amount);
+          switch (val?.unit) {
+            case "day":
+              return `(CAST(${start} AS DATE) + ${n})`;
+            case "week":
+              return `(CAST(${start} AS DATE) + 7 * ${n})`;
+            case "hour":
+            case "minute":
+            case "second":
+              return `(${start} + NUMTODSINTERVAL(${n}, '${String(val.unit).toUpperCase()}'))`;
+            case "month":
+              return `ADD_MONTHS(${start}, ${n})`;
+            case "quarter":
+              return `ADD_MONTHS(${start}, 3 * ${n})`;
+            case "year":
+              return `ADD_MONTHS(${start}, 12 * ${n})`;
+            default:
+              throw new Error(MSG.PIPELINE_EXPRESSION_ARGS(op, "unit one of second, minute, hour, day, week, month, quarter, year"));
+          }
+        }
+        case "$dateDiff": {
+          // Boundaries crossed between the two dates (MongoDB semantics): days between
+          // the calendar dates, months between the calendar months, and so on.
+          const s = one(val?.startDate);
+          const e = one(val?.endDate);
+          const months = (x: string) => `(EXTRACT(YEAR FROM ${x}) * 12 + EXTRACT(MONTH FROM ${x}))`;
+          switch (val?.unit) {
+            case "day":
+              return `(TRUNC(CAST(${e} AS DATE)) - TRUNC(CAST(${s} AS DATE)))`;
+            case "week":
+              return `((TRUNC(CAST(${e} AS DATE), 'IW') - TRUNC(CAST(${s} AS DATE), 'IW')) / 7)`;
+            case "month":
+              return `(${months(e)} - ${months(s)})`;
+            case "quarter":
+              return `(TRUNC((${months(e)} - 1) / 3) - TRUNC((${months(s)} - 1) / 3))`;
+            case "year":
+              return `(EXTRACT(YEAR FROM ${e}) - EXTRACT(YEAR FROM ${s}))`;
+            default:
+              throw new Error(MSG.PIPELINE_EXPRESSION_ARGS(op, "unit one of day, week, month, quarter, year"));
+          }
+        }
+        case "$prev":
+        case "$next": {
+          // Row-pattern navigation (only meaningful inside $matchRecognize define / measures).
+          const fn = op === "$prev" ? "PREV" : "NEXT";
+          if (!Array.isArray(val)) return `${fn}(${one(val)})`;
+          const n = val[1];
+          if (!Number.isInteger(n) || n < 0) throw new Error(MSG.PIPELINE_EXPRESSION_ARGS(op, "[column, a non-negative whole number of rows]"));
+          return `${fn}(${one(val[0])}, ${n})`;
+        }
+        case "$lastDayOfMonth":
+          return `LAST_DAY(${one(val)})`;
+        case "$year":
+          return `EXTRACT(YEAR FROM ${one(val)})`;
+        case "$month":
+          return `EXTRACT(MONTH FROM ${one(val)})`;
+        case "$dayOfMonth":
+          return `EXTRACT(DAY FROM ${one(val)})`;
         case "$cond": {
           const { if: ifCond, then: thenVal, else: elseVal } = val;
           const condSql = _buildCondExpr(ifCond, binds, counter);
-          const thenSql = _fieldRefOrBind(thenVal, binds, counter);
-          const elseSql = _fieldRefOrBind(elseVal, binds, counter);
-          return `CASE WHEN ${condSql} THEN ${thenSql} ELSE ${elseSql} END`;
+          return `CASE WHEN ${condSql} THEN ${arg(thenVal)} ELSE ${arg(elseVal)} END`;
+        }
+        case "$switch": {
+          const branches = val?.branches;
+          if (!Array.isArray(branches) || branches.length === 0) throw new Error(MSG.PIPELINE_EXPRESSION_ARGS(op, "branches: [{ case, then }, …]"));
+          const whens = branches.map((b: DslSpec) => `WHEN ${_buildCondExpr(b.case, binds, counter)} THEN ${arg(b.then)}`);
+          const otherwise = val.default !== undefined ? ` ELSE ${arg(val.default)}` : "";
+          return `CASE ${whens.join(" ")}${otherwise} END`;
         }
         case "$ifNull": {
           if (Array.isArray(val)) {
-            const parts = val.map((v) => _fieldRefOrBind(v, binds, counter));
+            const parts = val.map(arg);
             return `COALESCE(${parts.join(", ")})`;
           }
-          return _fieldRef(val);
+          return one(val);
         }
         case "$size":
-          return `JSON_ARRAY_LENGTH(${_fieldRef(val)})`;
+          // Number of elements in a JSON array column (19c item method size()).
+          return `JSON_VALUE(${one(val)}, '$.size()' RETURNING NUMBER)`;
         case "$window": {
           const { buildWindowExpr } = (require("./windowFunctions") as typeof import("./windowFunctions"));
           return buildWindowExpr(val);
         }
         default:
-          return _fieldRef(val);
+          // An unknown operator used to fall through to a column named after its
+          // argument ("$round" → "$A,0"), failing later with a misleading ORA-00904.
+          throw new Error(MSG.PIPELINE_UNKNOWN_EXPRESSION(op));
       }
     }
   }
   return String(expr);
+}
+
+/**
+ * While set, column references ("$X") resolve through this instead of a plain quoted
+ * name. compileExpression / compileCondition set it for the duration of one
+ * synchronous build, e.g. a recursive CTE where "$prior.X" is the parent row.
+ */
+let _refResolver: ((name: string) => string) | null = null;
+
+/**
+ * Compile one pipeline expression (or a $cond-style condition) outside a pipeline,
+ * with column references resolved by `resolve`. Binds are added to `binds`, named
+ * `${prefix}agg_N` / `${prefix}cond_N`.
+ */
+function compileExpression(expr: unknown, binds: Record<string, unknown>, prefix: string, resolve: (name: string) => string, asCondition = false): string {
+  const base = _createCounter();
+  const counter: Counter = { next: (p) => `${prefix}${base.next(p)}` };
+  _refResolver = resolve;
+  try {
+    return asCondition ? _buildCondExpr(expr, binds, counter) : _fieldRefOrBind(expr, binds, counter);
+  } finally {
+    _refResolver = null;
+  }
+}
+
+/** Placeholder table name a $lookup pipeline's subquery replaces in the join builder's SQL. */
+const LOOKUP_SUB = "MIRA_LOOKUP_SUB$";
+
+/** Comparison operators usable in $cond / $switch conditions. */
+const COND_OPS: Readonly<Record<string, string>> = Object.freeze({ $gt: ">", $gte: ">=", $lt: "<", $lte: "<=", $eq: "=", $ne: "<>" });
+
+/** Units $dateTrunc accepts, with the TRUNC format each maps to. */
+const DATE_TRUNC_UNITS: Readonly<Record<string, string>> = Object.freeze({ year: "YYYY", quarter: "Q", month: "MM", week: "IW", day: "DD", hour: "HH24", minute: "MI" });
+
+/** A nested expression: a plain object whose only key is an operator, e.g. { $mul: [...] }. */
+function _isExpr(val: unknown): val is Record<string, unknown> {
+  if (!val || typeof val !== "object" || Array.isArray(val) || val instanceof Date) return false;
+  const keys = Object.keys(val);
+  return keys.length === 1 && keys[0].startsWith("$");
+}
+
+/** Bind any literal value (number, string, boolean, Date, null) and return its placeholder. */
+function _bindValue(val: unknown, binds: Record<string, unknown>, counter: Counter): string {
+  const bname = counter.next("agg");
+  binds[bname] = val;
+  return `:${bname}`;
+}
+
+/** A single-value operand: a column, a nested expression or a Date literal; other values as before. */
+function _one(val: DslSpec, binds: Record<string, unknown>, counter: Counter): string {
+  if (_isExpr(val)) return `(${_buildAggExpr(val as Record<string, DslSpec>, binds, counter)})`;
+  if (val instanceof Date) return _bindValue(val, binds, counter);
+  return _fieldRef(val);
 }
 
 /**
@@ -588,7 +816,7 @@ function _buildAggExpr(expr: Record<string, DslSpec>, binds: Record<string, unkn
  */
 function _fieldRef(val: DslSpec) {
   if (typeof val === "string" && val.startsWith("$")) {
-    return quoteIdentifier(val.substring(1));
+    return _refResolver ? _refResolver(val.substring(1)) : quoteIdentifier(val.substring(1));
   }
   if (val === "*") return "*";
   if (typeof val === "number") return String(val);
@@ -602,17 +830,12 @@ function _fieldRef(val: DslSpec) {
  */
 function _fieldRefOrBind(val: unknown, binds: Record<string, unknown>, counter: Counter) {
   if (typeof val === "string" && val.startsWith("$")) {
-    return quoteIdentifier(val.substring(1));
+    return _refResolver ? _refResolver(val.substring(1)) : quoteIdentifier(val.substring(1));
   }
-  if (typeof val === "number" || typeof val === "boolean") {
-    const bname = counter.next("agg");
-    binds[bname] = val;
-    return `:${bname}`;
-  }
-  if (typeof val === "string") {
-    const bname = counter.next("agg");
-    binds[bname] = val;
-    return `:${bname}`;
+  if (_isExpr(val)) return `(${_buildAggExpr(val as Record<string, DslSpec>, binds, counter)})`;
+  if (val === null) return "NULL";
+  if (typeof val === "number" || typeof val === "boolean" || typeof val === "string" || typeof val === "bigint" || val instanceof Date) {
+    return _bindValue(val, binds, counter);
   }
   return String(val);
 }
@@ -621,7 +844,22 @@ function _fieldRefOrBind(val: unknown, binds: Record<string, unknown>, counter: 
  * Build a SQL condition for $cond expressions.
  * { $amount: { $gt: 100 } } → '"amount" > :cond_0'
  */
-function _buildCondExpr(cond: DslSpec, binds: Record<string, unknown>, counter: Counter) {
+function _buildCondExpr(cond: DslSpec, binds: Record<string, unknown>, counter: Counter): string {
+  // Expression form (MongoDB $expr style): { $gt: [a, b] } compares two operands,
+  // each a column, a nested expression or a literal; $and / $or / $not combine.
+  if (cond && typeof cond === "object" && !Array.isArray(cond) && Object.keys(cond).length === 1) {
+    const [k, v] = Object.entries(cond)[0];
+    const cmp = COND_OPS[k];
+    if (cmp && Array.isArray(v)) {
+      if (v.length !== 2) throw new Error(MSG.PIPELINE_EXPRESSION_ARGS(k, "two operands"));
+      if (v[1] === null && (k === "$eq" || k === "$ne")) return `${_fieldRefOrBind(v[0], binds, counter)} ${k === "$eq" ? "IS NULL" : "IS NOT NULL"}`;
+      return `${_fieldRefOrBind(v[0], binds, counter)} ${cmp} ${_fieldRefOrBind(v[1], binds, counter)}`;
+    }
+    if ((k === "$and" || k === "$or") && Array.isArray(v) && v.length > 0) {
+      return `(${v.map((c) => _buildCondExpr(c, binds, counter)).join(k === "$and" ? " AND " : " OR ")})`;
+    }
+    if (k === "$not") return `NOT (${_buildCondExpr(v, binds, counter)})`;
+  }
   // Simple condition: { field: { $gt: value } }
   if (typeof cond === "object") {
     for (const [field, ops] of Object.entries(cond)) {
@@ -742,15 +980,110 @@ function _buildLateralSub(lj: DslSpec, prevSource: unknown) {
 }
 
 /**
- * Build a MERGE INTO statement for the $merge pipeline stage.
- * Merges results from the pipeline into a target table.
+ * Wrap the pipeline's SELECT in a MERGE INTO for the $merge stage.
+ *
+ *   { $merge: {
+ *       into: "TARGET",                 // target table
+ *       on: { ID: "ID" },               // target column -> pipeline column
+ *       fields: ["ID", "TOTAL"],        // pipeline columns to write (same names in the target)
+ *       whenMatched: "merge",           // "merge" (update non-key fields, default) | "keepExisting"
+ *       whenNotMatched: "insert",       // "insert" (default) | "discard"
+ *   } }
+ *
+ * `fields` is required: the builder never sees the result columns, and Oracle
+ * accepts neither `INSERT VALUES (src.*)` nor updating an ON column (ORA-38104).
  */
-function _buildMergeStage(merge: DslSpec, source: unknown) {
-  const into = quoteIdentifier(merge.into);
-  const onCols = Object.entries(merge.on as Record<string, string>)
-    .map(([l, r]) => `tgt.${quoteIdentifier(l)} = src.${quoteIdentifier(r)}`)
+function _buildMergeStatement(merge: DslSpec, sourceSql: string): string {
+  const { into, on, fields, whenMatched = "merge", whenNotMatched = "insert" } = merge ?? {};
+  if (!into) throw new Error(MSG.PIPELINE_MERGE_INVALID("into is required"));
+  if (!on || typeof on !== "object" || Object.keys(on).length === 0) throw new Error(MSG.PIPELINE_MERGE_INVALID("on must map at least one target column"));
+  if (!Array.isArray(fields) || fields.length === 0) throw new Error(MSG.PIPELINE_MERGE_INVALID("fields must list the columns to write"));
+  if (whenMatched !== "merge" && whenMatched !== "keepExisting") throw new Error(MSG.PIPELINE_MERGE_INVALID('whenMatched must be "merge" or "keepExisting"'));
+  if (whenNotMatched !== "insert" && whenNotMatched !== "discard") throw new Error(MSG.PIPELINE_MERGE_INVALID('whenNotMatched must be "insert" or "discard"'));
+
+  const onSql = Object.entries(on as Record<string, string>)
+    .map(([t, s]) => `tgt.${quoteIdentifier(t)} = src.${quoteIdentifier(s)}`)
     .join(" AND ");
-  return `MERGE INTO ${into} tgt USING (SELECT * FROM ${source}) src ON (${onCols}) WHEN MATCHED THEN UPDATE SET tgt.updated = SYSDATE WHEN NOT MATCHED THEN INSERT VALUES (src.*)`;
+  const updatable = (fields as string[]).filter((f) => !(f in on));
+  const matched =
+    whenMatched === "merge" && updatable.length > 0
+      ? ` WHEN MATCHED THEN UPDATE SET ${updatable.map((c) => `tgt.${quoteIdentifier(c)} = src.${quoteIdentifier(c)}`).join(", ")}`
+      : "";
+  const notMatched =
+    whenNotMatched === "insert"
+      ? ` WHEN NOT MATCHED THEN INSERT (${(fields as string[]).map(quoteIdentifier).join(", ")}) VALUES (${(fields as string[]).map((c) => `src.${quoteIdentifier(c)}`).join(", ")})`
+      : "";
+  if (!matched && !notMatched) throw new Error(MSG.PIPELINE_MERGE_INVALID("nothing to do: no updatable fields and whenNotMatched is discard"));
+  return `MERGE INTO ${quoteIdentifier(into)} tgt USING (${sourceSql}) src ON (${onSql})${matched}${notMatched}`;
+}
+
+/** Pattern variables: unquoted upper-case identifiers, so they can be written into SQL as is. */
+const MR_VAR = /^[A-Z][A-Z0-9_]{0,29}$/;
+const MR_AGGS: Readonly<Record<string, string>> = Object.freeze({ $first: "FIRST", $last: "LAST", $sum: "SUM", $min: "MIN", $max: "MAX", $avg: "AVG", $count: "COUNT" });
+
+/**
+ * Build the $matchRecognize stage: Oracle row pattern matching (MATCH_RECOGNIZE).
+ *
+ *   { $matchRecognize: {
+ *       partitionBy: ["SKU"], orderBy: { D: 1 },
+ *       measures: { START_D: { $first: "$D" }, DAYS: { $count: "*" } },
+ *       rowsPerMatch: "one" | "all",            // default "one"
+ *       afterMatch: "pastLastRow" | "nextRow",  // default "pastLastRow"
+ *       pattern: "Z+",                          // variables, quantifiers, ( ) | ^ $
+ *       define: { Z: { QTY: 0 } },              // a $cond-style condition per variable
+ *   } }
+ *
+ * The pattern is checked token by token and every variable must be defined, so
+ * nothing but a pattern reaches the SQL. Conditions are built like $cond (values
+ * bound); $prev / $next look at neighbouring rows. Measures: $first / $last /
+ * $sum / $min / $max / $avg / $count of a column ("$COL" or "$VAR.COL"),
+ * $classifier, $matchNumber.
+ */
+function _buildMatchRecognize(spec: DslSpec, source: string, counter: Counter): { sql: string; binds: Record<string, unknown>; outputs: string[] } {
+  const binds: Record<string, unknown> = {};
+  const bad = (why: string) => new Error(MSG.PIPELINE_MATCH_RECOGNIZE(why));
+  if (!spec || typeof spec !== "object") throw bad("expects an object");
+  const { partitionBy, orderBy, measures, rowsPerMatch = "one", afterMatch = "pastLastRow", pattern, define } = spec;
+  if (!orderBy || typeof orderBy !== "object" || Object.keys(orderBy).length === 0) throw bad("orderBy is required");
+  if (!define || typeof define !== "object") throw bad("define is required");
+  for (const v of Object.keys(define)) if (!MR_VAR.test(v)) throw bad(`variable ${v} must be an upper-case name`);
+
+  // PATTERN: only variables, quantifiers, grouping, alternation and anchors.
+  const tokens = typeof pattern === "string" ? pattern.match(/[A-Za-z_][A-Za-z0-9_]*|\{\d+(?:,\d*)?\}|[()|*+?^$]|\s+/g) : null;
+  if (!tokens || tokens.join("") !== pattern || !pattern.trim()) throw bad("pattern may contain only variable names, quantifiers (* + ? {n,m}), ( ) | ^ $");
+  for (const t of tokens) if (/^[A-Za-z_]/.test(t) && !(t in define)) throw bad(`variable ${t} is not defined (add it to define)`);
+
+  const col = (ref: unknown): string => {
+    if (ref === "*") return "*";
+    const m = typeof ref === "string" ? /^\$(?:([A-Z][A-Z0-9_]*)\.)?(.+)$/.exec(ref) : null;
+    if (!m) throw bad(`a measure takes "$COLUMN" or "$VARIABLE.COLUMN", got ${JSON.stringify(ref)}`);
+    if (m[1] && !(m[1] in define)) throw bad(`variable ${m[1]} is not defined`);
+    return `${m[1] ? `${m[1]}.` : ""}${quoteIdentifier(m[2])}`;
+  };
+  const outputs: string[] = [];
+  const measureSql = Object.entries((measures ?? {}) as Record<string, Record<string, unknown>>).map(([alias, m]) => {
+    const [op, val] = Object.entries(m ?? {})[0] ?? [];
+    let expr: string;
+    if (op === "$classifier") expr = "CLASSIFIER()";
+    else if (op === "$matchNumber") expr = "MATCH_NUMBER()";
+    else if (op && MR_AGGS[op]) expr = `${MR_AGGS[op]}(${col(val)})`;
+    else throw bad(`measure ${alias}: use $first, $last, $sum, $min, $max, $avg, $count, $classifier or $matchNumber`);
+    outputs.push(alias.toUpperCase());
+    return `${expr} AS ${quoteIdentifier(alias.toUpperCase())}`;
+  });
+
+  const parts: string[] = [];
+  const pcols = partitionBy == null ? [] : Array.isArray(partitionBy) ? partitionBy : [partitionBy];
+  if (pcols.length) parts.push(`PARTITION BY ${pcols.map((c: string) => quoteIdentifier(c)).join(", ")}`);
+  parts.push(`ORDER BY ${_buildSortString(orderBy)}`);
+  if (measureSql.length) parts.push(`MEASURES ${measureSql.join(", ")}`);
+  if (rowsPerMatch !== "one" && rowsPerMatch !== "all") throw bad('rowsPerMatch is "one" or "all"');
+  parts.push(rowsPerMatch === "all" ? "ALL ROWS PER MATCH" : "ONE ROW PER MATCH");
+  if (afterMatch !== "pastLastRow" && afterMatch !== "nextRow") throw bad('afterMatch is "pastLastRow" or "nextRow"');
+  parts.push(afterMatch === "nextRow" ? "AFTER MATCH SKIP TO NEXT ROW" : "AFTER MATCH SKIP PAST LAST ROW");
+  parts.push(`PATTERN (${pattern})`);
+  parts.push(`DEFINE ${Object.entries(define).map(([v, c]) => `${v} AS ${c === true ? "1=1" : _buildCondExpr(c, binds, counter)}`).join(", ")}`);
+  return { sql: `SELECT * FROM ${source} MATCH_RECOGNIZE (${parts.join(" ")})`, binds, outputs };
 }
 
 /**
@@ -807,4 +1140,4 @@ function _buildBucket(bucket: DslSpec, source: unknown, counter: Counter) {
   };
 }
 
-export { buildAggregateSQL };
+export { compileExpression, buildAggregateSQL };

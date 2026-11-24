@@ -460,7 +460,10 @@ exports[`constants/messages templates (wave 2) > oracle: every template renders 
 
 exports[`constants/messages templates (wave 2) > oracleWrapper: every template renders deterministic, fully-interpolated text 1`] = `
 {
+  "oracleWrapper.oracleMongoWrapperMessages.AGGREGATE_UNKNOWN_FUNCTION": "[S1x] Unsupported aggregate function: S2x. Use SUM, AVG, MIN, MAX or COUNT.",
   "oracleWrapper.oracleMongoWrapperMessages.BULK_WRITE_UNKNOWN_OP": "[OracleCollection.bulkWrite] Unknown operation type: "S1x"",
+  "oracleWrapper.oracleMongoWrapperMessages.COLLECTION_INVALID_TABLE_NAME": "[OracleCollection] tableName must be a non-empty string, got "S1x".",
+  "oracleWrapper.oracleMongoWrapperMessages.CTE_SET_UNKNOWN_COLUMN": "[withRecursiveCTE] set.S1x: S2x has no such column (set can only compute the anchor table's columns).",
   "oracleWrapper.oracleMongoWrapperMessages.DCL_GRANT_INSUFFICIENT": "[OracleDCL.grant] Insufficient privileges to GRANT. Requires GRANT OPTION or DBA role.
 Original: undefined
 SQL: S2x",
@@ -469,12 +472,25 @@ Original: undefined
 SQL: S2x",
   "oracleWrapper.oracleMongoWrapperMessages.FILTER_UNSUPPORTED_OPERATOR": "[filterParser] Unsupported operator: S1x",
   "oracleWrapper.oracleMongoWrapperMessages.FOR_UPDATE_INVALID_MODE": "[QueryBuilder.forUpdate] Invalid lock mode: "S1x". Use true, "nowait", "skip locked" or { of?: string[], wait?: number, nowait?: boolean, skipLocked?: boolean }.",
+  "oracleWrapper.oracleMongoWrapperMessages.INLINE_BIND_UNSUPPORTED": "[S1x] the filter value S2x (S3x) cannot be written into a view: views cannot take bind values, and only numbers, strings and null have an exact literal form. Pass the view as SQL text instead.",
   "oracleWrapper.oracleMongoWrapperMessages.INSUFFICIENT_PRIVILEGES": "[S1x] Insufficient privileges. S2x
 Original: undefined
 SQL: S4x",
+  "oracleWrapper.oracleMongoWrapperMessages.INVALID_ROW_COUNT": "[S1x] S2x must be a non-negative integer, got "S3x".",
+  "oracleWrapper.oracleMongoWrapperMessages.JOIN_UNKNOWN_TYPE": "[S1x] Unknown joinType "S2x". Use left, right, full, inner, cross, self or natural.",
   "oracleWrapper.oracleMongoWrapperMessages.MERGE_BINDS_KEY_COLLISION": "Bind key collision: "S1x" exists in both bind objects.",
+  "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_EXPRESSION_ARGS": "[aggregatePipeline] S1x expects S2x.",
+  "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_MATCH_RECOGNIZE": "[aggregatePipeline] $matchRecognize: S1x.",
+  "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_MERGE_INVALID": "[aggregatePipeline] Invalid $merge: S1x.",
+  "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_UNKNOWN_EXPRESSION": "[aggregatePipeline] Unsupported expression operator "S1x".",
+  "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_UNKNOWN_STAGE": "[aggregatePipeline] Unsupported stage: S1x.",
+  "oracleWrapper.oracleMongoWrapperMessages.SERIES_INVALID": "[series] S1x.",
+  "oracleWrapper.oracleMongoWrapperMessages.SUBQUERY_FIELD_REQUIRED": "[QueryBuilder.project] $subquery fn "S1x" needs a field.",
   "oracleWrapper.oracleMongoWrapperMessages.UPDATE_CURRENT_DATE_INVALID": "[updateParser] $currentDate.S1x must be true, { $type: "date" } or { $type: "timestamp" }.",
   "oracleWrapper.oracleMongoWrapperMessages.UPDATE_UNSUPPORTED_OPERATOR": "[updateParser] Unsupported update operator: S1x",
+  "oracleWrapper.oracleMongoWrapperMessages.WINDOW_INVALID_ARGUMENT": "[windowFunctions] S1x must be a positive integer, got "S2x".",
+  "oracleWrapper.oracleMongoWrapperMessages.WINDOW_INVALID_FRAME": "[windowFunctions] Invalid frame "S1x". Use ROWS|RANGE with UNBOUNDED PRECEDING / n PRECEDING / CURRENT ROW / n FOLLOWING / UNBOUNDED FOLLOWING.",
+  "oracleWrapper.oracleMongoWrapperMessages.WINDOW_UNKNOWN_FUNCTION": "[windowFunctions] Unsupported window function: S1x.",
 }
 `;
 

@@ -60,7 +60,7 @@
  * ============================================================================
  */
 
-import { quoteIdentifier } from "../utils";
+import { quoteIdentifier, bindSafe, renameBinds } from "../utils";
 import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
 
 /**
@@ -70,6 +70,30 @@ import { oracleMongoWrapperMessages as MSG } from "../../../constants/messages";
  * @constant {number}
  */
 const ORACLE_IN_LIST_MAX = 1000;
+
+/**
+ * Aggregate functions a correlated $subquery may apply. The name is spliced
+ * into SQL, so anything else is refused (an arbitrary "aggregate" string could
+ * otherwise rewrite the comparison — CWE-89).
+ * @constant {Set<string>}
+ */
+const SUBQUERY_AGGREGATES = new Set(["SUM", "AVG", "MIN", "MAX", "COUNT"]);
+
+/**
+ * Large $in / $nin lists are bound as ONE collection instead of N scalar binds:
+ * `col IN (SELECT COLUMN_VALUE FROM TABLE(:b))`. Thousands of OR-ed IN groups
+ * make Oracle's parse cost grow super-linearly (20,000 values measured ~50x
+ * slower than 2,000) — an easy denial of service. One collection bind keeps the
+ * statement text constant, so cost is linear and the cursor is shared.
+ * SYS.ODCI*LIST types are granted to PUBLIC. Lists whose element type cannot be
+ * mapped (mixed types, strings > 4000 bytes) fall back to grouped IN lists.
+ */
+function _collectionBind(values: unknown[]): { type: string; val: unknown[] } | null {
+  if (values.every((v) => typeof v === "number" && Number.isFinite(v))) return { type: "SYS.ODCINUMBERLIST", val: values };
+  if (values.every((v) => v instanceof Date)) return { type: "SYS.ODCIDATELIST", val: values };
+  if (values.every((v) => typeof v === "string" && Buffer.byteLength(v, "utf8") <= 4000)) return { type: "SYS.ODCIVARCHAR2LIST", val: values };
+  return null;
+}
 
 // ─── _createCounter ─────────────────────────────────────────────
 /**
@@ -96,7 +120,7 @@ function _createCounter(): { next: (prefix: string) => string; } {
   let _count = 0;
   return {
     next(prefix) {
-      return `${prefix}_${_count++}`;
+      return `${bindSafe(prefix)}_${_count++}`;
     },
   };
 }
@@ -130,23 +154,34 @@ const COMPARISON_OPS: Record<string, string> = {
 const NOW_UNITS: Readonly<Record<string, string>> = Object.freeze({ days: "DAY", hours: "HOUR", minutes: "MINUTE", seconds: "SECOND" });
 
 /**
- * Server-time operand: `{ $now: true }` is SYSTIMESTAMP; `{ $now: { minus: { days: 7 } } }`
- * (and `plus`, with days / hours / minutes / seconds) shifts it by bound
- * NUMTODSINTERVAL amounts, so the comparison uses the DATABASE clock, never the app's.
+ * Server-time operand: `{ $now: true }` is the database's current time;
+ * `{ $now: { minus: { days: 7 } } }` (and `plus`, with days / hours / minutes /
+ * seconds) shifts it by bound NUMTODSINTERVAL amounts, so the comparison uses the
+ * DATABASE clock, never the app's.
  *
  *   { CREATED_AT: { $lt: { $now: { minus: { days: 30 } } } } }
- *   → "CREATED_AT" < SYSTIMESTAMP - NUMTODSINTERVAL(:where_CREATED_AT_now_0, 'DAY')
+ *   → "CREATED_AT" < CAST(SYSTIMESTAMP AS TIMESTAMP) - NUMTODSINTERVAL(:where_CREATED_AT_now_0, 'DAY')
+ *
+ * Time zones: by default the value is the database server's wall-clock time as a
+ * plain TIMESTAMP, which is what $currentDate (SYSTIMESTAMP / SYSDATE) stores in
+ * DATE and TIMESTAMP columns. Comparing such a column with SYSTIMESTAMP itself
+ * (a TIMESTAMP WITH TIME ZONE) would make Oracle convert the column using the
+ * SESSION time zone, shifting the window by the app-vs-database offset. For a
+ * TIMESTAMP WITH TIME ZONE column pass `withTimeZone: true` to compare with
+ * SYSTIMESTAMP itself: `{ $now: { minus: { hours: 1 }, withTimeZone: true } }`.
  *
  * Amounts are bound (never interpolated); unknown keys or non-finite / negative
  * amounts throw instead of guessing.
  */
 function _nowExpr(field: string, spec: unknown, binds: Record<string, unknown>, counter: Record<string, any>): string {
-  if (spec === true || (spec && typeof spec === "object" && Object.keys(spec).length === 0)) return "SYSTIMESTAMP";
+  const DB_NOW = "CAST(SYSTIMESTAMP AS TIMESTAMP)";
+  if (spec === true || (spec && typeof spec === "object" && Object.keys(spec).length === 0)) return DB_NOW;
   if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
-    throw new TypeError(`$now on "${field}" must be true or { minus | plus: { days, hours, minutes, seconds } }`);
+    throw new TypeError(`$now on "${field}" must be true or { minus | plus: { days, hours, minutes, seconds }, withTimeZone? }`);
   }
-  let sql = "SYSTIMESTAMP";
-  for (const [dir, amounts] of Object.entries(spec as Record<string, unknown>)) {
+  const { withTimeZone, ...shifts } = spec as Record<string, unknown>;
+  let sql = withTimeZone === true ? "SYSTIMESTAMP" : DB_NOW;
+  for (const [dir, amounts] of Object.entries(shifts)) {
     const sign = dir === "minus" ? "-" : dir === "plus" ? "+" : null;
     if (!sign) throw new TypeError(`$now on "${field}": unknown key "${dir}" (use minus or plus)`);
     if (!amounts || typeof amounts !== "object" || Array.isArray(amounts)) {
@@ -212,11 +247,8 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
     if (expr === null || expr === undefined) {
       return `${qField} IS NULL`;
     }
-    // Handle $outer. correlated reference (for LATERAL JOIN)
-    if (typeof expr === "string" && expr.startsWith("$outer.")) {
-      const outerCol = expr.slice(7);
-      return `${qField} = ${quoteIdentifier(outerCol)}`;
-    }
+    // "$outer.COL" (LATERAL correlation) is bound like any value; $lateralJoin
+    // rewrites such binds into a reference to the OUTER source's column.
     const bname = counter.next(`where_${field}`);
     binds[bname] = expr;
     return `${qField} = :${bname}`;
@@ -245,6 +277,9 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
           counter,
         );
         conditions.push(`${qField} ${COMPARISON_OPS[op]} ${subExpr}`);
+      } else if ((val === null || val === undefined) && (op === "$eq" || op === "$ne")) {
+        // A bound NULL never compares equal (or unequal) to anything: use IS [NOT] NULL.
+        conditions.push(`${qField} ${op === "$eq" ? "IS NULL" : "IS NOT NULL"}`);
       } else if (val && typeof val === "object" && !Array.isArray(val) && !(val instanceof Date) && "$now" in val) {
         conditions.push(`${qField} ${COMPARISON_OPS[op]} ${_nowExpr(field, val.$now, binds, counter)}`);
       } else {
@@ -253,8 +288,13 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
         conditions.push(`${qField} ${COMPARISON_OPS[op]} :${bname}`);
       }
     } else if (op === "$in") {
+      const coll = Array.isArray(val) && val.length > ORACLE_IN_LIST_MAX ? _collectionBind(val) : null;
       if (!Array.isArray(val) || val.length === 0) {
         conditions.push("1=0"); // empty IN → always false
+      } else if (coll) {
+        const bname = counter.next(`where_${field}`);
+        binds[bname] = coll;
+        conditions.push(`${qField} IN (SELECT COLUMN_VALUE FROM TABLE(:${bname}))`);
       } else {
         // Oracle caps an IN list at 1,000 expressions (ORA-01795). Split
         // oversized value lists into OR-joined IN groups of ≤1,000 binds so
@@ -274,8 +314,13 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
         );
       }
     } else if (op === "$nin") {
+      const coll = Array.isArray(val) && val.length > ORACLE_IN_LIST_MAX ? _collectionBind(val) : null;
       if (!Array.isArray(val) || val.length === 0) {
         conditions.push("1=1");
+      } else if (coll) {
+        const bname = counter.next(`where_${field}`);
+        binds[bname] = coll;
+        conditions.push(`${qField} NOT IN (SELECT COLUMN_VALUE FROM TABLE(:${bname}))`);
       } else {
         // Same ORA-01795 cap as $in. De Morgan: NOT(x IN a OR x IN b)
         // ≡ x NOT IN a AND x NOT IN b — so groups join with AND.
@@ -359,27 +404,24 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
         binds[bElse] = elseVal;
         elseStr = ` ELSE :${bElse}`;
       }
-      conditions.push(`CASE ${whenParts.join(" ")}${elseStr} END`);
+      // { tier: { $case: … } } means tier = CASE … END (README "Conditional expressions").
+      conditions.push(`${qField} = CASE ${whenParts.join(" ")}${elseStr} END`);
     } else if (op === "$else") {
       // Handled inside $case
     } else if (op === "$coalesce") {
+      // "$COL" is a column; every other value (string, number, date) is bound.
       const parts = val.map((v: any) => {
-        if (typeof v === "string" && !v.startsWith("$")) {
-          const bname = counter.next(`where_${field}`);
-          binds[bname] = v;
-          return `:${bname}`;
-        }
-        // Column reference
-        return quoteIdentifier(
-          typeof v === "string" && v.startsWith("$") ? v.slice(1) : v,
-        );
+        if (typeof v === "string" && v.startsWith("$")) return quoteIdentifier(v.slice(1));
+        const bname = counter.next(`where_${field}`);
+        binds[bname] = v;
+        return `:${bname}`;
       });
-      conditions.push(`COALESCE(${parts.join(", ")})`);
+      conditions.push(`${qField} = COALESCE(${parts.join(", ")})`);
     } else if (op === "$nullif") {
       const left = quoteIdentifier(val[0]);
       const bname = counter.next(`where_${field}`);
       binds[bname] = val[1];
-      conditions.push(`NULLIF(${left}, :${bname})`);
+      conditions.push(`${qField} = NULLIF(${left}, :${bname})`);
     } else if (op === "$subquery") {
       // Correlated subquery for WHERE comparisons
       conditions.push(
@@ -388,23 +430,19 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
     } else if (op === "$inSelect") {
       // val can be a QueryBuilder, a resolved Array, or raw SQL string
       if (Array.isArray(val)) {
-        // Already resolved (e.g. from await distinct()) — treat like $in
-        if (val.length === 0) {
-          conditions.push("1=0");
-        } else {
-          const placeholders = val.map((v) => {
-            const bname = counter.next(`where_${field}`);
-            binds[bname] = v;
-            return `:${bname}`;
-          });
-          conditions.push(`${qField} IN (${placeholders.join(", ")})`);
-        }
+        // Already resolved (e.g. from await distinct()) — exactly $in, including its
+        // empty-list and >1,000-value (ORA-01795) handling.
+        conditions.push(_parseFieldExpr(field, { $in: val }, binds, outerAlias, counter));
       } else if (val && val._buildSQL) {
         // QueryBuilder — get its SQL
-        const subSql = val._buildSQL();
-        const subBinds = val._getBinds ? val._getBinds() : {};
-        Object.assign(binds, subBinds);
-        conditions.push(`${qField} IN (${subSql.sql || subSql})`);
+        // The subquery numbers its binds from 0 like the outer filter; prefix them
+        // so a subquery filtering the same column cannot overwrite the outer value.
+        const built = val._buildSQL();
+        const subSql: string = typeof built === "string" ? built : built.sql;
+        const subBinds: Record<string, unknown> = (typeof built === "string" ? undefined : built.binds) ?? (val._getBinds ? val._getBinds() : {});
+        const sub = renameBinds(subSql, subBinds, `${counter.next("sq")}_`);
+        Object.assign(binds, sub.binds);
+        conditions.push(`${qField} IN (${sub.sql})`);
       } else {
         // SECURITY WARNING: Raw SQL string fallback — caller is responsible
         // for ensuring `val` is safe. This path exists for power-user escape
@@ -485,8 +523,11 @@ function _parseFieldExpr(field: string, expr: any, binds: Record<string, unknown
 function _buildCorrelatedSubquery(field: string, spec: Record<string, any>, binds: Record<string, unknown>, outerAlias: string | null | undefined, counter: Record<string, any>): string {
   const collection = quoteIdentifier(spec.collection);
   const aggFn = spec.aggregate
-    ? spec.aggregate.replace("$", "").toUpperCase()
+    ? String(spec.aggregate).replace("$", "").toUpperCase()
     : null;
+  if (aggFn !== null && !SUBQUERY_AGGREGATES.has(aggFn)) {
+    throw new Error(MSG.AGGREGATE_UNKNOWN_FUNCTION("filterParser.$subquery", spec.aggregate));
+  }
   const subField = spec.field ? quoteIdentifier(spec.field) : "*";
 
   let selectExpr = subField;

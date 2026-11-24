@@ -113,24 +113,28 @@ describe("filterParser — parseFilter", function () {
             expect(Object.keys(binds)).toHaveLength(1000);
         });
 
-        it("$in with >1000 values splits into OR-joined IN groups (ORA-01795)", function () {
+        it("$in with >1000 numbers is one collection bind (no ORA-01795, linear-time)", function () {
             const vals = Array.from({ length: 2500 }, (_, i) => i);
             const { whereClause, binds } = parseFilter({ GID: { $in: vals } });
-            // 2500 values → 3 groups (1000 + 1000 + 500), OR-joined
-            expect(whereClause.match(/ IN \(/g)).toHaveLength(3);
-            expect(whereClause.match(/ OR /g)).toHaveLength(2);
-            expect(Object.keys(binds)).toHaveLength(2500);
-            // Every value still bound — no raw interpolation in the IN lists
-            expect(Object.values(binds)).toContain(0);
-            expect(Object.values(binds)).toContain(2499);
+            // One bind holding the whole list: SYS.ODCINUMBERLIST, unnested with TABLE().
+            // (Splitting into OR-joined IN groups parsed super-linearly: 20k values ~50x slower than 2k.)
+            expect(whereClause).toBe('WHERE "GID" IN (SELECT COLUMN_VALUE FROM TABLE(:where_GID_0))');
+            expect(binds).toEqual({ where_GID_0: { type: "SYS.ODCINUMBERLIST", val: vals } });
         });
 
-        it("$nin with >1000 values splits into AND-joined NOT IN groups", function () {
+        it("$nin with >1000 numbers is one collection bind (NOT IN)", function () {
             const vals = Array.from({ length: 1500 }, (_, i) => i);
             const { whereClause, binds } = parseFilter({ GID: { $nin: vals } });
-            expect(whereClause.match(/NOT IN \(/g)).toHaveLength(2);
-            expect(whereClause.match(/ AND /g)).toHaveLength(1);
-            expect(Object.keys(binds)).toHaveLength(1500);
+            expect(whereClause).toBe('WHERE "GID" NOT IN (SELECT COLUMN_VALUE FROM TABLE(:where_GID_0))');
+            expect(Object.keys(binds)).toHaveLength(1);
+        });
+
+        it("$in with >1000 mixed-type values still splits into OR-joined IN groups", function () {
+            const vals = [...Array.from({ length: 1500 }, (_, i) => i), "x"];
+            const { whereClause, binds } = parseFilter({ GID: { $in: vals } });
+            expect(whereClause.match(/ IN \(/g)).toHaveLength(2);
+            expect(whereClause.match(/ OR /g)).toHaveLength(1);
+            expect(Object.keys(binds)).toHaveLength(1501);
         });
     });
 
