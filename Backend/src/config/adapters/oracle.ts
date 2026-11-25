@@ -137,6 +137,11 @@ function _loadEnvForCompiled() {
 /** The node-oracledb module (loaded lazily below so a compiled exe can stage its environment first). */
 type OracleDb = typeof import("oracledb");
 
+/** ORA_SDTZ=+00:00 unless set already (see the note where it is called). */
+function _ensureSessionTimeZone() {
+    if (process.env.ORA_SDTZ === undefined || process.env.ORA_SDTZ.trim() === "") process.env.ORA_SDTZ = "+00:00";
+}
+
 function _initOracleClient(db: OracleDb) {
     if (db.oracleClientVersion) return;
     const clientPath = process.env.ORACLE_INSTANT_CLIENT;
@@ -167,6 +172,15 @@ try {
         setupOracleEnvironment();
     }
     oracledb = require("oracledb") as OracleDb;
+
+    // Session time zone: +00:00 in both driver modes. Thin mode opens every
+    // session in UTC; Thick mode opened it in the operating system's zone, and a
+    // JS Date written to a TIMESTAMP WITH (LOCAL) TIME ZONE column then moved by
+    // that zone's offset. The Oracle client reads ORA_SDTZ when it creates a
+    // session, so it is set before the client loads. A numeric offset, not "UTC":
+    // a named region needs the client's time-zone file, and an older client on a
+    // newer server fails with ORA-01805. A value the caller already set wins.
+    _ensureSessionTimeZone();
 
     // Always attempt Thick mode when ORACLE_INSTANT_CLIENT is set
     // (not just for compiled executables). Thick mode supports all
@@ -248,9 +262,22 @@ const POOL_DEFAULTS = Object.freeze({
 // It also means the legacy `convertTypes`/`rowToDoc` helpers in
 // `utils/oracle-mongo-wrapper/utils.js` must NOT re-coerce these strings back to
 // numbers — they are fenced off there (they would undo this protection).
+//
+// LOBS ARE FETCHED AS PLAIN VALUES (2.0.1).
+//   - CLOB / NCLOB → string, BLOB → Buffer
+// A driver Lob is a locator tied to the connection that fetched it, and every
+// wrapper call releases its connection before returning. Thin mode happened to
+// keep such a Lob readable; Thick mode (OCI) refuses with NJS-003. Materialising
+// the value at fetch time behaves the same in both modes.
 function moneySafeFetchTypeHandler(metaData: import("oracledb").Metadata<unknown>) {
     if (metaData.dbType === oracledb.DB_TYPE_NUMBER && (metaData.scale ?? 0) > 0) {
         return { type: oracledb.STRING };
+    }
+    if (metaData.dbType === oracledb.DB_TYPE_CLOB || metaData.dbType === oracledb.DB_TYPE_NCLOB) {
+        return { type: oracledb.STRING };
+    }
+    if (metaData.dbType === oracledb.DB_TYPE_BLOB) {
+        return { type: oracledb.BUFFER };
     }
     return undefined; // default handling for everything else
 }
@@ -633,6 +660,21 @@ function toDriverConnectTimeoutSec(ms: number): number {
     return Math.max(1, Math.ceil(safeMs / 1000));
 }
 
+/**
+ * Thick mode runs each database call on a libuv worker thread (UV_THREADPOOL_SIZE).
+ * A call waiting on a row lock keeps its thread; with fewer threads than such calls,
+ * the transaction holding the lock never gets one to commit and the process hangs
+ * with no error (seen on a 4-core CI runner). Warn when a pool can outgrow the threads.
+ * Thin mode does not use these threads.
+ */
+function _warnIfThreadPoolTooSmall(name: unknown, poolMax: number) {
+    if (!oracledb.oracleClientVersion) return;
+    const configured = Number(process.env.UV_THREADPOOL_SIZE);
+    const fromEnv = Number.isInteger(configured) && configured > 0;
+    const threads = fromEnv ? configured : 4;
+    if (poolMax > threads) logger.warning(oracleMessages.THREADPOOL_TOO_SMALL(name, poolMax, threads, fromEnv));
+}
+
 async function _createPool(name: unknown, dbConfig: import("oracledb").PoolAttributes, attempt = 0) {
     const MAX_RETRIES = 3;
     const delay = Math.min(1000 * 2 ** attempt, 10_000);
@@ -668,6 +710,7 @@ async function _createPool(name: unknown, dbConfig: import("oracledb").PoolAttri
         await conn.close();
 
         logger.notice(oracleMessages.POOL_READY(name, pool));
+        _warnIfThreadPoolTooSmall(name, pool.poolMax);
         return pool;
     } catch (err) {
         // Destroy the partially-created pool so the alias is freed for retries

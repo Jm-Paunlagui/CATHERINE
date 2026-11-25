@@ -131,7 +131,8 @@ describe("updateParser — parseUpdate", function () {
 
     describe("unsupported operator", function () {
         it("throws for unknown operators", function () {
-            expect(() => parseUpdate({ $push: { arr: "val" } })).toThrow();
+            // $push is supported since Mira 2.1 (JSON arrays): $bit is a MongoDB operator Mira has not.
+            expect(() => parseUpdate({ $bit: { flags: { and: 1 } } })).toThrow();
         });
     });
 

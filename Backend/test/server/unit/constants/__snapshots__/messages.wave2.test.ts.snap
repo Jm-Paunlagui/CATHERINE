@@ -455,11 +455,16 @@ exports[`constants/messages templates (wave 2) > oracle: every template renders 
   "oracle.oracleMessages.ROLLBACK_FAILED": "Rollback failed on "S1x": S2x",
   "oracle.oracleMessages.SIGNAL_RECEIVED": "S1x received — shutting down.",
   "oracle.oracleMessages.SLOW_OP": "Slow op on "S1x": S2xms",
+  "oracle.oracleMessages.THREADPOOL_TOO_SMALL": "Pool "S1x" can open S2x connections, but Thick mode runs each call on one of S3x worker threads (UV_THREADPOOL_SIZE). Calls waiting on row locks can hold every thread and hang the process: set UV_THREADPOOL_SIZE=S2x or more before the process starts.",
 }
 `;
 
 exports[`constants/messages templates (wave 2) > oracleWrapper: every template renders deterministic, fully-interpolated text 1`] = `
 {
+  "oracleWrapper.oracleMongoWrapperMessages.ACCUMULATOR_INVALID": "[aggregatePipeline] S1x: S2x.",
+  "oracleWrapper.oracleMongoWrapperMessages.AFTER_INVALID_CURSOR": "[QueryBuilder.after] the cursor must be an object of sort-key values (or the previous page's last row), got S1x.",
+  "oracleWrapper.oracleMongoWrapperMessages.AFTER_NEEDS_SORT": "[QueryBuilder.after] S1x: keyset pagination needs a sort(); after() continues from a row in that order.",
+  "oracleWrapper.oracleMongoWrapperMessages.AFTER_NULL_VALUE": "[QueryBuilder.after] S1x is null or missing in the cursor: keyset pagination needs non-null sort keys.",
   "oracleWrapper.oracleMongoWrapperMessages.AGGREGATE_UNKNOWN_FUNCTION": "[S1x] Unsupported aggregate function: S2x. Use SUM, AVG, MIN, MAX or COUNT.",
   "oracleWrapper.oracleMongoWrapperMessages.BULK_WRITE_UNKNOWN_OP": "[OracleCollection.bulkWrite] Unknown operation type: "S1x"",
   "oracleWrapper.oracleMongoWrapperMessages.COLLECTION_INVALID_TABLE_NAME": "[OracleCollection] tableName must be a non-empty string, got "S1x".",
@@ -472,12 +477,16 @@ Original: undefined
 SQL: S2x",
   "oracleWrapper.oracleMongoWrapperMessages.FILTER_UNSUPPORTED_OPERATOR": "[filterParser] Unsupported operator: S1x",
   "oracleWrapper.oracleMongoWrapperMessages.FOR_UPDATE_INVALID_MODE": "[QueryBuilder.forUpdate] Invalid lock mode: "S1x". Use true, "nowait", "skip locked" or { of?: string[], wait?: number, nowait?: boolean, skipLocked?: boolean }.",
+  "oracleWrapper.oracleMongoWrapperMessages.INCLUDE_TWICE": "[QueryBuilder.include] S1x is already included.",
+  "oracleWrapper.oracleMongoWrapperMessages.INCLUDE_UNKNOWN_RELATION": "[QueryBuilder.include] 111 has no relation named 222. Declare relations with relations() on a defineTable() table, and bind that table with .on(db).",
   "oracleWrapper.oracleMongoWrapperMessages.INLINE_BIND_UNSUPPORTED": "[S1x] the filter value S2x (S3x) cannot be written into a view: views cannot take bind values, and only numbers, strings and null have an exact literal form. Pass the view as SQL text instead.",
   "oracleWrapper.oracleMongoWrapperMessages.INSUFFICIENT_PRIVILEGES": "[S1x] Insufficient privileges. S2x
 Original: undefined
 SQL: S4x",
   "oracleWrapper.oracleMongoWrapperMessages.INVALID_ROW_COUNT": "[S1x] S2x must be a non-negative integer, got "S3x".",
   "oracleWrapper.oracleMongoWrapperMessages.JOIN_UNKNOWN_TYPE": "[S1x] Unknown joinType "S2x". Use left, right, full, inner, cross, self or natural.",
+  "oracleWrapper.oracleMongoWrapperMessages.JSON_PATH_INVALID": "[JSON path] S1x.",
+  "oracleWrapper.oracleMongoWrapperMessages.JSON_TYPE_NEEDS_21C": "[OracleSchema.createTable] S1x: S2x use the JSON type, which needs Oracle Database 21c or later (this is S3x). Use t.json() without { native: true } (JSON text with an IS JSON check) on 19c.",
   "oracleWrapper.oracleMongoWrapperMessages.MERGE_BINDS_KEY_COLLISION": "Bind key collision: "S1x" exists in both bind objects.",
   "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_EXPRESSION_ARGS": "[aggregatePipeline] S1x expects S2x.",
   "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_MATCH_RECOGNIZE": "[aggregatePipeline] $matchRecognize: S1x.",
@@ -485,12 +494,16 @@ SQL: S4x",
   "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_UNKNOWN_EXPRESSION": "[aggregatePipeline] Unsupported expression operator "S1x".",
   "oracleWrapper.oracleMongoWrapperMessages.PIPELINE_UNKNOWN_STAGE": "[aggregatePipeline] Unsupported stage: S1x.",
   "oracleWrapper.oracleMongoWrapperMessages.SERIES_INVALID": "[series] S1x.",
+  "oracleWrapper.oracleMongoWrapperMessages.SORT_INVALID": "[sort] S1x: S2x.",
+  "oracleWrapper.oracleMongoWrapperMessages.SQL_TAG_INVALID": "[sql] S1x.",
   "oracleWrapper.oracleMongoWrapperMessages.SUBQUERY_FIELD_REQUIRED": "[QueryBuilder.project] $subquery fn "S1x" needs a field.",
   "oracleWrapper.oracleMongoWrapperMessages.UPDATE_CURRENT_DATE_INVALID": "[updateParser] $currentDate.S1x must be true, { $type: "date" } or { $type: "timestamp" }.",
   "oracleWrapper.oracleMongoWrapperMessages.UPDATE_UNSUPPORTED_OPERATOR": "[updateParser] Unsupported update operator: S1x",
   "oracleWrapper.oracleMongoWrapperMessages.WINDOW_INVALID_ARGUMENT": "[windowFunctions] S1x must be a positive integer, got "S2x".",
   "oracleWrapper.oracleMongoWrapperMessages.WINDOW_INVALID_FRAME": "[windowFunctions] Invalid frame "S1x". Use ROWS|RANGE with UNBOUNDED PRECEDING / n PRECEDING / CURRENT ROW / n FOLLOWING / UNBOUNDED FOLLOWING.",
+  "oracleWrapper.oracleMongoWrapperMessages.WINDOW_INVALID_OPTION": "[windowFunctions] S1x.",
   "oracleWrapper.oracleMongoWrapperMessages.WINDOW_UNKNOWN_FUNCTION": "[windowFunctions] Unsupported window function: S1x.",
+  "oracleWrapper.oracleMongoWrapperMessages.WITH_TIES_NEEDS_SORT": "[S1x] withTies needs a sort: FETCH … WITH TIES without ORDER BY silently returns exactly n rows.",
 }
 `;
 

@@ -2068,5 +2068,68 @@
     ],
     "createdAt": "2026-11-24T16:24:09.869Z",
     "updatedAt": "2026-11-24T16:24:22.105Z"
+  },
+  {
+    "id": "e13cf9e8-26fb-4d1c-915c-e9d1ea7978e3",
+    "displayDate": "2026-11-26",
+    "version": "1.0.0-dev.55",
+    "title": "Database Helper Brought Up to Mira 2.1",
+    "message": "The database helper now matches Mira 2.1: typed tables, migrations, relations, JSON columns, timestamps and soft delete, optimistic locking and new statistics, all opt-in, plus seven proven fixes. Existing queries behave as before. Every feature was first proven in Mira on Oracle 19c and on Oracle 23ai in both driver modes.",
+    "whatChanged": [
+      {
+        "text": "New: statistics in $group ($countDistinct, $median, $stdDevPop / $stdDevSamp, $percentile, $push / $addToSet / $listAgg), LAG / LEAD defaults, IGNORE NULLS, RATIO_TO_REPORT, NULLS FIRST / LAST, and limit with ties"
+      },
+      {
+        "text": "New: typed tables (defineTable with t.* columns) with type-checked filters, inserts and updates; generateTableTypes() writes the definitions of existing tables"
+      },
+      {
+        "text": "New: migrations (createMigrator) with versioned files, a checksummed history, a lock against two deployments at once, and dry runs"
+      },
+      {
+        "text": "New: relations (hasMany / hasOne / belongsTo) and find().include(), fetching related rows in the same statement"
+      },
+      {
+        "text": "New: JSON columns (t.json()) with path filters and updates, $elemMatch, $push / $pull and a $jsonTable stage"
+      },
+      {
+        "text": "New: timestamps, soft delete (withDeleted, restore), hooks and validation on typed tables; optimistic locking with t.version()"
+      },
+      {
+        "text": "New: keyset paging with after(), for await streaming, the sql`…` tag (every value bound) and onQuery() statement events (never bind values)"
+      },
+      {
+        "text": "Fixed (proven): insertMany silently dropped columns that only later rows had, and failed (NJS-011) on Buffer values and on a column given as a number in one row and a string in another"
+      },
+      {
+        "text": "Fixed (proven): CLOB / BLOB values are now read as text / Buffer in both driver modes; in Thick mode they could not be read once the connection was released"
+      },
+      {
+        "text": "Fixed (proven): in Thick mode, dates written to TIMESTAMP WITH (LOCAL) TIME ZONE columns moved by the machine's UTC offset; sessions now open at UTC in both modes (ORA_SDTZ, unless already set). This app has no such columns and no session-time SQL"
+      },
+      {
+        "text": "Fixed (proven): explainPlan of a find() query failed in Thick mode (ORA-01036); $lateralJoin with a limit returned too few rows on Oracle 23ai"
+      },
+      {
+        "text": "New warning at startup: in Thick mode, a pool larger than UV_THREADPOOL_SIZE is logged, because calls waiting on row locks can then hang the process"
+      },
+      {
+        "text": "Changed: a filter key with a dot is now a path into a JSON column; this app has no dotted filter keys"
+      },
+      {
+        "text": "Tests: 1 test updated ($push is now a supported update operator) and 13 new message templates in the snapshot; backend suite 4876 of 4876; live check against Oracle (sign-in, admin list and search, audit log, data purge, integrity, changelog) all succeeded"
+      },
+      {
+        "text": "No database update"
+      }
+    ],
+    "type": "feat",
+    "authors": [
+      "John Moises Paunlagui"
+    ],
+    "coAuthors": [
+      "Claude Opus 5"
+    ],
+    "createdAt": "2026-11-25T21:06:29.221Z",
+    "updatedAt": "2026-11-25T21:06:29.221Z"
   }
 ]
