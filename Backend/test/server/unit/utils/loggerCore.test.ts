@@ -45,7 +45,8 @@ afterEach(() => {
     for (const k of CONFIG_KEYS) (Logger.CONFIG as Record<string, unknown>)[k] = savedConfig[k];
     for (const [k, v] of Object.entries(savedEnv)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     for (const k of Object.keys(savedEnv)) delete savedEnv[k];
-    fs.rmSync(dir, { recursive: true, force: true });
+    // Windows refuses to delete a log file the logger still has open; retry briefly.
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
 describe("Logger level filtering and construction", () => {

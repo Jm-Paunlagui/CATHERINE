@@ -21,7 +21,7 @@ Production-grade Node.js Express API template. Class-based OOP architecture, cle
 - Structured AppError class with operational error handling
 - Global error handler — all errors funnel through one place
 - Winston-style custom logger with daily file rotation, microsecond precision, and no truncation
-- Request traceability (unique `X-Request-Id` per request via `nanoid`)
+- Request traceability (unique 23-char `X-Request-Id` per request via `src/utils/snowflake.ts`)
 - Response time tracking with slow-response detection
 - Graceful shutdown with pool cleanup
 - OracleDB dual-pool pattern with PoolHealthMonitor and exponential backoff retry
@@ -93,7 +93,8 @@ Backend/
         ├── consoleManager.js          # Class: ASCII art, process title, daily clear
         ├── runtimePaths.js            # IS_COMPILED / APP_ROOT / appPath — every on-disk path
         ├── formatUtcStamp.js          # Engine-neutral "Nov 3, 2026, 2:32 PM" email stamps
-        ├── nanoidLoader.js            # Nanoid with fallback chain
+        ├── snowflake.ts               # Request IDs: "{13-digit ts}-{4-digit machine}-{4-digit tail}"
+        ├── nanoidLoader.ts            # Nanoid with fallback chain — NOT imported by src/ (unused; keep or delete deliberately)
         └── oracle-mongo-wrapper/      # MongoDB-style Oracle query library
 ```
 
@@ -525,7 +526,7 @@ Verbose diagnostic (local dev only)              →  debug
 - Worker process died (cluster mode) → `warning`
 - Server startup/shutdown → `notice`
 - oracledb driver loaded → `notice`
-- Nanoid fallback used → `warning`; crypto fallback used → `warning`
+- Nanoid fallback used → `warning`; crypto fallback used → `warning` (`nanoidLoader.ts` — currently unused by `src/`)
 - Console manager init → `notice`
 
 ---
@@ -660,7 +661,7 @@ or reviewed against a four-key success shape is wrong.
   "status": "success",
   "code": 200,
   "message": "User fetched successfully",
-  "requestId": "req_V1StGXR8_Z5jdHi6B-myT",
+  "requestId": "0078812966528-0448-0000",
   "data": { ... }
 }
 
@@ -670,7 +671,7 @@ or reviewed against a four-key success shape is wrong.
   "code": 400,
   "title": "Bad Request",
   "message": "Invalid request data",
-  "requestId": "req_V1StGXR8_Z5jdHi6B-myT",
+  "requestId": "0078812966528-0448-0000",
   "error": {
     "type": "ValidationError",
     "details": [
@@ -1130,6 +1131,8 @@ Rules:
 - Log files organized as `logs/YYYY/MM/DD/level.log` — rotate daily, never truncate mid-message
 - `LOG_MAX_SAFESTR_LENGTH` defaults to `Infinity` — only set if disk-space issues in specific environment
 - `PASSWORD_HASH_MODE=plain` **only** for local development — always `bcrypt` in production
+- Unused exports (tested, but no caller in `src/`): `src/utils/nanoidLoader.ts` (request IDs come from `snowflake.ts`) and `sendSseNotStreamable` in `src/utils/sse/ssePreflight.ts`. Wire them up or delete them deliberately — don't assume they are live
+- `TeardownSequence.preCloseTeardown`: if the last in-flight request finishes synchronously inside `httpInFlight.beginShutdown`, the notice `setInterval` is created after `finish()` and never cleared. Harmless (`unref`'d, ticks are no-ops) — tidy if you touch that code
 
 ---
 
@@ -1169,7 +1172,7 @@ OPTISv2 backend at `D:\Web\OPTISv2\OPITS-BE` used as reference for advanced patt
 | Exponential backoff on pool init (3 retries)                             | ✅ Implemented                               |
 | Security filter (scanner/traversal blocking)                             | ✅ Implemented                               |
 | Machine identifier in logs (hostname + IP)                               | ✅ Implemented                               |
-| Request ID middleware (nanoid, `X-Request-Id`)                           | ✅ Implemented                               |
+| Request ID middleware (snowflake, `X-Request-Id`)                        | ✅ Implemented                               |
 | Response time tracking + slow detection                                  | ✅ Implemented                               |
 | Clustering support (master/worker, configurable)                         | ✅ Implemented                               |
 | Advanced CORS (VPN, WFH, corporate, local)                               | ✅ Implemented                               |
@@ -1203,7 +1206,8 @@ The backend suite is a **6-category matrix**: unit, integration, performance, ch
 - New or changed behaviour is tested in **every category that applies** to it, not only unit.
 - Tests must reach the coverage required for the system's architecture and runtime, as modelled in `src/constants/architectureModel.ts` and `src/constants/runtimeModel.ts` (validated by `src/utils/systemMap.ts`). Adding a node, flow or route to a model means adding its tests.
 - The coverage gate is `coverage.thresholds` in `vitest.config.mts` (branches 85, lines 80, functions 85, statements 80). Never lower it.
-- Current state (2026-11-23, `bun run test:coverage`): 4874 tests in 262 files pass and the gate **passes** on all four metrics (statements 96.81%, branches 94.70%, functions 94.88%, lines 97.12%). `vitest.requireToImport.mts` (tests only) routes relative `require()` in both tests and src through Vite, so every module is instrumented and tests, setup and src share one module instance; no test opts out. To load a fresh copy of a module, use `vi.resetModules()` + `await import()` (or a `?fresh=N` query import, see `test/server/helpers/freshOracleAdapter.ts`), never `require.cache`. Keep new work above the thresholds.
+- Current state (2026-11-27, `bun run test:coverage`): 4953 tests in 268 files pass and the gate **passes** on all four metrics (statements 97.41%, branches 94.89%, functions 95.28%, lines 97.69%). `vitest.requireToImport.mts` (tests only) routes relative `require()` in both tests and src through Vite, so every module is instrumented and tests, setup and src share one module instance; no test opts out. To load a fresh copy of a module, use `vi.resetModules()` + `await import()` (or a `?fresh=N` query import, see `test/server/helpers/freshOracleAdapter.ts`), never `require.cache`. Keep new work above the thresholds.
+- **Coverage caveat — fresh-module loads can under-report.** Under `bun --bun vitest`, coverage recorded against a module copy that is later discarded and garbage-collected is lost. A suite that calls `vi.resetModules()` + `await import()` many times (e.g. `snowflake.test.ts`, ~30 reloads) can show code as uncovered even though it ran. Prefer one static import when a fresh copy is not needed; when it is, keep every loaded copy reachable (push it into an array held by the suite) — see `test/server/unit/utils/nanoidLoader.test.ts`. When a file's coverage looks lower than its tests suggest, suspect this before writing more tests.
 - Chaos tests live in `test/server/chaos/` as `*.chaos.test.ts` (`bun run test:chaos`).
 - Per-category counts, the architecture/runtime coverage map and the prioritised gaps are in `plans/test-coverage-gap-report.md`.
 
@@ -1790,7 +1794,7 @@ describe("GET /api/v1/health", function () {
     it("sets X-Request-ID header on every response", async function () {
         const res = await agent.get("/api/v1/health");
         expect(res.headers).toHaveProperty("x-request-id");
-        expect(res.headers["x-request-id"]).toMatch(/^req_/);
+        expect(res.headers["x-request-id"]).toMatch(/^\d{13}-\d{4}-\d{4}$/);
     });
 });
 ```
