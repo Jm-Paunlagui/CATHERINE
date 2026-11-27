@@ -159,16 +159,21 @@ function lastAwaitImport(code: string): number {
     return end;
 }
 
+// Windows paths are case-insensitive; a shell opened at `d:\` gives Vite a lowercase
+// root while other module ids keep `D:\`. Canonicalize so every comparison and the
+// import-graph keys agree on one spelling.
+const canon = (p: string) => path.normalize(p).replace(/^[a-z]:/, (d) => d.toUpperCase());
+
 export function requireToImport(): Plugin {
     let srcRoot = "";
     return {
         name: "catherine:test-require-to-import",
         enforce: "pre",
         configResolved(cfg) {
-            srcRoot = path.join(cfg.root, "src");
+            srcRoot = canon(path.join(cfg.root, "src"));
         },
         transform(code, id) {
-            const file = id.split("?")[0];
+            const file = canon(id.split("?")[0]);
             if (!file.endsWith(".ts") || isWrapper(file) || !code.includes("require(")) return null;
             let out: string | null = null;
             if (srcRoot && file.startsWith(srcRoot + path.sep)) out = transformSrc(code, file, srcRoot);

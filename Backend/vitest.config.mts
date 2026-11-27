@@ -8,10 +8,17 @@
 // fileParallelism: false → test files run sequentially; the suite exercises
 // shared in-memory middleware state that is not safe to run concurrently.
 
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import { requireToImport } from "./vitest.requireToImport.mjs";
 
+// Windows: a shell opened at `d:\` makes Vitest's root lowercase while Bun resolves
+// imports to `D:\`, so vi.mock() and spies bind to a second module copy. Pin the drive
+// letter to upper case (no-op on macOS/Linux).
+const root = fileURLToPath(new URL(".", import.meta.url)).replace(/^[a-z]:/, (d) => d.toUpperCase());
+
 export default defineConfig({
+    root,
     plugins: [requireToImport()],
     test: {
         globals: true,

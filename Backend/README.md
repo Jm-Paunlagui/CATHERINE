@@ -79,6 +79,14 @@ bun run test:unit         # also: test:integration, test:security, test:performa
 
 Suites live under `test/server/{unit,integration,security,performance,reliability}`, `test/unit/` and `test/encryption/`. Baseline at the 2026-10-28 re-sync: 77 files / 1254 tests green.
 
+Tests run through Vitest on Bun, not `bun test`. The test-only
+[`vitest.requireToImport.mts`](vitest.requireToImport.mts) plugin routes relative
+`require()` calls through Vite so source modules and their spies share one instance.
+It normalizes Vite module paths before checking the source root, including on Windows;
+the same transform runs on macOS. Production module loading is unchanged.
+[`vitest.config.mts`](vitest.config.mts) also pins the root's drive letter to upper
+case, so a shell opened at `d:\` does not load a second copy of mocked modules.
+
 ## Scripts
 
 | Command | Does |
